@@ -16,18 +16,37 @@ set -e
 #        * <disappearer's-postrm> `disappear' <r>overwrit>r> <new-version>
 # for details, see /usr/doc/packaging-manual/
 
+# TODO : Should use /etc/default/snort definitions?
+
 case "$1" in
        purge|disappear)
+       		# Remove logfiles
 		rm -rf /var/log/snort/
-
+		
+		# Remove configuration
 		if [ -e /etc/snort/snort.debian.conf ] ; then
 			rm /etc/snort/snort.debian.conf
 		fi
+		if [ -e /etc/snort/snort.common.parameters ] ; then
+			rm /etc/snort/snort.common.parameters
+		fi
+		if [ -e /etc/default/snort ] ; then
+			rm /etc/default/snort
+		fi
 
+		# Remove configuration dir
 		rmdir --ignore-fail-on-non-empty /etc/snort
-
+		
+		# Remove init.d
 		update-rc.d -f snort remove >/dev/null
-		userdel snort 2>/dev/null || true
+
+		# Remove user/group
+		if ! getent passwd | grep -q "^snort:"; then
+			userdel snort 2>/dev/null || true
+		fi
+		if ! getent group | grep -q "^snort:" ; then
+			delgroup --only-if-empty snort 2>/dev/null || true
+		fi
 		;;
        remove|upgrade|failed-upgrade|abort-install|abort-upgrade)
 		# nothing
