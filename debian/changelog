@@ -1,3 +1,15 @@
+snort (2.3.0-9) unstable; urgency=low
+
+  * Fixed format of NEWS file (Closes: #299334) 
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 14 Mar 2005 12:51:55 +0100
+
+snort (2.3.0-8) unstable; urgency=low
+
+  * Added french translation provided by Christian Perrier.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri, 11 Mar 2005 01:53:15 +0100
+
 snort (2.3.0-7) unstable; urgency=low
 
   * Do not change the permissions of /var/log/snort/ and 
