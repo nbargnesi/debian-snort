@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: web-attacks.rules,v 1.14.2.3 2004/09/07 19:35:57 bmc Exp $
+# $Id: web-attacks.rules,v 1.14.2.4 2004/10/13 20:25:47 bmc Exp $
 # ----------------
 # WEB ATTACKS
 # ----------------
@@ -57,4 +57,3 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-ATTACKS /etc/
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-ATTACKS /etc/motd access"; flow:to_server,established; content:"/etc/motd"; nocase; classtype:web-application-activity; sid:1371; rev:5;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-ATTACKS /etc/shadow access"; flow:to_server,established; content:"/etc/shadow"; nocase; classtype:web-application-activity; sid:1372; rev:5;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-ATTACKS conf/httpd.conf attempt"; flow:to_server,established; content:"conf/httpd.conf"; nocase; classtype:web-application-activity; sid:1373; rev:6;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-ATTACKS .htgroup access"; flow:to_server,established; uricontent:".htgroup"; nocase; classtype:web-application-activity; sid:1374; rev:5;)

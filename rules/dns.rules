@@ -1,12 +1,12 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: dns.rules,v 1.34.2.2 2004/08/10 13:52:05 bmc Exp $
+# $Id: dns.rules,v 1.34.2.3 2004/10/13 20:25:46 bmc Exp $
 #----------
 # DNS RULES
 #----------
 
-alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS zone transfer TCP"; flow:to_server,established; content:"|00 00 FC|"; offset:15; reference:arachnids,212; reference:cve,1999-0532; classtype:attempted-recon; reference:nessus,10595; sid:255; rev:12;)
-alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS zone transfer UDP"; content:"|00 00 FC|"; offset:14; reference:arachnids,212; reference:cve,1999-0532; classtype:attempted-recon; reference:nessus,10595; sid:1948; rev:5;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS zone transfer TCP"; flow:to_server,established; content:"|00 00 FC|"; offset:15; reference:arachnids,212; reference:cve,1999-0532; reference:nessus,10595; classtype:attempted-recon; sid:255; rev:13;)
+alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS zone transfer UDP"; content:"|00 00 FC|"; offset:14; reference:arachnids,212; reference:cve,1999-0532; reference:nessus,10595; classtype:attempted-recon; sid:1948; rev:6;)
 
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS named authors attempt"; flow:to_server,established; content:"|07|authors"; offset:12; nocase; content:"|04|bind"; offset:12; nocase; reference:arachnids,480; reference:nessus,10728; classtype:attempted-recon; sid:1435; rev:6;)
@@ -33,3 +33,5 @@ alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS EXPLOIT x86 Linux overflow
 alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS EXPLOIT x86 Linux overflow attempt ADMv2"; flow:to_server,established; content:"|89 F7 29 C7 89 F3 89 F9 89 F2 AC|<|FE|"; classtype:attempted-admin; sid:265; rev:7;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS EXPLOIT x86 FreeBSD overflow attempt"; flow:to_server,established; content:"|EB|n^|C6 06 9A|1|C9 89|N|01 C6|F|05|"; classtype:attempted-admin; sid:266; rev:6;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS EXPLOIT sparc overflow attempt"; flow:to_server,established; content:"|90 1A C0 0F 90 02| |08 92 02| |0F D0 23 BF F8|"; classtype:attempted-admin; sid:267; rev:5;)
+# alert tcp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS TCP inverse query"; flow:to_server,established; byte_test:1,<,16,2; byte_test:1,&,8,2; reference:bugtraq,2302; reference:cve,2001-0010; classtype:attempted-recon; sid:2922; rev:1;)
+# alert udp $EXTERNAL_NET any -> $HOME_NET 53 (msg:"DNS UDP inverse query"; byte_test:1,<,16,2; byte_test:1,&,8,2; reference:bugtraq,2302; reference:cve,2001-0010; classtype:attempted-recon; sid:2921; rev:1;)

@@ -18,5 +18,10 @@
   administration.  Note that database permissions for the 'snort' 
   user need to be properly setup!
   Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
+  http://lists.debian.org/debian-devel/2004/10/msg00340.html
+  and
+  http://lists.debian.org/debian-devel/2004/10/msg00962.html
+
+  I probably need to take a look at how wwwconfig-common does it...
 
 - Add some common logcheck rules (see #222584, and #217175)

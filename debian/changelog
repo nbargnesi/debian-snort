@@ -1,3 +1,20 @@
+snort (2.2.0-6) unstable; urgency=low
+
+  * Added a 'config-check' option in init.d to test the user's configuration
+    file. This could be used to determine (in postinst) if snort should be
+    restarted and warn the user (not yet done). This will help fix #165107,
+    #165351 (since similar user mistakes would be detected), #276565 and
+    #247665.
+  * Added more information to the TODOs
+  * Moved DEBIAN_TRESHOLD to DEBIAN_THRESHOLD (save for the debconf value
+    in order to avoid reseting it) (Closes: #256581)
+  * Removed double space in template (Closes: #275936)
+  * The snort-rules package now Suggests: snort instead of depending on it
+    (Closes: #249697)
+  * Updated rules with the latest snapshot.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 25 Oct 2004 23:47:45 +0200
+
 snort (2.2.0-5) unstable; urgency=low
 
   * Rules update 

@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: info.rules,v 1.23.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: info.rules,v 1.23.2.3 2004/10/13 20:25:46 bmc Exp $
 #-----------
 # INFO RULES
 #-----------
@@ -12,3 +12,4 @@ alert tcp $HOME_NET 21 -> $EXTERNAL_NET any (msg:"INFO FTP Bad login"; flow:from
 alert tcp $HOME_NET 23 -> $EXTERNAL_NET any (msg:"INFO TELNET Bad Login"; flow:from_server,established; content:"Login failed"; nocase; classtype:bad-unknown; sid:492; rev:8;)
 alert tcp $HOME_NET 23 -> $EXTERNAL_NET any (msg:"INFO TELNET Bad Login"; flow:from_server,established; content:"Login incorrect"; nocase; classtype:bad-unknown; sid:1251; rev:6;)
 alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"INFO psyBNC access"; flow:from_server,established; content:"Welcome!psyBNC@lam3rz.de"; classtype:bad-unknown; sid:493; rev:5;)
+alert tcp $EXTERNAL_NET $HTTP_PORTS -> $HOME_NET any (msg:"INFO web bug 0x0 gif attempt"; flow:from_server,established; content:"Content-type|3A| image/gif"; nocase; content:"GIF"; nocase; distance:0; content:"|01 00 01 00|"; distance:3; within:4; content:"|2C|"; distance:0; content:"|01 00 01 00|"; distance:4; within:4; classtype:misc-activity; sid:2925; rev:2;)

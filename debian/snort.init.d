@@ -45,7 +45,7 @@ case "$1" in
 				fail="already running"
 
 		CONFIGFILE=/etc/snort/snort.$interface.conf
-		if [ ! -e $CONFIGFILE ]; then
+		if [ ! -e "$CONFIGFILE" ]; then
 			echo "No /etc/snort/snort.$interface.conf, defaulting to snort.conf"
 			CONFIGFILE=/etc/snort/snort.conf
 		fi
@@ -154,8 +154,54 @@ case "$1" in
         done
         echo "."
         ;;
+  config-check)
+	if [ "$DEBIAN_SNORT_STARTUP" = "dialup" ]; then
+		echo "Config-check is currently not supported for snort in Dialup configuration"
+		exit 0
+	fi
+
+	# usually, we test all interfaces
+	interfaces="$DEBIAN_SNORT_INTERFACE"
+	# if we are requested to test a specific interface...
+	test "$2" && interfaces="$2"
+
+	myret=0
+	got_instance=0
+	for interface in $interfaces; do
+		got_instance=1
+		echo -n "checking $desc config: $name($interface)"
+
+		CONFIGFILE=/etc/snort/snort.$interface.conf
+		if [ ! -e "$CONFIGFILE" ]; then
+			CONFIGFILE=/etc/snort/snort.conf
+		fi
+		COMMON=`echo $COMMON | sed -e 's/-D//'`
+		set +e
+		$DAEMON -T $COMMON $DEBIAN_SNORT_OPTIONS \
+			-c $CONFIGFILE \
+			-S "HOME_NET=[$DEBIAN_SNORT_HOME_NET]" \
+			-i $interface >/dev/null 2>&1
+		ret=$?
+		set -e
+		case "$ret" in
+			0)
+				echo ".ok."
+				;;
+			*)
+				echo "...failed."
+				myret=$(expr "$myret" + 1)
+				;;
+		esac
+	done
+	if [ "$got_instance" = 0 ]; then
+		echo "no snort instance found to be started!" >&2
+		exit 1
+	fi
+
+	exit $myret
+	;;
   *)
-	echo "Usage: $0 {start|stop|restart|force-restart|reload|force-reload|status}"
+	echo "Usage: $0 {start|stop|restart|force-restart|reload|force-reload|status|config-check}"
 	exit 1
 	;;
 esac

@@ -1,4 +1,4 @@
-# $Id: sid-msg.map,v 1.147.2.6 2004/09/22 14:10:05 bmc Exp $
+# $Id: sid-msg.map,v 1.147.2.7 2004/10/13 20:25:45 bmc Exp $
 # Format: SID || MSG || Optional References || Optional References ...
 # SID -> MSG map
 
@@ -191,7 +191,7 @@
 296 || IMAP EXPLOIT x86 linux overflow || bugtraq,130 || cve,1999-0005
 297 || IMAP EXPLOIT x86 linux overflow || bugtraq,130 || cve,1999-0005
 298 || IMAP EXPLOIT x86 linux overflow || bugtraq,130 || cve,1999-0005
-299 || IMAP EXPLOIT x86 linux overflow || bugtraq,130 || cve, CVE-1999-0005
+299 || IMAP EXPLOIT x86 linux overflow || bugtraq,130 || cve,1999-0005
 300 || EXPLOIT nlps x86 Solaris overflow || bugtraq,2319
 301 || EXPLOIT LPRng overflow || bugtraq,1712 || cve,2000-0917
 302 || EXPLOIT Redhat 7.0 lprd overflow || bugtraq,1712 || cve,2000-0917
@@ -243,7 +243,7 @@
 349 || FTP EXPLOIT MKD overflow || bugtraq,113 || bugtraq,2242 || cve,1999-0368
 350 || FTP EXPLOIT x86 linux overflow || bugtraq,113 || bugtraq,2242 || cve,1999-0368
 351 || FTP EXPLOIT x86 linux overflow || bugtraq,113 || bugtraq,2242 || cve,1999-0368
-352 || FTP EXPLOIT x86 linux overflow || bugtraq, 113 || cve, CVE-1999-0368
+352 || FTP EXPLOIT x86 linux overflow || bugtraq,113 || cve,1999-0368
 353 || FTP adm scan || arachnids,332
 354 || FTP iss scan || arachnids,331
 355 || FTP pass wh00t || arachnids,324
@@ -252,7 +252,7 @@
 358 || FTP saint scan || arachnids,330
 359 || FTP satan scan || arachnids,329
 360 || FTP serv-u directory transversal || bugtraq,2052 || cve,2001-0054
-361 || FTP SITE EXEC attempt || arachnids,317 || bugtraq,2241 || cve,1999-0080 || cve,1999-0080 || cve,1999-0955
+361 || FTP SITE EXEC attempt || arachnids,317 || bugtraq,2241 || cve,1999-0080 || cve,1999-0955
 362 || FTP tar parameters || arachnids,134 || bugtraq,2240 || cve,1999-0202 || cve,1999-0997
 363 || ICMP IRDP router advertisement || arachnids,173 || bugtraq,578 || cve,1999-0875
 364 || ICMP IRDP router selection || arachnids,174 || bugtraq,578 || cve,1999-0875
@@ -389,7 +389,7 @@
 506 || MISC ramen worm incoming || arachnids,460
 507 || MISC PCAnywhere Attempted Administrator Login
 508 || MISC gopher proxy || arachnids,409
-509 || WEB-MISC PCCS mysql database admin tool access || arachnids,300 || bugtraq,1557 || bugtraq,1557 || cve,2000-0707 || cve,CVE-2000-0707 || nessus,10783
+509 || WEB-MISC PCCS mysql database admin tool access || arachnids,300 || bugtraq,1557 || cve,2000-0707 || nessus,10783
 510 || POLICY HP JetDirect LCD modification attempt || arachnids,302 || bugtraq,2245
 511 || MISC Invalid PCAnywhere Login
 512 || MISC PCAnywhere Failed Login || arachnids,240
@@ -564,7 +564,7 @@
 685 || MS-SQL sp_adduser - database user creation
 686 || MS-SQL xp_reg* - registry access || bugtraq,5205 || cve,2002-0642 || nessus,10642
 687 || MS-SQL xp_cmdshell - program execution
-688 || MS-SQL sa login failed || bugtraq,4797 || cve,CAN-2000-1209 || nessus,10673
+688 || MS-SQL sa login failed || bugtraq,4797 || cve,2000-1209 || nessus,10673
 689 || MS-SQL/SMB xp_reg* registry access || bugtraq,5205 || cve,2002-0642 || nessus,10642
 690 || MS-SQL/SMB xp_printstatements possible buffer overflow || bugtraq,2041 || cve,2000-1086 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
 691 || MS-SQL shellcode attempt
@@ -579,8 +579,8 @@
 700 || MS-SQL/SMB xp_updatecolvbm possible buffer overflow || bugtraq,2039 || cve,2000-1084 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
 701 || MS-SQL xp_updatecolvbm possible buffer overflow || bugtraq,2039 || cve,2000-1084 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
 702 || MS-SQL/SMB xp_displayparamstmt possible buffer overflow || bugtraq,2030 || cve,2000-1081 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
-703 || MS-SQL/SMB xp_setsqlsecurity possible buffer overflow || bugtraq,2043 || cve,CAN-2000-1088 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
-704 || MS-SQL xp_sprintf possible buffer overflow || bugtraq,1204 || cve,CAN-2001-0542 || url,www.microsoft.com/technet/security/bulletin/MS01-060.mspx
+703 || MS-SQL/SMB xp_setsqlsecurity possible buffer overflow || bugtraq,2043 || cve,2000-1088 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
+704 || MS-SQL xp_sprintf possible buffer overflow || bugtraq,1204 || cve,2001-0542 || url,www.microsoft.com/technet/security/bulletin/MS01-060.mspx
 705 || MS-SQL xp_showcolv possible buffer overflow || bugtraq,2038 || cve,2000-1083 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
 706 || MS-SQL xp_peekqueue possible buffer overflow || bugtraq,2040 || cve,2000-1085 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
 707 || MS-SQL xp_proxiedmetadata possible buffer overflow || bugtraq,2024 || cve,1999-0287 || cve,2000-1087 || url,www.microsoft.com/technet/security/bulletin/MS00-092.mspx
@@ -718,7 +718,7 @@
 844 || WEB-CGI args.bat access || cve,1999-1180 || nessus,11465
 845 || WEB-CGI AT-admin.cgi access || cve,1999-1072
 846 || WEB-CGI bnbform.cgi access || bugtraq,2147 || cve,1999-0937
-847 || WEB-CGI campas access || bugtraq,1975 || cve,1999-0146 || nessus,10035 || nessus,10035
+847 || WEB-CGI campas access || bugtraq,1975 || cve,1999-0146 || nessus,10035
 848 || WEB-CGI view-source directory traversal || bugtraq,2251 || bugtraq,8883 || cve,1999-0174
 849 || WEB-CGI view-source access || bugtraq,2251 || bugtraq,8883 || cve,1999-0174
 850 || WEB-CGI wais.pl access
@@ -759,7 +759,7 @@
 886 || WEB-CGI phf access || arachnids,128 || bugtraq,629 || cve,1999-0067
 887 || WEB-CGI www-sql access || url,marc.theaimsgroup.com/?l=bugtraq&m=88704258804054&w=2
 888 || WEB-CGI wwwadmin.pl access
-889 || WEB-CGI ppdscgi.exe access || bugtraq,491 || nessus,10187 || nessus,10187 || url,online.securityfocus.com/archive/1/16878
+889 || WEB-CGI ppdscgi.exe access || bugtraq,491 || nessus,10187 || url,online.securityfocus.com/archive/1/16878
 890 || WEB-CGI sendform.cgi access || bugtraq,5286 || cve,2002-0710 || url,www.scn.org/help/sendform.txt
 891 || WEB-CGI upload.pl access
 892 || WEB-CGI AnyForm2 access || bugtraq,719 || cve,1999-0066 || nessus,10277
@@ -808,7 +808,7 @@
 936 || WEB-COLDFUSION gettempdirectory.cfm access  || bugtraq,550
 937 || WEB-FRONTPAGE _vti_rpc access || bugtraq,2144 || cve,2001-0096 || nessus,10585
 939 || WEB-FRONTPAGE posting || bugtraq,2144 || cve,2001-0096 || nessus,10585
-940 || WEB-FRONTPAGE shtml.dll access || arachnids,292 || bugtraq,1174 || bugtraq,1594 || bugtraq,1595 || cve,2000-0413 || cve,CAN-2000-0746 || cve,CAN-2000-0746 || nessus,11395 || url,www.microsoft.com/technet/security/bulletin/ms00-060.mspx
+940 || WEB-FRONTPAGE shtml.dll access || arachnids,292 || bugtraq,1174 || bugtraq,1594 || bugtraq,1595 || cve,2000-0413 || cve,2000-0746 || nessus,11395 || url,www.microsoft.com/technet/security/bulletin/ms00-060.mspx
 941 || WEB-FRONTPAGE contents.htm access
 942 || WEB-FRONTPAGE orders.htm access
 943 || WEB-FRONTPAGE fpsrvadm.exe access
@@ -823,14 +823,14 @@
 952 || WEB-FRONTPAGE author.exe access
 953 || WEB-FRONTPAGE administrators.pwd access || bugtraq,1205
 954 || WEB-FRONTPAGE form_results.htm access || cve,1999-1052
-955 || WEB-FRONTPAGE access.cnf access || bugtraq,4078 || bugtraq,4078 || nessus,10575
+955 || WEB-FRONTPAGE access.cnf access || bugtraq,4078 || nessus,10575
 956 || WEB-FRONTPAGE register.txt access
 957 || WEB-FRONTPAGE registrations.txt access
 958 || WEB-FRONTPAGE service.cnf access || bugtraq,4078 || nessus,10575
 959 || WEB-FRONTPAGE service.pwd || bugtraq,1205
 960 || WEB-FRONTPAGE service.stp access
 961 || WEB-FRONTPAGE services.cnf access || bugtraq,4078 || nessus,10575
-962 || WEB-FRONTPAGE shtml.exe access || bugtraq,1174 || bugtraq,1608 || bugtraq,5804 || cve,2000-0413 || cve,2000-0709 || cve,CVE-2002-0692 || nessus,10405 || nessus,11311
+962 || WEB-FRONTPAGE shtml.exe access || bugtraq,1174 || bugtraq,1608 || bugtraq,5804 || cve,2000-0413 || cve,2000-0709 || cve,2002-0692 || nessus,10405 || nessus,11311
 963 || WEB-FRONTPAGE svcacl.cnf access || bugtraq,4078 || nessus,10575
 964 || WEB-FRONTPAGE users.pwd access
 965 || WEB-FRONTPAGE writeto.cnf access || bugtraq,4078 || nessus,10575
@@ -845,7 +845,7 @@
 974 || WEB-IIS Directory transversal attempt || bugtraq,2218 || cve,1999-0229
 975 || WEB-IIS Alternate Data streams ASP file access attempt || bugtraq,149 || cve,1999-0278 || nessus,10362 || url,support.microsoft.com/default.aspx?scid=kb\
 976 || WEB-IIS .bat? access || bugtraq,2023 || cve,1999-0233 || url,support.microsoft.com/support/kb/articles/Q148/1/88.asp || url,support.microsoft.com/support/kb/articles/Q155/0/56.asp
-977 || WEB-IIS .cnf access || bugtraq,4078 || bugtraq,4078 || nessus,10575
+977 || WEB-IIS .cnf access || bugtraq,4078 || nessus,10575
 978 || WEB-IIS ASP contents view || bugtraq,1084 || cve,2000-0302 || nessus,10356
 979 || WEB-IIS ASP contents view || bugtraq,1861 || cve,2000-0942
 980 || WEB-IIS CGImail.exe access || bugtraq,1623 || cve,2000-0726
@@ -868,7 +868,7 @@
 997 || WEB-IIS asp-dot attempt || bugtraq,1814 || nessus,10363
 998 || WEB-IIS asp-srch attempt
 999 || WEB-IIS bdir access || bugtraq,2280
-1000 || WEB-IIS bdir.htr access || bugtraq,2280 || bugtraq,2280 || nessus,10577
+1000 || WEB-IIS bdir.htr access || bugtraq,2280 || nessus,10577
 1001 || WEB-MISC carbo.dll access || bugtraq,2126 || cve,1999-1069
 1002 || WEB-IIS cmd.exe access
 1003 || WEB-IIS cmd? access
@@ -885,7 +885,7 @@
 1016 || WEB-IIS global.asa access || cve,2000-0778 || nessus,10491 || nessus,10991
 1017 || WEB-IIS idc-srch attempt || cve,1999-0874
 1018 || WEB-IIS iisadmpwd attempt || bugtraq,1191 || bugtraq,2110 || cve,2000-0304
-1019 || WEB-IIS index server file source code attempt || bugtraq,1084 || bugtraq,1084 || cve,2000-0302 || nessus,10356
+1019 || WEB-IIS index server file source code attempt || bugtraq,1084 || cve,2000-0302 || nessus,10356
 1020 || WEB-IIS isc$data attempt || bugtraq,307 || cve,1999-0874 || nessus,10116
 1021 || WEB-IIS ism.dll attempt || bugtraq,1193 || cve,2000-0457 || nessus,10680
 1022 || WEB-IIS jet vba access || bugtraq,286 || cve,1999-0874
@@ -916,7 +916,7 @@
 1047 || WEB-MISC Netscape Enterprise DOS || bugtraq,2294 || cve,2001-0251
 1048 || WEB-MISC Netscape Enterprise directory listing attempt || bugtraq,2285 || cve,2001-0250
 1049 || WEB-MISC iPlanet ../../ DOS attempt || bugtraq,2282 || cve,2001-0252
-1050 || WEB-MISC iPlanet GETPROPERTIES attempt || bugtraq,2732 || bugtraq,2732 || cve,2001-0746 || cve,2001-0746
+1050 || WEB-MISC iPlanet GETPROPERTIES attempt || bugtraq,2732 || cve,2001-0746
 1051 || WEB-CGI technote main.cgi file directory traversal attempt || bugtraq,2156 || cve,2001-0075 || nessus,10584
 1052 || WEB-CGI technote print.cgi directory traversal attempt || bugtraq,2156 || cve,2001-0075 || nessus,10584
 1053 || WEB-CGI ads.cgi command execution attempt || bugtraq,2103 || cve,2001-0025 || nessus,11464
@@ -947,7 +947,7 @@
 1080 || WEB-MISC unify eWave ServletExec upload || bugtraq,1868 || bugtraq,1876 || cve,2000-1024 || cve,2000-1025 || nessus,10570
 1081 || WEB-MISC Netscape Servers suite DOS || bugtraq,1868 || cve,2000-1025
 1082 || WEB-MISC amazon 1-click cookie theft || bugtraq,1194 || cve,2000-0439
-1083 || WEB-MISC unify eWave ServletExec DOS || bugtraq,1868 || bugtraq,1868 || cve,2000-1025
+1083 || WEB-MISC unify eWave ServletExec DOS || bugtraq,1868 || cve,2000-1025
 1084 || WEB-MISC Allaire JRUN DOS attempt || bugtraq,2337 || cve,2000-1049
 1085 || WEB-PHP strings overflow || arachnids,431 || bugtraq,802
 1086 || WEB-PHP strings overflow || arachnids,430 || bugtraq,1786 || cve,2000-0967
@@ -955,8 +955,8 @@
 1088 || WEB-CGI eXtropia webstore directory traversal || bugtraq,1774 || cve,2000-1005 || nessus,10532
 1089 || WEB-CGI shopping cart directory traversal || bugtraq,1777 || cve,2000-0921
 1090 || WEB-CGI Allaire Pro Web Shell attempt
-1091 || WEB-MISC ICQ Webfront HTTP DOS || bugtraq,1463 || cve,2000-1078 || cve,2000-1078
-1092 || WEB-CGI Armada Style Master Index directory traversal || bugtraq,1772 || bugtraq,1772 || cve,2000-0924 || cve,2000-0924 || nessus,10562 || url,www.synnergy.net/downloads/advisories/SLA-2000-16.masterindex.txt
+1091 || WEB-MISC ICQ Webfront HTTP DOS || bugtraq,1463 || cve,2000-1078
+1092 || WEB-CGI Armada Style Master Index directory traversal || bugtraq,1772 || cve,2000-0924 || nessus,10562 || url,www.synnergy.net/downloads/advisories/SLA-2000-16.masterindex.txt
 1093 || WEB-CGI cached_feed.cgi moreover shopping cart directory traversal || bugtraq,1762 || cve,2000-0906
 1094 || WEB-CGI webstore directory traversal || bugtraq,1774 || cve,2000-1005
 1095 || WEB-MISC Talentsoft Web+ Source Code view access || bugtraq,1722 || url,archives.neohapsis.com/archives/ntbugtraq/2000-q3/0168.html
@@ -967,15 +967,15 @@
 1100 || WEB-MISC L3retriever HTTP Probe || arachnids,310
 1101 || WEB-MISC Webtrends HTTP probe || arachnids,309
 1102 || WEB-MISC nessus 1.X 404 probe || arachnids,301
-1103 || WEB-MISC Netscape admin passwd || bugtraq,1579 || nessus,10468 || nessus,10468
+1103 || WEB-MISC Netscape admin passwd || bugtraq,1579 || nessus,10468
 1104 || WEB-MISC whisker space splice attack || arachnids,296 || url,www.wiretrip.net/rfp/pages/whitepapers/whiskerids.html
-1105 || WEB-MISC BigBrother access || bugtraq,1455 || bugtraq,1455 || cve,2000-0638 || cve,2000-0638 || nessus,10460 || nessus,10460
+1105 || WEB-MISC BigBrother access || bugtraq,1455 || cve,2000-0638 || nessus,10460
 1106 || WEB-CGI Poll-it access || bugtraq,1431 || cve,2000-0590 || nessus,10459
 1107 || WEB-MISC ftp.pl access || bugtraq,1471 || cve,2000-0674 || nessus,10467
 1108 || WEB-MISC Tomcat server snoop access || bugtraq,1532 || cve,2000-0760
 1109 || WEB-MISC ROXEN directory list attempt || bugtraq,1510 || cve,2000-0671
 1110 || WEB-MISC apache source.asp file access || bugtraq,1457 || cve,2000-0628 || nessus,10480
-1111 || WEB-MISC Tomcat server exploit access || bugtraq,1548 || bugtraq,1548 || cve,2000-0672 || cve,2000-0672 || nessus,10477
+1111 || WEB-MISC Tomcat server exploit access || bugtraq,1548 || cve,2000-0672 || nessus,10477
 1112 || WEB-MISC http directory traversal || arachnids,298
 1113 || WEB-MISC http directory traversal || arachnids,297
 1114 || WEB-MISC prefix-get //
@@ -990,7 +990,7 @@
 1123 || WEB-MISC ?PageServices access || bugtraq,1063 || bugtraq,7621 || cve,1999-0269
 1124 || WEB-MISC Ecommerce check.txt access
 1125 || WEB-MISC webcart access || cve,1999-0610 || nessus,10298
-1126 || WEB-MISC AuthChangeUrl access || bugtraq,1191 || bugtraq,1191 || cve,2000-0304 || cve,2000-0304
+1126 || WEB-MISC AuthChangeUrl access || bugtraq,1191 || cve,2000-0304
 1127 || WEB-MISC convert.bas access || bugtraq,2025 || cve,1999-0175
 1128 || WEB-MISC cpshost.dll access || bugtraq,1811 || bugtraq,4002 || cve,1999-0360
 1129 || WEB-MISC .htaccess access
@@ -1034,7 +1034,7 @@
 1168 || WEB-MISC mall log order access || bugtraq,2266 || cve,1999-0606
 1171 || WEB-MISC whisker HEAD with large datagram || url,www.wiretrip.net/rfp/pages/whitepapers/whiskerids.html
 1172 || WEB-CGI bigconf.cgi access || bugtraq,778 || cve,1999-1550 || nessus,10027
-1173 || WEB-MISC architext_query.pl access || bugtraq,2248 || bugtraq,2248 || cve,1999-0279 || nessus,10064 || nessus,10064 || url,www2.fedcirc.gov/alerts/advisories/1998/txt/fedcirc.98.03.txt
+1173 || WEB-MISC architext_query.pl access || bugtraq,2248 || cve,1999-0279 || nessus,10064 || url,www2.fedcirc.gov/alerts/advisories/1998/txt/fedcirc.98.03.txt
 1174 || WEB-CGI /cgi-bin/jj access || bugtraq,2002 || cve,1999-0260 || nessus,10131
 1175 || WEB-MISC wwwboard.pl access || bugtraq,1795 || bugtraq,649 || cve,1999-0930 || cve,1999-0954
 1176 || WEB-MISC order.log access
@@ -1044,7 +1044,7 @@
 1180 || WEB-MISC get32.exe access || arachnids,258 || bugtraq,1485 || bugtraq,770 || cve,1999-0885 || nessus,10011
 1181 || WEB-MISC Annex Terminal DOS attempt || arachnids,260 || cve,1999-1070 || nessus,10017
 1182 || WEB-MISC cgitest.exe attempt || arachnids,265 || bugtraq,1313 || bugtraq,3885 || cve,2000-0521 || cve,2002-0128 || nessus,10040 || nessus,10623
-1183 || WEB-MISC Netscape Enterprise Server directory view || bugtraq,1063 || cve,2000-0236 || cve,2000-0236 || nessus,10352
+1183 || WEB-MISC Netscape Enterprise Server directory view || bugtraq,1063 || cve,2000-0236 || nessus,10352
 1184 || WEB-MISC Netscape Enterprise Server directory view || bugtraq,1063 || cve,2000-0236
 1185 || WEB-CGI bizdbsearch attempt || bugtraq,1104 || cve,2000-0287 || nessus,10383
 1186 || WEB-MISC Netscape Enterprise Server directory view || bugtraq,1063
@@ -1075,7 +1075,7 @@
 1213 || WEB-MISC backup access
 1214 || WEB-MISC intranet access || nessus,11626
 1215 || WEB-CGI ministats admin access
-1216 || WEB-MISC filemail access || cve,1999-1154 || cve,1999-1154 || cve,1999-1155 || url,www.securityfocus.com/archive/1/11175
+1216 || WEB-MISC filemail access || cve,1999-1154 || cve,1999-1155 || url,www.securityfocus.com/archive/1/11175
 1217 || WEB-MISC plusmail access || bugtraq,2653 || cve,2000-0074 || nessus,10181
 1218 || WEB-MISC adminlogin access || bugtraq,1164 || bugtraq,1175 || nessus,11748
 1219 || WEB-CGI dfire.cgi access || bugtraq,0564 || bugtraq,564 || cve,1999-0913
@@ -1099,7 +1099,7 @@
 1238 || WEB-MISC Tomcat sourecode view
 1239 || NETBIOS RFParalyze Attempt || bugtraq,1163 || cve,2000-0347 || nessus,10392
 1240 || EXPLOIT MDBMS overflow || bugtraq,1252 || cve,2000-0446
-1241 || WEB-MISC SWEditServlet directory traversal attempt || bugtraq,2868 || bugtraq,2868 || cve,2001-0555
+1241 || WEB-MISC SWEditServlet directory traversal attempt || bugtraq,2868 || cve,2001-0555
 1242 || WEB-IIS ISAPI .ida access || arachnids,552 || bugtraq,1065 || cve,2000-0071
 1243 || WEB-IIS ISAPI .ida attempt || arachnids,552 || bugtraq,1065 || cve,2000-0071
 1244 || WEB-IIS ISAPI .idq attempt || arachnids,553 || bugtraq,1065 || bugtraq,968 || cve,2000-0071 || cve,2000-0126 || nessus,10115
@@ -1232,7 +1232,7 @@
 1371 || WEB-ATTACKS /etc/motd access
 1372 || WEB-ATTACKS /etc/shadow access
 1373 || WEB-ATTACKS conf/httpd.conf attempt
-1374 || WEB-ATTACKS .htgroup access
+1374 || WEB-MISC .htgroup access
 1375 || WEB-MISC sadmind worm access || url,www.cert.org/advisories/CA-2001-11.html
 1376 || WEB-MISC jrun directory browse attempt || bugtraq,3592
 1377 || FTP wu-ftp bad file completion attempt [ || bugtraq,3581 || bugtraq,3707 || cve,2001-0550 || cve,2001-0886
@@ -1345,18 +1345,18 @@
 1484 || WEB-IIS /isapi/tstisapi.dll access || bugtraq,2381 || cve,2001-0302
 1485 || WEB-IIS mkilog.exe access || nessus,10359
 1486 || WEB-IIS ctss.idc access || nessus,10359
-1487 || WEB-IIS /iisadmpwd/aexp2.htr access || bugtraq,2110 || bugtraq,4236 || cve,1999-0407 || cve,2002-0421 || cve,2002-0421 || nessus,10371 || nessus,10371
+1487 || WEB-IIS /iisadmpwd/aexp2.htr access || bugtraq,2110 || bugtraq,4236 || cve,1999-0407 || cve,2002-0421 || nessus,10371
 1488 || WEB-CGI store.cgi directory traversal attempt || bugtraq,2385 || cve,2001-0305 || nessus,10639
 1489 || WEB-MISC /~nobody access || nessus,10484
 1490 || WEB-PHP Phorum /support/common.php attempt || bugtraq,1997
 1491 || WEB-PHP Phorum /support/common.php access || bugtraq,1997 || bugtraq,9361
-1492 || WEB-MISC RBS ISP /newuser  directory traversal attempt || bugtraq,1704 || bugtraq,1704 || cve,2000-1036 || cve,CVE-2000-1036 || nessus,10521 || nessus,10521
-1493 || WEB-MISC RBS ISP /newuser access || bugtraq,1704 || cve,CVE-2000-1036 || nessus,10521
+1492 || WEB-MISC RBS ISP /newuser  directory traversal attempt || bugtraq,1704 || cve,2000-1036 || nessus,10521
+1493 || WEB-MISC RBS ISP /newuser access || bugtraq,1704 || cve,2000-1036 || nessus,10521
 1494 || WEB-CGI SIX webboard generate.cgi attempt || bugtraq,3175 || cve,2001-1115 || nessus,10725
 1495 || WEB-CGI SIX webboard generate.cgi access || bugtraq,3175 || cve,2001-1115
 1496 || WEB-CGI spin_client.cgi access || nessus,10393
 1497 || WEB-MISC cross site scripting attempt
-1498 || WEB-MISC PIX firewall manager directory traversal attempt || bugtraq,691 || bugtraq,691 || cve,1999-0158 || nessus,10819 || nessus,10819
+1498 || WEB-MISC PIX firewall manager directory traversal attempt || bugtraq,691 || cve,1999-0158 || nessus,10819
 1499 || WEB-MISC SiteScope Service access || nessus,10778
 1500 || WEB-MISC ExAir access || bugtraq,193 || cve,1999-0449 || nessus,10002 || nessus,10003 || nessus,10004
 1501 || WEB-CGI a1stats a1disp3.cgi directory traversal attempt || bugtraq,2705 || cve,2001-0561 || nessus,10669
@@ -1425,9 +1425,9 @@
 1564 || WEB-MISC login.htm access || bugtraq,665 || cve,1999-1533
 1565 || WEB-CGI eshop.pl arbitrary commane execution attempt || bugtraq,3340 || cve,2001-1014
 1566 || WEB-CGI eshop.pl access || bugtraq,3340 || cve,2001-1014
-1567 || WEB-IIS /exchange/root.asp attempt || bugtraq,3301 || bugtraq,3301 || cve,2001-0660 || cve,2001-0660 || nessus,10755 || nessus,10781
-1568 || WEB-IIS /exchange/root.asp access || bugtraq,3301 || bugtraq,3301 || cve,2001-0660 || cve,2001-0660 || nessus,10755 || nessus,10781
-1569 || WEB-CGI loadpage.cgi directory traversal attempt || bugtraq,2109 || bugtraq,2109 || cve,2000-1092 || cve,2000-1092
+1567 || WEB-IIS /exchange/root.asp attempt || bugtraq,3301 || cve,2001-0660 || nessus,10755 || nessus,10781
+1568 || WEB-IIS /exchange/root.asp access || bugtraq,3301 || cve,2001-0660 || nessus,10755 || nessus,10781
+1569 || WEB-CGI loadpage.cgi directory traversal attempt || bugtraq,2109 || cve,2000-1092
 1570 || WEB-CGI loadpage.cgi access || bugtraq,2109 || cve,2000-1092
 1571 || WEB-CGI dcforum.cgi directory traversal attempt || bugtraq,2611 || cve,2001-0436 || cve,2001-0437
 1572 || WEB-CGI commerce.cgi arbitrary file access attempt || bugtraq,2361 || cve,2001-0210 || nessus,10612
@@ -1445,12 +1445,12 @@
 1584 || WEB-MISC Domino bookmark.nsf access || nessus,10629
 1585 || WEB-MISC Domino agentrunner.nsf access || nessus,10629
 1586 || WEB-MISC Domino mail.box access || bugtraq,881 || nessus,10629
-1587 || WEB-MISC cgitest.exe access || arachnids,265 || bugtraq,1313 || bugtraq,3885 || cve,2000-0521 || cve,2002-0128 || nessus,10040 || nessus,10623
+1587 || WEB-MISC cgitest.exe access || arachnids,265 || bugtraq,1313 || bugtraq,3885 || cve,2000-0521 || cve,2002-0128 || nessus,10040 || nessus,10623 || nessus,11131
 1588 || WEB-MISC SalesLogix Eviewer access || bugtraq,1078 || bugtraq,1089 || cve,2000-0278 || cve,2000-0289
 1589 || WEB-MISC musicat empower attempt || bugtraq,2374 || cve,2001-0224 || nessus,10609
 1590 || WEB-CGI faqmanager.cgi arbitrary file access attempt || bugtraq,3810 || nessus,10837
 1591 || WEB-CGI faqmanager.cgi access || bugtraq,3810 || nessus,10837
-1592 || WEB-CGI /fcgi-bin/echo.exe access || nessus,10838 || nessus,10838
+1592 || WEB-CGI /fcgi-bin/echo.exe access || nessus,10838
 1593 || WEB-CGI FormHandler.cgi external site redirection attempt || bugtraq,798 || bugtraq,799 || cve,1999-1050 || nessus,10075
 1594 || WEB-CGI FormHandler.cgi access || bugtraq,798 || bugtraq,799 || cve,1999-1050 || nessus,10075
 1595 || WEB-IIS htimage.exe access || bugtraq,1117 || bugtraq,964 || cve,2000-0122 || cve,2000-0256 || nessus,10376
@@ -1508,8 +1508,8 @@
 1649 || WEB-CGI perl command attempt || arachnids,219 || cve,1999-0509 || nessus,10173 || url,www.cert.org/advisories/CA-1996-11.html
 1650 || WEB-CGI tst.bat access || bugtraq,770 || cve,1999-0885 || nessus,10014
 1651 || WEB-CGI environ.pl access
-1652 || WEB-CGI campus attempt || bugtraq,1975 || cve,1999-0146 || nessus,10035 || nessus,10035
-1653 || WEB-CGI campus access || bugtraq,1975 || cve,1999-0146 || nessus,10035 || nessus,10035
+1652 || WEB-CGI campus attempt || bugtraq,1975 || cve,1999-0146 || nessus,10035
+1653 || WEB-CGI campus access || bugtraq,1975 || cve,1999-0146 || nessus,10035
 1654 || WEB-CGI cart32.exe access || bugtraq,1153
 1655 || WEB-CGI pfdispaly.cgi arbitrary command execution attempt || cve,1999-0270 || nessus,10174
 1656 || WEB-CGI pfdispaly.cgi access || cve,1999-0270 || nessus,10174
@@ -1591,7 +1591,7 @@
 1732 || RPC portmap rwalld request UDP
 1733 || RPC portmap rwalld request TCP
 1734 || FTP USER overflow attempt || bugtraq,10078 || bugtraq,1227 || bugtraq,1504 || bugtraq,1690 || bugtraq,4638 || bugtraq,7307 || bugtraq,8376 || cve,1999-1510 || cve,1999-1514 || cve,1999-1519 || cve,1999-1539 || cve,2000-0479 || cve,2000-0656 || cve,2000-0761 || cve,2000-0943 || cve,2000-1035 || cve,2000-1194 || cve,2001-0256 || cve,2001-0794 || cve,2001-0826 || cve,2002-0126 || cve,2002-1522 || cve,2003-0271 || cve,2004-0286
-1735 || WEB-CLIENT XMLHttpRequest attempt || bugtraq,4628 || bugtraq,4628 || cve,2002-0354
+1735 || WEB-CLIENT XMLHttpRequest attempt || bugtraq,4628 || cve,2002-0354
 1736 || WEB-PHP squirrel mail spell-check arbitrary command attempt || bugtraq,3952
 1737 || WEB-PHP squirrel mail theme arbitrary command attempt || bugtraq,4385 || cve,2002-0516
 1738 || WEB-MISC global.inc access || bugtraq,4612 || cve,2002-0614
@@ -1613,8 +1613,8 @@
 1754 || WEB-IIS as_web4.exe access || bugtraq,4670
 1755 || IMAP partial body buffer overflow attempt || bugtraq,4713 || cve,2002-0379
 1756 || WEB-IIS NewsPro administration authentication attempt || bugtraq,4672
-1757 || WEB-MISC b2 arbitrary command execution attempt || bugtraq,4673 || bugtraq,4673 || cve,2002-0734 || cve,2002-1466 || nessus,11667
-1758 || WEB-MISC b2 access || bugtraq,4673 || bugtraq,4673 || cve,2002-0734 || cve,2002-1466 || nessus,11667
+1757 || WEB-MISC b2 arbitrary command execution attempt || bugtraq,4673 || cve,2002-0734 || cve,2002-1466 || nessus,11667
+1758 || WEB-MISC b2 access || bugtraq,4673 || cve,2002-0734 || cve,2002-1466 || nessus,11667
 1759 || MS-SQL xp_cmdshell program execution 445
 1760 || OTHER-IDS ISS RealSecure 6 event collector connection attempt
 1761 || OTHER-IDS ISS RealSecure 6 daemon connection attempt
@@ -1670,7 +1670,7 @@
 1811 || ATTACK-RESPONSES successful gobbles ssh exploit uname || bugtraq,5093 || cve,2002-0390 || cve,2002-0639
 1812 || EXPLOIT gobbles SSH exploit attempt || bugtraq,5093 || cve,2002-0390 || cve,2002-0639
 1813 || ICMP digital island bandwidth query
-1814 || WEB-MISC CISCO VoIP DOS ATTEMPT || bugtraq,4794 || bugtraq,4794 || cve,2002-0882 || nessus,11013
+1814 || WEB-MISC CISCO VoIP DOS ATTEMPT || bugtraq,4794 || cve,2002-0882 || nessus,11013
 1815 || WEB-PHP directory.php arbitrary command attempt || bugtraq,4278 || cve,2002-0434
 1816 || WEB-PHP directory.php access || bugtraq,4278 || cve,2002-0434
 1817 || WEB-IIS MS Site Server default login attempt || nessus,11018
@@ -1802,7 +1802,7 @@
 1944 || WEB-MISC /ecscripts/ecware.exe access || bugtraq,6066
 1945 || WEB-IIS unicode directory traversal attempt || bugtraq,1806 || cve,2000-0884 || nessus,10537
 1946 || WEB-MISC answerbook2 admin attempt || bugtraq,5383 || cve,2000-0696
-1947 || WEB-MISC answerbook2 arbitrary command execution attempt || bugtraq,1556 || bugtraq,1556 || cve,2000-0697 || cve,2000-0697
+1947 || WEB-MISC answerbook2 arbitrary command execution attempt || bugtraq,1556 || cve,2000-0697
 1948 || DNS zone transfer UDP || arachnids,212 || cve,1999-0532 || nessus,10595
 1949 || RPC portmap SET attempt TCP 111
 1950 || RPC portmap SET attempt UDP 111
@@ -1855,7 +1855,7 @@
 1997 || WEB-PHP read_body.php access attempt || bugtraq,6302 || cve,2002-1341
 1998 || WEB-PHP calendar.php access || bugtraq,5820 || bugtraq,9353 || nessus,11179
 1999 || WEB-PHP edit_image.php access || bugtraq,3288 || cve,2001-1020 || nessus,11104
-2000 || WEB-PHP readmsg.php access || cve,CAN-2001-1408 || nessus,11073
+2000 || WEB-PHP readmsg.php access || cve,2001-1408 || nessus,11073
 2001 || WEB-CGI smartsearch.cgi access || bugtraq,7133
 2002 || WEB-PHP remote include path
 2003 || MS-SQL Worm propagation attempt || bugtraq,5310 || bugtraq,5311 || cve,2002-0649 || nessus,11214 || url,vil.nai.com/vil/content/v_99992.htm
@@ -1903,8 +1903,8 @@
 2045 || RPC snmpXdmi overflow attempt UDP || bugtraq,2417 || cve,2001-0236 || url,www.cert.org/advisories/CA-2001-05.html
 2046 || IMAP partial body.peek buffer overflow attempt || bugtraq,4713 || cve,2002-0379
 2047 || MISC rsyncd module list access
-2048 || MISC rsyncd overflow attempt || bugtraq,9153 || cve,CAN-2003-0962 || nessus,11943
-2049 || MS-SQL ping attempt || nessus,10674 || nessus,10674
+2048 || MISC rsyncd overflow attempt || bugtraq,9153 || cve,2003-0962 || nessus,11943
+2049 || MS-SQL ping attempt || nessus,10674
 2050 || MS-SQL version overflow attempt || bugtraq,5310 || cve,2002-0649 || nessus,10674
 2051 || WEB-CGI cached_feed.cgi moreover shopping cart access || bugtraq,1762 || cve,2000-0906
 2052 || WEB-CGI overflow.cgi access || bugtraq,6326 || cve,2002-1361 || nessus,11190 || url,www.cert.org/advisories/CA-2002-35.html
@@ -1917,8 +1917,8 @@
 2059 || WEB-MISC MsmMask.exe access || nessus,11163
 2060 || WEB-MISC DB4Web access || nessus,11180
 2061 || WEB-MISC Tomcat null byte directory listing attempt || bugtraq,2518 || bugtraq,6721 || cve,2003-0042
-2062 || WEB-MISC iPlanet .perf access || nessus,11220 || nessus,11220
-2063 || WEB-MISC Demarc SQL injection attempt || bugtraq,4520 || bugtraq,4520 || cve,2002-0539 || cve,2002-0539
+2062 || WEB-MISC iPlanet .perf access || nessus,11220
+2063 || WEB-MISC Demarc SQL injection attempt || bugtraq,4520 || cve,2002-0539
 2064 || WEB-MISC Lotus Notes .csp script source download attempt || bugtraq,6841
 2065 || WEB-MISC Lotus Notes .csp script source download attempt
 2066 || WEB-MISC Lotus Notes .pl script source download attempt || bugtraq,6841
@@ -1980,7 +1980,7 @@
 2126 || MISC Microsoft PPTP Start Control Request buffer overflow attempt || bugtraq,5807 || cve,2002-1214
 2127 || WEB-CGI ikonboard.cgi access || bugtraq,7361 || nessus,11605
 2128 || WEB-CGI swsrv.cgi access || bugtraq,7510 || cve,2003-0217 || nessus,11608
-2129 || WEB-IIS nsiislog.dll access || bugtraq,8035 || cve,2003-0349 || cve,CAN-2003-0227 || nessus,11664 || url,www.microsoft.com/technet/security/bulletin/ms03-018.mspx
+2129 || WEB-IIS nsiislog.dll access || bugtraq,8035 || cve,2003-0227 || cve,2003-0349 || nessus,11664 || url,www.microsoft.com/technet/security/bulletin/ms03-018.mspx
 2130 || WEB-IIS IISProtect siteadmin.asp access || bugtraq,7675 || cve,2003-0377 || nessus,11662
 2131 || WEB-IIS IISProtect access || nessus,11661
 2132 || WEB-IIS Synchrologic Email Accelerator userid list access attempt || nessus,11657
@@ -2060,7 +2060,7 @@
 2206 || WEB-CGI ezman.cgi access || bugtraq,4068 || bugtraq,4579 || cve,2002-0263 || nessus,11748
 2207 || WEB-CGI fileseek.cgi access || bugtraq,4579 || bugtraq,6784 || cve,2002-0611 || nessus,11748
 2208 || WEB-CGI fom.cgi access || bugtraq,4579 || cve,2002-0230 || nessus,11748
-2209 || WEB-CGI getdoc.cgi access || bugtraq,4579 || cve,2000-0288 || cve,2000-0288 || nessus,11748
+2209 || WEB-CGI getdoc.cgi access || bugtraq,4579 || cve,2000-0288 || nessus,11748
 2210 || WEB-CGI global.cgi access || bugtraq,4579 || cve,2000-0952 || nessus,11748
 2211 || WEB-CGI guestserver.cgi access || bugtraq,4579 || cve,2001-0180 || nessus,11748
 2212 || WEB-CGI imageFolio.cgi access || bugtraq,4579 || bugtraq,6265 || cve,2002-1334 || nessus,11748
@@ -2264,9 +2264,9 @@
 2410 || WEB-PHP IGeneric Free Shopping Cart page.php access || bugtraq,9773
 2411 || WEB-MISC Real Server DESCRIBE buffer overflow attempt || bugtraq,8476 || url,www.service.real.com/help/faq/security/rootexploit091103.html
 2412 || ATTACK-RESPONSES successful cross site scripting forced download attempt
-2413 || EXPLOIT ISAKMP delete hash with empty hash attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164 || cve,CAN-2004-0164
-2414 || EXPLOIT ISAKMP initial contact notification without SPI attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164 || cve,CAN-2004-0164
-2415 || EXPLOIT ISAKMP second payload initial contact notification without SPI attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164 || cve,CAN-2004-0164
+2413 || EXPLOIT ISAKMP delete hash with empty hash attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164
+2414 || EXPLOIT ISAKMP initial contact notification without SPI attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164
+2415 || EXPLOIT ISAKMP second payload initial contact notification without SPI attempt || bugtraq,9416 || bugtraq,9417 || cve,2004-0164
 2416 || FTP invalid MDTM command attempt || bugtraq,9751 || cve,2001-1021 || cve,2004-0330
 2417 || FTP format string attempt
 2418 || MISC MS Terminal Server no encryption session initiation attempt || url,www.microsoft.com/technet/security/bulletin/MS01-052.mspx
@@ -2313,9 +2313,9 @@
 2459 || CHAT Yahoo IM conference offer invitation
 2460 || CHAT Yahoo IM conference request
 2461 || CHAT Yahoo IM conference watch
-2462 || EXPLOIT IGMP IGAP account overflow attempt || bugtraq,9952 || cve, CAN-2004-0367 || cve,2004-0176 || cve,2004-0367
-2463 || EXPLOIT IGMP IGAP message overflow attempt || bugtraq,9952 || cve, CAN-2004-0367 || cve,2004-0176 || cve,2004-0367
-2464 || EXPLOIT EIGRP prefix length overflow attempt || bugtraq,9952 || cve, CAN-2004-0367 || cve,2004-0176 || cve,2004-0367
+2462 || EXPLOIT IGMP IGAP account overflow attempt || bugtraq,9952 || cve,2004-0176 || cve,2004-0367
+2463 || EXPLOIT IGMP IGAP message overflow attempt || bugtraq,9952 || cve,2004-0176 || cve,2004-0367
+2464 || EXPLOIT EIGRP prefix length overflow attempt || bugtraq,9952 || cve,2004-0176 || cve,2004-0367
 2465 || NETBIOS SMB-DS IPC$ share access
 2466 || NETBIOS SMB-DS IPC$ share unicode access
 2467 || NETBIOS SMB D$ share unicode access
@@ -2373,7 +2373,7 @@
 2519 || SMTP Client_Hello overflow attempt || bugtraq,10116 || cve,2003-0719 || url,www.microsoft.com/technet/security/bulletin/MS04-011.mspx
 2520 || WEB-MISC SSLv3 Client_Hello request
 2521 || WEB-MISC SSLv3 Server_Hello request
-2522 || WEB-MISC SSLv3 invalid Client_Hello attempt || cve,2004-0120 || nessus,12204 || nessus,12204 || url,www.microsoft.com/technet/security/bulletin/MS04-011.mspx
+2522 || WEB-MISC SSLv3 invalid Client_Hello attempt || cve,2004-0120 || nessus,12204 || url,www.microsoft.com/technet/security/bulletin/MS04-011.mspx
 2523 || DOS BGP spoofed connection reset attempt || bugtraq,10183 || cve,2004-0230 || url,www.uniras.gov.uk/vuls/2004/236929/index.htm
 2524 || NETBIOS DCERPC LSASS direct bind attempt || bugtraq,10108 || cve,2003-0533 || url,www.microsoft.com/technet/security/bulletin/MS04-011.mspx
 2525 || NETBIOS SMB DCERPC LSASS direct bind attempt || bugtraq,10108 || cve,2003-0533 || url,www.microsoft.com/technet/security/bulletin/MS04-011.mspx
@@ -2431,23 +2431,23 @@
 2577 || WEB-CLIENT local resource redirection attempt || cve,2004-0549 || url,www.kb.cert.org/vuls/id/713878
 2578 || EXPLOIT kerberos principal name overflow UDP || url,web.mit.edu/kerberos/www/advisories/MITKRB5-SA-2003-005-buf.txt
 2579 || EXPLOIT kerberos principal name overflow TCP || url,web.mit.edu/kerberos/www/advisories/MITKRB5-SA-2003-005-buf.txt
-2580 || WEB-MISC server negative Content-Length attempt || cve,CAN-2004-0492 || url,www.guninski.com/modproxy1.html
-2581 || WEB-MISC Crystal Reports crystalimagehandler.aspx access || cve,CAN-2004-0204 || url,www.microsoft.com/security/bulletins/200406_crystal.mspx
-2582 || WEB-MISC Crystal Reports crystalImageHandler.aspx directory traversal attempt || bugtraq,10260 || cve,CAN-2004-0204 || nessus,12271 || url,www.microsoft.com/security/bulletins/200406_crystal.mspx
-2583 || MISC CVS Max-dotdot integer overflow attempt || bugtraq,10499 || cve,CAN-2004-0417
+2580 || WEB-MISC server negative Content-Length attempt || cve,2004-0492 || url,www.guninski.com/modproxy1.html
+2581 || WEB-MISC Crystal Reports crystalimagehandler.aspx access || cve,2004-0204 || url,www.microsoft.com/security/bulletins/200406_crystal.mspx
+2582 || WEB-MISC Crystal Reports crystalImageHandler.aspx directory traversal attempt || bugtraq,10260 || cve,2004-0204 || nessus,12271 || url,www.microsoft.com/security/bulletins/200406_crystal.mspx
+2583 || MISC CVS Max-dotdot integer overflow attempt || bugtraq,10499 || cve,2004-0417
 2584 || EXPLOIT eMule buffer overflow attempt || bugtraq,10039 || nessus,12233
 2585 || WEB-MISC nessus 2.x 404 probe || nessus,10386
 2586 || P2P eDonkey transfer || url,www.kom.e-technik.tu-darmstadt.de/publications/abstracts/HB02-1.html
 2587 || P2P eDonkey server response || url,www.emule-project.net
 2588 || WEB-PHP TUTOS path disclosure attempt || bugtraq,10129 || url,www.securiteam.com/unixfocus/5FP0J15CKE.html
 2589 || WEB-CLIENT Content-Disposition CLSID command attempt || bugtraq,9510 || cve,2004-0420 || url,www.microsoft.com/technet/security/bulletin/ms04-024.mspx
-2590 || SMTP MAIL FROM overflow attempt || bugtraq,10290 || cve,CAN-2004-0399 || url,www.guninski.com/exim1.html
-2591 || SMTP From command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
-2592 || SMTP ReplyTo command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
-2593 || SMTP Sender command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
-2594 || SMTP To command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
-2595 || SMTP CC command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
-2596 || SMTP BCC command overflow attempt || bugtraq,10291 || cve,CAN-2004-0400 || url,www.guninski.com/exim1.html
+2590 || SMTP MAIL FROM overflow attempt || bugtraq,10290 || cve,2004-0399 || url,www.guninski.com/exim1.html
+2591 || SMTP From command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
+2592 || SMTP ReplyTo command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
+2593 || SMTP Sender command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
+2594 || SMTP To command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
+2595 || SMTP CC command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
+2596 || SMTP BCC command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
 2597 || WEB-MISC Samba SWAT Authorization overflow attempt || bugtraq,10780
 2598 || WEB-MISC Samba SWAT Authorization port 901 overflow attempt || bugtraq,10780
 2599 || ORACLE dbms_repcat.add_grouped_column buffer overflow attempt
@@ -2462,7 +2462,7 @@
 2608 || ORACLE sysdbms_repcat_rgt.check_ddl_text buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck97.html
 2609 || ORACLE dbms_repcat.cancel_statistics buffer overflow attempt
 2610 || ORACLE cancel_statistics ordered sname/oname buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck633.html
-2611 || ORACLE LINK metadata buffer overflow attempt || bugtraq,7453 || cve,CAN-2003-0222 || url,archives.neohapsis.com/archives/bugtraq/2003-04/0360.html
+2611 || ORACLE LINK metadata buffer overflow attempt || bugtraq,7453 || cve,2003-0222 || url,archives.neohapsis.com/archives/bugtraq/2003-04/0360.html
 2612 || ORACLE sys.dbms_repcat_auth.revoke_surrogate_repcat buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck97.html
 2613 || ORACLE revoke_surrogate_repcat ordered userid buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck97.html
 2614 || ORACLE time_zone buffer overflow attempt || bugtraq,9587 || url,www.nextgenss.com/advisories/ora_time_zone.txt
@@ -2489,6 +2489,7 @@
 2635 || ORACLE dbms_offline_snapshot.end_load buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck632.html
 2636 || ORACLE snapshot.end_load ordered gname buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck632.html
 2637 || ORACLE dbms_repcat.drop_master_repobject buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck634.html
+2638 || ORACLE drop_master_repobject ordered type buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck634.html
 2639 || ORACLE dbms_repcat.drop_mview_repgroup buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck90.html
 2640 || ORACLE drop_mview_repgroup ordered gowner/gname buffer overflow attempt || url,www.appsecinc.com/Policy/PolicyCheck90.html
 2641 || ORACLE dbms_repcat_instantiate.drop_site_instantiation buffer overflow attempt
@@ -2555,6 +2556,225 @@
 2702 || WEB-MISC Oracle iSQLPlus username overflow attempt || bugtraq,10871 || url,www.nextgenss.com/advisories/ora-isqlplus.txt
 2703 || WEB-MISC Oracle iSQLPlus login.uix username overflow attempt || bugtraq,10871 || url,www.nextgenss.com/advisories/ora-isqlplus.txt
 2704 || WEB-MISC Oracle 10g iSQLPlus login.unix connectID overflow attempt || bugtraq,10871 || url,www.nextgenss.com/advisories/ora-isqlplus.txt
-2705 || WEB-CLIENT JPEG parser heap overflow attempt || bugtraq,11173 || cve,CAN-2004-0200 || url,www.microsoft.com/security/bulletins/200409_jpeg.mspx
+2705 || WEB-CLIENT JPEG parser heap overflow attempt || bugtraq,11173 || cve,2004-0200 || url,www.microsoft.com/security/bulletins/200409_jpeg.mspx
 2706 || WEB-CLIENT JPEG transfer
-2707 || WEB-CLIENT JPEG parser multipacket heap overflow || bugtraq,11173 || cve,CAN-2004-0200 || url,www.microsoft.com/security/bulletins/200409_jpeg.mspx
+2707 || WEB-CLIENT JPEG parser multipacket heap overflow || bugtraq,11173 || cve,2004-0200 || url,www.microsoft.com/security/bulletins/200409_jpeg.mspx
+2708 || ORACLE dbms_offline_og.begin_flavor_change buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2709 || ORACLE dbms_offline_og.begin_instantiation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2710 || ORACLE dbms_offline_og.begin_load buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2711 || ORACLE dbms_offline_og.end_flavor_change buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2712 || ORACLE dbms_offline_og.end_instantiation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2713 || ORACLE dbms_offline_og.end_load buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2714 || ORACLE dbms_offline_og.resume_subset_of_masters buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2715 || ORACLE dbms_offline_snapshot.begin_load buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2716 || ORACLE dbms_offline_snapshot.end_load buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2717 || ORACLE dbms_rectifier_diff.differences buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2718 || ORACLE dbms_rectifier_diff.rectify buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2719 || ORACLE dbms_repcat.abort_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2720 || ORACLE dbms_repcat.add_column_group_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2721 || ORACLE dbms_repcat.add_columns_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2722 || ORACLE dbms_repcat.add_object_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2723 || ORACLE dbms_repcat.add_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2724 || ORACLE dbms_repcat.add_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2725 || ORACLE dbms_repcat.add_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2726 || ORACLE dbms_repcat.add_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2727 || ORACLE dbms_repcat.add_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2728 || ORACLE dbms_repcat.add_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2729 || ORACLE dbms_repcat.add_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2730 || ORACLE dbms_repcat.add_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2731 || ORACLE dbms_repcat.add_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2732 || ORACLE dbms_repcat.add_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2733 || ORACLE dbms_repcat.alter_master_propagation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2734 || ORACLE dbms_repcat.alter_mview_propagation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2735 || ORACLE dbms_repcat.alter_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2736 || ORACLE dbms_repcat.alter_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2737 || ORACLE dbms_repcat.alter_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2738 || ORACLE dbms_repcat.alter_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2739 || ORACLE dbms_repcat.alter_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2740 || ORACLE dbms_repcat.alter_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2741 || ORACLE dbms_repcat.alter_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2742 || ORACLE dbms_repcat.alter_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2743 || ORACLE dbms_repcat.alter_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2744 || ORACLE dbms_repcat.alter_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2745 || ORACLE dbms_repcat.alter_snapshot_propagation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2746 || ORACLE dbms_repcat_auth.revoke_surrogate_repcat buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2747 || ORACLE dbms_repcat.begin_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2748 || ORACLE dbms_repcat.comment_on_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2749 || ORACLE dbms_repcat.comment_on_delete_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2750 || ORACLE dbms_repcat.comment_on_mview_repsites buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2751 || ORACLE dbms_repcat.comment_on_priority_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2752 || ORACLE dbms_repcat.comment_on_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2753 || ORACLE dbms_repcat.comment_on_repsites buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2754 || ORACLE dbms_repcat.comment_on_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2755 || ORACLE dbms_repcat.comment_on_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2756 || ORACLE dbms_repcat.comment_on_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2757 || ORACLE dbms_repcat.create_master_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2758 || ORACLE dbms_repcat.create_master_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2759 || ORACLE dbms_repcat.create_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2760 || ORACLE dbms_repcat.define_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2761 || ORACLE dbms_repcat.define_priority_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2762 || ORACLE dbms_repcat.define_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2763 || ORACLE dbms_repcat.do_deferred_repcat_admin buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2764 || ORACLE dbms_repcat.drop_column_group_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2765 || ORACLE dbms_repcat.drop_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2766 || ORACLE dbms_repcat.drop_columns_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2767 || ORACLE dbms_repcat.drop_delete_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2768 || ORACLE dbms_repcat.drop_grouped_column buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2769 || ORACLE dbms_repcat.drop_mview_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2770 || ORACLE dbms_repcat.drop_object_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2771 || ORACLE dbms_repcat.drop_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2772 || ORACLE dbms_repcat.drop_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2773 || ORACLE dbms_repcat.drop_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2774 || ORACLE dbms_repcat.drop_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2775 || ORACLE dbms_repcat.drop_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2776 || ORACLE dbms_repcat.drop_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2777 || ORACLE dbms_repcat.drop_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2778 || ORACLE dbms_repcat.drop_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2779 || ORACLE dbms_repcat.drop_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2780 || ORACLE dbms_repcat.drop_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2781 || ORACLE dbms_repcat.drop_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2782 || ORACLE dbms_repcat.drop_snapshot_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2783 || ORACLE dbms_repcat.drop_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2784 || ORACLE dbms_repcat.drop_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2785 || ORACLE dbms_repcat.execute_ddl buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2786 || ORACLE dbms_repcat.generate_replication_package buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2787 || ORACLE dbms_repcat_instantiate.instantiate_online buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2788 || ORACLE dbms_repcat.make_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2789 || ORACLE dbms_repcat.obsolete_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2790 || ORACLE dbms_repcat.publish_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2791 || ORACLE dbms_repcat.purge_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2792 || ORACLE dbms_repcat.purge_master_log buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2793 || ORACLE dbms_repcat.purge_statistics buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2794 || ORACLE dbms_repcat.refresh_mview_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2795 || ORACLE dbms_repcat.refresh_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2796 || ORACLE dbms_repcat.register_mview_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2797 || ORACLE dbms_repcat.register_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2798 || ORACLE dbms_repcat.register_statistics buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2799 || ORACLE dbms_repcat.relocate_masterdef buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2800 || ORACLE dbms_repcat.rename_shadow_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2801 || ORACLE dbms_repcat.resume_master_activity buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2802 || ORACLE dbms_repcat_rgt.check_ddl_text buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2803 || ORACLE dbms_repcat_rgt.drop_site_instantiation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2804 || ORACLE dbms_repcat.send_and_compare_old_values buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2805 || ORACLE dbms_repcat.set_columns buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2806 || ORACLE dbms_repcat.set_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2807 || ORACLE dbms_repcat.specify_new_masters buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2808 || ORACLE dbms_repcat.suspend_master_activity buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2809 || ORACLE dbms_repcat.unregister_mview_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2810 || ORACLE dbms_repcat.unregister_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2811 || ORACLE dbms_repcat.validate_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2812 || ORACLE dbms_repcat.validate_for_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2813 || ORACLE sys.dbms_repcat_fla.abort_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2814 || ORACLE sys.dbms_repcat_fla.add_object_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2815 || ORACLE sys.dbms_repcat_fla.begin_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2816 || ORACLE sys.dbms_repcat_fla.drop_object_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2817 || ORACLE sys.dbms_repcat_fla_mas.add_column_group_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2818 || ORACLE sys.dbms_repcat_fla_mas.add_columns_to_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2819 || ORACLE sys.dbms_repcat_fla_mas.drop_column_group_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2820 || ORACLE sys.dbms_repcat_fla_mas.drop_columns_from_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2821 || ORACLE sys.dbms_repcat_fla_mas.obsolete_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2822 || ORACLE sys.dbms_repcat_fla_mas.publish_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2823 || ORACLE sys.dbms_repcat_fla_mas.purge_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2824 || ORACLE sys.dbms_repcat_fla.set_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2825 || ORACLE sys.dbms_repcat_fla.validate_flavor_definition buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2826 || ORACLE sys.dbms_repcat_fla.validate_for_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2827 || ORACLE sys.dbms_repcat_mas.alter_master_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2828 || ORACLE sys.dbms_repcat_mas.comment_on_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2829 || ORACLE sys.dbms_repcat_mas.comment_on_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2830 || ORACLE sys.dbms_repcat_mas.create_master_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2831 || ORACLE sys.dbms_repcat_mas.create_master_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2832 || ORACLE sys.dbms_repcat_mas.do_deferred_repcat_admin buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2833 || ORACLE sys.dbms_repcat_mas.drop_master_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2834 || ORACLE sys.dbms_repcat_mas.generate_replication_package buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2835 || ORACLE sys.dbms_repcat_mas.purge_master_log buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2836 || ORACLE sys.dbms_repcat_mas.relocate_masterdef buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2837 || ORACLE sys.dbms_repcat_mas.rename_shadow_column_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2838 || ORACLE sys.dbms_repcat_mas.resume_master_activity buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2839 || ORACLE sys.dbms_repcat_mas.suspend_master_activity buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2840 || ORACLE sys.dbms_repcat_sna_utl.alter_snapshot_propagation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2841 || ORACLE sys.dbms_repcat_sna_utl.create_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2842 || ORACLE sys.dbms_repcat_sna_utl.drop_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2843 || ORACLE sys.dbms_repcat_sna_utl.drop_snapshot_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2844 || ORACLE sys.dbms_repcat_sna_utl.refresh_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2845 || ORACLE sys.dbms_repcat_sna_utl.register_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2846 || ORACLE sys.dbms_repcat_sna_utl.repcat_import_check buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2847 || ORACLE sys.dbms_repcat_sna_utl.unregister_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2848 || ORACLE sys.dbms_repcat_utl4.drop_master_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2849 || ORACLE sys.dbms_repcat_utl.drop_an_object buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2850 || ORACLE dbms_repcat.create_mview_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2851 || ORACLE dbms_repcat.create_snapshot_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2852 || ORACLE dbms_repcat.generate_mview_support buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2853 || ORACLE dbms_repcat.generate_replication_trigger buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2854 || ORACLE dbms_repcat.generate_snapshot_support buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2855 || ORACLE dbms_repcat.remove_master_databases buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2856 || ORACLE dbms_repcat.switch_mview_master buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2857 || ORACLE dbms_repcat.switch_snapshot_master buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2858 || ORACLE sys.dbms_repcat_conf.add_delete_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2859 || ORACLE sys.dbms_repcat_conf.add_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2860 || ORACLE sys.dbms_repcat_conf.add_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2861 || ORACLE sys.dbms_repcat_conf.add_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2862 || ORACLE sys.dbms_repcat_conf.add_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2863 || ORACLE sys.dbms_repcat_conf.add_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2864 || ORACLE sys.dbms_repcat_conf.add_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2865 || ORACLE sys.dbms_repcat_conf.add_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2866 || ORACLE sys.dbms_repcat_conf.add_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2867 || ORACLE sys.dbms_repcat_conf.add_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2868 || ORACLE sys.dbms_repcat_conf.add_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2869 || ORACLE sys.dbms_repcat_conf.alter_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2870 || ORACLE sys.dbms_repcat_conf.alter_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2871 || ORACLE sys.dbms_repcat_conf.alter_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2872 || ORACLE sys.dbms_repcat_conf.alter_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2873 || ORACLE sys.dbms_repcat_conf.alter_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2874 || ORACLE sys.dbms_repcat_conf.alter_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2875 || ORACLE sys.dbms_repcat_conf.alter_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2876 || ORACLE sys.dbms_repcat_conf.alter_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2877 || ORACLE sys.dbms_repcat_conf.alter_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2878 || ORACLE sys.dbms_repcat_conf.alter_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2879 || ORACLE sys.dbms_repcat_conf.cancel_statistics buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2880 || ORACLE sys.dbms_repcat_conf.comment_on_delete_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2881 || ORACLE sys.dbms_repcat_conf.comment_on_priority_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2882 || ORACLE sys.dbms_repcat_conf.comment_on_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2883 || ORACLE sys.dbms_repcat_conf.comment_on_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2884 || ORACLE sys.dbms_repcat_conf.comment_on_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2885 || ORACLE sys.dbms_repcat_conf.define_priority_group buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2886 || ORACLE sys.dbms_repcat_conf.define_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2887 || ORACLE sys.dbms_repcat_conf.drop_delete_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2888 || ORACLE sys.dbms_repcat_conf.drop_priority_char buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2889 || ORACLE sys.dbms_repcat_conf.drop_priority_date buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2890 || ORACLE sys.dbms_repcat_conf.drop_priority_nchar buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2891 || ORACLE sys.dbms_repcat_conf.drop_priority_number buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2892 || ORACLE sys.dbms_repcat_conf.drop_priority_nvarchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2893 || ORACLE sys.dbms_repcat_conf.drop_priority_raw buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2894 || ORACLE sys.dbms_repcat_conf.drop_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2895 || ORACLE sys.dbms_repcat_conf.drop_priority_varchar2 buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2896 || ORACLE sys.dbms_repcat_conf.drop_site_priority_site buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2897 || ORACLE sys.dbms_repcat_conf.drop_site_priority buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2898 || ORACLE sys.dbms_repcat_conf.drop_unique_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2899 || ORACLE sys.dbms_repcat_conf.drop_update_resolution buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2900 || ORACLE sys.dbms_repcat_conf.purge_statistics buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2901 || ORACLE sys.dbms_repcat_conf.register_statistics buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2902 || ORACLE sys.dbms_repcat_sna.alter_snapshot_propagation buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2903 || ORACLE sys.dbms_repcat_sna.create_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2904 || ORACLE sys.dbms_repcat_sna.create_snapshot_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2905 || ORACLE sys.dbms_repcat_sna.create_snapshot_repschema buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2906 || ORACLE sys.dbms_repcat_sna.drop_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2907 || ORACLE sys.dbms_repcat_sna.drop_snapshot_repobject buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2908 || ORACLE sys.dbms_repcat_sna.drop_snapshot_repschema buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2909 || ORACLE sys.dbms_repcat_sna.generate_snapshot_support buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2910 || ORACLE sys.dbms_repcat_sna.refresh_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2911 || ORACLE sys.dbms_repcat_sna.refresh_snapshot_repschema buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2912 || ORACLE sys.dbms_repcat_sna.register_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2913 || ORACLE sys.dbms_repcat_sna.repcat_import_check buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2914 || ORACLE sys.dbms_repcat_sna.set_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2915 || ORACLE sys.dbms_repcat_sna.switch_snapshot_master buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2916 || ORACLE sys.dbms_repcat_sna.unregister_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2917 || ORACLE sys.dbms_repcat_sna_utl.switch_snapshot_master buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2918 || ORACLE sys.dbms_repcat_sna.validate_for_local_flavor buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2919 || ORACLE sys.dbms_repcat_untrusted.register_snapshot_repgroup buffer overflow attempt || url,www.appsecinc.com/resources/alerts/oracle/2004-0001/25.html
+2921 || DNS UDP inverse query || bugtraq,2302 || cve,2001-0010
+2922 || DNS TCP inverse query || bugtraq,2302 || cve,2001-0010
+2923 || NETBIOS SMB repeated logon failure
+2924 || NETBIOS SMB-DS repeated logon failure
+2925 || INFO web bug 0x0 gif attempt
+2926 || WEB-PHP PhpGedView PGV base directory manipulation || bugtraq,9368
+2927 || NNTP XPAT pattern overflow attempt || cve,2004-0574 || url,www.microsoft.com/technet/security/bulletin/MS04-036.mspx
