@@ -1,14 +1,17 @@
-snort (2.3.0-9) unstable; urgency=medium
+snort (2.3.2-1) unstable; urgency=medium
 
-  * The snort package, Since version 2.3.0, introduces /etc/default/snort
-    and no longer uses /etc/snort/common.parameters. The new configuration
-    file will be automatically created based on the old configuration.
-    However, since there is no way to know if the old file has been parsed
-    properly, the old parameters file will be used in the /etc/init.d/script
-    file until it has been removed.
+  * In Snort version 2.3.0 and later the preferred configuration method
+    uses /etc/default/snort rather than /etc/snort/snort.common.parameters.
+    The new approach makes it possible to introduce improvements in the
+    init.d script, such as sanity checks for common misconfigurations.
 
-  * Please check the contents of /etc/default/snort (or create a new one)
-    and remove /etc/snort/common.parameters to take advantage of the 
-    improvements introduced in the init.d script.
+  * Upgrading automatically generates the file /etc/default/snort
+    from /etc/snort/snort.common.parameters. 
+
+  * Since the automatically generated file may not be correct, you should 
+    inspect it or create a new one to your liking.  If the configuration
+    file is correct, delete /etc/snort/snort.common.parameters and restart
+    the server to use the new file. The system will run Snort with the old
+    configuration file until you do so.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue,  8 Feb 2005 23:55:57 +0100

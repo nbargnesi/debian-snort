@@ -1,3 +1,21 @@
+2005-03-10 - Snort 2.3.2 Released
+
+* Removed end-of-line parser fix in favor of completely reworking
+  this at the next parser overhaul.
+
+2005-03-09 - Snort 2.3.1 Released
+
+* Fixed issue where the number of flowbits were too small. Thanks Marc
+  Norton for the fix.
+
+* Fixed parsing of comments at end of line in config file.  In
+  snort.conf, anything that follows a # on a line is considered a
+  comment. Thanks Steve Sturges for the fix.
+
+* Fixed alignment issue causing sfPortscan to crash on Solaris/HPUX.
+  Thanks Andy Mullican for the fix. Thanks Senthil Prabu.S and
+  Jonathan Miner for working with us on this.
+
 2005-01-25 - Snort 2.3.0 Final Released
 
 * Fixed issue with sfPortscan reporting incorrect IP datagram length.

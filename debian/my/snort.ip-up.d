@@ -8,7 +8,13 @@ NAME=snort
 DESC="Network Intrusion Detection System"
 
 CONFIG=/etc/snort/snort.debian.conf
-[ -r /etc/snort/snort.common.parameters ] && COMMON=`cat /etc/snort/snort.common.parameters`
+if [ -r /etc/snort/snort.common.parameters ] ; then
+        COMMON=`cat /etc/snort/snort.common.parameters`
+elif [ -r /etc/default/snort ] ; then
+# Only read this if the old configuration is not present
+        . /etc/default/snort
+        COMMON="$PARAMS -l $LOGDIR -u $SNORTUSER -g $SNORTGROUP"
+fi
 
 test -x $DAEMON || exit 0
 test -f $CONFIG && . $CONFIG
@@ -40,6 +46,36 @@ test "$DEBIAN_SNORT_STARTUP" = "dialup" || exit 0
 #	to start snort.
 # 2.2.2)
 # 	We warn and won't start.
+
+check_log_dir() {
+# Does the logging directory belong to Snort?
+        # If we cannot determine the logdir return without error
+        # (we will not check it)
+        # This will only be used by people using /etc/default/snort
+        [ -n "$LOGDIR" ] || return 0
+        [ -n "$SNORTUSER" ] || return 0
+        if [ ! -e "$LOGDIR" ] ; then
+                echo -n "ERR: logging directory $LOGDIR does not exist"
+                return 1
+        elif [ ! -d "$LOGDIR" ] ; then
+                echo -n "ERR: logging directory $LOGDIR does not exist"
+                return 1
+        else
+                real_log_user=`stat -c %U $LOGDIR`
+        # An alternative way is to check if the snort user can create
+        # a file there...
+                if [ "$real_log_user" != "$SNORTUSER" ] ; then
+                        echo -n "ERR: logging directory $LOGDIR does not belong to the snort user $SNORTUSER"
+                        return 1
+                fi
+        fi
+        return 0
+}
+
+if ! check_log_dir; then
+        echo "Cannot start $DESC!"
+        exit 1
+fi
 
 if ! [ "$DEBIAN_SNORT_RECURSIVE" ]; then
 	# Acquire lock...

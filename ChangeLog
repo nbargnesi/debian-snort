@@ -1,4 +1,30 @@
-2005-1-13 Marc Norton <mnorton@sourcefire.com>
+2005-03-10 Jeremy Hewlett <jh@sourcefire.com>
+
+    * src/parser.c:
+      Removed end-of-line parser fix in favor of completely reworking
+      this at the next parser overhaul.
+
+2005-03-08 Jeremy Hewlett <jh@sourcefire.com>
+
+    * src/preprocessors/spp_flow.c:
+    * src/detection-plugins/sp_flowbits.c:
+      Increased number of flowbits (mnorton)
+
+2005-03-08 Steven Sturges <ssturges@sourcefire.com>
+
+    * src/parser.c:
+      Fixed parsing of comments at end of line in config file.   In
+      snort.conf, anything that follows a # on a line is considered a
+      comment.
+
+2005-03-04 Jeremy Hewlett <jh@sourcefire.com>
+
+    * src/preprocessors/spp_sfportscan.c:
+      Fixed alignment issue causing sfPortscan to crash on Solaris/HPUX.
+      Thanks Andy Mullican for the fix. Thanks Senthil Prabu.S and
+      Jonathan Miner for working with us on this.
+
+2005-01-13 Marc Norton <mnorton@sourcefire.com>
 
     * src/preprocessors/spp_sfportscan.c:
       Fixed arithmetic to correctly set the ip packet length in the ip
@@ -32,7 +58,7 @@
       Fixed xatou function to check for non-digit parameter. Thanks nnposter for submitting
       a patch!
 
-2004-12-20 Gisle Vanem <giva@bgnett.no>:
+2004-12-20 Jeremy Hewlett <jh@sourcefire.com>
 
     * src/decode.h:
     * src/win32/WIN32-Includes/config.h:

@@ -6,6 +6,8 @@ Sid:
 
 --
 Summary:
+This event is generated when an attempt is made to exploit a known 
+vulnerability in Lyris List Manager.
 
 --
 Impact:

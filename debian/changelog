@@ -1,14 +1,16 @@
-snort (2.3.0-9) unstable; urgency=low
+snort (2.3.2-1) unstable; urgency=low
 
-  * Fixed format of NEWS file (Closes: #299334) 
+  * New upstream release. 
+    - Fixes some bugs in preprocessors
+    - Rules updates
+  * Fixed format of NEWS file, updated the version of the changelog entry so
+    that everybody will read it on next upgrade (Closes: #299334) 
+  * Added debconf french translation provided by Christian Perrier (Closes: #299016)
+  * Updated debconf dutch translation provided by  Peter Vandenabeele (Closes: #296152)
+  * The PPP script will now use the new /etc/default/snort mechanism 
+    (Closes: 298003
 
- -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 14 Mar 2005 12:51:55 +0100
-
-snort (2.3.0-8) unstable; urgency=low
-
-  * Added french translation provided by Christian Perrier.
-
- -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri, 11 Mar 2005 01:53:15 +0100
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 14 Mar 2005 13:26:45 +0100
 
 snort (2.3.0-7) unstable; urgency=low
 

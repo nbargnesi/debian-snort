@@ -1,4 +1,4 @@
-# $Id: sid-msg.map,v 1.151.2.7 2005/01/17 23:52:48 bmc Exp $
+# $Id: sid-msg.map,v 1.151.2.10 2005/03/01 18:57:08 bmc Exp $
 # Format: SID || MSG || Optional References || Optional References ...
 # SID -> MSG map
 
@@ -14,7 +14,7 @@
 112 || BACKDOOR BackOrifice access || arachnids,400
 113 || BACKDOOR DeepThroat access || arachnids,405
 114 || BACKDOOR netbus active || arachnids,401
-115 || BACKDOOR netbus 2 active || arachnids,401
+115 || BACKDOOR NetBus Pro 2.0 connection established
 116 || BACKDOOR BackOrifice access || arachnids,399
 117 || BACKDOOR Infector.1.x || arachnids,315
 118 || BACKDOOR SatansBackdoor.2.0.Beta || arachnids,316
@@ -372,7 +372,7 @@
 489 || INFO FTP no password || arachnids,322
 490 || INFO battle-mail traffic
 491 || INFO FTP Bad login
-492 || INFO TELNET Bad Login
+492 || INFO TELNET login failed
 493 || INFO psyBNC access
 494 || ATTACK-RESPONSES command completed || bugtraq,1806
 495 || ATTACK-RESPONSES command error
@@ -592,9 +592,9 @@
 713 || TELNET livingston DOS || arachnids,370 || bugtraq,2225 || cve,1999-0218
 714 || TELNET resolv_host_conf || arachnids,369 || bugtraq,2181 || cve,2001-0170
 715 || TELNET Attempted SU from wrong group
-716 || TELNET access || arachnids,08 || cve,1999-0619 || nessus,10280
+716 || INFO TELNET access || arachnids,08 || cve,1999-0619 || nessus,10280
 717 || TELNET not on console || arachnids,365
-718 || TELNET login incorrect || arachnids,127
+718 || INFO TELNET login incorrect || arachnids,127
 719 || TELNET root login
 720 || Virus - SnowWhite Trojan Incoming
 721 || VIRUS OUTBOUND bad file attachment
@@ -708,7 +708,7 @@
 834 || WEB-CGI rwwwshell.pl access || url,www.itsecurity.com/papers/p37.htm
 835 || WEB-CGI test-cgi access || arachnids,218 || bugtraq,2003 || cve,1999-0070 || nessus,10282
 836 || WEB-CGI textcounter.pl access || bugtraq,2265 || cve,1999-1479 || nessus,11451
-837 || WEB-CGI uploader.exe access || cve,1999-0177 || nessus,10291
+837 || WEB-CGI uploader.exe access || bugtraq,1611 || cve,1999-0177 || cve,2000-0769 || nessus,10291
 838 || WEB-CGI webgais access || arachnids,472 || bugtraq,2058 || cve,1999-0176 || nessus,10300
 839 || WEB-CGI finger access || arachnids,221 || cve,1999-0612 || nessus,10071
 840 || WEB-CGI perlshop.cgi access || cve,1999-1374
@@ -1069,7 +1069,7 @@
 1206 || WEB-CGI cachemgr.cgi access || bugtraq,2059 || cve,1999-0710 || nessus,10034
 1207 || WEB-MISC htgrep access || cve,2000-0832
 1208 || WEB-CGI responder.cgi access || bugtraq,3155
-1209 || WEB-MISC .nsconfig access
+1209 || WEB-MISC .nsconfig access || url,www.osvdb.org/5709
 1211 || WEB-CGI web-map.cgi access
 1212 || WEB-MISC Admin_files access
 1213 || WEB-MISC backup access
@@ -1332,7 +1332,7 @@
 1482 || WEB-CGI view_source access || bugtraq,2251 || cve,1999-0174 || nessus,10294
 1483 || WEB-CGI ustorekeeper.pl access || cve,2001-0466 || nessus,10646
 1484 || WEB-IIS /isapi/tstisapi.dll access || bugtraq,2381 || cve,2001-0302
-1485 || WEB-IIS mkilog.exe access || nessus,10359
+1485 || WEB-IIS mkilog.exe access || nessus,10359 || url,www.osvdb.org/274
 1486 || WEB-IIS ctss.idc access || nessus,10359
 1487 || WEB-IIS /iisadmpwd/aexp2.htr access || bugtraq,2110 || bugtraq,4236 || cve,1999-0407 || cve,2002-0421 || nessus,10371
 1488 || WEB-CGI store.cgi directory traversal attempt || bugtraq,2385 || cve,2001-0305 || nessus,10639
@@ -1397,7 +1397,7 @@
 1547 || WEB-CGI csSearch.cgi arbitrary command execution attempt || bugtraq,4368 || cve,2002-0495 || nessus,10924
 1548 || WEB-CGI csSearch.cgi access || bugtraq,4368 || cve,2002-0495 || nessus,10924
 1549 || SMTP HELO overflow attempt || bugtraq,7726 || bugtraq,895 || cve,2000-0042 || nessus,10324 || nessus,11674
-1550 || SMTP ETRN overflow attempt || bugtraq,1297 || cve,2000-0490 || nessus,10438
+1550 || SMTP ETRN overflow attempt || bugtraq,1297 || bugtraq,7515 || cve,2000-0490 || nessus,10438
 1551 || WEB-MISC /CVS/Entries access || nessus,10922 || nessus,11032
 1552 || WEB-MISC cvsweb version access || cve,2000-0670
 1553 || WEB-CGI /cart/cart.cgi access || bugtraq,1115 || cve,2000-0252
@@ -1694,7 +1694,7 @@
 1862 || WEB-CGI mrtg.cgi directory traversal attempt || bugtraq,4017 || cve,2002-0232 || nessus,11001
 1864 || FTP SITE NEWER attempt || cve,1999-0880 || nessus,10319
 1865 || WEB-CGI webdist.cgi arbitrary command attempt || bugtraq,374 || cve,1999-0039 || nessus,10299
-1866 || POP3 USER overflow attempt || bugtraq,789 || cve,1999-0494 || nessus,10311
+1866 || POP3 USER overflow attempt || bugtraq,11256 || bugtraq,789 || cve,1999-0494 || nessus,10311
 1867 || MISC xdmcp info query || nessus,10891
 1868 || WEB-CGI story.pl arbitrary file read attempt || bugtraq,3028 || cve,2001-0804 || nessus,10817
 1869 || WEB-CGI story.pl access || bugtraq,3028 || cve,2001-0804 || nessus,10817
@@ -1747,7 +1747,7 @@
 1916 || RPC STATD TCP monitor mon_name format string exploit attempt || bugtraq,1480 || cve,2000-0666
 1917 || SCAN UPnP service discover attempt
 1918 || SCAN SolarWinds IP scan attempt
-1919 || FTP CWD overflow attempt || bugtraq,1227 || bugtraq,1690 || bugtraq,6869 || bugtraq,7251 || bugtraq,7950 || cve,1999-0219 || cve,1999-1058 || cve,1999-1510 || cve,2000-1035 || cve,2000-1194 || cve,2001-0781 || cve,2002-0126 || cve,2002-0405
+1919 || FTP CWD overflow attempt || bugtraq,11069 || bugtraq,1227 || bugtraq,1690 || bugtraq,6869 || bugtraq,7251 || bugtraq,7950 || cve,1999-0219 || cve,1999-1058 || cve,1999-1510 || cve,2000-1035 || cve,2000-1194 || cve,2001-0781 || cve,2002-0126 || cve,2002-0405
 1920 || FTP SITE NEWER overflow attempt || bugtraq,229 || cve,1999-0800
 1921 || FTP SITE ZIPCHK overflow attempt || cve,2000-0040
 1922 || RPC portmap proxy attempt TCP
@@ -2168,15 +2168,15 @@
 2341 || WEB-PHP DCP-Portal remote file include attempt || bugtraq,6525
 2342 || WEB-PHP DCP-Portal remote file include attempt || bugtraq,6525
 2343 || FTP STOR overflow attempt || bugtraq,8668 || cve,2000-0133
-2344 || FTP XCWD overflow attempt || bugtraq,8704
+2344 || FTP XCWD overflow attempt || bugtraq,11542 || bugtraq,8704
 2345 || WEB-PHP PhpGedView search.php access || bugtraq,9369 || cve,2004-0032
 2346 || WEB-PHP myPHPNuke chatheader.php access || bugtraq,6544
 2347 || WEB-PHP myPHPNuke partner.php access || bugtraq,6544
 2348 || NETBIOS SMB-DS DCERPC print spool bind attempt
 2349 || NETBIOS SMB-DS DCERPC enumerate printers request attempt
 2350 || NETBIOS DCERPC ISystemActivator bind accept || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
-2351 || NETBIOS DCERPC ISystemActivator path overflow attempt little endian || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
-2352 || NETBIOS DCERPC ISystemActivator path overflow attempt big endian || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+2351 || NETBIOS DCERPC ISystemActivator path overflow attempt little endian unicode || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+2352 || NETBIOS DCERPC ISystemActivator path overflow attempt big endian unicode || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
 2353 || WEB-PHP IdeaBox cord.php file include || bugtraq,7488
 2354 || WEB-PHP IdeaBox notification.php file include || bugtraq,7488
 2355 || WEB-PHP Invision Board emailer.php file include || bugtraq,7204
@@ -2206,8 +2206,8 @@
 2379 || EXPLOIT ISAKMP forth payload certificate request length overflow attempt || bugtraq,9582 || cve,2004-0040
 2380 || EXPLOIT ISAKMP fifth payload certificate request length overflow attempt || bugtraq,9582 || cve,2004-0040
 2381 || WEB-MISC schema overflow attempt || bugtraq,9581 || cve,2004-0039 || nessus,12084
-2382 || NETBIOS SMB DCERPC NTLMSSP asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
-2383 || NETBIOS SMB-DS DCERPC NTLMSSP asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+2382 || NETBIOS SMB Session Setup NTMLSSP asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+2383 || NETBIOS SMB-DS Session Setup NTMLSSP asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
 2384 || NETBIOS SMB NTLMSSP invalid mechlistMIC attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12054 || nessus,12065
 2385 || NETBIOS SMB-DS DCERPC NTLMSSP invalid mechlistMIC attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12054 || nessus,12065
 2386 || WEB-IIS NTLM ASN.1 vulnerability scan attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12055 || nessus,12065
@@ -2248,14 +2248,14 @@
 2421 || MULTIMEDIA realplayer .smi playlist download attempt
 2422 || MULTIMEDIA realplayer .rt playlist download attempt
 2423 || MULTIMEDIA realplayer .rp playlist download attempt
-2424 || NNTP sendsys overflow attempt || bugtraq,9382 || cve,2004-00045
-2425 || NNTP senduuname overflow attempt || bugtraq,9382 || cve,2004-00045
-2426 || NNTP version overflow attempt || bugtraq,9382 || cve,2004-00045
-2427 || NNTP checkgroups overflow attempt || bugtraq,9382 || cve,2004-00045
-2428 || NNTP ihave overflow attempt || bugtraq,9382 || cve,2004-00045
-2429 || NNTP sendme overflow attempt || bugtraq,9382 || cve,2004-00045
-2430 || NNTP newgroup overflow attempt || bugtraq,9382 || cve,2004-00045
-2431 || NNTP rmgroup overflow attempt || bugtraq,9382 || cve,2004-00045
+2424 || NNTP sendsys overflow attempt || bugtraq,9382 || cve,2004-0045
+2425 || NNTP senduuname overflow attempt || bugtraq,9382 || cve,2004-0045
+2426 || NNTP version overflow attempt || bugtraq,9382 || cve,2004-0045
+2427 || NNTP checkgroups overflow attempt || bugtraq,9382 || cve,2004-0045
+2428 || NNTP ihave overflow attempt || bugtraq,9382 || cve,2004-0045
+2429 || NNTP sendme overflow attempt || bugtraq,9382 || cve,2004-0045
+2430 || NNTP newgroup overflow attempt || bugtraq,9382 || cve,2004-0045
+2431 || NNTP rmgroup overflow attempt || bugtraq,9382 || cve,2004-0045
 2432 || NNTP article post without path attempt
 2433 || WEB-CGI MDaemon form2raw.cgi overflow attempt || bugtraq,9317 || url,secunia.com/advisories/10512/
 2434 || WEB-CGI MDaemon form2raw.cgi access || bugtraq,9317 || url,secunia.com/advisories/10512/
@@ -2270,7 +2270,7 @@
 2443 || EXPLOIT ICQ SRV_MULTI/SRV_META_USER first name overflow attempt || url,www.eeye.com/html/Research/Advisories/AD20040318.html
 2444 || EXPLOIT ICQ SRV_MULTI/SRV_META_USER first name overflow attempt || url,www.eeye.com/html/Research/Advisories/AD20040318.html
 2445 || EXPLOIT ICQ SRV_MULTI/SRV_META_USER last name overflow attempt || url,www.eeye.com/html/Research/Advisories/AD20040318.html
-2446 || EXPLOIT ICQ SRV_MULTI/SRV_META_USER email overflow attempt || url,www.eeye.com/html/Research/Advisories/AD20040318.html
+2446 || EXPLOIT ICQ SRV_MULTI/SRV_META_USER overflow attempt || cve,2004-0362 || url,www.eeye.com/html/Research/Advisories/AD20040318.html
 2447 || WEB-MISC ServletManager access || bugtraq,3697 || cve,2001-1195 || nessus,12122
 2448 || WEB-MISC setinfo.hts access || bugtraq,9973 || nessus,12120
 2449 || FTP ALLO overflow attempt || bugtraq,9953
@@ -2414,7 +2414,7 @@
 2587 || P2P eDonkey server response || url,www.emule-project.net
 2588 || WEB-PHP TUTOS path disclosure attempt || bugtraq,10129 || url,www.securiteam.com/unixfocus/5FP0J15CKE.html
 2589 || WEB-CLIENT Content-Disposition CLSID command attempt || bugtraq,9510 || cve,2004-0420 || url,www.microsoft.com/technet/security/bulletin/ms04-024.mspx
-2590 || SMTP MAIL FROM overflow attempt || bugtraq,10290 || cve,2004-0399 || url,www.guninski.com/exim1.html
+2590 || SMTP MAIL FROM overflow attempt || bugtraq,10290 || bugtraq,7506 || cve,2004-0399 || url,www.guninski.com/exim1.html
 2591 || SMTP From command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
 2592 || SMTP ReplyTo command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
 2593 || SMTP Sender command overflow attempt || bugtraq,10291 || cve,2004-0400 || url,www.guninski.com/exim1.html
@@ -2823,8 +2823,13 @@
 2997 || NETBIOS SMB-DS InitiateSystemShutdown little endian andx attempt
 2998 || NETBIOS SMB-DS InitiateSystemShutdown unicode andx attempt
 2999 || NETBIOS SMB-DS InitiateSystemShutdown unicode little endian andx attempt
+3000 || NETBIOS SMB Session Setup NTMLSSP unicode asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+3001 || NETBIOS SMB Session Setup NTMLSSP andx asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+3002 || NETBIOS SMB Session Setup NTMLSSP unicode andx asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+3003 || NETBIOS SMB-DS Session Setup NTMLSSP unicode asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+3004 || NETBIOS SMB-DS Session Setup NTMLSSP andx asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
+3005 || NETBIOS SMB-DS Session Setup NTMLSSP unicode andx asn1 overflow attempt || bugtraq,9633 || bugtraq,9635 || cve,2003-0818 || nessus,12052 || nessus,12065
 3006 || EXPLOIT Volition Freespace 2 buffer overflow attempt || bugtraq,9785
-3007 || WEB-IIS Hit-Highlighting arbitrary file access attempt || url,www.microsoft.com/technet/security/bulletin/ms00-006.mspx || cve,2000-0097 || bugtraq,950
 3007 || IMAP delete overflow attempt || bugtraq,11675
 3008 || IMAP delete literal overflow attempt || bugtraq,11675
 3009 || BACKDOOR NetBus Pro 2.0 connection request
@@ -2835,46 +2840,46 @@
 3014 || BACKDOOR Asylum 0.1 connection established
 3015 || BACKDOOR Insane Network 4.0 connection established
 3016 || BACKDOOR Insane Network 4.0 connection established port 63536
-3017 || EXPLOIT WINS overflow attempt || url,www.immunitysec.com/downloads/instantanea.pdf
-3018 || NETBIOS SMB NT Trans NT CREATE oversized Security Descriptor attempt
-3019 || NETBIOS SMB NT Trans NT CREATE unicode oversized Security Descriptor attempt
-3020 || NETBIOS SMB NT Trans NT CREATE andx oversized Security Descriptor attempt
-3021 || NETBIOS SMB NT Trans NT CREATE unicode andx oversized Security Descriptor attempt
-3022 || NETBIOS SMB-DS NT Trans NT CREATE oversized Security Descriptor attempt
-3023 || NETBIOS SMB-DS NT Trans NT CREATE unicode oversized Security Descriptor attempt
-3024 || NETBIOS SMB-DS NT Trans NT CREATE andx oversized Security Descriptor attempt
-3025 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx oversized Security Descriptor attempt
-3026 || NETBIOS SMB NT Trans NT CREATE SACL overflow attempt
-3027 || NETBIOS SMB NT Trans NT CREATE unicode SACL overflow attempt
-3028 || NETBIOS SMB NT Trans NT CREATE andx SACL overflow attempt
-3029 || NETBIOS SMB NT Trans NT CREATE unicode andx SACL overflow attempt
-3030 || NETBIOS SMB-DS NT Trans NT CREATE SACL overflow attempt
-3031 || NETBIOS SMB-DS NT Trans NT CREATE unicode SACL overflow attempt
-3032 || NETBIOS SMB-DS NT Trans NT CREATE andx SACL overflow attempt
-3033 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx SACL overflow attempt
-3034 || NETBIOS SMB NT Trans NT CREATE DACL overflow attempt
-3035 || NETBIOS SMB NT Trans NT CREATE unicode DACL overflow attempt
-3036 || NETBIOS SMB NT Trans NT CREATE andx DACL overflow attempt
-3037 || NETBIOS SMB NT Trans NT CREATE unicode andx DACL overflow attempt
-3038 || NETBIOS SMB-DS NT Trans NT CREATE DACL overflow attempt
-3039 || NETBIOS SMB-DS NT Trans NT CREATE unicode DACL overflow attempt
-3040 || NETBIOS SMB-DS NT Trans NT CREATE andx DACL overflow attempt
-3041 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx DACL overflow attempt
+3017 || EXPLOIT WINS overflow attempt || bugtraq,11763 || cve,2004-1080 || url,www.immunitysec.com/downloads/instantanea.pdf || url,www.microsoft.com/technet/security/bulletin/MS04-045.mspx
+3018 || NETBIOS SMB NT Trans NT CREATE oversized Security Descriptor attempt || cve,2004-1154
+3019 || NETBIOS SMB NT Trans NT CREATE andx oversized Security Descriptor attempt || cve,2004-1154
+3020 || NETBIOS SMB NT Trans NT CREATE unicode oversized Security Descriptor attempt || cve,2004-1154
+3021 || NETBIOS SMB NT Trans NT CREATE unicode andx oversized Security Descriptor attempt || cve,2004-1154
+3022 || NETBIOS SMB-DS NT Trans NT CREATE oversized Security Descriptor attempt || cve,2004-1154
+3023 || NETBIOS SMB-DS NT Trans NT CREATE andx oversized Security Descriptor attempt || cve,2004-1154
+3024 || NETBIOS SMB-DS NT Trans NT CREATE unicode oversized Security Descriptor attempt || cve,2004-1154
+3025 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx oversized Security Descriptor attempt || cve,2004-1154
+3026 || NETBIOS SMB NT Trans NT CREATE SACL overflow attempt || cve,2004-1154
+3027 || NETBIOS SMB NT Trans NT CREATE andx SACL overflow attempt || cve,2004-1154
+3028 || NETBIOS SMB NT Trans NT CREATE unicode SACL overflow attempt || cve,2004-1154
+3029 || NETBIOS SMB NT Trans NT CREATE unicode andx SACL overflow attempt || cve,2004-1154
+3030 || NETBIOS SMB-DS NT Trans NT CREATE SACL overflow attempt || cve,2004-1154
+3031 || NETBIOS SMB-DS NT Trans NT CREATE andx SACL overflow attempt || cve,2004-1154
+3032 || NETBIOS SMB-DS NT Trans NT CREATE unicode SACL overflow attempt || cve,2004-1154
+3033 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx SACL overflow attempt || cve,2004-1154
+3034 || NETBIOS SMB NT Trans NT CREATE DACL overflow attempt || cve,2004-1154
+3035 || NETBIOS SMB NT Trans NT CREATE andx DACL overflow attempt || cve,2004-1154
+3036 || NETBIOS SMB NT Trans NT CREATE unicode DACL overflow attempt || cve,2004-1154
+3037 || NETBIOS SMB NT Trans NT CREATE unicode andx DACL overflow attempt || cve,2004-1154
+3038 || NETBIOS SMB-DS NT Trans NT CREATE DACL overflow attempt || cve,2004-1154
+3039 || NETBIOS SMB-DS NT Trans NT CREATE andx DACL overflow attempt || cve,2004-1154
+3040 || NETBIOS SMB-DS NT Trans NT CREATE unicode DACL overflow attempt || cve,2004-1154
+3041 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx DACL overflow attempt || cve,2004-1154
 3042 || NETBIOS SMB NT Trans NT CREATE invalid SACL ace size dos attempt
-3043 || NETBIOS SMB NT Trans NT CREATE unicode invalid SACL ace size dos attempt
-3044 || NETBIOS SMB NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3043 || NETBIOS SMB NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3044 || NETBIOS SMB NT Trans NT CREATE unicode invalid SACL ace size dos attempt
 3045 || NETBIOS SMB NT Trans NT CREATE unicode andx invalid SACL ace size dos attempt
 3046 || NETBIOS SMB-DS NT Trans NT CREATE invalid SACL ace size dos attempt
-3047 || NETBIOS SMB-DS NT Trans NT CREATE unicode invalid SACL ace size dos attempt
-3048 || NETBIOS SMB-DS NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3047 || NETBIOS SMB-DS NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3048 || NETBIOS SMB-DS NT Trans NT CREATE unicode invalid SACL ace size dos attempt
 3049 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx invalid SACL ace size dos attempt
 3050 || NETBIOS SMB NT Trans NT CREATE invalid SACL ace size dos attempt
-3051 || NETBIOS SMB NT Trans NT CREATE unicode invalid SACL ace size dos attempt
-3052 || NETBIOS SMB NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3051 || NETBIOS SMB NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3052 || NETBIOS SMB NT Trans NT CREATE unicode invalid SACL ace size dos attempt
 3053 || NETBIOS SMB NT Trans NT CREATE unicode andx invalid SACL ace size dos attempt
 3054 || NETBIOS SMB-DS NT Trans NT CREATE invalid SACL ace size dos attempt
-3055 || NETBIOS SMB-DS NT Trans NT CREATE unicode invalid SACL ace size dos attempt
-3056 || NETBIOS SMB-DS NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3055 || NETBIOS SMB-DS NT Trans NT CREATE andx invalid SACL ace size dos attempt
+3056 || NETBIOS SMB-DS NT Trans NT CREATE unicode invalid SACL ace size dos attempt
 3057 || NETBIOS SMB-DS NT Trans NT CREATE unicode andx invalid SACL ace size dos attempt
 3058 || IMAP copy literal overflow attempt || bugtraq,1110
 3059 || WEB-MISC TLS1 Client_Hello via SSLv2 handshake request
@@ -2896,14 +2901,283 @@
 3075 || IMAP unsubscribe literal overflow attempt || bugtraq,11775
 3076 || IMAP unsubscribe overflow attempt || bugtraq,11775
 3077 || FTP RNFR overflow attempt
-3078 || NNTP SEARCH pattern overflow attempt || url,www.microsoft.com/technet/security/bulletin/MS04-036.mspx || cve,2004-0574
-3079 || WEB-CLIENT Microsoft ANI file parsing overflow; flow:established,from_server; content: || cve,CAN-2004-1049
+3078 || NNTP SEARCH pattern overflow attempt || cve,2004-0574 || url,www.microsoft.com/technet/security/bulletin/MS04-036.mspx
+3079 || WEB-CLIENT Microsoft ANI file parsing overflow || cve,CAN-2004-1049
 3080 || MISC Unreal Tournament secure overflow attempt || bugtraq,10570 || cve,CAN-2004-0608
 3081 || BACKDOOR Y3KRAT 1.5 Connect
 3082 || BACKDOOR Y3KRAT 1.5 Connect Client Response
 3083 || BACKDOOR Y3KRAT 1.5 Connection confirmation
-3084 || EXPLOIT Veritas backup overflow attempt || cve,2004-1172 || bugtraq,11974
+3084 || EXPLOIT Veritas backup overflow attempt || bugtraq,11974 || cve,2004-1172
 3085 || EXPLOIT AIM goaway message buffer overflow attempt || bugtraq,10889 || cve,2004-0636
 3086 || WEB-MISC 3Com 3CRADSL72 ADSL 11g Wireless Router app_sta.stm access attempt || bugtraq,11408
-3087 || WEB-IIS w3who.dll buffer overflow attempt || cve,2004-1134 || bugtraq,11820
+3087 || WEB-IIS w3who.dll buffer overflow attempt || bugtraq,11820 || cve,2004-1134
 3088 || WEB-CLIENT winamp .cda file name overflow attempt || bugtraq,11730
+3089 || DOS squid WCCP I_SEE_YOU message overflow attempt || bugtraq,12275 || cve,CAN-2005-0095
+3090 || NETBIOS SMB llsrpc create tree attempt
+3091 || NETBIOS SMB llsrpc unicode create tree attempt
+3092 || NETBIOS SMB llsrpc andx create tree attempt
+3093 || NETBIOS SMB llsrpc unicode andx create tree attempt
+3094 || NETBIOS SMB-DS llsrpc create tree attempt
+3095 || NETBIOS SMB-DS llsrpc unicode create tree attempt
+3096 || NETBIOS SMB-DS llsrpc andx create tree attempt
+3097 || NETBIOS SMB-DS llsrpc unicode andx create tree attempt
+3098 || NETBIOS SMB llsrpc bind attempt
+3099 || NETBIOS SMB llsrpc little endian bind attempt
+3100 || NETBIOS SMB llsrpc unicode bind attempt
+3101 || NETBIOS SMB llsrpc unicode little endian bind attempt
+3102 || NETBIOS SMB llsrpc andx bind attempt
+3103 || NETBIOS SMB llsrpc little endian andx bind attempt
+3104 || NETBIOS SMB llsrpc unicode andx bind attempt
+3105 || NETBIOS SMB llsrpc unicode little endian andx bind attempt
+3106 || NETBIOS SMB-DS llsrpc bind attempt
+3107 || NETBIOS SMB-DS llsrpc little endian bind attempt
+3108 || NETBIOS SMB-DS llsrpc unicode bind attempt
+3109 || NETBIOS SMB-DS llsrpc unicode little endian bind attempt
+3110 || NETBIOS SMB-DS llsrpc andx bind attempt
+3111 || NETBIOS SMB-DS llsrpc little endian andx bind attempt
+3112 || NETBIOS SMB-DS llsrpc unicode andx bind attempt
+3113 || NETBIOS SMB-DS llsrpc unicode little endian andx bind attempt
+3114 || NETBIOS SMB llsrconnect overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3115 || NETBIOS SMB llsrconnect little endian overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3116 || NETBIOS SMB llsrconnect unicode overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3117 || NETBIOS SMB llsrconnect unicode little endian overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3118 || NETBIOS SMB llsrconnect andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3119 || NETBIOS SMB llsrconnect little endian andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3120 || NETBIOS SMB llsrconnect unicode andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3121 || NETBIOS SMB llsrconnect unicode little endian andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3122 || NETBIOS SMB-DS llsrconnect overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3123 || NETBIOS SMB-DS llsrconnect little endian overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3124 || NETBIOS SMB-DS llsrconnect unicode overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3125 || NETBIOS SMB-DS llsrconnect unicode little endian overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3126 || NETBIOS SMB-DS llsrconnect andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3127 || NETBIOS SMB-DS llsrconnect little endian andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3128 || NETBIOS SMB-DS llsrconnect unicode andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3129 || NETBIOS SMB-DS llsrconnect unicode little endian andx overflow attempt || url,www.microsoft.com/technet/security/bulletin/ms05-010.mspx
+3130 || EXPLOIT MSN Messenger png overflow || bugtraq,10872 || cve,2004-0957 || url,www.microsoft.com/technet/security/bulletin/MS05-009.mspx
+3131 || WEB-CGI mailman directory traversal attempt || cve,2005-0202
+3132 || WEB-CLIENT PNG large image width download attempt || bugtraq,11523 || cve,2004-0990 || cve,2004-1244 || url,www.microsoft.com/technet/security/bulletin/MS05-009.mspx
+3133 || WEB-CLIENT PNG large image height download attempt || bugtraq,11481 || bugtraq,11523 || cve,2004-0599 || cve,2004-0990 || cve,2004-1244 || url,www.microsoft.com/technet/security/bulletin/MS05-009.mspx
+3134 || WEB-CLIENT PNG large colour depth download attempt || bugtraq,11523 || cve,2004-0990 || cve,2004-1244 || url,www.microsoft.com/technet/security/bulletin/MS05-009.mspx
+3135 || NETBIOS SMB Trans2 QUERY_FILE_INFO attempt
+3136 || NETBIOS SMB Trans2 QUERY_FILE_INFO andx attempt
+3137 || NETBIOS SMB-DS Trans2 QUERY_FILE_INFO attempt
+3138 || NETBIOS SMB-DS Trans2 QUERY_FILE_INFO andx attempt
+3139 || NETBIOS SMB Trans2 FIND_FIRST2 attempt
+3140 || NETBIOS SMB Trans2 FIND_FIRST2 andx attempt
+3141 || NETBIOS SMB-DS Trans2 FIND_FIRST2 attempt
+3142 || NETBIOS SMB-DS Trans2 FIND_FIRST2 andx attempt
+3143 || NETBIOS SMB Trans2 FIND_FIRST2 response overflow attempt || cve,2005-0045 || url,www.microsoft.com/technet/security/Bulletin/MS05-011.mspx
+3144 || NETBIOS SMB Trans2 FIND_FIRST2 response andx overflow attempt || cve,2005-0045 || url,www.microsoft.com/technet/security/Bulletin/MS05-011.mspx
+3145 || NETBIOS SMB-DS Trans2 FIND_FIRST2 response overflow attempt || cve,2005-0045 || url,www.microsoft.com/technet/security/Bulletin/MS05-011.mspx
+3146 || NETBIOS SMB-DS Trans2 FIND_FIRST2 response andx overflow attempt || cve,2005-0045 || url,www.microsoft.com/technet/security/Bulletin/MS05-011.mspx
+3147 || TELNET login buffer overflow attempt || bugtraq,3681 || cve,2001-0797
+3148 || WEB-CLIENT winhelp clsid attempt || bugtraq,4857 || cve,2002-0823 || url,www.ngssoftware.com/advisories/ms-winhlp.txt
+3149 || WEB-CLIENT object type overflow attempt || cve,2003-0344
+3150 || WEB-IIS SQLXML content type overflow || cve,2002-0186 || url,www.microsoft.com/technet/security/bulletin/MS02-030.mspx || url,www.westpoint.ltd.uk/advisories/wp-02-0007.txt
+3151 || FINGER / execution attempt || cve,1999-0612 || cve,2000-0915
+3152 || MS-SQL sa brute force login attempt || bugtraq,4797 || cve,2000-1209 || nessus,10673
+3153 || DNS TCP inverse query overflow || bugtraq,134 || cve,1999-0009
+3154 || DNS UDP inverse query overflow || bugtraq,134 || cve,1999-0009
+3155 || BACKDOOR BackOrifice 2000 Inbound Traffic
+3156 || NETBIOS DCERPC msqueue bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3157 || NETBIOS DCERPC msqueue little endian bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3158 || NETBIOS DCERPC CoGetInstanceFromFile little endian overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3159 || NETBIOS DCERPC CoGetInstanceFromFile overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3160 || NETBIOS SMB msqueue bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3161 || NETBIOS SMB msqueue little endian bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3162 || NETBIOS SMB msqueue unicode bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3163 || NETBIOS SMB msqueue unicode little endian bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3164 || NETBIOS SMB msqueue andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3165 || NETBIOS SMB msqueue little endian andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3166 || NETBIOS SMB msqueue unicode andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3167 || NETBIOS SMB msqueue unicode little endian andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3168 || NETBIOS SMB-DS msqueue bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3169 || NETBIOS SMB-DS msqueue little endian bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3170 || NETBIOS SMB-DS msqueue unicode bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3171 || NETBIOS SMB-DS msqueue unicode little endian bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3172 || NETBIOS SMB-DS msqueue andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3173 || NETBIOS SMB-DS msqueue little endian andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3174 || NETBIOS SMB-DS msqueue unicode andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3175 || NETBIOS SMB-DS msqueue unicode little endian andx bind attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3176 || NETBIOS SMB CoGetInstanceFromFile overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3177 || NETBIOS SMB CoGetInstanceFromFile little endian overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3178 || NETBIOS SMB CoGetInstanceFromFile unicode overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3179 || NETBIOS SMB CoGetInstanceFromFile unicode little endian overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3180 || NETBIOS SMB CoGetInstanceFromFile andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3181 || NETBIOS SMB CoGetInstanceFromFile little endian andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3182 || NETBIOS SMB CoGetInstanceFromFile unicode andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3183 || NETBIOS SMB CoGetInstanceFromFile unicode little endian andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3184 || NETBIOS SMB-DS CoGetInstanceFromFile overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3185 || NETBIOS SMB-DS CoGetInstanceFromFile little endian overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3186 || NETBIOS SMB-DS CoGetInstanceFromFile unicode overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3187 || NETBIOS SMB-DS CoGetInstanceFromFile unicode little endian overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3188 || NETBIOS SMB-DS CoGetInstanceFromFile andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3189 || NETBIOS SMB-DS CoGetInstanceFromFile little endian andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3190 || NETBIOS SMB-DS CoGetInstanceFromFile unicode andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3191 || NETBIOS SMB-DS CoGetInstanceFromFile unicode little endian andx overflow attempt || cve,2003-0995 || url,www.eeye.com/html/Research/Advisories/AD20030910.html || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3192 || WEB-CLIENT Windows Media Player directory traversal via Content-Disposition attempt || cve,2003-0228
+3193 || WEB-IIS .cmd executable file parsing attack || bugtraq,1912 || cve,CVE-2000-0886
+3194 || WEB-IIS .bat executable file parsing attack || bugtraq,1912 || cve,CVE-2000-0886
+3195 || NETBIOS name query overflow attempt TCP || bugtraq,9624 || cve,2003-0825
+3196 || NETBIOS name query overflow attempt UDP || bugtraq,9624 || cve,2003-0825
+3197 || NETBIOS DCERPC ISystemActivator path overflow attempt little endian || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3198 || NETBIOS DCERPC ISystemActivator path overflow attempt big endian || bugtraq,8205 || cve,2003-0352 || nessus,11808 || url,www.microsoft.com/technet/security/bulletin/MS03-026.mspx
+3199 || EXPLOIT WINS name query overflow attempt TCP || bugtraq,9624 || cve,2003-0825
+3200 || EXPLOIT WINS name query overflow attempt UDP || bugtraq,9624 || cve,2003-0825
+3201 || WEB-IIS httpodbc.dll access - nimda || bugtraq,2708 || cve,2001-0333
+3202 || NETBIOS SMB winreg bind attempt
+3203 || NETBIOS SMB winreg little endian bind attempt
+3204 || NETBIOS SMB winreg unicode bind attempt
+3205 || NETBIOS SMB winreg unicode little endian bind attempt
+3206 || NETBIOS SMB winreg andx bind attempt
+3207 || NETBIOS SMB winreg little endian andx bind attempt
+3208 || NETBIOS SMB winreg unicode andx bind attempt
+3209 || NETBIOS SMB winreg unicode little endian andx bind attempt
+3210 || NETBIOS SMB-DS winreg bind attempt
+3211 || NETBIOS SMB-DS winreg little endian bind attempt
+3212 || NETBIOS SMB-DS winreg unicode bind attempt
+3213 || NETBIOS SMB-DS winreg unicode little endian bind attempt
+3214 || NETBIOS SMB-DS winreg andx bind attempt
+3215 || NETBIOS SMB-DS winreg little endian andx bind attempt
+3216 || NETBIOS SMB-DS winreg unicode andx bind attempt
+3217 || NETBIOS SMB-DS winreg unicode little endian andx bind attempt
+3218 || NETBIOS SMB OpenKey overflow attempt || bugtraq,1331 || cve,2000-0377
+3219 || NETBIOS SMB OpenKey little endian overflow attempt || bugtraq,1331 || cve,2000-0377
+3220 || NETBIOS SMB OpenKey unicode overflow attempt || bugtraq,1331 || cve,2000-0377
+3221 || NETBIOS SMB OpenKey unicode little endian overflow attempt || bugtraq,1331 || cve,2000-0377
+3222 || NETBIOS SMB OpenKey andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3223 || NETBIOS SMB OpenKey little endian andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3224 || NETBIOS SMB OpenKey unicode andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3225 || NETBIOS SMB OpenKey unicode little endian andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3226 || NETBIOS SMB-DS OpenKey overflow attempt || bugtraq,1331 || cve,2000-0377
+3227 || NETBIOS SMB-DS OpenKey little endian overflow attempt || bugtraq,1331 || cve,2000-0377
+3228 || NETBIOS SMB-DS OpenKey unicode overflow attempt || bugtraq,1331 || cve,2000-0377
+3229 || NETBIOS SMB-DS OpenKey unicode little endian overflow attempt || bugtraq,1331 || cve,2000-0377
+3230 || NETBIOS SMB-DS OpenKey andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3231 || NETBIOS SMB-DS OpenKey little endian andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3232 || NETBIOS SMB-DS OpenKey unicode andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3233 || NETBIOS SMB-DS OpenKey unicode little endian andx overflow attempt || bugtraq,1331 || cve,2000-0377
+3234 || NETBIOS Messenger message little endian overflow attempt || bugtraq,8826 || cve,2003-0717
+3235 || NETBIOS Messenger message overflow attempt || bugtraq,8826 || cve,2003-0717
+3236 || NETBIOS DCERPC irot bind attempt
+3237 || NETBIOS DCERPC irot little endian bind attempt
+3238 || NETBIOS DCERPC IrotIsRunning attempt || bugtraq,6005 || cve,2002-1561
+3239 || NETBIOS DCERPC IrotIsRunning little endian attempt || bugtraq,6005 || cve,2002-1561
+3240 || NETBIOS SMB irot bind attempt
+3241 || NETBIOS SMB irot little endian bind attempt
+3242 || NETBIOS SMB irot unicode bind attempt
+3243 || NETBIOS SMB irot unicode little endian bind attempt
+3244 || NETBIOS SMB irot andx bind attempt
+3245 || NETBIOS SMB irot little endian andx bind attempt
+3246 || NETBIOS SMB irot unicode andx bind attempt
+3247 || NETBIOS SMB irot unicode little endian andx bind attempt
+3248 || NETBIOS SMB-DS irot bind attempt
+3249 || NETBIOS SMB-DS irot little endian bind attempt
+3250 || NETBIOS SMB-DS irot unicode bind attempt
+3251 || NETBIOS SMB-DS irot unicode little endian bind attempt
+3252 || NETBIOS SMB-DS irot andx bind attempt
+3253 || NETBIOS SMB-DS irot little endian andx bind attempt
+3254 || NETBIOS SMB-DS irot unicode andx bind attempt
+3255 || NETBIOS SMB-DS irot unicode little endian andx bind attempt
+3256 || NETBIOS SMB IrotIsRunning attempt || bugtraq,6005 || cve,2002-1561
+3257 || NETBIOS SMB IrotIsRunning little endian attempt || bugtraq,6005 || cve,2002-1561
+3258 || NETBIOS SMB IrotIsRunning unicode attempt || bugtraq,6005 || cve,2002-1561
+3259 || NETBIOS SMB IrotIsRunning unicode little endian attempt || bugtraq,6005 || cve,2002-1561
+3260 || NETBIOS SMB IrotIsRunning andx attempt || bugtraq,6005 || cve,2002-1561
+3261 || NETBIOS SMB IrotIsRunning little endian andx attempt || bugtraq,6005 || cve,2002-1561
+3262 || NETBIOS SMB IrotIsRunning unicode andx attempt || bugtraq,6005 || cve,2002-1561
+3263 || NETBIOS SMB IrotIsRunning unicode little endian andx attempt || bugtraq,6005 || cve,2002-1561
+3264 || NETBIOS SMB-DS IrotIsRunning attempt || bugtraq,6005 || cve,2002-1561
+3265 || NETBIOS SMB-DS IrotIsRunning little endian attempt || bugtraq,6005 || cve,2002-1561
+3266 || NETBIOS SMB-DS IrotIsRunning unicode attempt || bugtraq,6005 || cve,2002-1561
+3267 || NETBIOS SMB-DS IrotIsRunning unicode little endian attempt || bugtraq,6005 || cve,2002-1561
+3268 || NETBIOS SMB-DS IrotIsRunning andx attempt || bugtraq,6005 || cve,2002-1561
+3269 || NETBIOS SMB-DS IrotIsRunning little endian andx attempt || bugtraq,6005 || cve,2002-1561
+3270 || NETBIOS SMB-DS IrotIsRunning unicode andx attempt || bugtraq,6005 || cve,2002-1561
+3271 || NETBIOS SMB-DS IrotIsRunning unicode little endian andx attempt || bugtraq,6005 || cve,2002-1561
+3272 || BACKDOOR mydoom.a backdoor upload/execute attempt
+3273 || MS-SQL sa brute force login unicode attempt || bugtraq,4797 || cve,2000-1209 || nessus,10673
+3274 || TELNET login buffer non-evasive overflow attempt || bugtraq,3681 || cve,2001-0797
+3275 || NETBIOS DCERPC IActivation bind attempt
+3276 || NETBIOS DCERPC IActivation little endian bind attempt
+3377 || NETBIOS SMB IActivation bind attempt
+3378 || NETBIOS SMB IActivation little endian bind attempt
+3379 || NETBIOS SMB IActivation unicode bind attempt
+3380 || NETBIOS SMB IActivation unicode little endian bind attempt
+3381 || NETBIOS SMB IActivation andx bind attempt
+3382 || NETBIOS SMB IActivation little endian andx bind attempt
+3383 || NETBIOS SMB IActivation unicode andx bind attempt
+3384 || NETBIOS SMB IActivation unicode little endian andx bind attempt
+3385 || NETBIOS SMB-DS IActivation bind attempt
+3386 || NETBIOS SMB-DS IActivation little endian bind attempt
+3387 || NETBIOS SMB-DS IActivation unicode bind attempt
+3388 || NETBIOS SMB-DS IActivation unicode little endian bind attempt
+3389 || NETBIOS SMB-DS IActivation andx bind attempt
+3390 || NETBIOS SMB-DS IActivation little endian andx bind attempt
+3391 || NETBIOS SMB-DS IActivation unicode andx bind attempt
+3392 || NETBIOS SMB-DS IActivation unicode little endian andx bind attempt
+3393 || NETBIOS SMB ISystemActivator bind attempt
+3394 || NETBIOS SMB ISystemActivator little endian bind attempt
+3395 || NETBIOS SMB ISystemActivator unicode bind attempt
+3396 || NETBIOS SMB ISystemActivator unicode little endian bind attempt
+3397 || NETBIOS SMB ISystemActivator andx bind attempt
+3398 || NETBIOS SMB ISystemActivator little endian andx bind attempt
+3399 || NETBIOS SMB ISystemActivator unicode andx bind attempt
+3400 || NETBIOS SMB ISystemActivator unicode little endian andx bind attempt
+3401 || NETBIOS SMB-DS ISystemActivator bind attempt
+3402 || NETBIOS SMB-DS ISystemActivator little endian bind attempt
+3403 || NETBIOS SMB-DS ISystemActivator unicode bind attempt
+3404 || NETBIOS SMB-DS ISystemActivator unicode little endian bind attempt
+3405 || NETBIOS SMB-DS ISystemActivator andx bind attempt
+3406 || NETBIOS SMB-DS ISystemActivator little endian andx bind attempt
+3407 || NETBIOS SMB-DS ISystemActivator unicode andx bind attempt
+3408 || NETBIOS SMB-DS ISystemActivator unicode little endian andx bind attempt
+3409 || NETBIOS SMB RemoteActivation attempt
+3410 || NETBIOS SMB RemoteActivation little endian attempt
+3411 || NETBIOS SMB RemoteActivation unicode attempt
+3412 || NETBIOS SMB RemoteActivation unicode little endian attempt
+3413 || NETBIOS SMB RemoteActivation andx attempt
+3414 || NETBIOS SMB RemoteActivation little endian andx attempt
+3415 || NETBIOS SMB RemoteActivation unicode andx attempt
+3416 || NETBIOS SMB RemoteActivation unicode little endian andx attempt
+3417 || NETBIOS SMB-DS RemoteActivation attempt
+3418 || NETBIOS SMB-DS RemoteActivation little endian attempt
+3419 || NETBIOS SMB-DS RemoteActivation unicode attempt
+3420 || NETBIOS SMB-DS RemoteActivation unicode little endian attempt
+3421 || NETBIOS SMB-DS RemoteActivation andx attempt
+3422 || NETBIOS SMB-DS RemoteActivation little endian andx attempt
+3423 || NETBIOS SMB-DS RemoteActivation unicode andx attempt
+3424 || NETBIOS SMB-DS RemoteActivation unicode little endian andx attempt
+3425 || NETBIOS SMB CoGetInstanceFromFile attempt
+3426 || NETBIOS SMB CoGetInstanceFromFile little endian attempt
+3427 || NETBIOS SMB CoGetInstanceFromFile unicode attempt
+3428 || NETBIOS SMB CoGetInstanceFromFile unicode little endian attempt
+3429 || NETBIOS SMB CoGetInstanceFromFile andx attempt
+3430 || NETBIOS SMB CoGetInstanceFromFile little endian andx attempt
+3431 || NETBIOS SMB CoGetInstanceFromFile unicode andx attempt
+3432 || NETBIOS SMB CoGetInstanceFromFile unicode little endian andx attempt
+3433 || NETBIOS SMB-DS CoGetInstanceFromFile attempt
+3434 || NETBIOS SMB-DS CoGetInstanceFromFile little endian attempt
+3435 || NETBIOS SMB-DS CoGetInstanceFromFile unicode attempt
+3436 || NETBIOS SMB-DS CoGetInstanceFromFile unicode little endian attempt
+3437 || NETBIOS SMB-DS CoGetInstanceFromFile andx attempt
+3438 || NETBIOS SMB-DS CoGetInstanceFromFile little endian andx attempt
+3439 || NETBIOS SMB-DS CoGetInstanceFromFile unicode andx attempt
+3440 || NETBIOS SMB-DS CoGetInstanceFromFile unicode little endian andx attempt
+3442 || DOS WIN32 TCP print service denial of service attempt || bugtraq,1082 || cve,2000-0232
+3443 || MS-SQL DNS query with 1 requests
+3444 || MS-SQL DNS query with 2 requests
+3445 || MS-SQL DNS query with 3 requests
+3446 || MS-SQL DNS query with 4 requests
+3447 || MS-SQL DNS query with 5 requests
+3448 || MS-SQL DNS query with 6 requests
+3449 || MS-SQL DNS query with 7 requests
+3450 || MS-SQL DNS query with 8 requests
+3451 || MS-SQL DNS query with 9 requests
+3452 || MS-SQL DNS query with 10 requests
+3453 || MISC Arkeia client backup system info probe || bugtraq,12594
+3454 || MISC Arkeia client backup generic info probe || bugtraq,12594
+3455 || EXPLOIT Bontago Game Server Nickname Buffer Overflow || bugtraq,12603 || url,aluigi.altervista.org/adv/bontagobof-adv.txt
+3456 || MYSQL 4.0 root login attempt
+3457 || EXPLOIT Arkeia backup client type 77 overflow attempt || bugtraq,12594
+3458 || EXPLOIT Arkeia backup client type 84 overflow attempt || bugtraq,12594

@@ -6,12 +6,11 @@ Sid:
 
 --
 Summary:
-
-
+This event is generated when an attempt is made to use ICMP as a
+reconnaisance tool.
 
 --
 Impact:
-
 Can be used as a reconnaissance tool.  Traceroute reveals information
 about the layout of a network.
 

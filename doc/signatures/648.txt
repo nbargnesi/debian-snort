@@ -19,10 +19,10 @@ The NOP allows an attacker to fill an address space with a large
 number of NOPs followed by his or her code of choice.  This allows
 "sledding" into the attackers shellcode.
 
-
 --
 Affected Systems:
- 
+	All x86 based systems
+
 --
 Attack Scenarios:
 If a particular service was written using unsafe functions without
@@ -48,14 +48,12 @@ ability point-and-click can use and wreak havok with.
 
 --
 False Positives:
-None Known
-Many. The x86 NOP can frequently be found in day-to-day traffic,
+The x86 NOP can frequently be found in day-to-day traffic,
 particularly when transfering large files. 
 
 --
 False Negatives:
-None Known
-Few.  There are other techniques to emulate a NOP.  Additionally, if
+There are other techniques to emulate a NOP.  Additionally, if
 the attackers NOP sled is small enough (< 15), this particular attack
 may slip by.  Fortunately, NOP sleds are generally quite large.
 
@@ -74,6 +72,6 @@ Jon Hart <warchild@spoofed.org>
 
 -- 
 Additional References:
-(aleph1's classic article from Phrack?)
+
 
 --
