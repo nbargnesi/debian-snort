@@ -1,3 +1,23 @@
+snort (2.2.0-9) unstable; urgency=low
+
+  * Removed old (obsolete) converstion of PPPENV in /var/tmp in postinst
+    which actually might open up security holes when using dialup access
+    and installing/upgrading the package.
+  * Updated translations:
+    - Japanese, provided by Hideki Yamane (closes: #283128)
+    - French, provided by Christian Perrier (closes: #284559)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 20 Dec 2004 01:35:21 +0100
+
+snort (2.2.0-8) unstable; urgency=low
+
+  * Updated the README.Debian file with proper information on how to setup
+    multiple interfaces and rewrote the Debconf question to specify that
+    it can be used to define multiple interfaces (Closes: #283816) 
+  * Added some additional TODO notes
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed,  1 Dec 2004 17:04:38 +0100
+
 snort (2.2.0-7) unstable; urgency=low
 
   * Make snort-common Arch: all (Closes: #278987) 

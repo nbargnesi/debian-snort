@@ -2,17 +2,27 @@
  SNORT ON MULTIPLE INTERFACES
 ------------------------------
 
-This package of snort is not capable of managing multiple interfaces.
-This feature is planned for later releases of Snort in Debian.
+This package of snort is capable of managing multiple interfaces.  The
+current init.d script is capable of launching more than one snort
+instance. You just need to answer the debconf question "On which
+interface(s) should snort listen on" with a list (separated by spaces
+of interafes you want to use). This actually modifies the value of 
+DEBIAN_SNORT_INTERFACE definition in /etc/snort/snort.debian.conf.
 
-If you want to try with this version of the packages, please use the 
-init.d script provided in /usr/share/doc/snort*/examples/. It's not a
-plug-and-play replacement for the current init.d script, since you need
-to create /etc/snort/snort.$INTERFACE.conf configuration files for reach
-interface you want Snort to listen on. All sensors can use the same rule
-sets so it's easy to update them and all your sensors.
+Afterwards, you need to create different
+/etc/snort/snort.$INTERFACE.conf configuration files (where $INTERFACE
+is your interface names, e.g., eth0 or eth1) for each interface you
+want Snort to listen on. All sensors can use the same rule set so it's
+easy to update them and all your sensors simultaneously. If no
+/etc/snort/snort.$INTERFACE.conf file exists for a given interface,
+then the regular /etc/snort/snort.conf file is used.
 
-Remember: This is work in progress! 
+Notice, however, that the same HOME_NET definition will be used for
+all interfaces (the answer to the "address range snort will listen
+on"). The debconf scripts don't currently support a way to give
+different HOME_NET definitions to different interfaces.
+
+This is still work in progress. Please file bugs to the snort package.
 
 -----------------------------------------------------------------------------
 
@@ -106,3 +116,5 @@ A5. Signature updates are provided by the snort-rules-default package but
    by using 'snort -T' 
 
    See also upstreams Snort FAQ item 3.18
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>, Wed Dec  1 17:01:30 2004

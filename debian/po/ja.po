@@ -14,10 +14,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: snort 2.2.0-2\n"
+"Project-Id-Version: snort 2.2.0-7\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2004-11-13 15:49+0100\n"
-"PO-Revision-Date: 2004-09-18 00:32+0900\n"
+"PO-Revision-Date: 2004-11-26 00:32+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -64,7 +64,7 @@ msgid ""
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
 msgstr ""
-"snort が listen するべきインターフェイス名を入力してください。指定可能なイン"
+"Snort が listen すべきインターフェイス名を入力してください。指定可能なイン"
 "ターフェイスは 'ip link show' を実行すると確認できます。この値は大抵の場合 "
 "'eth0' ですが、これは環境にとても依存するので、ダイヤルアップ接続を利用してい"
 "る場合は 'ppp0' のほうがより適切かもしれません 。"
@@ -81,9 +81,9 @@ msgid ""
 msgstr ""
 "通常、Snort はインターネットからやって来るすべてのトラフィックを受け取るよう"
 "に設定されるので、ここで追加したインターフェイスは大抵 'default route' が存在"
-"するものと同じということに注意してください。'/sbin/ip ro sh' または '/sbin/"
+"するものと同じであるのに注意してください。'/sbin/ip ro sh' または '/sbin/"
 "route -n' を実行し ('default' または '0.0.0.0' を探して)、どのインターフェイ"
-"スを使うかを決めることができます。"
+"スを使うかを決められます。"
 
 #. Type: string
 #. Description
@@ -97,11 +97,11 @@ msgid ""
 "traffic is sent to this interface (either connected to a 'port mirroring/"
 "spanning' port in a switch, to a hub or to a tap)"
 msgstr ""
-"IP を付与していないインターフェイス上にて promiscuous モードで Snort を動作さ"
-"せるのはあまり一般的でなく、これに当てはまるような場合、受信を行いたいネット"
-"ワークに対して物理的に接続されているこのシステム上のインターフェイスを選択"
-"し、後ほど promiscuous モードを有効にしてネットワークトラフィックがこのイン"
-"ターフェイス (スイッチの 'port mirrorin' ポート・'spanning' ポートかリピー"
+"IP を付与していないインターフェイス上で promiscuous モードの Snort を動作させ"
+"るのはあまり一般的ではありません。これに当てはまるような場合、受信を行いたい"
+"ネットワークに対して物理的に接続されているこのシステム上のインターフェイスを"
+"選択し、後ほど promiscuous モードを有効にしてネットワークトラフィックがこのイ"
+"ンターフェイス (スイッチの 'port mirrorin' ポート・'spanning' ポートかリピー"
 "ターハブ、あるいはネットワークタップに接続されています) に流れているのを確認"
 "してください。"
 
@@ -255,7 +255,7 @@ msgstr ""
 #. Description
 #: ../snort.templates:92
 msgid "There is an error in your configuration"
-msgstr ""
+msgstr "設定にエラーがあります"
 
 #. Type: note
 #. Description
@@ -268,6 +268,12 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
+"Snort の設定が正しくないので、そのままだと Snort が起動できなくなります。設定"
+"を見直して修正してください。行わない場合は Snort パッケージのアップグレードが"
+"できなくなるでしょう。どこでエラーが起こっているのかをチェックするには '/usr/"
+"sbin/snort -T -c /etc/snort/snort.conf' を実行してください (異なったインター"
+"フェイスごとに別のファイルを使っているという場合は、他の設定ファイルを指定し"
+"てください)。"
 
 #. Type: string
 #. Description
@@ -456,7 +462,7 @@ msgstr "PostgreSQL サーバのホスト名を入力してください。"
 #. Description
 #: ../snort-common.templates:3
 msgid "Your configuration file is deprecated"
-msgstr ""
+msgstr "無効な設定ファイルです"
 
 #. Type: note
 #. Description
@@ -468,6 +474,10 @@ msgid ""
 "your configuration file with the one provided in this package or fix it "
 "manually by removing deprecated options."
 msgstr ""
+"Snort の設定ファイル (/etc/snort/snort.conf) にて、今回のリリースから使えなく"
+"なった無効なオプションを指定しています。設定ファイルを修正しない限り起動でき"
+"なくなります。設定ファイルをこのパッケージが提供しているものに置換するか、無"
+"効なオプションを手動で削除するかして回避できます。"
 
 #. Type: note
 #. Description
@@ -475,7 +485,7 @@ msgstr ""
 msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
-msgstr ""
+msgstr "設定ファイルで以下の無効なオプションが見つかりました: ${DEP_CONFIG}"
 
 #~ msgid "On which interface Snort should listen? (only one!)"
 #~ msgstr ""

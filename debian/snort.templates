@@ -9,8 +9,8 @@ _Description: When should Snort be started?
 Template: snort/interface
 Type: string
 Default: eth0
-_Description: On which interface should Snort listen?
- Please enter the interface name which snort should listen on. The name
+_Description: On which interface(s) should Snort listen?
+ Please enter the interface(s) name(s) which snort should listen on. The name
  of the available interfaces are provided by running 'ip link show'.
  This value usually is 'eth0', but you might want to vary this depending
  on your environment, if you are using a dialup connection 'ppp0' might
@@ -28,6 +28,10 @@ _Description: On which interface should Snort listen?
  you want to inspect, enable promiscuous mode later on and make sure
  that the network traffic is sent to this interface (either connected
  to a 'port mirroring/spanning' port in a switch, to a hub or to a tap)
+ .
+ You can configure multiple interfaces here, just by adding more than
+ one interface name separated by spaces. Each interface can have its
+ specific configuration.
 
 Template: snort/address_range
 Type: string
@@ -38,6 +42,9 @@ _Description: Please enter the address range that Snort will listen on.
  separated by ',' (comma characters), no spaces allowed!
  .
  If you want you can specify 'any', to not trust any side of the network.
+ .
+ Notice that if you are using multiple interfaces this definition will
+ be used as the HOME_NET definition of all of them.
 
 Template: snort/disable_promiscuous
 Type: boolean

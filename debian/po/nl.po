@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-11-13 15:49+0100\n"
+"POT-Creation-Date: 2004-12-01 17:07+0100\n"
 "PO-Revision-Date: 2004-10-29 00:05+0100\n"
 "Last-Translator: Bart Cornelis <cobaco@linux.be>\n"
 "Language-Team: debian-l10n-dutch <debian-l10n-dutch@lists.debian.org>\n"
@@ -56,19 +56,19 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
-msgid "On which interface should Snort listen?"
+#: ../snort.templates:12
+#, fuzzy
+msgid "On which interface(s) should Snort listen?"
 msgstr "Op welke netwerkapparaten dient Snort te luisteren?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:12
+#, fuzzy
 msgid ""
-"Please enter the interface name which snort should listen on. The name of "
-"the available interfaces are provided by running 'ip link show'. This value "
-"usually is 'eth0', but you might want to vary this depending on your "
+"Please enter the interface(s) name(s) which snort should listen on. The name "
+"of the available interfaces are provided by running 'ip link show'. This "
+"value usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
 msgstr ""
@@ -112,11 +112,20 @@ msgstr ""
 "verzonden wort (dus deze dient verbonden te zijn via een 'port mirroring/"
 "spanning'-poort op een switch, via een hub, of via een tap)"
 
+#. Type: string
+#. Description
+#: ../snort.templates:12
+msgid ""
+"You can configure multiple interfaces here, just by adding more than one "
+"interface name separated by spaces. Each interface can have its specific "
+"configuration."
+msgstr ""
+
 #  Type: string
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:35 ../snort-mysql.templates:35
+#: ../snort.templates:39 ../snort-mysql.templates:35
 #: ../snort-pgsql.templates:35
 msgid "Please enter the address range that Snort will listen on."
 msgstr "Op welk adresbereik dient Snort te luisteren?"
@@ -125,7 +134,7 @@ msgstr "Op welk adresbereik dient Snort te luisteren?"
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:35 ../snort-mysql.templates:35
+#: ../snort.templates:39 ../snort-mysql.templates:35
 #: ../snort-pgsql.templates:35
 msgid ""
 "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
@@ -141,18 +150,26 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:35 ../snort-mysql.templates:35
+#: ../snort.templates:39 ../snort-mysql.templates:35
 #: ../snort-pgsql.templates:35
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
 "Wanneer u geen enkel deel van het netwerk wilt vertrouwen kunt 'any' opgeven."
 
+#. Type: string
+#. Description
+#: ../snort.templates:39
+msgid ""
+"Notice that if you are using multiple interfaces this definition will be "
+"used as the HOME_NET definition of all of them."
+msgstr ""
+
 #  Type: boolean
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort.templates:45 ../snort-mysql.templates:45
+#: ../snort.templates:52 ../snort-mysql.templates:45
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr ""
 "Wilt u dat Snort de 'promiscuous'-modus van het netwerkapparaat uitschakelt?"
@@ -161,7 +178,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort.templates:45 ../snort-mysql.templates:45
+#: ../snort.templates:52 ../snort-mysql.templates:45
 #: ../snort-pgsql.templates:45
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
@@ -177,7 +194,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:45 ../snort-mysql.templates:45
+#: ../snort.templates:52 ../snort-mysql.templates:45
 #: ../snort-pgsql.templates:45
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
@@ -190,7 +207,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort.templates:57 ../snort-mysql.templates:57
+#: ../snort.templates:64 ../snort-mysql.templates:57
 #: ../snort-pgsql.templates:57
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
 msgstr ""
@@ -200,7 +217,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort.templates:57 ../snort-mysql.templates:57
+#: ../snort.templates:64 ../snort-mysql.templates:57
 #: ../snort-pgsql.templates:57
 msgid ""
 "If you change Snort's rules testing order to Pass|Alert|Log, they will be "
@@ -217,14 +234,14 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:66 ../snort-mysql.templates:66
+#: ../snort.templates:73 ../snort-mysql.templates:66
 #: ../snort-pgsql.templates:66
 msgid "Who should receive the daily statistics mails?"
 msgstr "Naar wie dienen de dagelijkse statistieken verstuurd te worden?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:66
+#: ../snort.templates:73
 msgid ""
 "A cron job running daily will summarise the information of the logs "
 "generated by Snort using a script called 'snort-stat'. Introduce here the "
@@ -243,7 +260,7 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:76 ../snort-mysql.templates:70
+#: ../snort.templates:83 ../snort-mysql.templates:70
 #: ../snort-pgsql.templates:70
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
@@ -253,7 +270,7 @@ msgstr "Als u speciale opties aan Snort wil meegeven kunt u deze hier opgeven."
 #  Description
 #. Type: string
 #. Description
-#: ../snort.templates:81 ../snort-mysql.templates:75
+#: ../snort.templates:88 ../snort-mysql.templates:75
 #: ../snort-pgsql.templates:75
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
@@ -266,7 +283,7 @@ msgstr ""
 #  Description
 #. Type: note
 #. Description
-#: ../snort.templates:85 ../snort-mysql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:125
 #: ../snort-pgsql.templates:125
 msgid "You are running Snort manually."
 msgstr "U voert Snort handmatig uit."
@@ -275,7 +292,7 @@ msgstr "U voert Snort handmatig uit."
 #  Description
 #. Type: note
 #. Description
-#: ../snort.templates:85 ../snort-mysql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:125
 #: ../snort-pgsql.templates:125
 msgid ""
 "Please restart Snort using:\n"
@@ -288,13 +305,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:92
+#: ../snort.templates:99
 msgid "There is an error in your configuration"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:92
+#: ../snort.templates:99
 msgid ""
 "Your Snort configuration is not correct and Snort will not be able to start "
 "up normally. Please review your configuration and fix it. If you do not do "
@@ -303,6 +320,29 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
+
+#  Type: string
+#  Description
+#. Type: string
+#. Description
+#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
+msgid "On which interface should Snort listen?"
+msgstr "Op welke netwerkapparaten dient Snort te luisteren?"
+
+#. Type: string
+#. Description
+#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
+msgid ""
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
+"usually is 'eth0', but you might want to vary this depending on your "
+"environment, if you are using a dialup connection 'ppp0' might be more "
+"appropiate."
+msgstr ""
+"Wat is de naam van de interface waarop snort dient te luisteren? U komt de "
+"namen van beschikbare interfaces te weten met het commando 'ip link show'. "
+"Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving wijkt dit "
+"mogelijk af; als us inbelt is 'ppp0' waarschijnlijk meer van toepassing."
 
 #. Type: string
 #. Description
