@@ -27,7 +27,7 @@ Description: Flexible Network Intrusion Detection System
  Homepage: http://www.snort.org
 
 Package: snort-common
-Architecture: any
+Architecture: all
 Depends: perl-modules, debconf (>= 0.2.80), adduser (>= 3.11), syslogd | system-log-daemon, ${shlibs:Depends}
 Suggests: snort-doc
 Description: Flexible Network Intrusion Detection System [common files]

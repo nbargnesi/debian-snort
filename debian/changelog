@@ -1,3 +1,25 @@
+snort (2.2.0-7) unstable; urgency=low
+
+  * Make snort-common Arch: all (Closes: #278987) 
+  * The installation will now check if you are using a configuration that
+    will not be able to work with the current Snort version and will forewarn
+    you. The package installation will still fail (if Snort is started
+    automatically) but the administrator will be pointed to where the
+    error is (Closes: #165107)
+  * Use dh_installman instead of dh_installmanpages and provide proper
+    PACKAGE.manpages file since dh_installmanpages now fails to create the
+    snort-common package properly.
+  * Updated to the latest rules snapshot
+  * Added an 'update-rules' target in debian/rules that downloads the 
+    latest rules snapshot and installs it in the package.
+  [ Translations ]
+  * Dutch update, provided by cobaco (Closes: #278719)
+  * Japanese update, provided by Hideki Yamane (Closes: #279028)
+  * French update, provided by Christian Perrier (Closes: #279833)
+  * German update, provided by Erik Schanze (Closes: #280964)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat, 30 Oct 2004 22:47:34 +0200
+
 snort (2.2.0-6) unstable; urgency=low
 
   * Added a 'config-check' option in init.d to test the user's configuration

@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.2.0-2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-10-25 23:35+0200\n"
+"POT-Creation-Date: 2004-11-13 15:49+0100\n"
 "PO-Revision-Date: 2004-09-18 00:32+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
@@ -250,6 +250,24 @@ msgstr ""
 "設定変更を反映するために\n"
 " /etc/init.d/snort restart\n"
 " として Snort を再起動してください。"
+
+#. Type: note
+#. Description
+#: ../snort.templates:92
+msgid "There is an error in your configuration"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort.templates:92
+msgid ""
+"Your Snort configuration is not correct and Snort will not be able to start "
+"up normally. Please review your configuration and fix it. If you do not do "
+"this, Snort package upgrades will probably break. To check which error is "
+"being generated run '/usr/sbin/snort -T -c /etc/snort/snort.conf' (or point "
+"to an alternate configuration file if you are using different files for "
+"different interfaces)"
+msgstr ""
 
 #. Type: string
 #. Description
