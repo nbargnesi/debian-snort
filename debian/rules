@@ -1,0 +1,199 @@
+#!/usr/bin/make -f
+#-*- makefile -*-
+# Made with the aid of dh_make, by Craig Small
+# Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
+# Some lines taken from debmake, by Christoph Lameter.
+
+export DH_VERBOSE=1
+export DH_COMPAT=2
+
+TMP=`pwd`/debian
+
+CFLAGS:=-g -O2 -D_GNU_SOURCE
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+export CFLAGS
+
+CONFFLAGS= --prefix=/usr \
+	--bindir=\$$\{exec_prefix\}/sbin \
+	--mandir=\$$\{exec_prefix\}/share/man \
+	--enable-flexresp \
+	--enable-smbalerts \
+	--with-snmp \
+	--with-openssl
+
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+	./configure $(CONFFLAGS) \
+		--with-mysql \
+		--without-postgresql
+
+	# Add here commands to compile the package.
+	$(MAKE) 
+	mv src/snort src/snort-mysql
+	$(MAKE) clean
+
+	./configure $(CONFFLAGS) \
+		--without-mysql \
+		--with-postgresql
+
+	# Add here commands to compile the package.
+	$(MAKE) 
+	mv src/snort src/snort-pgsql
+	$(MAKE) clean
+
+	./configure $(CONFFLAGS) \
+		--without-mysql \
+		--without-postgresql
+
+	# Add here commands to compile the package.
+	$(MAKE) 
+	$(MAKE) clean
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp install-stamp
+
+	# Add here commands to clean up after the build process.
+	-$(MAKE) distclean
+	rm -f src/snort-mysql
+	rm -f src/snort-pgsql
+
+	dh_clean
+
+install: install-stamp
+install-stamp: build-stamp
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/tmp.
+	$(MAKE) install prefix=$(TMP)/snort-common/usr/
+	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-mysql/etc/init.d/snort
+	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-pgsql/etc/init.d/snort
+	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort/etc/init.d/snort
+
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort-mysql/etc/ppp/ip-up.d/snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort-pgsql/etc/ppp/ip-up.d/snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort/etc/ppp/ip-up.d/snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort-mysql/etc/ppp/ip-down.d/snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort-pgsql/etc/ppp/ip-down.d/snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort/etc/ppp/ip-down.d/snort
+	rm -rf $(TMP)/snort-common/etc/ppp
+	
+	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
+	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
+	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
+
+	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-mysql/etc/logrotate.d/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-pgsql/etc/logrotate.d/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort/etc/logrotate.d/snort
+
+	install -m 755 -o root -g root `pwd`/debian/snort.cron.daily $(TMP)/snort-common/etc/cron.daily/5snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort-stat $(TMP)/snort-common/usr/sbin/
+	install -m 644 -o root -g root `pwd`/etc/snort.conf $(TMP)/snort-common/etc/snort/
+	install -m 644 -o root -g root `pwd`/etc/unicode.map $(TMP)/snort-common/etc/snort/
+	install -m 644 -o root -g root `pwd`/etc/threshold.conf $(TMP)/snort-common/etc/snort/
+
+	cp rules/*.rules $(TMP)/snort-rules-default/etc/snort/rules/
+	
+	cp etc/sid-msg.map $(TMP)/snort-rules-default/etc/snort/
+	cp etc/gen-msg.map $(TMP)/snort-rules-default/etc/snort/
+	cp etc/classification.config $(TMP)/snort-rules-default/etc/snort/
+	cp etc/reference.config $(TMP)/snort-rules-default/etc/snort/
+
+	mv src/snort-mysql $(TMP)/snort-mysql/usr/sbin/snort
+	mv src/snort-pgsql $(TMP)/snort-pgsql/usr/sbin/snort
+
+	mv $(TMP)/snort-common/usr/sbin/snort $(TMP)/snort/usr/sbin/snort
+
+	touch install-stamp
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_testdir -i
+	dh_testroot -i
+	dh_installdocs
+	
+	cp -R $(TMP)/snort/usr/share/doc/snort/* $(TMP)/snort-doc/usr/share/doc/snort-doc/
+	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
+	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/contrib/CVS
+	dh_installexamples -i
+	chmod +x $(TMP)/snort-doc/usr/share/doc/snort-doc/examples/snort*
+	dh_installdebconf -i
+	dh_installmanpages -i 
+	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
+	rm -rf $(TMP)/snort-doc/usr/share/man
+	rm -rf $(TMP)/snort-rules-default/usr/share/man
+	dh_undocumented -i
+	dh_installchangelogs -i ChangeLog
+	dh_link -i
+	dh_strip -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_suidregister -i
+	dh_makeshlibs -i
+	dh_installdeb -i
+	dh_perl -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir -a
+	dh_testroot -a
+	dh_installdocs 
+	dh_installexamples -a
+	chmod +x $(TMP)/snort/usr/share/doc/snort/examples/snort*
+	chmod +x $(TMP)/snort-mysql/usr/share/doc/snort-mysql/examples/snort*
+	chmod +x $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/examples/snort*
+	dh_installdebconf -a
+	dh_installmanpages -a 
+	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
+	rm -rf $(TMP)/snort-mysql/usr/share/man/man8/snort-stat.*
+	rm -rf $(TMP)/snort-pgsql/usr/share/man/man8/snort-stat.*
+	rm -rf $(TMP)/snort-rules-default/usr/share/man
+	rm -rf $(TMP)/snort/usr/share/man/man8/snort-stat.*
+	rm -rf $(TMP)/snort-common/usr/share/man/man8/snort.*
+	
+	mkdir -p $(TMP)/snort-mysql/usr/share/doc/snort-mysql/contrib
+	install -m 644 -o root -g root contrib/create_mysql $(TMP)/snort-mysql/usr/share/doc/snort-mysql/contrib/
+
+	mkdir -p $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/contrib
+	install -m 644 -o root -g root contrib/create_postgresql $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/contrib/
+
+	dh_undocumented -a
+	dh_installchangelogs -a ChangeLog
+	dh_link -a
+	dh_strip -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_suidregister -a
+	dh_makeshlibs -a
+	dh_installdeb -a
+	dh_perl -a
+	dh_shlibdeps -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+source diff:                                                                  
+	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary
