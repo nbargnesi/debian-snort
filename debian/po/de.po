@@ -12,10 +12,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: snort_2.2.0-9_de\n"
+"Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2005-02-25 01:01+0100\n"
-"PO-Revision-Date: 2005-01-08 23:50+0100\n"
+"PO-Revision-Date: 2005-03-24 23:27+0100\n"
 "Last-Translator: Erik Schanze <mail@erikschanze.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -305,7 +305,7 @@ msgstr ""
 #: ../snort.templates:109 ../snort-mysql.templates:79
 #: ../snort-pgsql.templates:79
 msgid "This system uses an obsolete configuration file"
-msgstr ""
+msgstr "Das System benutzt eine veraltete Konfigurationsdatei "
 
 #. Type: note
 #. Description
@@ -319,6 +319,12 @@ msgid ""
 "script will not use the new configuration and you will not take advantage of "
 "the benefits introduced in newer releases."
 msgstr ""
+"Ihr System hat eine veraltete Konfigurationsdatei (/etc/snort/snort.common."
+"parameters), die automatisch in das neue Format (nach /etc/default/snort) "
+"umgewandelt wurde. Bitte üperprüfen Sie die neue Konfigurationsdatei und "
+"löschen Sie die veraltete. Bis dahin wird das Startskript (in /etc/init.d) "
+"die neue Konfiguration nicht verwenden und Sie können die Vorteile der neuen "
+"Version nicht nutzen."
 
 #. Type: string
 #. Description
@@ -570,3 +576,18 @@ msgid ""
 msgstr ""
 "Folgende veraltete Optionen wurden in Ihrer Konfigurationdatei gefunden: "
 "${DEP_CONFIG}"
+
+#~ msgid ""
+#~ "Your system has an obsolete configuration file (/etc/snort/common."
+#~ "parameters) which has been automatically converted into the new "
+#~ "configuration file format (at /etc/default/snort). Please review the new "
+#~ "configuration and remove the obsolete one. Until you do this, the init.d "
+#~ "script will not use the new configuration and you will not take advantage "
+#~ "of the benefits introduced in newer releases."
+#~ msgstr ""
+#~ "Ihr System hat eine veraltete Konfigurationsdatei (/etc/snort/common."
+#~ "parameters), die automatisch in das neue Format (nach /etc/default/snort) "
+#~ "umgewandelt wurde. Bitte üperprüfen Sie die neue Konfigurationsdatei und "
+#~ "löschen Sie die veraltete. Bis dahin wird das Startskript (in /etc/init."
+#~ "d) die neue Konfiguration nicht verwenden und Sie können die Vorteile der "
+#~ "neuen Version nicht nutzen."

@@ -29,6 +29,7 @@ Description: Flexible Network Intrusion Detection System
 Package: snort-common
 Architecture: all
 Depends: perl-modules, debconf (>= 0.2.80), adduser (>= 3.11), syslogd | system-log-daemon, ${shlibs:Depends}
+Conflicts: snort (<< ${Source-Version})
 Suggests: snort-doc
 Description: Flexible Network Intrusion Detection System [common files]
  Snort is a libpcap-based packet sniffer/logger which can be used as a
@@ -113,5 +114,5 @@ Description: Flexible Network Intrusion Detection System ruleset
  .
  These rules can be used as a basis for development of additional rules.
  .
- Homepage: http://www.snort.org/snort-db/
+ Homepage: http://www.snort.org/rules/
 

@@ -32,7 +32,10 @@ msgstr "Quan s'hauria d'iniciar el Snort?"
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only when you manually start it via /usr/sbin/snort."
-msgstr "El Snort es pot iniciar a l'arrencada del sistema, quan el sistema es connecti a la xarxa a través de pppd o iniciar-lo manualment via /usr/sbin/snort."
+msgstr ""
+"El Snort es pot iniciar a l'arrencada del sistema, quan el sistema es "
+"connecti a la xarxa a través de pppd o iniciar-lo manualment via /usr/sbin/"
+"snort."
 
 #. Type: string
 #. Description
@@ -49,7 +52,12 @@ msgid ""
 "value usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
-msgstr "Introduïu el nom de la interfície(s) que hauria d'escoltar el snort. El nom de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip link show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-lo en funció de l'entorn, si utilitzeu el marcatge directe probablement us interessi més el valor 'ppp0'."
+msgstr ""
+"Introduïu el nom de la interfície(s) que hauria d'escoltar el snort. El nom "
+"de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip "
+"link show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-"
+"lo en funció de l'entorn, si utilitzeu el marcatge directe probablement us "
+"interessi més el valor 'ppp0'."
 
 #. Type: string
 #. Description
@@ -60,7 +68,11 @@ msgid ""
 "route' is on.  You can determine which interface is used for this running "
 "either '/sbin/ip ro sh' or '/sbin/route -n' (look for 'default' or "
 "'0.0.0.0')."
-msgstr "Recordeu que el Snort acostuma a estar configurat per analitzar tot el tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la de la 'ruta per defecte'. Podeu obtenir la interfície executant l'ordre '/sbin/ip ro sh' o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0'). "
+msgstr ""
+"Recordeu que el Snort acostuma a estar configurat per analitzar tot el "
+"tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la "
+"de la 'ruta per defecte'. Podeu obtenir la interfície executant l'ordre '/"
+"sbin/ip ro sh' o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0'). "
 
 #. Type: string
 #. Description
@@ -73,7 +85,13 @@ msgid ""
 "inspect, enable promiscuous mode later on and make sure that the network "
 "traffic is sent to this interface (either connected to a 'port mirroring/"
 "spanning' port in a switch, to a hub or to a tap)"
-msgstr "També es pot donar la situació d'executar el Snort en una interfície sense IP i configurada en mode promiscu, si és el vostre cas, seleccioneu la interfície que està físicament connectada a la xarxa que voleu analitzar, posteriorment habiliteu el mode promiscu i assegureu-vos que el tràfic de la xarxa s'envia a la interfície (connectada a un port 'port mirroring/spanning' d'un commutador, a un concentrador o a un tap)"
+msgstr ""
+"També es pot donar la situació d'executar el Snort en una interfície sense "
+"IP i configurada en mode promiscu, si és el vostre cas, seleccioneu la "
+"interfície que està físicament connectada a la xarxa que voleu analitzar, "
+"posteriorment habiliteu el mode promiscu i assegureu-vos que el tràfic de la "
+"xarxa s'envia a la interfície (connectada a un port 'port mirroring/"
+"spanning' d'un commutador, a un concentrador o a un tap)"
 
 #. Type: string
 #. Description
@@ -82,7 +100,9 @@ msgid ""
 "You can configure multiple interfaces here, just by adding more than one "
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
-msgstr "Podeu configurar múltiples interfície afegint més d'un nom d'interfície separat per espais. Cada interfície pot tenir una configuració específica."
+msgstr ""
+"Podeu configurar múltiples interfície afegint més d'un nom d'interfície "
+"separat per espais. Cada interfície pot tenir una configuració específica."
 
 #. Type: string
 #. Description
@@ -99,7 +119,10 @@ msgid ""
 "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
 "separated by ',' (comma characters), no spaces allowed!"
-msgstr "Heu d'utilitzar el format CIDR, ex. 192.168.1.0/24 per un bloc de 256 IPs o 192.268.1.42/32 per una.  Especifiqueu múltiples adreces separades per ',' (caràcters de coma) en una sola línia, no utilitzeu espais."
+msgstr ""
+"Heu d'utilitzar el format CIDR, ex. 192.168.1.0/24 per un bloc de 256 IPs o "
+"192.268.1.42/32 per una.  Especifiqueu múltiples adreces separades per "
+"',' (caràcters de coma) en una sola línia, no utilitzeu espais."
 
 #. Type: string
 #. Description
@@ -107,7 +130,9 @@ msgstr "Heu d'utilitzar el format CIDR, ex. 192.168.1.0/24 per un bloc de 256 IP
 #: ../snort-pgsql.templates:35
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
-msgstr "Per no establir una relació de confiança amb cap part de la xarxa, podeu especificar 'any'."
+msgstr ""
+"Per no establir una relació de confiança amb cap part de la xarxa, podeu "
+"especificar 'any'."
 
 #. Type: string
 #. Description
@@ -115,7 +140,9 @@ msgstr "Per no establir una relació de confiança amb cap part de la xarxa, podeu
 msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
-msgstr "Recordeu que si utilitzeu múltiples interfícies aquesta definició s'utilitzarà com a definició HOME_NET de totes."
+msgstr ""
+"Recordeu que si utilitzeu múltiples interfícies aquesta definició "
+"s'utilitzarà com a definició HOME_NET de totes."
 
 #. Type: boolean
 #. Description
@@ -132,7 +159,11 @@ msgid ""
 "to it's own interface. Enabling it allows Snort to check  every packet that "
 "passes ethernet segment even if it's a connection between two other "
 "computers."
-msgstr "Si s'inhabilita el mode promiscu, el Snort únicament veurà els paquets adreçats a la seva pròpia interfície. Si s'habilita, el Snort pot comprovar cada paquet que passa pel segment ethernet, encara que sigui entre d'altres ordinador."
+msgstr ""
+"Si s'inhabilita el mode promiscu, el Snort únicament veurà els paquets "
+"adreçats a la seva pròpia interfície. Si s'habilita, el Snort pot comprovar "
+"cada paquet que passa pel segment ethernet, encara que sigui entre d'altres "
+"ordinador."
 
 #. Type: boolean
 #. Description
@@ -141,7 +172,9 @@ msgstr "Si s'inhabilita el mode promiscu, el Snort únicament veurà els paquets a
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
-msgstr "Si esteu configurant el Snort en una interfície sense una adreça d'IP inhabiliteu el mode promiscu."
+msgstr ""
+"Si esteu configurant el Snort en una interfície sense una adreça d'IP "
+"inhabiliteu el mode promiscu."
 
 #. Type: boolean
 #. Description
@@ -161,7 +194,12 @@ msgid ""
 "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
 "This will prevent people from having to make huge Berky Packet Filter "
 "command line arguments to filter their alert rules."
-msgstr "Si canvieu l'ordre de comprovació de les regles del Snort per Pass|Alert|Log, s'aplicaran en l'ordre Pass->Alert->Log, en comptes de l'estàndard Alert->Pass->Log. Aquesta opció permetrà que els usuaris no hagin d'utilitzar una gran quantitat d'arguments de la línia d'ordres del Berky Packet Filter per filtrar les regles d'alerta."
+msgstr ""
+"Si canvieu l'ordre de comprovació de les regles del Snort per Pass|Alert|"
+"Log, s'aplicaran en l'ordre Pass->Alert->Log, en comptes de l'estàndard "
+"Alert->Pass->Log. Aquesta opció permetrà que els usuaris no hagin "
+"d'utilitzar una gran quantitat d'arguments de la línia d'ordres del Berky "
+"Packet Filter per filtrar les regles d'alerta."
 
 #. Type: string
 #. Description
@@ -179,7 +217,13 @@ msgid ""
 "recipient of these mails. The default value is the system administrator. If "
 "you keep this value, make sure that the mail of the administrator is "
 "redirected to a user that actually reads those mails."
-msgstr "Una tasca programada diàriament resumirà la informació dels registres del Snort utilitzant una seqüència anomenada 'snort-stat'. Introduïu el destinatari dels correus electrònics. El valor predeterminat és l'administrador del sistema. Si manteniu el valor assegureu-vos que el correu electrònic de l'administrador es redireccioni a una usuari que llegeixi els missatges."
+msgstr ""
+"Una tasca programada diàriament resumirà la informació dels registres del "
+"Snort utilitzant una seqüència anomenada 'snort-stat'. Introduïu el "
+"destinatari dels correus electrònics. El valor predeterminat és "
+"l'administrador del sistema. Si manteniu el valor assegureu-vos que el "
+"correu electrònic de l'administrador es redireccioni a una usuari que "
+"llegeixi els missatges."
 
 #. Type: string
 #. Description
@@ -196,7 +240,9 @@ msgstr "Si voleu definir opcions personalitzades del Snort, feu-ho aquí."
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
-msgstr "Una alerta s'inclourà a les estadístiques diàries quan aparegui un nombre de vegades superior a l'indicat."
+msgstr ""
+"Una alerta s'inclourà a les estadístiques diàries quan aparegui un nombre de "
+"vegades superior a l'indicat."
 
 #. Type: note
 #. Description
@@ -233,7 +279,13 @@ msgid ""
 "being generated run '/usr/sbin/snort -T -c /etc/snort/snort.conf' (or point "
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
-msgstr "La configuració del Snort no és correcte i no es podrà iniciar correctament. Reviseu la configuració i arregleu-ne els errors. Si no ho feu probablement no es podran realitzar correctament les actualitzacions del paquet Snort. Per comprovar l'error executeu l'ordre '/usr/sbin/snort -T -c /etc/snort/snort.conf' (si utilitzeu diferents fitxers per a diferents interfícies feu referència a un altre fitxer de configuració)"
+msgstr ""
+"La configuració del Snort no és correcte i no es podrà iniciar correctament. "
+"Reviseu la configuració i arregleu-ne els errors. Si no ho feu probablement "
+"no es podran realitzar correctament les actualitzacions del paquet Snort. "
+"Per comprovar l'error executeu l'ordre '/usr/sbin/snort -T -c /etc/snort/"
+"snort.conf' (si utilitzeu diferents fitxers per a diferents interfícies feu "
+"referència a un altre fitxer de configuració)"
 
 #. Type: note
 #. Description
@@ -253,7 +305,13 @@ msgid ""
 "configuration and remove the obsolete one. Until you do this, the init.d "
 "script will not use the new configuration and you will not take advantage of "
 "the benefits introduced in newer releases."
-msgstr "El sistema té un fitxer de configuració obsolet (/etc/snort/snort.common.parameters) que s'ha convertit automàticament al nou format de fitxer de configuració (a /etc/default/snort). Comproveu el nou fitxer de configuració i suprimiu l'obsolet. Fins que no ho feu, la seqüència de l'init.d no utilitzarà la nova configuració i no podreu utilitzar les característiques afegides en les noves versions."
+msgstr ""
+"El sistema té un fitxer de configuració obsolet (/etc/snort/snort.common."
+"parameters) que s'ha convertit automàticament al nou format de fitxer de "
+"configuració (a /etc/default/snort). Comproveu el nou fitxer de configuració "
+"i suprimiu l'obsolet. Fins que no ho feu, la seqüència de l'init.d no "
+"utilitzarà la nova configuració i no podreu utilitzar les característiques "
+"afegides en les noves versions."
 
 #. Type: string
 #. Description
@@ -270,7 +328,12 @@ msgid ""
 "usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
-msgstr "Introduïu el nom de la interfície que haurà d'escoltar el snort. El nom de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip link show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-lo en funció de l'entorn, si utilitzeu el marcatge directe probablement us interessi més el valor 'ppp0'."
+msgstr ""
+"Introduïu el nom de la interfície que haurà d'escoltar el snort. El nom de "
+"les interfícies disponibles el podeu aconseguir executant l'ordre 'ip link "
+"show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-lo "
+"en funció de l'entorn, si utilitzeu el marcatge directe probablement us "
+"interessi més el valor 'ppp0'."
 
 #. Type: string
 #. Description
@@ -280,13 +343,18 @@ msgid ""
 "the Internet, so the interface you add here is usually the same the 'default "
 "route' is on.  You can determine which interface is used for this running "
 "either 'ip route show' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
-msgstr "Recordeu que el Snort acostuma a estar configurat per analitzar tot el tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la de la 'ruta per defecte'. Podeu obtenir-la executant l'ordre 'ip route show' o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0')."
+msgstr ""
+"Recordeu que el Snort acostuma a estar configurat per analitzar tot el "
+"tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la "
+"de la 'ruta per defecte'. Podeu obtenir-la executant l'ordre 'ip route show' "
+"o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0')."
 
 #. Type: boolean
 #. Description
 #: ../snort-mysql.templates:91
 msgid "Do you want to set up a database for snort-mysql to log to?"
-msgstr "Voleu configurar una base de dades on el snort-mysql hi registri dades?"
+msgstr ""
+"Voleu configurar una base de dades on el snort-mysql hi registri dades?"
 
 #. Type: boolean
 #. Description
@@ -300,13 +368,23 @@ msgid ""
 "logging support, or fix this first. You can always configure database "
 "logging later, by reconfiguring the snort-mysql package with 'dpkg-"
 "reconfigure -plow snort-mysql'"
-msgstr "Aquestes tasques només les heu de realitzar la primera vegada que instal·leu el snort-mysql. Abans de continuar assegureu-vos de tenir(1) el nom d'un servidor central on s'estigui executant un servidor de mysql que permeti connexions tcp d'aquest ordinador. (2) una base de dades, (3) un nom d'usuari i una contrasenya per accedir-hi. Si no teniu tots els elements de la llista, solucioneu-ho o seleccioneu l'opció 'no' i utilitzeu el suport tradicional de registre per fitxer. Posteriorment, sempre podreu configurar el mode de registre reconfigurant el paquet snort-mysql utilitzant 'dpkg-reconfigure -plow snort-mysql'"
+msgstr ""
+"Aquestes tasques només les heu de realitzar la primera vegada que instal·leu "
+"el snort-mysql. Abans de continuar assegureu-vos de tenir(1) el nom d'un "
+"servidor central on s'estigui executant un servidor de mysql que permeti "
+"connexions tcp d'aquest ordinador. (2) una base de dades, (3) un nom "
+"d'usuari i una contrasenya per accedir-hi. Si no teniu tots els elements de "
+"la llista, solucioneu-ho o seleccioneu l'opció 'no' i utilitzeu el suport "
+"tradicional de registre per fitxer. Posteriorment, sempre podreu configurar "
+"el mode de registre reconfigurant el paquet snort-mysql utilitzant 'dpkg-"
+"reconfigure -plow snort-mysql'"
 
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
 msgid "Snort needs a configured database to log to."
-msgstr "El Snort necessita una base de dades configurada per registrar-hi les dades."
+msgstr ""
+"El Snort necessita una base de dades configurada per registrar-hi les dades."
 
 #. Type: note
 #. Description
@@ -320,14 +398,18 @@ msgid ""
 msgstr ""
 "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
 " cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom base de dades>\n"
-"Ompliu correctament les dades de l'usuari, ordinador central i nom de la base de dades. El MySQL us demanarà la contrasenya."
+" zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom "
+"base de dades>\n"
+"Ompliu correctament les dades de l'usuari, ordinador central i nom de la "
+"base de dades. El MySQL us demanarà la contrasenya."
 
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
 msgid "After you created the database structure, press 'ok' to continue."
-msgstr "Un cop creada l'estructura de la base de dades, premeu 'd'acord' per continuar."
+msgstr ""
+"Un cop creada l'estructura de la base de dades, premeu 'd'acord' per "
+"continuar."
 
 #. Type: string
 #. Description
@@ -343,7 +425,9 @@ msgstr ""
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
-msgstr "Abans de permetre les connexions a aquest ordinador, assegureu-vos que estigui configurat correctament."
+msgstr ""
+"Abans de permetre les connexions a aquest ordinador, assegureu-vos que "
+"estigui configurat correctament."
 
 #. Type: string
 #. Description
@@ -357,7 +441,9 @@ msgstr "Introduïu el nom de la base de dades a utilitzar."
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
-msgstr "Assegureu-vos que la base de dades existeixi i que el vostre usuari hi tingui permís d'escriptura."
+msgstr ""
+"Assegureu-vos que la base de dades existeixi i que el vostre usuari hi "
+"tingui permís d'escriptura."
 
 #. Type: string
 #. Description
@@ -381,7 +467,9 @@ msgstr "Introduïu la contrasenya per a la connexió amb la base de dades."
 #. Description
 #: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
 msgid "Please enter a password to connect to the Snort Alert database."
-msgstr "Introduïu la contrasenya per connectar-vos a la base de dades d'alertes del Snort."
+msgstr ""
+"Introduïu la contrasenya per connectar-vos a la base de dades d'alertes del "
+"Snort."
 
 #. Type: boolean
 #. Description
@@ -393,7 +481,8 @@ msgstr "S'hauria d'inhabilitar el mode promiscu de la interfície?"
 #. Description
 #: ../snort-pgsql.templates:91
 msgid "Do you want to set up a database for snort-pgsql to log to?"
-msgstr "Voleu configurar una base de dades on el snort-pgsql hi registri dades?"
+msgstr ""
+"Voleu configurar una base de dades on el snort-pgsql hi registri dades?"
 
 #. Type: boolean
 #. Description
@@ -407,7 +496,17 @@ msgid ""
 "logging support, or fix this first. You can always configure database "
 "logging later, by reconfiguring the snort-pgsql package with 'dpkg-"
 "reconfigure -plow snort-pgsql'"
-msgstr "Aquestes tasques només les heu de dur a terme la primera vegada que instal·leu el snort-pgsql. Abans de continuar assegureu-vos de tenir(1) el nom d'un servidor central on s'estigui executant el servidor de pgsql i que permeti connexions tcp d'aquest ordinador. (2) una base de dades en aquest servidor. (3) un nom d'usuari i una contrasenya per accedir a la base de dades. Si no teniu tots els elements de la llista, solucioneu-ho o seleccioneu l'opció 'no' i utilitzeu el suport tradicional de registre per fitxer. Posteriorment, sempre podreu configurar el mode de registre reconfigurant el paquet snort-pgsql a través de l'ordre 'dpkg-reconfigure -plow snort-pgsql'"
+msgstr ""
+"Aquestes tasques només les heu de dur a terme la primera vegada que "
+"instal·leu el snort-pgsql. Abans de continuar assegureu-vos de tenir(1) el "
+"nom d'un servidor central on s'estigui executant el servidor de pgsql i que "
+"permeti connexions tcp d'aquest ordinador. (2) una base de dades en aquest "
+"servidor. (3) un nom d'usuari i una contrasenya per accedir a la base de "
+"dades. Si no teniu tots els elements de la llista, solucioneu-ho o "
+"seleccioneu l'opció 'no' i utilitzeu el suport tradicional de registre per "
+"fitxer. Posteriorment, sempre podreu configurar el mode de registre "
+"reconfigurant el paquet snort-pgsql a través de l'ordre 'dpkg-reconfigure -"
+"plow snort-pgsql'"
 
 #. Type: note
 #. Description
@@ -421,14 +520,18 @@ msgid ""
 msgstr ""
 "Creeu l'estructura de la base de dades utilitzant l'ordre següent:\n"
 " cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_pgsql.gz | pgsql -U <usuari> -h <ordinador central> -W <nom base de dades>\n"
-"Ompliu correctament les dades de l'usuari, ordinador central i nom de la base de dades. El PostgreSQL us demanarà la contrasenya."
+" zcat create_pgsql.gz | pgsql -U <usuari> -h <ordinador central> -W <nom "
+"base de dades>\n"
+"Ompliu correctament les dades de l'usuari, ordinador central i nom de la "
+"base de dades. El PostgreSQL us demanarà la contrasenya."
 
 #. Type: string
 #. Description
 #: ../snort-pgsql.templates:114
 msgid "Please enter the hostname of the pgsql database server to use."
-msgstr "Introduïu el nom de l'ordinador central del servidor de base de dades de pgsql  a utilitzar."
+msgstr ""
+"Introduïu el nom de l'ordinador central del servidor de base de dades de "
+"pgsql  a utilitzar."
 
 #. Type: note
 #. Description
@@ -445,7 +548,12 @@ msgid ""
 "to start unless you provide a correct configuration file. You can substitute "
 "your configuration file with the one provided in this package or fix it "
 "manually by removing deprecated options."
-msgstr "El fitxer de configuració actual (/etc/snort/snort.conf) utilitza opcions obsoletes que ja no estaran disponibles per a aquesta versió del Snort. No el podreu iniciar si no utilitzeu un fitxer de configuració correcte. Podeu substituir el fitxer de configuració pel proporcionat pel paquet o arreglar-lo manualment suprimint les opcions obsoletes."
+msgstr ""
+"El fitxer de configuració actual (/etc/snort/snort.conf) utilitza opcions "
+"obsoletes que ja no estaran disponibles per a aquesta versió del Snort. No "
+"el podreu iniciar si no utilitzeu un fitxer de configuració correcte. Podeu "
+"substituir el fitxer de configuració pel proporcionat pel paquet o arreglar-"
+"lo manualment suprimint les opcions obsoletes."
 
 #. Type: note
 #. Description
