@@ -8,7 +8,7 @@ NAME=snort
 DESC="Network Intrusion Detection System"
 
 CONFIG=/etc/snort/snort.debian.conf
-[ -r /etc/snort/snort.common.parameters] && COMMON=`cat /etc/snort/snort.common.parameters`
+[ -r /etc/snort/snort.common.parameters ] && COMMON=`cat /etc/snort/snort.common.parameters`
 
 test -x $DAEMON || exit 0
 test -f $CONFIG && . $CONFIG
