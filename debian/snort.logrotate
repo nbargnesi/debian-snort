@@ -3,7 +3,6 @@
     rotate 7
     compress
     missingok
-    notifempty
     create 0640 snort adm
     sharedscripts
     postrotate

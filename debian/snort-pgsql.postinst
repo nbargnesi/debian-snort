@@ -126,11 +126,8 @@ EOF
 		fi
 
 		# Ensure the config file is readable by root.root and mode 600
-		if ! dpkg-statoverride --list /etc/snort/snort.conf >/dev/null
-		then
-			chown root.snort /etc/snort/snort.conf
-			chmod 640 /etc/snort/snort.conf
-		fi
+		chown root.snort /etc/snort/snort.conf
+		chmod 640 /etc/snort/snort.conf
 	fi
 
 	db_stop

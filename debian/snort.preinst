@@ -70,11 +70,8 @@ case "$1" in
 		-g $SNORTGROUP \
 		$SNORTUSER
 	# 5. adjust file and directory permissions
-	if ! dpkg-statoverride --list $LOGDIR >/dev/null
-	then
-		chown -R $SNORTUSER:adm $LOGDIR
-		chmod u=rwx,g=rxs,o= $LOGDIR
-	fi
+	chown -R $SNORTUSER:adm $LOGDIR
+	chmod u=rwx,g=rxs,o= $LOGDIR
 		
 	# setup /etc/snort
 	test -d /etc/snort || mkdir /etc/snort

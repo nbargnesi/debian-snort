@@ -29,10 +29,6 @@ CONFFLAGS= --prefix=/usr \
 # Cannot enable flexresp since it builds only with libnet 1.0.2a
 #	--enable-flexresp \
 
-build-indep: build-indep-stamp
-build-indep-stamp:
-	dh_testdir
-	cd doc && make snort_manual.pdf
 
 build: build-stamp
 build-stamp:
@@ -132,18 +128,21 @@ install-stamp: build-stamp
 	touch install-stamp
 
 # Build architecture-independent files here.
-binary-indep: build build-indep install
+binary-indep: build install
 	dh_testdir -i
 	dh_testroot -i
 
-	dh_installdocs -i
-	dh_installexamples -i
-	dh_installdebconf -i
-	dh_installman -i 
-	# Other adjustments
+	cd doc && make snort_manual.pdf
+	dh_installdocs 
+	
+	cp -R $(TMP)/snort/usr/share/doc/snort/* $(TMP)/snort-doc/usr/share/doc/snort-doc/
 	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
 	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/contrib/CVS
+	dh_installexamples -i
 	chmod +x $(TMP)/snort-doc/usr/share/doc/snort-doc/examples/snort*
+	dh_installdebconf -i
+	dh_installman -i 
+	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
 	cp -a doc/signatures/ $(TMP)/snort-doc/usr/share/doc/snort-doc/
 	rm -rf $(TMP)/snort-doc/usr/share/man
 	rm -rf $(TMP)/snort-rules-default/usr/share/man
@@ -167,7 +166,7 @@ binary-indep: build build-indep install
 binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
-	dh_installdocs -a 
+	dh_installdocs debian/NEWS.Debian
 	dh_installexamples -a
 	chmod +x $(TMP)/snort/usr/share/doc/snort/examples/snort*
 	chmod +x $(TMP)/snort-mysql/usr/share/doc/snort-mysql/examples/snort*

@@ -1,22 +1,23 @@
-# Translators, if you are not familiar with the PO format, gettext
-# documentation is worth reading, especially sections dedicated to
-# this format, e.g. by running:
-# info -n '(gettext)PO Files'
-# info -n '(gettext)Header Entry'
-# Some information specific to po-debconf are available at
-# /usr/share/doc/po-debconf/README-trans
-# or http://www.debian.org/intl/l10n/po-debconf/README-trans
-# Developers do not need to manually edit POT or PO files.
-# Bart Cornelis <cobaco@linux.be>, 2005.
-# 
-# 
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-06-22 23:37+0200\n"
-"PO-Revision-Date: 2005-02-20 17:46+0100\n"
-"Last-Translator: Peter Vandenabeele <peter@vandenabeele.com>\n"
+"POT-Creation-Date: 2005-02-09 00:20+0100\n"
+"PO-Revision-Date: 2004-10-29 00:05+0100\n"
+"Last-Translator: Bart Cornelis <cobaco@linux.be>\n"
 "Language-Team: debian-l10n-dutch <debian-l10n-dutch@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=iso-8859-15\n"
@@ -48,7 +49,7 @@ msgid ""
 "only when you manually start it via /usr/sbin/snort."
 msgstr ""
 "Snort kan opgestart worden tijdens het opstarten van de computer, bij het "
-"openen van de netwerkverbinding door pppd of wanneer u het handmatig opstart."
+"openen van de netwerkverbinding door pppd of wanneer u het handmatig opstart "
 "via /usr/bin/snort."
 
 #  Type: string
@@ -56,24 +57,25 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort.templates:12
+#, fuzzy
 msgid "On which interface(s) should Snort listen?"
-msgstr "Op welke interface(s) moet Snort luisteren?"
+msgstr "Op welke netwerkapparaten dient Snort te luisteren?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-pgsql.templates:12
+#: ../snort.templates:12
+#, fuzzy
 msgid ""
-"Please enter the name(s) of the interface(s) which snort should listen on. "
-"The names of the available interfaces are provided by running 'ip link "
-"show'. This value usually is 'eth0', but you might want to vary this "
-"depending on your environment, if you are using a dialup connection 'ppp0' "
-"might be more appropiate."
+"Please enter the interface(s) name(s) which snort should listen on. The name "
+"of the available interfaces are provided by running 'ip link show'. This "
+"value usually is 'eth0', but you might want to vary this depending on your "
+"environment, if you are using a dialup connection 'ppp0' might be more "
+"appropiate."
 msgstr ""
-"Wat is de naam van de interface(s) waarop Snort dient te luisteren? U komt "
-"de namen van beschikbare interfaces te weten met het commando 'ip link "
-"show'. Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving wilt u dit "
-"misschien aanpassen. Als u inbelt, is 'ppp0' waarschijnlijk meer van "
-"toepassing."
+"Wat is de naam van de interface waarop snort dient te luisteren? U komt de "
+"namen van beschikbare interfaces te weten met het commando 'ip link show'. "
+"Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving wijkt dit "
+"mogelijk af; als us inbelt is 'ppp0' waarschijnlijk meer van toepassing."
 
 #. Type: string
 #. Description
@@ -85,7 +87,7 @@ msgid ""
 "either '/sbin/ip ro sh' or '/sbin/route -n' (look for 'default' or "
 "'0.0.0.0')."
 msgstr ""
-"Merk op dat snort normaal ingesteld is om alle van het Internet afkomstige "
+"Merk op dat snort normaal ingesteld is om alle van Internet afkomende "
 "verkeer te onderzoeken. Bijgevolg is de hier opgegeven interface normaal "
 "dezelfde die de 'default route' heeft. Om te bepalen welke interface "
 "gebruikt wordt, kunt u '/sbin/ip ro sh' of '/sbin/route -n' uitvoeren (zoek "
@@ -103,13 +105,12 @@ msgid ""
 "traffic is sent to this interface (either connected to a 'port mirroring/"
 "spanning' port in a switch, to a hub or to a tap)"
 msgstr ""
-"Het is ook niet ongewoon om Snort te draaien op een interface zonder IP en "
-"geconfigureerd in promiscue modus. In dat geval selecteert u de interface "
-"die fysiek verbonden is met het netwerk dat u wilt onderzoeken, activeert u "
-"later de promiscue modus en verzekert u zich ervan dat het netwerkverkeer "
-"naar deze interface verzonden wordt (dus deze dient verbonden te zijn via "
-"een 'port mirroring/spanning'-poort op een switch, via een hub, of via een "
-"tap)"
+"Het is ook niet ongewoon om snort te draaien op een interface in promiscue "
+"modus. In dat geval selecteert u de interface die fysiek verbonden is met "
+"het netwerk dat u wilt onderzoeken, later kunt u de promiscue modus "
+"activeren en u ervan verzekeren dat het netwerkverkeer naar deze interface "
+"verzonden wort (dus deze dient verbonden te zijn via een 'port mirroring/"
+"spanning'-poort op een switch, via een hub, of via een tap)"
 
 #. Type: string
 #. Description
@@ -119,9 +120,6 @@ msgid ""
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
-"U kunt hier verschillende interfaces definiëren, door meer dan één naam van "
-"een interface te vermelden, gescheiden door spaties. Elke interface kan zijn "
-"eigen specifieke configuratie hebben."
 
 #  Type: string
 #  Description
@@ -143,10 +141,10 @@ msgid ""
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
-"U dient de CIDR-vorm te gebruiken (dit is 192.168.1.0/24 voor een blok van "
-"256 IP-adressen of 192.168.1.42/32 voor één enkel IP-adres). U kunt meerdere "
+"U dient de CIDR-vorm te gebruiken (i.e. 192.168.1.0/24 voor een blok van 256 "
+"IP-adressen of 192.168.1.42/32 voor een enkel IP-adres). U kunt meerdere "
 "adressen opgeven op één regel door ze te scheiden met kommas; spaties zijn "
-"hierbij niet toegestaan!"
+"hierbij niet toegelaten!"
 
 #  Type: string
 #  Description
@@ -157,8 +155,7 @@ msgstr ""
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
-"Wanneer u geen enkel deel van het netwerk wilt vertrouwen, kunt 'any' "
-"opgeven."
+"Wanneer u geen enkel deel van het netwerk wilt vertrouwen kunt 'any' opgeven."
 
 #. Type: string
 #. Description
@@ -167,8 +164,6 @@ msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
 msgstr ""
-"Merk op dat als u meerdere interfaces gebruikt, deze definitie gebruikt zal "
-"worden als de HOME_NET definitie van al deze interfaces."
 
 #  Type: boolean
 #  Description
@@ -176,7 +171,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:52 ../snort-mysql.templates:45
 msgid "Should Snort disable promiscuous mode on the interface?"
-msgstr "Wilt u dat Snort de promiscue modus van de interface uitschakelt?"
+msgstr ""
+"Wilt u dat Snort de 'promiscuous'-modus van het netwerkapparaat uitschakelt?"
 
 #  Type: boolean
 #  Description
@@ -190,11 +186,11 @@ msgid ""
 "passes ethernet segment even if it's a connection between two other "
 "computers."
 msgstr ""
-"Uitschakelen van de promiscue modus betekent dat Snort enkel die pakketten "
-"ziet die bestemd zijn voor zijn eigen interface. Het inschakelen van de "
-"promiscue modus laat Snort toe om elk op dit ethernet-segment langskomend "
-"pakket te controleren, zelfs als het een pakket is van een verbinding tussen "
-"twee andere computers."
+"Uitschakelen van de 'promiscuous'-modus betekent dat Snort enkel die "
+"pakketten ziet die bestemd zijn voor het eigen netwerkapparaat. Inschakelen "
+"laat Snort toe om elk op dit ethernet-segment langskomend pakket te "
+"controleren, zelfs als het een pakket is van een verbinding tussen 2 andere "
+"computers."
 
 #. Type: boolean
 #. Description
@@ -204,7 +200,7 @@ msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
 msgstr ""
-"Als u Snort instelt op een interface zonder IP-adres dient u de promiscue "
+"Als u snort insteld op een interface zonder IP-addres dient u de promiscue "
 "modus uit te schakelen."
 
 #  Type: boolean
@@ -215,8 +211,7 @@ msgstr ""
 #: ../snort-pgsql.templates:57
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
 msgstr ""
-"Moet de volgorde van het testen van de regels van Snort aangepast worden "
-"naar Pass|Alert|Log (doorlaten|alarmeren|loggen) ?"
+"Wilt u dat Snorts regeltestvolgorde veranderd wordt naar 'Pass|Alert|Log'?"
 
 #  Type: boolean
 #  Description
@@ -230,11 +225,10 @@ msgid ""
 "This will prevent people from having to make huge Berky Packet Filter "
 "command line arguments to filter their alert rules."
 msgstr ""
-"Wanneer u de volgorde van het testen van de regels van Snort verandert naar "
-"'Pass|Alert|Log', zullen de regels toegepast worden in de volgorde Pass-"
-">Alert->Log, in plaats van Alert->Pass->Log. Dit voorkomt dat men enorme "
-"'Berky Packet Filter' commandoregel-argumenten dient te gebruiken om de "
-"'alert'-regels uit te filteren."
+"Wanneer u Snorts regeltestvolgorde verandert naar 'Pass|Alert|Log', zullen "
+"de regels toegepast worden in de volgorde Pass->Alert->Log, i.p.v. Alert-"
+">Pass->Log. Dit voorkomt dat men enorme 'Berkely Packet Filter'-commando's "
+"dient te gebruiken om de 'alert'-regels uit te filteren."
 
 #  Type: string
 #  Description
@@ -258,9 +252,9 @@ msgstr ""
 "Een dagelijks uitgevoerde taak (cron job) vat de informatie in de door snort "
 "gegenereerde logboeken samen met een script (genaamd 'snort-stat'). Hier "
 "geeft u aan wie deze e-mails zal ontvangen. De standaardwaarde is de "
-"systeembeheerder. Als u dit zo laat, dient u ervoor te zorgen dat de e-mail "
+"systeembeheerder. Als u dit zo laat dient u ervoor te zorgen dat de e-mail "
 "van de beheerder omgeleid wordt naar een gebruiker die deze berichten ook "
-"daadwerkelijk nakijkt."
+"nakijkt."
 
 #  Type: string
 #  Description
@@ -270,8 +264,7 @@ msgstr ""
 #: ../snort-pgsql.templates:70
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
-msgstr ""
-"Als u speciale opties aan Snort wil meegeven, kunt u deze hier opgeven."
+msgstr "Als u speciale opties aan Snort wil meegeven kunt u deze hier opgeven."
 
 #  Type: string
 #  Description
@@ -283,15 +276,15 @@ msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
 msgstr ""
-"Opdat een waarschuwing weergegeven zou worden in de dagelijkse statistieken "
-"dient het vaker dan het hier opgeven aantal keer voor te komen."
+"Opdat een alert weergegeven zou worden in de dagelijkse statistieken dient "
+"het meer dan het hier opgeven aantal keer voor te komen."
 
 #  Type: note
 #  Description
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:136
-#: ../snort-pgsql.templates:136
+#: ../snort.templates:92 ../snort-mysql.templates:135
+#: ../snort-pgsql.templates:135
 msgid "You are running Snort manually."
 msgstr "U voert Snort handmatig uit."
 
@@ -299,8 +292,8 @@ msgstr "U voert Snort handmatig uit."
 #  Description
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:136
-#: ../snort-pgsql.templates:136
+#: ../snort.templates:92 ../snort-mysql.templates:135
+#: ../snort-pgsql.templates:135
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
@@ -308,13 +301,13 @@ msgid ""
 msgstr ""
 "Gelieve Snort te herstarten via:\n"
 " /etc/init.d/snort restart\n"
-"om de instellingen in werking te doen treden."
+"om de instellingen actief te maken."
 
 #. Type: note
 #. Description
 #: ../snort.templates:99
 msgid "There is an error in your configuration"
-msgstr "Er is een fout in uw configuratie"
+msgstr ""
 
 #. Type: note
 #. Description
@@ -327,13 +320,6 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
-"Uw Snort configuratie is niet correct en Snort zal niet in staat zijn om "
-"normaal op te starten. Gelieve uw configuratiebestand na te kijken en te "
-"corrigeren. Als u dit niet doet, zullen latere opwaarderingen vermoedelijk "
-"niet correct werken. Voer dan '/usr/sbin/snort -T -c /etc/snort/snort.conf' "
-"uit om te controleren welke fout wordt gegenereerd (of verwijs naar een "
-"alternatief configuratiebestand als u verschillende configuratiebestanden "
-"gebruikt voor verschillende interfaces)."
 
 #. Type: note
 #. Description
@@ -347,7 +333,7 @@ msgstr ""
 #: ../snort.templates:109 ../snort-mysql.templates:79
 #: ../snort-pgsql.templates:79
 msgid ""
-"Your system has an obsolete configuration file  (/etc/snort/snort.common."
+"Your system has an obsolete configuration file (/etc/snort/common."
 "parameters) which has been automatically converted into the new "
 "configuration file format (at /etc/default/snort). Please review the new "
 "configuration and remove the obsolete one. Until you do this, the init.d "
@@ -361,23 +347,22 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
 msgid "On which interface should Snort listen?"
-msgstr "Op welke interface dient Snort te luisteren?"
+msgstr "Op welke netwerkapparaten dient Snort te luisteren?"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:12
+#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
 msgid ""
-"Please enter the name(s) of the interface(s) which snort should listen on.  "
-"The names of the available interfaces are provided by running 'ip link "
-"show'. This value usually is 'eth0', but you might want to vary this "
-"depending on your environment, if you are using a dialup connection 'ppp0' "
-"might be more appropiate."
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
+"usually is 'eth0', but you might want to vary this depending on your "
+"environment, if you are using a dialup connection 'ppp0' might be more "
+"appropiate."
 msgstr ""
-"Wat is de naam van de interface(s) waarop Snort dient te luisteren? U komt "
-"de namen van beschikbare interfaces te weten met het commando 'ip link "
-"show'. Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving wilt u dit "
-"misschien aanpassen. Als u inbelt, is 'ppp0' waarschijnlijk meer van "
-"toepassing."
+"Wat is de naam van de interface waarop snort dient te luisteren? U komt de "
+"namen van beschikbare interfaces te weten met het commando 'ip link show'. "
+"Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving wijkt dit "
+"mogelijk af; als us inbelt is 'ppp0' waarschijnlijk meer van toepassing."
 
 #. Type: string
 #. Description
@@ -388,8 +373,8 @@ msgid ""
 "route' is on.  You can determine which interface is used for this running "
 "either 'ip route show' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
-"Merk op dat snort normaal ingesteld is om alle dataverkeer afkomstig van het "
-"Internet te inspecteren. Bijgevolg is de hier opgegeven interface normaal "
+"Merk op dat snort normaal ingesteld is om alle van Internet afkomende "
+"verkeer te onderzoeken. Bijgevolg is de hier opgegeven interface normaal "
 "dezelfde die de 'default route' heeft. Om te bepalen welke interface "
 "gebruikt wordt, kunt u 'ip route show' of '/sbin/route -n' uitvoeren (zoek "
 "naar 'default' of '0.0.0.0')."
@@ -398,7 +383,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:91
+#: ../snort-mysql.templates:90
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
 "Wilt u een een database opzetten waar snort-mysql het logboek in kan "
@@ -408,7 +393,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:91
+#: ../snort-mysql.templates:90
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a mysql "
@@ -420,7 +405,7 @@ msgid ""
 "reconfigure -plow snort-mysql'"
 msgstr ""
 "Dit dient enkel de eerste keer dat u snort-mysql installeert te gebeuren. "
-"Voordat u verder gaat, dient u over de volgende informatie te beschikken:\n"
+"Voordat u verder gaat dient u over de volgende informatie te beschikken:\n"
 "  (1) de computernaam van een mysql-databaseserver die verbindingen van deze "
 "machine aanvaardt\n"
 "  (2) een database op die server\n"
@@ -435,7 +420,7 @@ msgstr ""
 #  Description
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
+#: ../snort-mysql.templates:102 ../snort-pgsql.templates:102
 msgid "Snort needs a configured database to log to."
 msgstr "Snort heeft een geconfigureerde database nodig voor het logboek."
 
@@ -443,8 +428,7 @@ msgstr "Snort heeft een geconfigureerde database nodig voor het logboek."
 #  Description
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103
-#, fuzzy
+#: ../snort-mysql.templates:102
 msgid ""
 "Please create the database structure now, using the following command:\n"
 " cd /usr/share/doc/snort-mysql/\n"
@@ -453,16 +437,16 @@ msgid ""
 "will prompt you for the password."
 msgstr ""
 "U kunt de databasestructuur nu aanmaken met het volgende commando:\n"
-"  cd /usr/share/doc/snort-mysql/contrib\n"
+"  cd /usr/share/doc/snort-mysql/\n"
 "  zcat create_mysql.gz | mysql -u <gebruiker> -h <server> -p <databasenaam>\n"
-"Hierbij dient u de juiste waarden voor <gebruiker>, <computer>, en "
-"<databasenaam> in te vullen. MySQL vraagt u om het wachtwoord."
+"Hierbij dient u de juiste waarden voor <gebruiker>, <host>, en <dtabasenaam> "
+"in te vullen. Mysql vraagt u om het wachtwoord."
 
 #  Type: note
 #  Description
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
+#: ../snort-mysql.templates:102 ../snort-pgsql.templates:102
 msgid "After you created the database structure, press 'ok' to continue."
 msgstr ""
 "Druk na het aanmaken van de databasestructuur op 'ok' om verder te gaan."
@@ -471,7 +455,7 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:114
+#: ../snort-mysql.templates:113
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr "Wat is de computernaam van de te gebruiken MySQL-databaseserver?"
 
@@ -479,19 +463,19 @@ msgstr "Wat is de computernaam van de te gebruiken MySQL-databaseserver?"
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:114 ../snort-pgsql.templates:114
+#: ../snort-mysql.templates:113 ../snort-pgsql.templates:113
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
 msgstr ""
-"U dient ervoor te zorgen dat deze correct is ingesteld is om inkomende "
-"verbindingen van deze computer te aanvaarden!"
+"U dient ervoor te zorgen dat deze ingesteld is om inkomende verbindingen van "
+"deze computer te aanvaarden!"
 
 #  Type: string
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:119 ../snort-pgsql.templates:119
 msgid "Please enter the name of the database to use."
 msgstr "Wat is de naam van de te gebruiken database?"
 
@@ -499,7 +483,7 @@ msgstr "Wat is de naam van de te gebruiken database?"
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:119 ../snort-pgsql.templates:119
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
@@ -511,7 +495,7 @@ msgstr ""
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
+#: ../snort-mysql.templates:125 ../snort-pgsql.templates:125
 msgid "Please enter the name of the database user you want to use."
 msgstr "Wat is de naam van de te gebruiken databasegebruiker?"
 
@@ -519,7 +503,7 @@ msgstr "Wat is de naam van de te gebruiken databasegebruiker?"
 #  Description
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
+#: ../snort-mysql.templates:125 ../snort-pgsql.templates:125
 msgid "Make sure this user has been created and has write access."
 msgstr ""
 "U dient ervoor te zorgen dat deze gebruiker aangemaakt is en schrijfrechten "
@@ -529,7 +513,7 @@ msgstr ""
 #  Description
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
+#: ../snort-mysql.templates:130 ../snort-pgsql.templates:130
 msgid "Please enter the password for the database connection."
 msgstr "Wat is het wachtwoord voor de databaseverbinding?"
 
@@ -537,7 +521,7 @@ msgstr "Wat is het wachtwoord voor de databaseverbinding?"
 #  Description
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
+#: ../snort-mysql.templates:130 ../snort-pgsql.templates:130
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
 "Wat is het wachtwoord om verbinding te maken met de Snort-Alertdatabase?"
@@ -548,13 +532,14 @@ msgstr ""
 #. Description
 #: ../snort-pgsql.templates:45
 msgid "Should Snort disable promiscous mode on the interface?"
-msgstr "Wilt u dat Snort de promiscue modus van de interface uitschakelt?"
+msgstr ""
+"Wilt u dat Snort de 'promiscuous' modus van de netwerkapparaten uitschakelt?"
 
 #  Type: boolean
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:91
+#: ../snort-pgsql.templates:90
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
 "Wilt u een database opzetten waar snort-pgsql het logboek in kan bijhouden?"
@@ -563,7 +548,7 @@ msgstr ""
 #  Description
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:91
+#: ../snort-pgsql.templates:90
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a pgsql "
@@ -575,13 +560,13 @@ msgid ""
 "reconfigure -plow snort-pgsql'"
 msgstr ""
 "Dit dient enkel de eerste keer dat u snort-pgsql installeert te gebeuren. "
-"Voordat u verder gaat, dient u over de volgende informatie te beschikken:\n"
-"  (1) de computernaam van een pgql-databaseserver die verbindingen van deze "
-"machine aanvaardt\n"
+"Voordat u verder gaat dient u over de volgende informatie te beschikken:\n"
+"  (1) de computernaam van een postgresql-databaseserver die verbindingen van "
+"deze machine aanvaard\n"
 "  (2) een database op die server\n"
 "  (3) een gebruikersnaam en wachtwoord die toegang verlenen tot die "
 "database\n"
-"Als u niet over _al_ deze informatie beschikt, kunt u daar ofwel eerst voor "
+"Als u niet over _al_ deze informatie beschikt kunt u daar ofwel eerst voor "
 "zorgen, ofwel 'nee' kiezen en het logboek gewoon in een bestand opslaan. U "
 "kunt het databaselogboek altijd later instellen via het commando 'dpkg-"
 "reconfigure -plow snort-pgsql"
@@ -590,8 +575,7 @@ msgstr ""
 #  Description
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:103
-#, fuzzy
+#: ../snort-pgsql.templates:102
 msgid ""
 "Please create the database structure now, using the following command:\n"
 " cd /usr/share/doc/snort-pgsql/\n"
@@ -600,18 +584,18 @@ msgid ""
 "PostgreSQL will prompt you for the password."
 msgstr ""
 "U kunt de databasestructuur nu aanmaken met het volgende commando:\n"
-"  cd /usr/share/doc/snort-pgsql/contrib\n"
+"  cd /usr/share/doc/snort-pgsql/\n"
 "  zcat create_pgsql.gz | pgsql -U <gebruiker> -h <server> -W <databasenaam>\n"
-"Hierbij dient u de juiste waarden voor <gebruiker>, <computer>, en "
-"<dtabasenaam> in te vullen. PostgreSQL vraagt u om het wachtwoord."
+"Hierbij dient u de juiste waarden voor <gebruiker>, <host>, en <dtabasenaam> "
+"in te vullen. PostgreSQL vraagt u om het wachtwoord."
 
 #  Type: string
 #  Description
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:114
+#: ../snort-pgsql.templates:113
 msgid "Please enter the hostname of the pgsql database server to use."
-msgstr "Wat is de computernaam van de te gebruiken pgsql-databaseserver?"
+msgstr "Wat is de computernaam van de te gebruiken postgres-databaseserver?"
 
 #. Type: note
 #. Description
@@ -631,9 +615,9 @@ msgid ""
 msgstr ""
 "Uw snort-configuratiebestand (/etc/snort/snort.conf) maakt gebruik van "
 "verouderde opties die door deze versie niet meer ondersteund worden. Met een "
-"onjuist configuratiebestand kan snort niet opstarten. U kunt uw bestaande "
-"configuratiebestand vervangen met het door dit pakket meegeleverde bestand, "
-"of u kunt de verouderde opties handmatig verwijderen."
+"onjuist configuratiebestand kan snort niet opstarten. U kunt uw bestaand "
+"configuratiebestand vervangen met het door dit pakket voorziene bestand, of "
+"u kunt de verouderde opties handmatig verwijderen."
 
 #. Type: note
 #. Description
@@ -644,16 +628,3 @@ msgid ""
 msgstr ""
 "De in uw configuratiebestand aangetroffen verouderde opties zijn: "
 "${DEP_CONFIG}"
-
-#~ msgid ""
-#~ "Please enter the interface name which snort should listen on. The name of "
-#~ "the available interfaces are provided by running 'ip link show'. This "
-#~ "value usually is 'eth0', but you might want to vary this depending on "
-#~ "your environment, if you are using a dialup connection 'ppp0' might be "
-#~ "more appropiate."
-#~ msgstr ""
-#~ "Wat is de naam van de interface waarop snort dient te luisteren? U komt "
-#~ "de namen van beschikbare interfaces te weten met het commando 'ip link "
-#~ "show'. Gewoonlijk is dit 'eth0', maar afhankelijk van uw omgeving, wijkt "
-#~ "dit mogelijk af; als u inbelt, is 'ppp0' waarschijnlijk meer van "
-#~ "toepassing."

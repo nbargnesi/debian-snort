@@ -2,9 +2,7 @@
 TODO things for Snort in Debian
 -------------------------------
 
-- Use ucf to integrate changes by the maintainer when upgrading
-
-- Break up the init.d script into reusable functions 
+- Breakup the init.d script into reusable functions 
   Also: add a check in order to determine if the snort sensor started
   up properly or it did not.
 
