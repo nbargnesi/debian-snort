@@ -1,3 +1,11 @@
+snort (2.3.0-4) experimental; urgency=low
+
+  * Call dh_installdocs with -i or -a depending on target, rename
+    (Closes: #295228, #294755)
+  *  NEWS.Debian file to NEWS 
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 15 Feb 2005 08:33:34 +0100
+
 snort (2.3.0-3) experimental; urgency=low
 
   * Create manual in build-indep location (Closes: #294755) 
