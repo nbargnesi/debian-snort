@@ -1,0 +1,22 @@
+
+
+- The snort-common package currently does not check if you _accepted_ the
+  config file provided, this is related to bug #247665 which is partially
+  fixed by the snort-common Source-Version depends introduced in 2.2.0-2
+
+- Determine, if the interface is configured and up and has an assigned
+  IP address, the address range for the sensor in an automatic way
+  (see bug #248000)
+
+- Provide an update script, as required in #191105, this could be done
+  by Recommending 'oinkmaster' as soon as 
+
+- Offer the user an option to automatically create the database since
+  the /usr/share/doc/snort* stuff is not available on installation.
+  Review what other packages (gnudip? horde? imp? sitebar? openwebmail?)
+  have done and consider the use of the generic user for database
+  administration.  Note that database permissions for the 'snort' 
+  user need to be properly setup!
+  Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
+
+- Add some common logcheck rules (see #222584, and #217175)

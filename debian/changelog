@@ -1,3 +1,13 @@
+snort (2.2.0-2) unstable; urgency=low
+
+  * Taking over maintainership of this package (Closes: #265343)
+  * Have  Snort{,-mysql,-pgsql} depend on the same versions of the
+    common packages (was not done in the previous release)
+  * Updated JA translation (Closes: #271755)
+  * Added a list of todo items in debian/TODO
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 15 Sep 2004 10:42:43 +0200
+
 snort (2.2.0-1) unstable; urgency=low
 
   + The 'Please Adopt Me!' release.
