@@ -7,7 +7,7 @@ NAME=snort
 DESC="Network Intrusion Detection System"
 
 CONFIG=/etc/snort/snort.debian.conf
-COMMON=`cat /etc/snort/snort.common.parameters`
+[ -r /etc/snort/snort.common.parameters ] && COMMON=`cat /etc/snort/snort.common.parameters`
 
 test -x $DAEMON || exit 0
 test -f $CONFIG && . $CONFIG
@@ -133,8 +133,29 @@ case "$1" in
 		echo "No snort instance found to be restarted!" >&2
 	fi
 	;;
+  status)
+        echo -n "Status of snort daemon(s):"
+	interfaces="$DEBIAN_SNORT_INTERFACE"
+	# If we are requested to check for a specific interface...
+	test "$2" && interfaces="$2"
+	for interface in $interfaces; do
+                echo -n " $interface "
+                pidfile=/var/run/snort_$interface.pid
+                if [ -f  "$pidfile" ] ; then
+ 	                pidval=`cat $pidfile`
+		        if ps -p $pidval | grep -q snort; then
+		       		echo -n "(ok)"
+			else
+				echo -n "(nok!)"
+			fi
+                 else
+                        echo -n "(nok!)"
+                 fi
+        done
+        echo "."
+        ;;
   *)
-	echo "Usage: $0 {start|stop|restart|force-restart|reload|force-reload}"
+	echo "Usage: $0 {start|stop|restart|force-restart|reload|force-reload|status}"
 	exit 1
 	;;
 esac

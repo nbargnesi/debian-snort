@@ -8,8 +8,8 @@
   IP address, the address range for the sensor in an automatic way
   (see bug #248000)
 
-- Provide an update script, as required in #191105, this could be done
-  by Recommending 'oinkmaster' as soon as 
+- Provide an update script, as required in #191105, snort-rules-default
+  currently recommends: 'oinkmaster' but that is sub-optimal
 
 - Offer the user an option to automatically create the database since
   the /usr/share/doc/snort* stuff is not available on installation.

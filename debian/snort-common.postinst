@@ -1,0 +1,42 @@
+#!/bin/sh -e
+
+. /usr/share/debconf/confmodule
+
+
+# This is a list of deprecated preprocessors used to detect
+# bad configuration that will prevent Snort from running
+# based on http://cvs.snort.org/viewcvs.cgi/snort/src/preprocessors/Attic/
+OLD_PREPROCESSORS="http_decode anomsensor asn1 defrag defrag2 fnord httpflow minfrag tcp_stream tcp_stream2 tcp_stream3 unidecode"
+# List of valid preprocessors (taken from src/preprocessor)
+# [Currently not used since the user might have custom preprocessors]
+VALID_PREPROCESSORS="arpspoof bo conversation flow frag2 httpinspect perfmonitor portscan2 portscan rpc_decode stream4 telnet_negotiation"
+
+CONFIG_FILE=/etc/snort/snort.conf
+deprecated=0
+
+if test -f $CONFIG_FILE
+then
+	for prep in $OLD_PREPROCESSORS
+	do
+		found_deprecated=`egrep "^preprocessor $prep:+" $CONFIG_FILE | sed -e 's/:.*//'`
+		if [ -n "$found_deprecated" ] ; then
+			deprecated=1
+			deprecated_list="$found_deprecated $deprecated_list"
+		fi
+	done
+fi
+
+# We should warn the user if 
+# a) the snort.conf does not match the md5sum [TODO]
+# b) we found some deprecated preprocessor
+if [ "$deprecated" -eq 1 ] ; then
+	deprecated_list=`echo $deprecated_list |sed -e 's/ $//'`
+#	echo "Your $CONFIG_FILE is using out of date preprocessors ($deprecated_list) you should upgrade!"
+	db_subst snort/deprecated_config DEP_CONFIG "$deprecated_list" || true
+	db_input high snort/deprecated_config || true
+	db_go || true
+fi
+
+db_stop
+
+exit 0

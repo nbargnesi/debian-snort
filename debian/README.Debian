@@ -16,6 +16,9 @@ Remember: This is work in progress!
 
 -----------------------------------------------------------------------------
 
+ DATABASE CHANGES
+------------------
+
 The database layout has changed a bit since 1.9.0beta4:
 
          - DB schema v106
@@ -30,10 +33,12 @@ The database layout has changed a bit since 1.9.0beta4:
 
             psql> ALTER TABLE sensor ADD last_cid INT8;
             psql> UPDATE schema SET vseq=106;
-          
-#
-# Q & A
-#
+
+-----------------------------------------------------------------------------
+
+ FREQUENT QUESTIONS AND ANSWERS
+---------------------------------
+
 Q.  I want to use FLEXRESP rules, but snort won't start with those rules
     enabled! What is wrong, what should I do?
 A.	FLEXRESP rules need root-priviledges to access raw ethernet interface.
@@ -77,8 +82,27 @@ A3. For performance reasons they are logged in tcpdump-binary format. You
     be existing. You can use -s instead for logging to /var/log/auth.log.
     
 Q4. It seems you disabled some checks and modified snort-lib, why?
-    Because they either generated too many false positives or generate too 
+A4. Because they either generated too many false positives or generate too 
     much noise for harmless things like traceroutes or nmap fingerprint 
     attempts. These modifications are marked by a leading #debian#.
     For more information see /usr/share/doc/snort/README.Maintainer.
 
+Q5. How can I update my rule database with the Debian packages? 
+    (Hint: I'm running stable)
+A5. Signature updates are provided by the snort-rules-default package but
+    if you are using stable, you will not see any changes in that package
+    since they are not allowed for stable releases. If you want to keep
+    your ruleset up-to-date you have two options:
+
+    	- Use the snort-rules-default from the unstable distribution, this
+	  might work as long as it does not belong to a different Snort
+	  release since in between releases snort rules might be updated
+	  in such a way that they are not backwards compatible.
+	- Use a script to manage rule updates, such as 'oinkmaster' (currently
+	  provided as a Debian package) or 'updateSnort'
+	- Use a backported version of Snort which includes these signatures.
+
+   Always make sure that your new rules will be loaded fine by the sensor
+   by using 'snort -T' 
+
+   See also upstreams Snort FAQ item 3.18

@@ -26,8 +26,8 @@ case "$1" in
     install)
 	;;
     upgrade)
-	db_get snort/startup
-	if [ $RET = "manual" ]; then
+	db_get snort/startup || true
+	if [ "$RET" = "manual" ]; then
 		echo "You have chosen to (re)start snort manually."
 		echo "Please restart Snort manually."
 		sleep 2

@@ -26,8 +26,8 @@ case "$1" in
     install)
 	;;
     upgrade)
-	db_get snort-mysql/startup
-	if [ $RET = "manual" ]; then
+	db_get snort-mysql/startup || true
+	if [ "$RET" = "manual" ]; then
 		#db_fset snort-mysql/please_restart_manually seen false
 		db_beginblock
 		db_input high snort-mysql/please_restart_manually || true

@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: misc.rules,v 1.48.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: misc.rules,v 1.48.2.4 2004/09/22 14:10:05 bmc Exp $
 #-----------
 # MISC RULES
 #-----------
@@ -35,8 +35,8 @@ alert udp $EXTERNAL_NET 2002 -> $HTTP_SERVERS 2002 (msg:"MISC slapper worm admin
 
 # once we get response, check for content:"|03|"; offset:0; depth:1;
 alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (msg:"MISC MS Terminal server request RDP"; flow:to_server,established; content:"|03 00 00 0B 06 E0 00 00 00 00 00|"; depth:11; reference:bugtraq,3099; reference:cve,2001-0540; classtype:protocol-command-decode; sid:1447; rev:11;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (msg:"MISC MS Terminal server request"; flow:to_server,established; content:"|03 00 00|"; depth:3; content:"|E0 00 00 00 00 00|"; depth:6; offset:5; reference:bugtraq,3099; reference:cve,2001-0540; classtype:protocol-command-decode; sid:1448; rev:10;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (msg:"MISC MS Terminal Server no encryption session initiation attmept"; flow:to_server,established; content:"|03 00 01|"; depth:3; content:"|00|"; depth:1; offset:288; reference:url,www.microsoft.com/technet/security/bulletin/MS01-052.mspx; classtype:attempted-dos; sid:2418; rev:3;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (msg:"MISC MS Terminal server request"; flow:to_server,established; content:"|03 00 00|"; depth:3; content:"|E0 00 00 00 00 00|"; depth:6; offset:5; reference:bugtraq,3099; reference:cve,2001-0540; classtype:protocol-command-decode; reference:url,www.microsoft.com/technet/security/bulletin/MS01-040.mspx; sid:1448; rev:11;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (msg:"MISC MS Terminal Server no encryption session initiation attempt"; flow:to_server,established; content:"|03 00 01|"; depth:3; content:"|00|"; depth:1; offset:288; reference:url,www.microsoft.com/technet/security/bulletin/MS01-052.mspx; classtype:attempted-dos; sid:2418; rev:4;)
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET 2533 (msg:"MISC Alcatel PABX 4400 connection attempt"; flow:established,to_server; content:"|00 01|C"; depth:3; reference:nessus,11019; classtype:misc-activity; sid:1819; rev:5;)
 alert udp $EXTERNAL_NET any -> $HOME_NET 67 (msg:"MISC bootp hardware address length overflow"; content:"|01|"; depth:1; byte_test:1,>,6,2; reference:cve,1999-0798; classtype:misc-activity; sid:1939; rev:4;)

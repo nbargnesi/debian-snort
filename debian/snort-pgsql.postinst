@@ -26,8 +26,8 @@ case "$1" in
     install)
 	;;
     upgrade)
-	db_get snort-pgsql/startup
-	if [ $RET = "manual" ]; then
+	db_get snort-pgsql/startup || true
+	if [ "$RET" = "manual" ]; then
 		#db_fset snort-pgsql/please_restart_manually seen false
 		db_beginblock
 		db_input high snort-pgsql/please_restart_manually || true

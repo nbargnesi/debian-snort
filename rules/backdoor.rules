@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: backdoor.rules,v 1.40.2.2 2004/08/10 13:52:05 bmc Exp $
+# $Id: backdoor.rules,v 1.40.2.3 2004/08/26 15:19:51 bmc Exp $
 #---------------
 # BACKDOOR RULES
 #---------------
@@ -36,8 +36,8 @@ alert tcp $EXTERNAL_NET any -> $HOME_NET 7597 (msg:"BACKDOOR QAZ Worm Client Log
 
 alert tcp $HOME_NET 146 -> $EXTERNAL_NET 1024: (msg:"BACKDOOR Infector.1.x"; flow:established,from_server; content:"WHATISIT"; reference:arachnids,315; classtype:misc-activity; sid:117; rev:6;)
 alert tcp $HOME_NET 666 -> $EXTERNAL_NET 1024: (msg:"BACKDOOR SatansBackdoor.2.0.Beta"; flow:established,from_server; content:"Remote|3A| You are connected to me."; reference:arachnids,316; classtype:misc-activity; sid:118; rev:5;)
-alert tcp $HOME_NET 146 -> $EXTERNAL_NET 1000:1300 (msg:"BACKDOOR Infector 1.6 Server to Client"; flow:established,from_server; content:"WHATISIT"; classtype:misc-activity; sid:120; rev:5;)
-alert tcp $EXTERNAL_NET 1000:1300 -> $HOME_NET 146 (msg:"BACKDOOR Infector 1.6 Client to Server Connection Request"; flow:to_server,established; content:"FC "; classtype:misc-activity; sid:121; rev:5;)
+alert tcp $HOME_NET 146 -> $EXTERNAL_NET 1000:1300 (msg:"BACKDOOR Infector 1.6 Server to Client"; flow:established,from_server; content:"WHATISIT"; classtype:misc-activity; reference:cve,1999-0660; reference:nessus,11157; sid:120; rev:7;)
+alert tcp $EXTERNAL_NET 1000:1300 -> $HOME_NET 146 (msg:"BACKDOOR Infector 1.6 Client to Server Connection Request"; flow:to_server,established; content:"FC "; classtype:misc-activity; reference:cve,1999-0660; reference:nessus,11157; sid:121; rev:7;)
 
 alert tcp $HOME_NET 31785 -> $EXTERNAL_NET any (msg:"BACKDOOR HackAttack 1.20 Connect"; flow:established,from_server; content:"host"; classtype:misc-activity; sid:141; rev:5;)
 
