@@ -1,3 +1,9 @@
+snort (2.2.0-5) unstable; urgency=low
+
+  * Rules update 
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 13 Oct 2004 12:11:21 +0200
+
 snort (2.2.0-4) unstable; urgency=medium
 
   * Fix typo introduced in previous upload that prevents
