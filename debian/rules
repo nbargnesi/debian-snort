@@ -118,6 +118,8 @@ install-stamp: build-stamp
 	install -m 644 -o root -g root `pwd`/etc/threshold.conf $(TMP)/snort-common/etc/snort/
 
 	cp rules/*.rules $(TMP)/snort-rules-default/etc/snort/rules/
+#	mkdir -p $(TMP)/snort-rules-default/usr/share/snort/
+#	install -m 644 -o root -g root `pwd`/debian/oldrules.md5 $(TMP)/snort-rules-default/usr/share/snort/oldrules.md5
 	
 	cp etc/sid-msg.map $(TMP)/snort-rules-default/etc/snort/
 	cp etc/gen-msg.map $(TMP)/snort-rules-default/etc/snort/
