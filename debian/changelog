@@ -1,3 +1,12 @@
+snort (2.3.2-4) unstable; urgency=low
+
+  * Snort, snort-pgsql and snort-mysql now depend on either coreutils
+    or earlier packages which provided 'stat'. This should prevent
+    partial-upgrades of woody systems which prevent snort's init scripts
+    from running (Closes: #311616)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri,  3 Jun 2005 16:24:50 +0200
+
 snort (2.3.2-3) unstable; urgency=high
 
   * Pre-Depend on adduser since we use it on preinst
