@@ -873,6 +873,7 @@ Optional Packages:
   --with-mysql=DIR        support for mysql
   --with-odbc=DIR         support for odbc
   --with-postgresql=DIR   support for postgresql
+  --with-pgsql-includes=DIR  postgresql include directory
   --with-oracle=DIR       support for oracle
   --with-libipq-includes=DIR  libipq include directory
   --with-libipq-libraries=DIR  libipq library directory
@@ -6876,7 +6877,7 @@ if test "$LPCAP" = "no"; then
   echo "   http://www.tcpdump.org"
   echo "   or use the --with-libpcap-* options, if you have it installed"
   echo "   in unusual place"
-  exit
+  exit 1
 fi
 
 default_directory="/usr /usr/local"
@@ -7071,7 +7072,7 @@ if test "$PCRE_H" = "no"; then
   echo
   echo "   ERROR!  Libpcre header not found, go get it from"
   echo "   http://www.pcre.org"
-  exit
+  exit 1
 fi
 
 # Verify that we have the library
@@ -7156,7 +7157,7 @@ if test "$PCRE_L" = "no"; then
     echo "    ERROR!  Libpcre library not found, go get it from"
     echo "    http://www.pcre.org"
     echo
-    exit
+    exit 1
 fi
 
 
@@ -7236,7 +7237,7 @@ echo $ECHO_N "checking for mysql... $ECHO_C" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
     else
       echo "$as_me:$LINENO: result: no" >&5
@@ -7267,7 +7268,7 @@ echo "${ECHO_T}no" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
       else
         echo "$as_me:$LINENO: result: no" >&5
@@ -7406,7 +7407,7 @@ echo $ECHO_N "checking \"for odbc\"... $ECHO_C" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
     else
       echo "$as_me:$LINENO: result: no" >&5
@@ -7436,7 +7437,7 @@ echo "${ECHO_T}no" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
       else
         echo "$as_me:$LINENO: result: no" >&5
@@ -7461,6 +7462,15 @@ else
    with_postgresql=no
 fi;
 
+
+# Check whether --with-pgsql_includes or --without-pgsql_includes was given.
+if test "${with_pgsql_includes+set}" = set; then
+  withval="$with_pgsql_includes"
+  with_pgsql_includes="$withval"
+else
+  with_pgsql_includes=no
+fi;
+
 if test "$with_postgresql" != "no"; then
   if test "$with_postgresql" = "yes"; then
     postgresql_directory="$default_directory /usr/local/pgsql /usr/pgsql /usr/local"
@@ -7476,23 +7486,42 @@ if test "$with_postgresql" != "no"; then
   echo "$as_me:$LINENO: checking for postgresql" >&5
 echo $ECHO_N "checking for postgresql... $ECHO_C" >&6
 
-  for i in $postgresql_directory; do
-    if test -r $i/include/pgsql/libpq-fe.h; then
-      POSTGRESQL_DIR=$i
-      POSTGRESQL_INC_DIR=$i/include/pgsql
-    elif test -r $i/include/libpq-fe.h; then
-      POSTGRESQL_DIR=$i
-      POSTGRESQL_INC_DIR=$i/include
-    elif test -r $i/include/postgresql/libpq-fe.h; then
-      POSTGRESQL_DIR=$i
-      POSTGRESQL_INC_DIR=$i/include/postgresql
-    fi
-  done
+  if test "$with_pgsql_includes" != "no"; then
+    for i in $with_pgsql_includes $postgresql_directory; do
+      if test -r $i/libpq-fe.h; then
+        POSTGRESQL_INC_DIR=$i
+      elif test -r $i/include/pgsql/libpq-fe.h; then
+        POSTGRESQL_INC_DIR=$i/include/pgsql
+      elif test -r $i/include/libpq-fe.h; then
+        POSTGRESQL_INC_DIR=$i/include
+      elif test -r $i/include/postgresql/libpq-fe.h; then
+        POSTGRESQL_INC_DIR=$i/include/postgresql
+      fi
+    done
+  fi
 
-  if test -z "$POSTGRESQL_DIR"; then
+  if test -z "$POSTGRESQL_INC_DIR"; then
+    for i in $postgresql_directory; do
+      if test -r $i/include/pgsql/libpq-fe.h; then
+        POSTGRESQL_DIR=$i
+        POSTGRESQL_INC_DIR=$i/include/pgsql
+      elif test -r $i/include/libpq-fe.h; then
+        POSTGRESQL_DIR=$i
+        POSTGRESQL_INC_DIR=$i/include
+      elif test -r $i/include/postgresql/libpq-fe.h; then
+        POSTGRESQL_DIR=$i
+        POSTGRESQL_INC_DIR=$i/include/postgresql
+      fi
+    done
+  fi
+
+  if test -z "$POSTGRESQL_INC_DIR"; then
     if test "$postgresql_fail" != "no"; then
       tmp=""
-      for i in $postgesql_directory; do
+      if test "$with_pgsql_includes" != "no"; then
+        tmp="$tmp $with_pgsql_includes"
+      fi
+      for i in $postgresql_directory; do
         tmp="$tmp $i/include $i/include/pgsql"
       done
 
@@ -7506,26 +7535,30 @@ echo $ECHO_N "checking for postgresql... $ECHO_C" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
     else
       echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
     fi
-  else
+  fi
 
-    for i in lib lib/pgsql; do
-      str="$POSTGRESQL_DIR/$i/libpq.*"
-      for j in `echo $str`; do
-        if test -r $j; then
-          POSTGRESQL_LIB_DIR="$POSTGRESQL_DIR/$i"
-          break 2
-        fi
-      done
-    done
+  if test -z "$POSTGRESQL_DIR"; then
+    for dir in $postgresql_directory; do
+       for i in lib lib/pgsql; do
+         str="$dir/$i/libpq.*"
+         for j in `echo $str`; do
+           if test -r $j; then
+  	     POSTGRESQL_LIB_DIR="$dir/$i"
+             break 2
+           fi
+         done
+       done
+   done
+  fi
 
-    if test -z "$POSTGRESQL_LIB_DIR"; then
-      if test "$postgresql_fail" != "no"; then
+  if test -z "$POSTGRESQL_LIB_DIR"; then
+     if test "$postgresql_fail" != "no"; then
 
    echo
    echo
@@ -7537,19 +7570,18 @@ echo "${ECHO_T}no" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
-      else
-        echo "$as_me:$LINENO: result: no" >&5
+     else
+       echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6;
-      fi
-    else
-      echo "$as_me:$LINENO: result: yes" >&5
+     fi
+  else
+     echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
-      LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
-      CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
-      LIBS="${LIBS} -lpq"
-    fi
+     LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
+     CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
+     LIBS="${LIBS} -lpq"
   fi
 fi
 
@@ -7601,7 +7633,7 @@ echo $ECHO_N "checking for oracle... $ECHO_C" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
     else
       echo "$as_me:$LINENO: result: no" >&5
@@ -7919,7 +7951,7 @@ fi
                echo "   www.netfilter.org or use the --with-libipq-* options, "
                echo "   if you have it installed in unusual place"
                echo
-               exit
+               exit 1
            fi
         fi
 
@@ -7946,7 +7978,7 @@ echo $ECHO_N "checking \"for libnet.h version 1.0.x\"... $ECHO_C" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
             fi
             CFLAGS="${CFLAGS} `libnet-config --defines` `libnet-config --cflags`"
@@ -8147,7 +8179,7 @@ done
     echo "   http://www.packetfactory.net/projects/libnet/"
     echo "   or use the --with-libnet-* options, if you have it installed"
     echo "   in unusual place"
-    exit
+    exit 1
   fi
 
   echo "$as_me:$LINENO: checking for libnet version 1.0.2a" >&5
@@ -8188,7 +8220,7 @@ echo "${ECHO_T}no" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
     fi
     echo "$as_me:$LINENO: result: yes" >&5
@@ -8207,7 +8239,7 @@ echo "${ECHO_T}no" >&6
    done
    echo "**********************************************"
    echo
-   exit
+   exit 1
 
   fi
 
@@ -8293,7 +8325,7 @@ fi
     echo "   http://www.packetfactory.net/projects/libnet/"
     echo "   or use the --with-libnet-* options, if you have it installed"
     echo "   in unusual place"
-    exit
+    exit 1
   fi
 
 fi
