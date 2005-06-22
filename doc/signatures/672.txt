@@ -52,3 +52,5 @@ Jen Harvey <jennifer.harvey@sourcefire.com>
 Additional References:
 CVE
 http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0096
+
+--

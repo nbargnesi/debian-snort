@@ -44,3 +44,5 @@ Disallow the use of IM clients on the protected network and enforce or implement
 Contributors:
 Sourcefire Research Team
 Judy Novak <judy.novak@sourcefire.com>
+
+--

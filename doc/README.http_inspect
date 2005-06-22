@@ -73,7 +73,7 @@ likely end up using this default configuration.  Most of the time I would
 suggest setting your default server to:
   - preprocessor http_inspect_server: server default profile all ports { [whatever ports you want] }
 
-In the case of individual IP's the configuration is very similar:
+In the case of individual IPs the configuration is very similar:
   - preprocessor http_inspect_server: server [IP] [server options]
 
 Now we'll talk about the server options.  Some configuration options have
@@ -108,9 +108,10 @@ There are three profiles available:
 	     attacks regardless of the HTTP server.
 
   - apache: The "apache" profile is used for apache web servers.  This differs
-  	        from the 'iis' profile by only excepting utf-8 standard unicode
-	        encoding and not excepting backslashes as legitimate slashes, like
-	        IIS does.  Apache also excepts tabs as whitespace 
+	     from the 'iis' profile by only accepting utf-8 standard
+	     unicode encoding and not accepting backslashes as
+	     legitimate slashes, like IIS does.  Apache also accepts 
+	     tabs as whitespace 
 
   - iis: The "iis" profile mimics IIS servers.  So that means we use IIS
   	     unicode codemaps for each server, %u encoding, bare-byte encoding,
@@ -140,10 +141,17 @@ outputs.
 * flow_depth [integer] *
 This specifies the amount of server response payload to inspect.  This option
 significantly increases IDS performance because we are ignoring a large part of
-the network traffic, that we don't really have rules for anyway.  Most of the
-HTTP server rules that we do have are for the HTTP header and a few bytes after
-that, so we can catch those alerts by specifying a flow_depth of about 150 -
-300.  Mileage may vary.
+the network traffic (HTTP server response payloads).  A small percentage of
+snort rules are targeted at this traffic and a small flow_depth value may
+cause false negatives in some of these rules.  Most of these rules target
+either the HTTP header, or the content that is likely to be in the first
+hundred or so bytes of non-header data.  Headers are usually under 300 bytes
+long, but your mileage may vary.
+
+This value can be set from 0 to 1460, with a value of 0 inspecting all HTTP
+server payloads (note that this will likely slow down IDS performance).  Values
+above 0 tell http_inspect the number of bytes to inspect in the first packet
+of the server response.
 
 * ascii [yes/no] *
 The ASCII decode option tells us whether to decode encoded ASCII chars, a.k.a
@@ -214,7 +222,7 @@ Anyway, this is really complex and adds tons of different encodings for one
 char.  When double_decode is enabled, so is ascii to enforce correct decoding.
 
 * non_rfc_char { [byte] [0x00] . . . } *
-This option let's users receive an alert if certain non-RFC chars are used in
+This option lets users receive an alert if certain non-RFC chars are used in
 a request URI.  For instance, a user may not want to see NULL bytes in the
 request-URI and we can give an alert on that.  Please use this option with
 care, because you could configure it to say, alert on all '/' or something
@@ -325,45 +333,64 @@ configuration.
 * Apache *
 
 flow_depth 300
+non_strict URL parsing
 chunk encoding (alert on chunks larger than 500000 bytes)
 ascii decoding is on (alert off)
-looking for NULL bytes in URL (alert on)
 multiple slash (alert off)
 directory normalization (alert off)
-apache whitespace (alert on)
+webroot (alert on)
+apache whitespace (alert off)
 utf_8 encoding (alert off)
-non_strict URL parsing
 
 * IIS *
 
 flow_depth 300
+chunk encoding (alert on chunks larger than 500000 bytes)
 iis_unicode_map is set to the codepoint map in the global configuration
 ascii decoding (alert off)
 multiple slash (alert off)
 directory normalization (alert off)
+webroot (alert on)
 double decoding (alert on)
 %u decoding (alert on)
 bare byte decoding (alert on)
 iis unicode codepoints (alert on)
 iis backslash (alert off)
-iis delimiter (alert on)
+iis delimiter (alert off)
+apache whitespace (alert off)
+non_strict URL parsing
 
-* All *
+* All * 
 
 flow_depth 300
 chunk encoding (alert on chunks larger than 500000 bytes)
 iis_unicode_map is set to the codepoint map in the global configuration
 ascii decoding is on (alert off)
-looking for NULL bytes in URL (alert on)
 multiple slash (alert off)
 directory normalization (alert off)
-apache whitespace (alert on)
+apache whitespace (alert off)
 double decoding (alert on)
 %u decoding (alert on)
 bare byte decoding (alert on)
 iis unicode codepoints (alert on)
 iis backslash (alert off)
-iis delimiter (alert on)
+iis delimiter (alert off)
+webroot (alert on)
+non_strict URL parsing
+
+The following lists the defaults:
+
+Port 80
+flow_depth 300
+chunk encoding (alert on chunks larger than 500000 bytes)
+ascii decoding is on (alert off)
+utf_8 encoding (alert off)
+multiple slash (alert off)
+directory normalization (alert off)
+webroot (alert on)
+apache whitespace (alert off)
+iis delimiter (alert off)
+non_strict URL parsing
 
 -- Writing uricontent rules --
 The uricontent parameter in the snort rule language searches the NORMALIZED

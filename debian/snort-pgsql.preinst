@@ -8,28 +8,73 @@ set -e
 #        * <new-preinst> `upgrade' <old-version>
 #        * <old-preinst> `abort-upgrade' <new-version>
 
+DEFAULT=/etc/default/snort
+PARAMETERS=/etc/snort/snort.common.parameters
+
+check_parameters() {
+# Check if the old parameters file is there and this is
+# an upgrade (default is not)
+	# Abort if either the old parameters file does not exist
+	# or if the new default has already been installed
+	[ ! -r "$PARAMETERS" ] && return 
+	[ -r "$DEFAULT" ] && return 
+	
+	# Extract our values from there
+	logdir=`cat $PARAMETERS | perl -ne 'print $1 if /-l\s+([\w\/]+)/'`
+	user_snort=`cat $PARAMETERS | perl -ne 'print $1 if /-u\s+(\w+)/'`
+	group_snort=`cat $PARAMETERS | perl -ne 'print $1 if /-g\s+(\w+)/'`
+	extraparms=`cat $PARAMETERS  | sed -e 's/-l[[:space:]]\+[\/[:alnum:]]\+[[:space:]]\+//g; s/-u[[:space:]]\+[[:alnum:]]\+[[:space:]]*//g; s/-g[[:space:]]\+[[:alnum:]]\+[[:space:]]*//g;'`
+	echo "Creating new $DEFAULT configuration based on $PARAMETERS"
+	cat <<EOF >$DEFAULT
+# Parameters for the daemon
+PARAMS="$extraparms"
+# Logging directory
+LOGDIR="$logdir"
+# Snort user
+SNORTUSER="$user_snort"
+# Snort group
+SNORTGROUP="$group_snort"
+EOF
+	return
+}
+
 case "$1" in
     install|upgrade)
+
+	check_parameters
+	[ -r "$DEFAULT" ] && . $DEFAULT
+	# Sane defaults, just in case
+	[ -z "$SNORTUSER" ] && SNORTUSER=snort
+	[ -z "$SNORTGROUP" ] && SNORTGROUP=snort
+	[ -z "$LOGDIR" ] && LOGDIR=/var/log/snort
+
 	# create snort user to avoid running snort as root
 	# 1. create group if not existing
-	addgroup --quiet --system snort 2>/dev/null || true
+	if ! getent group | grep -q "^$SNORTGROUP:" ; then
+		addgroup --quiet --system $SNORTGROUP 2>/dev/null || true
+	fi
 	# 2. create homedir if not existing
-	test -d /var/log/snort || mkdir /var/log/snort
+	test -d $LOGDIR || mkdir $LOGDIR
 	# 3. create user if not existing
+	if ! getent passwd | grep -q "^$SNORTUSER:"; then
 	adduser --quiet \
 	        --system \
-		--ingroup snort \
+		--ingroup $SNORTGROUP \
 		--no-create-home \
 		--disabled-password \
-		snort 2>/dev/null || true
+		$SNORTUSER 2>/dev/null || true
+	fi
 	# 4. adjust passwd entry
 	usermod -c "Snort IDS" \
-		-d /var/log/snort \
-		-g snort \
-		snort
+		-d $LOGDIR \
+		-g $SNORTGROUP \
+		$SNORTUSER
 	# 5. adjust file and directory permissions
-	chown -R snort.snort /var/log/snort
-	chmod u=rwx,g=rxs,o= /var/log/snort
+	if ! dpkg-statoverride --list $LOGDIR >/dev/null
+	then
+		chown -R $SNORTUSER:adm $LOGDIR
+		chmod u=rwx,g=rxs,o= $LOGDIR
+	fi
 		
 	# setup /etc/snort
 	test -d /etc/snort || mkdir /etc/snort
@@ -42,7 +87,8 @@ case "$1" in
 	# rename probably existing cron job with old name
 	if [ -e /etc/cron.daily/snort ]; then
 	    mv /etc/cron.daily/snort /etc/cron.daily/5snort
-    fi
+	fi
+
 
     ;;
     configure)
@@ -61,5 +107,3 @@ esac
 #DEBHELPER#
 
 exit 0
-
-

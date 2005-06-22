@@ -1,7 +1,8 @@
-$Id: README.WIN32,v 1.3 2003/12/17 15:48:12 cazz Exp $
+$Id: README.WIN32,v 1.3.6.1 2005/01/13 20:36:20 jhewlett Exp $
 
 Snort Installation for the Win32 environment
 March 2003 by Rich Adamson ( radamson at routers dot com )
+and updated in December 2004.
 
 Introduction
 The snort intrusion detection system was written as an application intended for 
@@ -17,41 +18,39 @@ This README file is intended to document the minimum drivers required by snort.
 The user may wish to install other snort-related components such as IIS,
 Apache, or Snortsnarf as well.  Installation documentation for those components
 is available from(2):
-  http://www.silicondefense.com/support/windows/
+  http://www.winsnort.com
 
 Snort
 Following the installation instructions provided with snort.
 
 WinPcap Driver
 Snort requires the WinPcap driver to be installed in order to function.  Snort
-has been extensively tested with WinPcap 2.3.  The current installation package
-can be downloaded from:
+has been extensively tested with WinPcap v3.0.  The current installation 
+package can be downloaded from:
   http://winpcap.polito.it/
 The WinPcap installation will install packet.dll and wpcap.dll drivers in the
 system32 directory.  (Note: if older versions of these two drivers exist, the
-instructions at the above URL suggests manually deleting them from your system
-before installing newer drivers.)
+instructions at the above URL suggests manually deleting them from your system,
+reboot, then install newer drivers. Do NOT use any of the WinPcap "beta"
+versions as they are likely to fail.)
 
 LibnetNT Driver
 Certain snort functions, notably the FlexResp functions, will also require an
 appropriate version of LibnetNT to be installed in order for snort to operate
-properly. Snort 2.0 has been tested with the version of LibnetNT from August
-2001.  The current installation package can be downloaded from:
+properly. Snort 2.0 has been tested with the version of LibnetNT from May
+2003.  The current installation package can be downloaded from:
   http://www.securitybugware.org/libnetnt/
-The LibnetNT installation will install the LibnetNT.dll driver in the system32
+The snort installation includes LibnetNT.dll driver in the snort/bin
 directory, and relies on the use the WinPcap drivers noted above to function.
-The documentation at the above URL will indicate which version of WinPcap is
-required for LibnetNT compatibility.  (After installation, verify the
-LibnetNT.dll is installed in the system32 directory.  If it is not located
-there, consider moving it into that directory.)
-
+(Note: the FlexResp routines were being rewritten as of Dec 2004, therefore
+please verify that work has been completed prior to attempting to use them.)
 
 Installation Test Steps:
 The following steps can be used to test the installation of snort and its
 associated drivers.
 
 1. From a command line prompt, change directories to where snort was installed
-   (cd \snort)
+   (cd \snort\bin)
 
 2. Execute the following as a way to verify that snort can access the WinPcap
    drivers:
@@ -62,18 +61,19 @@ associated drivers.
    the command does not provide any list, the WinPcap drivers are not installed
    properly;  review the installation procedures provided with WinPcap and
    reinstall if necessary.  (Note specifically the instructions at
-   http://winpcap.polito.it/ that suggest removing old versions of WinPcap.)
+   http://winpcap.polito.it/ that suggest removing old versions of WinPcap and
+   rebooting prior to installing a newer version.)
 
 3. Execute the following to ensure an understanding as to which version of
    snort is installed:
      snort -V
-   and note the result (version 2.0, etc.).  The specific version number will
+   and note the result (version 2.2, etc.).  The specific version number will
    be required if you ask for assistance from the snort mailing list along with
    the specific Windows operating system that you are using.
 
 4. Next, using the interface number noted in step #2, above, execute:
      snort -v -n 3 -i 2
-   where 2 should be replace with the interface number noted.  This will cause
+   where 2 should be replaced with the interface number noted.  This will cause
    snort to operate in a basic sniffer mode (-v), displaying the headers of the
    first 3 packets observed (-n 3) from the interface specified (-i 2).  If
    packets are displayed, snort is functional and can find the low-level WinPcap
@@ -94,13 +94,13 @@ associated drivers.
    match your installation):
     C:\Snort\snort.exe -c "C:\snort\etc\snort.conf" -l "C:\snort\Log" -A full
                        -i 2 -d -e -X
-   (Note: Be sure to create the c:\snort\log directory on your machine before
-   executing the above.)  If the above command line entry does not return to a
+   Note: Be sure to create the c:\snort\log directory on your machine before
+   executing the above.  If the above command line entry does not return to a
    command line prompt, then snort is running, listening to all packets on
    interface 2 (-i 2), dumping those packets that match the Rules to files in
    the C:\snort\Log directory.  If after executing the above, snort aborts and
    returns to a command line prompt, carefully read the data that snort sent to
-   the screen as it will suggest configuration errors, etc.
+   the screen as it will suggest configuration and rule errors, etc.
 
 6. Carefully READ the documentation included in the snort installation,
    including:
@@ -115,21 +115,30 @@ Technical Notes:
    provided in the libpcap.lib and packet.lib libraries.  If an old version of
    WinPcap exits on your Windows system, newer versions should be installed
    from the URLs noted above.  At the time this document was written, snort
-   v2.0 functioned properly on Windows 2000 and Windows XP systems with:
-     system32\packet.dll   (no version reported)
-                            dated September 19, 2001
-                            size: 36,864 bytes
-     system32\wpcap.dll    (no version reported)
-                            dated September 20, 2001
-                            size: 135,168 bytes
-     system32\LibnetNT.dll (no version reported)
-                            dated August 7, 2001
-                            size 65,536 bytes
+   v2.2 functioned properly on Windows 2000, 2003, and Windows XP systems 
+   with:
+     system32\packet.dll     version reported: 3.0.0.18
+                             dated April 4, 2003
+                             size: 57,344 bytes
+     system32\wpcap.dll      version reported: 3.0.0.18
+                             dated April 4, 2003
+                             size: 1208,896 bytes
+     snort\bin\LibnetNT.dll  (no version reported)
+                             dated May 2, 2003
+                             size 68,161 bytes
 
-2. If you intend to run snort on a multiprocessor Intel system, the latest
-   versions of WinPcap and LibnetNT are required.  Earlier versions of these
-   libraries did not support the multiprocessor systems.
+2. If you intend to run snort on a multiprocessor Intel system, WinPcap v3.0
+   is required.  Earlier versions of these libraries did not support the 
+   multiprocessor systems. Do NOT attempt to use any of the WinPcap "beta"
+   versions as snort will likely fail.
 
+3. If you intend to run snort as a Win32 Service, ALWAYS run snort from the
+   command line FIRST to ensure there are no configuration or rule errors.
+   Snort will NOT report errors when run as a Service; it will simply abort
+   providing no clue why it aborted. The syntax for running snort as a
+   Service can be seen by simply executing snort from the command line
+   (no command line parameters) and reviewing the first several lines 
+   displayed.
 
 =============================================================
 (1) Contributors to this README file include:
@@ -137,10 +146,10 @@ Technical Notes:
     Chris Reid
 
 (2) Installation Documentation for other Snort-related components:
-    Michael E. Steele, Technical Support Engineer for Silicon Defense has
-    prepared, written and maintained several excellent documents integrating
-    other snort-related components. The documents can be downloaded from:
-      http://www.silicondefense.com/support/windows/
+    Michael E. Steele, ( www.winsnort.com ) has prepared, written and 
+    maintained several excellent documents integrating other snort-related 
+    components. The documents can be downloaded from:
+      http://www.winsnort.com
     As of March 2003, the following configuration / installation documents were
     available:
       Snort with IIS and Snortsnarf

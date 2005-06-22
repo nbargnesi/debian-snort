@@ -24,6 +24,11 @@ running a Web server or a vulnerable application on a web server.
 Many known vulnerabilities exist for each implementation and the 
 attack scenarios are legion.
 
+In this case, this event indicates an attempt to access the file
+_AuthChangeUrl which may indicate that an exploit attempt has been
+sucessful in changing user information on an IIS host or that an attempt
+has been made to enumerate accounts on an IIS host.
+
 Some applications do not perform stringent checks when validating the
 credentials of a client host connecting to the services offered on a
 host server. This can lead to unauthorized access and possibly escalated
@@ -67,3 +72,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+--

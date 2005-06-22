@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: verstuff.pl,v 1.6 2004/02/26 15:08:32 cazz Exp $
+# $Id: verstuff.pl,v 1.6.4.2 2004/11/11 00:18:23 jhewlett Exp $
 # Author: Chris Green <cmg@sourcefire.com>
 # Purpose: make sure snort versions stay in sync
 # Created: Tue Jul 22 17:21:42 EDT 2003
@@ -51,10 +51,18 @@ while(<MANUAL>) {
 }
 system("mv -f $prefix/doc/snort_manual.tex.new $prefix/doc/snort_manual.tex");
 
-open(MANUAL, "<$prefix/contrib/rpm/snort.org.spec");
-open(MANUALNEW, ">$prefix/contrib/rpm/snort.org.spec.new");
+open(MANUAL, "<$prefix/rpm/snort.org.spec");
+open(MANUALNEW, ">$prefix/rpm/snort.org.spec.new");
 while(<MANUAL>) {
     s/^Version: .*$/Version: $version/;
     print MANUALNEW $_;
 }
-system("mv -f $prefix/contrib/rpm/snort.org.spec.new $prefix/contrib/rpm/snort.org.spec");
+system("mv -f $prefix/rpm/snort.org.spec.new $prefix/rpm/snort.org.spec");
+
+open (CONF, "<$prefix/etc/snort.conf");
+open (CONFNEW,">$prefix/etc/snort.conf.new");
+while (<CONF>) {
+    s/Snort .* Ruleset/Snort $version Ruleset/;
+    print CONFNEW $_;
+}
+system("mv -f $prefix/etc/snort.conf.new $prefix/etc/snort.conf");

@@ -18,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_database.c,v 1.76 2004/03/23 15:34:46 chris_reid Exp $ */
+/* $Id: spo_database.c,v 1.77 2004/09/13 17:44:49 jhewlett Exp $ */
 
 /* Snort Database Output Plug-in
  * 
@@ -64,6 +64,7 @@
 #include "util.h"
 
 #include "snort.h"
+#include "inline.h"
 
 #ifdef ENABLE_POSTGRESQL
     #include <libpq-fe.h>
@@ -347,8 +348,17 @@ void DatabaseInit(u_char *args)
     insert_into_sensor   = (char *)SnortAlloc(MAX_QUERY_LENGTH);
 
     escapedSensorName    = snort_escape_string(data->sensor_name, data);
-    escapedInterfaceName = snort_escape_string(PRINT_INTERFACE(pv.interface), data);
-
+    if(pv.interface != NULL)
+    {
+    	escapedInterfaceName = snort_escape_string(PRINT_INTERFACE(pv.interface), data);
+    }
+    else
+    {   
+       if(InlineMode())
+       {
+	  escapedInterfaceName = snort_escape_string("inline", data);
+       }
+    }
     if( data->ignore_bpf == 0 )
     {
         if(pv.pcap_cmd == NULL)

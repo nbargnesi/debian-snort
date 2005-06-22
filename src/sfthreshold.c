@@ -28,6 +28,7 @@
 
 #include "sfthd.h"
 #include "sfthreshold.h"
+#include "snort.h"
 
 #ifndef WIN32
 #include <sys/socket.h>
@@ -54,20 +55,23 @@ static int          s_answer  = 0; /**< what was the last return value? */
 static unsigned xatou( char * s , char * etext)
 {
     unsigned val;
+
+    char *endptr;
   
     while( *s == ' ' ) s++;
 
-    if( *s == '-' ) FatalError("*** %s\n*** Invalid unsigned integer - negative sign found, input: %s\n",etext ,s );
-   
-    errno = 0; /* this cleans up a windows problem */
+    if( *s == '-' ) 
+       FatalError("*** %s\n*** Invalid unsigned integer - negative sign found, input: %s\n",etext ,s );
+
+    errno = 0;
     
     /*
     *  strtoul - errors on win32 : ERANGE (VS 6.0)
     *            errors on linux : ERANGE, EINVAL
     */ 
-    val =(unsigned)strtoul(s,0,10);
+    val =(unsigned)strtoul(s,&endptr,10);
     
-    if( errno ) 
+    if(errno || endptr == s)
     {
        FatalError( "*** %s\n*** Invalid integer input: %s\n",etext,s );
     } 
@@ -598,80 +602,87 @@ void ntoa( char * buff, int blen, unsigned ip )
  *          1 : local
  *          2 : suppres   	
  */
-void print_thd_node( THD_NODE *p , int type )
+int print_thd_node( THD_NODE *p , int type )
 {
-       char buffer[80];
-       switch( type )
-       {
-	       case 0: /* global */
-	       if(p->type == THD_TYPE_SUPPRESS ) return;
-	       if(p->sig_id != 0 ) return;
-               break;
-	       
-	       case 1: /* local */
-	       if(p->type == THD_TYPE_SUPPRESS ) return;
-	       if(p->sig_id == 0 || p->gen_id == 0 ) return;
-	       break;
-	       
-	       case 2: /*suppress  */
-	       if(p->type != THD_TYPE_SUPPRESS ) return;
-	       break;
-       }
+    char buf[STD_BUF+1];
+    char buffer[80];
 
-/*     LogMessage ("| thd-id=%d",p->thd_id ); */
+    memset(buf, 0, STD_BUF+1);
 
-       if( p->gen_id == 0 )
-       {
-       LogMessage ("| gen-id=global",p->gen_id );
-       }
-       else
-       {
-       LogMessage ("| gen-id=%-6d",p->gen_id );
-       }
-       if( p->sig_id == 0 )
-       {
-          LogMessage (" sig-id=global" );
-       }
-       else
-       {
-          LogMessage (" sig-id=%-10d",p->sig_id );
-       }
+    switch( type )
+    {
+    case 0: /* global */
+	       if(p->type == THD_TYPE_SUPPRESS ) return 0;
+           if(p->sig_id != 0 ) return 0;
+           break;
+           
+    case 1: /* local */
+	       if(p->type == THD_TYPE_SUPPRESS ) return 0;
+           if(p->sig_id == 0 || p->gen_id == 0 ) return 0;
+           break;
+           
+    case 2: /*suppress  */
+	       if(p->type != THD_TYPE_SUPPRESS ) return 0;
+           break;
+    }
+    
+    /*     sfsnprintfappend(buf, STD_BUF, "| thd-id=%d", p->thd_id ); */
 
-/*               
-       if( p->type == THD_TYPE_SUPPRESS )
-       LogMessage(" type=Suppress ");
-*/      
-       if( p->type != THD_TYPE_SUPPRESS )
-       {
-       if( p->type == THD_TYPE_LIMIT )
-       LogMessage(" type=Limit    ");
-       
-       if( p->type == THD_TYPE_THRESHOLD )
-       LogMessage(" type=Threshold");
-       
-       if( p->type == THD_TYPE_BOTH )
-       LogMessage("type=Both      ");
-       }
-       
-       LogMessage(" tracking=%s",(!p->tracking) ? "src" : "dst" );
+    
+    if( p->gen_id == 0 )
+    {
+        sfsnprintfappend(buf, STD_BUF, "| gen-id=global");
+    }
+    else
+    {
+        sfsnprintfappend(buf, STD_BUF, "| gen-id=%-6d", p->gen_id );
+    }
+    if( p->sig_id == 0 )
+    {
+        sfsnprintfappend(buf, STD_BUF, " sig-id=global" );
+    }
+    else
+    {
+        sfsnprintfappend(buf, STD_BUF, " sig-id=%-10d", p->sig_id );
+    }
+    
+    /*               
+    if( p->type == THD_TYPE_SUPPRESS )
+    sfsnprintfappend(buf, STD_BUF, " type=Suppress ");
+    */      
+    if( p->type != THD_TYPE_SUPPRESS )
+    {
+        if( p->type == THD_TYPE_LIMIT )
+            sfsnprintfappend(buf, STD_BUF, " type=Limit    ");
+        
+        if( p->type == THD_TYPE_THRESHOLD )
+            sfsnprintfappend(buf, STD_BUF, " type=Threshold");
+        
+        if( p->type == THD_TYPE_BOTH )
+            sfsnprintfappend(buf, STD_BUF, " type=Both     ");
+    }
+    
+    sfsnprintfappend(buf, STD_BUF, " tracking=%s", (!p->tracking) ? "src" : "dst" );
 		  
-       if( p->type == THD_TYPE_SUPPRESS )
-       {
-       ntoa(buffer,80,p->ip_address);
-       if (p->not_flag)
-           LogMessage("ip=!%-16s", buffer);
-       else
-           LogMessage("ip=%-17s", buffer);
-       ntoa(buffer,80,p->ip_mask);
-       LogMessage(" mask=%-15s", buffer );
-       }
-       else
-       {
-       LogMessage(" count=%-3d",p->count);
-       LogMessage(" seconds=%-3d",p->seconds);
-       }
-
-       LogMessage("\n");
+    if( p->type == THD_TYPE_SUPPRESS )
+    {
+        ntoa(buffer,80,p->ip_address);
+        if (p->not_flag)
+            sfsnprintfappend(buf, STD_BUF, "ip=!%-16s", buffer);
+        else
+            sfsnprintfappend(buf, STD_BUF, "ip=%-17s", buffer);
+        ntoa(buffer,80,p->ip_mask);
+        sfsnprintfappend(buf, STD_BUF, " mask=%-15s", buffer );
+    }
+    else
+    {
+        sfsnprintfappend(buf, STD_BUF, " count=%-3d", p->count);
+        sfsnprintfappend(buf, STD_BUF, " seconds=%-3d", p->seconds);
+    }
+    
+    LogMessage("%s\n", buf);
+    
+    return 1;
 }
 /*
  * 
@@ -684,7 +695,7 @@ int print_thd_local( THD_STRUCT * thd, int type )
     int        gen_id;
     SFGHASH_NODE * item_hash_node;
     int        lcnt=0;
-
+    
     for(gen_id=0;gen_id < THD_MAX_GENID ; gen_id++ )
     {
         sfthd_hash = thd->sfthd_array [ gen_id ];
@@ -692,30 +703,30 @@ int print_thd_local( THD_STRUCT * thd, int type )
         {
             continue;
         }
-
+        
         for(item_hash_node  = sfghash_findfirst( sfthd_hash );
-            item_hash_node != 0; 
-            item_hash_node  = sfghash_findnext( sfthd_hash ) )
+        item_hash_node != 0; 
+        item_hash_node  = sfghash_findnext( sfthd_hash ) )
         {
             /* Check for any Permanent sig_id objects for this gen_id */
             sfthd_item = (THD_ITEM*)item_hash_node->data;
-
+            
             /* For each permanent thresholding object, test/add/update the thd object */
             /* We maintain a list of thd objects for each gen_id+sig_id */
             /* each object has it's own unique thd_id */
-
+            
             for( sfthd_node  = (THD_NODE*)sflist_first(sfthd_item->sfthd_node_list);
-                 sfthd_node != 0;
-                 sfthd_node = (THD_NODE*)sflist_next(sfthd_item->sfthd_node_list) )
+            sfthd_node != 0;
+            sfthd_node = (THD_NODE*)sflist_next(sfthd_item->sfthd_node_list) )
             {
-		print_thd_node( sfthd_node,type);
-		lcnt++;
+                if (print_thd_node( sfthd_node,type) != 0)
+                    lcnt++;
             }
-	}
+        }
     }
-
+    
     if( ! lcnt ) LogMessage("| none\n");
-
+    
     return 0;
 }
 
@@ -798,7 +809,7 @@ void print_thresholding()
 	   print_thd_local(s_thd, PRINT_SUPPRESS );
 	}
 	
-	LogMessage("-------------------------------------------------------------------------------\n");
+	LogMessage("+------------------------------------------------------------------------------\n");
 	
 }
 

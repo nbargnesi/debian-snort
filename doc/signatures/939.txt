@@ -72,8 +72,7 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 Additional References:
 
-Bugtraq:
-http://www.securityfocus.com/bid/2144
+eEye Digital Security:
+http://www.eeye.com/html/research/advisories/AD20001222.html
 
-
-
+--

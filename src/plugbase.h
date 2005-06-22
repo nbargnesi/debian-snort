@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: plugbase.h,v 1.60 2004/03/23 15:34:46 chris_reid Exp $ */
+/* $Id: plugbase.h,v 1.61 2004/09/13 17:44:49 jhewlett Exp $ */
 #ifndef __PLUGBASE_H__
 #define __PLUGBASE_H__
 
@@ -83,7 +83,7 @@
 #define PP_ALL                    -1
 #define PP_LOADBALANCING          1
 #define PP_PORTSCAN               2
-#define PP_HTTP_DECODE            4
+#define PP_HTTPINSPECT            4
 #define PP_PORTSCAN_IGNORE_HOSTS  8
 #define PP_RPCDECODE              16
 #define PP_BO                     32

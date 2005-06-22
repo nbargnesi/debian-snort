@@ -1,7 +1,4 @@
 Rule: 
-remote file include attempt"; flags:A+; uricontent:"index.php"; nocase;
-content:"file=http\://"; nocase; reference:bugtraq,3889;
-classtype:web-application-attack; sid:1399; rev:1;) 
 
 --
 Sid:
@@ -9,12 +6,12 @@ Sid:
 
 --
 Summary:
-A remote machine has possibly attempted to include a remote file as part of
-PHP-nuke index.php.
+This event is generated when an attempt is made to include a remote file
+as part of PHP-Nuke index.php.
 
 --
 Impact:
-Possible file disclosure, or command execution at the privledge level of
+Possible information disclosure, or command execution at the priviledge level of
 the user running the webserver.
 
 --
@@ -22,16 +19,17 @@ Detailed Information:
 The index.php included with PHP-nuke allows inclusion of additional files.
 Normal usage might be situations where a webmaster wants to include
 additional code in their index.php.  This can be done via
-"index.php?file=<path_to_file>".  PHP-nuke also allows inclusion of files
-from remote sources specified by either ftp or http as the transport
-protocol.  This allows attackers to craft their own php file (say, foo.php)
-and store it remotely (say, http://mysite.org/foo.php) and then instruct
-the victim machine to include foo.php as part of it's source.  Any code in
-foo.php will get executed on the victim machine.
+"index.php?file=<path_to_file>".  PHP-nuke also allows inclusion of
+files from remote sources specified by either ftp or http as the
+transport protocol.  This allows attackers to craft their own php file
+(say, foo.php) and store it remotely (say, http://mysite.org/foo.php)
+and then instruct the victim machine to include foo.php as part of it's
+source.  Any code in foo.php will get executed on the victim machine.
 
 
 --
 Affected Systems:
+	PHP Nuke 1.0 through 5.3.1
  
 --
 Attack Scenarios:
@@ -52,41 +50,32 @@ that uses PHP-nuke, and execute any command:
 
 --
 Ease of Attack:
-Anyone with access to a web browser and a publicly available web server on 
-which they have the ability to make files viewable from the web. 
-
+Simple.
 
 --
 False Positives:
 None Known
-Unknown.
 
 
 --
 False Negatives:
-None Known
 If the page being accessed is not named index.php, but has the same
-vulnerability as the original index.php, the attack will slip by.  If your
-PHP-nuke install allows inclusion of files over other protcols (ftp), this
-attack may slip by.
+vulnerability as the original index.php, the rule will not generate an
+event.
 
 --
 Corrective Action:
-If you run PHP-nuke, either upgrade to the latest revision, or edit the
-source to remove support for file inclusion.  Check your web logs for
-attempted file inclusion.  If found, investigate this as a possible
-system-level intrusion.
+Upgrade to the latest non-affected version of the software.
 
 --
 Contributors:
-Original rule writer unknown
-Original document author unkown
+Snort documentation contributed by Jon Hart <warchild@spoofed.org>
 Sourcefire Vulnerability Research Team
+Brian Caswell <bmc@sourcefire.com>
 Nigel Houghton <nigel.houghton@sourcefire.com>
-Jon Hart <warchild@spoofed.org>
 
 -- 
 Additional References:
 
 
-
+--

@@ -7,7 +7,7 @@ Sid:
 --
 Summary:
 This event is generated when an attempt is made to exploit a known 
-vulnerability in a CGI web application running on a server.
+vulnerability in the CGI web application webdist.cgi running on a server.
 
 --
 Impact:
@@ -23,7 +23,12 @@ not perform stringent checks when validating the credentials of a client
 host connecting to the services offered on a host server. This can lead
 to unauthorized access and possibly escalated privileges to that of the
 administrator. Data stored on the machine can be compromised and trust
-relationships between the victim server and other hosts can be exploited by the attacker.
+relationships between the victim server and other hosts can be exploited
+by the attacker.
+
+In particular this event is generated when an attempt is made to access
+"MachineInfo" using the CGI application webdist.cgi, distributed with
+IRIX operating systems using the package IRIX Mindshare OutBox.
 
 If stringent input checks are not performed by the CGI application, it
 may also be possible for an attacker to execute system binaries or
@@ -31,7 +36,8 @@ malicious code of the attackers choosing.
 
 --
 Affected Systems:
-	All systems running CGI applications
+	IRIX 5.x
+	IRIX 6.x
 
 --
 Attack Scenarios:
@@ -65,3 +71,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+CERT:
+http://www.cert.org/advisories/CA-1997-12.html
+
+--

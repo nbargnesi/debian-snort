@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spp_conversation.c,v 1.24 2004/06/03 20:11:06 jhewlett Exp $
+/* $Id: spp_conversation.c,v 1.24.4.1 2005/01/13 20:36:20 jhewlett Exp $
  *
  */
 
@@ -246,6 +246,7 @@ void ConvInit(u_char* args)
 {
     int i;
     int printall = 1;
+    char buf[STD_BUF+1];
     
     memset(&conv_data, 0, sizeof(ConversationData));
     conv_data.keepstats = 0;
@@ -276,9 +277,10 @@ void ConvInit(u_char* args)
     LogMessage("   Conv Count: %d\n", conv_data.max_convs);
     LogMessage("   Timeout   : %d\n", conv_data.timeout);
     LogMessage("   Alert Odd?: %d\n", conv_data.alert_odd_protocols);
-    LogMessage("   Allowed IP Protocols: ");
-    
 
+    memset(buf, 0, STD_BUF+1);
+    snprintf(buf, STD_BUF, "   Allowed IP Protocols: ");
+    
     for(i=0;i<256;i++) 
     {
         if(!conv_data.allowed_ip_protocols[i])
@@ -290,7 +292,7 @@ void ConvInit(u_char* args)
 
     if(printall)
     {
-        LogMessage(" All\n");
+        sfsnprintfappend(buf, STD_BUF, " All\n");
     }
     else
     {
@@ -298,11 +300,11 @@ void ConvInit(u_char* args)
         {
             if(conv_data.allowed_ip_protocols[i])
             {
-                LogMessage("%d ", i);
+                sfsnprintfappend(buf, STD_BUF, "%d ", i);
             }
         }
     }
-    LogMessage("\n");
+    LogMessage("%s\n", buf);
     
     conv_data.isInitialized = 1;
 }

@@ -23,11 +23,16 @@ export CFLAGS
 CONFFLAGS= --prefix=/usr \
 	--bindir=\$$\{exec_prefix\}/sbin \
 	--mandir=\$$\{exec_prefix\}/share/man \
-	--enable-flexresp \
 	--enable-smbalerts \
 	--with-snmp \
 	--with-openssl
+# Cannot enable flexresp since it builds only with libnet 1.0.2a
+#	--enable-flexresp \
 
+build-indep: build-indep-stamp
+build-indep-stamp:
+	dh_testdir
+	cd doc && make snort_manual.pdf
 
 build: build-stamp
 build-stamp:
@@ -70,6 +75,7 @@ clean:
 	-$(MAKE) distclean
 	rm -f src/snort-mysql
 	rm -f src/snort-pgsql
+	rm -f doc/snort_manual.{pdf,ps,aux,log,toc}
 
 	dh_clean
 
@@ -94,9 +100,12 @@ install-stamp: build-stamp
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort/etc/ppp/ip-down.d/snort
 	rm -rf $(TMP)/snort-common/etc/ppp
 	
-	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
-	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
-	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-mysql/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-pgsql/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
 
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-mysql/etc/logrotate.d/snort
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-pgsql/etc/logrotate.d/snort
@@ -123,19 +132,19 @@ install-stamp: build-stamp
 	touch install-stamp
 
 # Build architecture-independent files here.
-binary-indep: build install
+binary-indep: build build-indep install
 	dh_testdir -i
 	dh_testroot -i
-	dh_installdocs 
-	
-	cp -R $(TMP)/snort/usr/share/doc/snort/* $(TMP)/snort-doc/usr/share/doc/snort-doc/
-	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
-	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/contrib/CVS
+
+	dh_installdocs -i
 	dh_installexamples -i
-	chmod +x $(TMP)/snort-doc/usr/share/doc/snort-doc/examples/snort*
 	dh_installdebconf -i
 	dh_installman -i 
-	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
+	# Other adjustments
+	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
+	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/contrib/CVS
+	chmod +x $(TMP)/snort-doc/usr/share/doc/snort-doc/examples/snort*
+	cp -a doc/signatures/ $(TMP)/snort-doc/usr/share/doc/snort-doc/
 	rm -rf $(TMP)/snort-doc/usr/share/man
 	rm -rf $(TMP)/snort-rules-default/usr/share/man
 	dh_undocumented -i
@@ -158,7 +167,7 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
-	dh_installdocs
+	dh_installdocs -a 
 	dh_installexamples -a
 	chmod +x $(TMP)/snort/usr/share/doc/snort/examples/snort*
 	chmod +x $(TMP)/snort-mysql/usr/share/doc/snort-mysql/examples/snort*
@@ -172,11 +181,11 @@ binary-arch: build install
 	rm -rf $(TMP)/snort/usr/share/man/man8/snort-stat.*
 	rm -rf $(TMP)/snort-common/usr/share/man/man8/snort.*
 	
-	mkdir -p $(TMP)/snort-mysql/usr/share/doc/snort-mysql/contrib
-	install -m 644 -o root -g root contrib/create_mysql $(TMP)/snort-mysql/usr/share/doc/snort-mysql/contrib/
+	mkdir -p $(TMP)/snort-mysql/usr/share/doc/snort-mysql/
+	install -m 644 -o root -g root schemas/create_mysql $(TMP)/snort-mysql/usr/share/doc/snort-mysql/
 
-	mkdir -p $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/contrib
-	install -m 644 -o root -g root contrib/create_postgresql $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/contrib/
+	mkdir -p $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/
+	install -m 644 -o root -g root schemas/create_postgresql $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/
 
 	dh_undocumented -a
 	dh_installchangelogs -a ChangeLog

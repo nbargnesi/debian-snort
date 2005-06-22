@@ -97,7 +97,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MYSQL" /D "ENABLE_MSSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -872,6 +872,14 @@ SOURCE=..\..\preprocessors\perf.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\portscan.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\portscan.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\preprocessors\sfprocpidstats.c
 # End Source File
 # Begin Source File
@@ -968,6 +976,14 @@ SOURCE=..\..\preprocessors\spp_rpc_decode.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\spp_sfportscan.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\spp_sfportscan.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\preprocessors\spp_stream4.c
 # End Source File
 # Begin Source File
@@ -1034,14 +1050,6 @@ SOURCE=..\..\sfutil\asn1.h
 # Begin Source File
 
 SOURCE=..\..\sfutil\bitop.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\event_queue.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\event_queue.h
 # End Source File
 # Begin Source File
 
@@ -1114,6 +1122,14 @@ SOURCE=..\..\sfutil\sfmemcap.c
 # Begin Source File
 
 SOURCE=..\..\sfutil\sfmemcap.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\sfsnprintfappend.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\sfsnprintfappend.h
 # End Source File
 # Begin Source File
 
@@ -1214,6 +1230,14 @@ SOURCE=..\..\event.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\event_queue.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\event_queue.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\event_wrapper.c
 # End Source File
 # Begin Source File
@@ -1243,6 +1267,14 @@ SOURCE=..\..\fpdetect.h
 # Begin Source File
 
 SOURCE=..\..\generators.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\inline.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\inline.h
 # End Source File
 # Begin Source File
 

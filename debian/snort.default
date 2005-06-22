@@ -1,0 +1,8 @@
+# Parameters for the daemon
+PARAMS="-m 027 -D -d "
+# Logging directory
+LOGDIR="/var/log/snort"
+# Snort user
+SNORTUSER="snort"
+# Snort group
+SNORTGROUP="snort"

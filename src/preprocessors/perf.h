@@ -1,5 +1,5 @@
 /*
-** $Id: perf.h,v 1.3 2003/10/20 15:03:37 chrisgreen Exp $
+** $Id: perf.h,v 1.3.6.1 2004/11/02 22:07:18 jhewlett Exp $
 **
 ** perf.h
 **
@@ -84,6 +84,7 @@ typedef struct _SFPERF {
 
 int sfInitPerformanceStatistics(SFPERF *sfPerf);
 int sfSetPerformanceSampleTime(SFPERF *sfPerf, int iSeconds);
+int sfSetPerformanceAccounting(SFPERF *sfPerf, int iReset);
 int sfSetPerformanceStatistics(SFPERF *sfPerf, int iFlag);
 int sfSetPerformanceStatisticsEx(SFPERF *sfPerf, int iFlag, void * param);
 int sfPerformanceStats(SFPERF *sfPerf, unsigned char *pucPacket, int len,

@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.15 2003/12/17 21:25:14 jh8 Exp $ */
+/* $Id: util.h,v 1.15.6.2 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -40,6 +40,8 @@
 #include "strlcpyu.h"
 #endif
 
+#include "sfsnprintfappend.h"
+
 extern u_long netmasks[33];
 
 /* Self preservation memory control struct */
@@ -67,7 +69,7 @@ void GenHomenet(char *);
 void InitNetmasks();
 void InitBinFrag();
 void GoDaemon();
-void SanityChecks();
+void CheckLogDir();
 char *read_infile(char *);
 void InitProtoNames();
 void CleanupProtoNames();

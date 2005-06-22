@@ -1,6 +1,6 @@
-/* $Id: spp_arpspoof.c,v 1.22 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id: spp_arpspoof.c,v 1.22.4.1 2004/12/09 17:38:47 jhewlett Exp $ */
 /*
-** Copyright (C) 2001-2003 Jeff Nathan <jeff@snort.org>
+** Copyright (C) 2001-2004 Jeff Nathan <jeff@snort.org>
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 /* Snort ARPspoof Preprocessor Plugin
  *   by Jeff Nathan <jeff@snort.org>
- *   Version 0.1.3
+ *   Version 0.1.4
  *
  * Purpose:
  *
@@ -119,22 +119,24 @@ typedef struct _IPMacEntryList
 
 /*  G L O B A L S  **************************************************/
 int check_unicast_arp, check_overwrite;
-u_int8_t bcast[6];  /* generic buffer to store Ethernet broadcast address */
-static IPMacEntryList *ipmel;
+u_int8_t bcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static IPMacEntryList *ipmel = NULL;
 
 
 /*  P R O T O T Y P E S  ********************************************/
-void ARPspoofInit(u_char *);
-void ARPspoofHostInit(u_char *);
-void ParseARPspoofArgs(char *);
-void ParseARPspoofHostArgs(char *);
-void DetectARPattacks(Packet *);
-void ARPspoofCleanExitFunction(int, void *);
-void FreeIPMacEntryList(IPMacEntryList *);
-int AddIPMacEntryToList(IPMacEntryList *, IPMacEntry *);
-IPMacEntry *LookupIPMacEntryByIP(IPMacEntryList *, u_int32_t);
+void ARPspoofInit(u_char *args);
+void ARPspoofHostInit(u_char *args);
+void ParseARPspoofArgs(char *args);
+void ParseARPspoofHostArgs(char *args);
+void DetectARPattacks(Packet *p);
+void ARPspoofCleanExit(int signal, void *unused);
+void FreeIPMacEntryList(IPMacEntryList *ip_mac_entry_list);
+int AddIPMacEntryToList(IPMacEntryList *ip_mac_entry_list, 
+        IPMacEntry *ip_mac_entry);
+IPMacEntry *LookupIPMacEntryByIP(IPMacEntryList *ip_mac_entry_list, 
+        u_int32_t ipv4_addr);
 #if defined(DEBUG)
-    void PrintIPMacEntryList(IPMacEntryList *);
+    void PrintIPMacEntryList(IPMacEntryList *ip_mac_entry_list);
 #endif
 
 
@@ -144,7 +146,7 @@ void SetupARPspoof(void)
     RegisterPreprocessor("arpspoof_detect_host", ARPspoofHostInit);
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, 
-            "Preprocessor: Arpspoof is setup...\n"););
+            "Preprocessor: ARPspoof is setup...\n"););
 
     return;
 }
@@ -153,16 +155,17 @@ void SetupARPspoof(void)
 void ARPspoofInit(u_char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, 
-            "Preprocessor: Arpspoof Initialized\n"););
+            "Preprocessor: ARPspoof Initialized\n"););
 
-    /* parse the argument list from the rules file */
+    /* Parse the arpspoof arguments from snort.conf */
     ParseARPspoofArgs(args);
 
-    /* Set the preprocessor function into the function list */
+    /* Add arpspoof to the preprocessor function list */
     AddFuncToPreprocList(DetectARPattacks);
-    AddFuncToCleanExitList(ARPspoofCleanExitFunction, NULL);
-    /* the code for Restart is identical to CleanExit.  This is intentional */
-    AddFuncToRestartList(ARPspoofCleanExitFunction, NULL);
+
+    /* Restart and CleanExit are identical */
+    AddFuncToCleanExitList(ARPspoofCleanExit, NULL);
+    AddFuncToRestartList(ARPspoofCleanExit, NULL);
 
     return;
 }
@@ -205,14 +208,17 @@ void ParseARPspoofArgs(char *args)
 void ARPspoofHostInit(u_char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, 
-            "Preprocessor: Arpspoof (overwrite list) Initialized\n"););
+            "Preprocessor: ARPspoof (overwrite list) Initialized\n"););
 
-    ipmel = (IPMacEntryList *)SnortAlloc(sizeof(IPMacEntryList));
+    if (ipmel == NULL)
+        ipmel = (IPMacEntryList *)SnortAlloc(sizeof(IPMacEntryList));
 
-    /* parse the argument list from the rules file */
+    /* Add MAC/IP pairs to ipmel */
     ParseARPspoofHostArgs(args);
 
-    check_overwrite = 1;
+    if (check_overwrite == 0)
+        check_overwrite = 1;
+
     return;
 }
 
@@ -295,7 +301,6 @@ void ParseARPspoofHostArgs(char *args)
 void DetectARPattacks(Packet *p)
 {
     IPMacEntry *ipme;
-    u_int32_t addr;
 
     /* is the packet valid? */
     if (p == NULL)
@@ -313,9 +318,6 @@ void DetectARPattacks(Packet *p)
     if ((ntohs(p->ah->ea_hdr.ar_hrd) != 0x0001) || 
             (ntohs(p->ah->ea_hdr.ar_pro) != ETHERNET_TYPE_IP))
         return;
-
-    addr = 0;
-    memset(bcast, 0xff, 6);
 
     switch(ntohs(p->ah->ea_hdr.ar_op))
     {
@@ -367,14 +369,13 @@ void DetectARPattacks(Packet *p)
             break;
     }
 
-    /* bail if the overwrite list hasn't been initialized */
+    /* return if the overwrite list hasn't been initialized */
     if (!check_overwrite)
         return;
 
     /* LookupIPMacEntryByIP() is too slow, will be fixed later */
-    memcpy(&addr, p->ah->arp_spa, 4);
-
-    if ((ipme = LookupIPMacEntryByIP(ipmel, addr)) == NULL)
+    if ((ipme = LookupIPMacEntryByIP(ipmel, 
+            *(u_int32_t *)&p->ah->arp_spa)) == NULL)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, 
                 "MODNAME: LookupIPMacEntryByIp returned NULL\n"););
@@ -385,9 +386,12 @@ void DetectARPattacks(Packet *p)
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, 
                 "MODNAME: LookupIPMacEntryByIP returned %p\n", ipme););
 
-        if ((!memcmp((u_int8_t *)p->eh->ether_src, 
+        /* If the Ethernet source address or the ARP source hardware address
+         * in p doesn't match the MAC address in ipme, then generate an alert
+         */
+        if ((memcmp((u_int8_t *)p->eh->ether_src, 
                 (u_int8_t *)ipme->mac_addr, 6)) || 
-                (!memcmp((u_int8_t *)p->ah->arp_sha, 
+                (memcmp((u_int8_t *)p->ah->arp_sha, 
                 (u_int8_t *)ipme->mac_addr, 6)))
         {
             SnortEventqAdd(GENERATOR_SPP_ARPSPOOF,
@@ -459,7 +463,8 @@ IPMacEntry *LookupIPMacEntryByIP(IPMacEntryList *ip_mac_entry_list,
     if (ip_mac_entry_list == NULL)
         return NULL;
 
-    for (current = ip_mac_entry_list->head; current != NULL; current = current->next)
+    for (current = ip_mac_entry_list->head; current != NULL; 
+            current = current->next)
     {
 #if defined(DEBUG)
         ina.s_addr = ipv4_addr;
@@ -514,12 +519,15 @@ void FreeIPMacEntryList(IPMacEntryList *ip_mac_entry_list)
 }
 
 
-void ARPspoofCleanExitFunction(int signal, void *ignored)
+void ARPspoofCleanExit(int signal, void *unused)
 {
-    FreeIPMacEntryList(ipmel);
-    free(ipmel);
-    ipmel = NULL;
-
+    if (ipmel != NULL)
+    {
+        FreeIPMacEntryList(ipmel);
+        free(ipmel);
+        ipmel = NULL;
+    }
+    check_unicast_arp = check_overwrite = 0;
     return;
 }
 

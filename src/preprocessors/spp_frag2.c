@@ -1,4 +1,4 @@
-/* $Id: spp_frag2.c,v 1.65 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id: spp_frag2.c,v 1.65.4.2 2004/11/02 22:07:18 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -546,23 +546,31 @@ void ParseFrag2Args(u_char *args)
             }
             else if(!strcasecmp(stoks[0], "ttl_limit"))
             {
-                if(stoks[1] == NULL || stoks[1][0] == '\0')
+                if(s_toks > 1)
                 {
-                    FatalError("%s(%d) => ttl_limit requires an integer argument\n",
-                               file_name,file_line);
-                }
+                    if(stoks[1] == NULL || stoks[1][0] == '\0')
+                    {
+                        FatalError("%s(%d) => ttl_limit requires an integer "
+                                "argument\n", file_name,file_line);
+                    }
                 
-                if(isdigit((int)stoks[1][0]))
-                {
-                    f2data.ttl_limit = atoi(stoks[1]);
+                    if(isdigit((int)stoks[1][0]))
+                    {
+                        f2data.ttl_limit = atoi(stoks[1]);
+                    }
+                    else
+                    {
+                        LogMessage("WARNING %s(%d) => Bad TTL Limit"
+                              "size, setting to default (%d\n", file_name, 
+                              file_line, FRAG2_TTL_LIMIT);
+
+                        f2data.ttl_limit = FRAG2_TTL_LIMIT;
+                    }
                 }
                 else
                 {
-                    LogMessage("WARNING %s(%d) => Bad TTL Limit"
-                            "size, setting to default (%d\n", file_name, 
-                            file_line, FRAG2_TTL_LIMIT);
-
-                    f2data.ttl_limit = FRAG2_TTL_LIMIT;
+                    FatalError("%s(%d) => ttl_limit requires an integer "
+                            "argument\n", file_name,file_line);
                 }
             }
             else if(!strcasecmp(stoks[0], "min_ttl"))
@@ -896,6 +904,7 @@ void Frag2Defrag(Packet *p)
             }
 
             RebuildFrag(ft, p);
+
         } else {
             DEBUG_WRAP(DebugMessage(DEBUG_FRAG2, "Fragment not complete\n"););
         }
@@ -1317,7 +1326,7 @@ int PruneFragCache(FragTracker *cft, u_int32_t time, u_int32_t mustdie)
 
                 ft = (FragTracker *) ubi_btNext((ubi_btNodePtr)ft);
 
-                if ((int)savft != (int)cft && ubi_trCount(FragRootPtr) > 1)
+                if (savft != cft && ubi_trCount(FragRootPtr) > 1)
                 {
                     DEBUG_WRAP(DebugMessage(DEBUG_FRAG2, "Pruning stale fragment\n"););
                     ZapFrag(savft);
@@ -1348,7 +1357,7 @@ int PruneFragCache(FragTracker *cft, u_int32_t time, u_int32_t mustdie)
              * pretty stale anyway
              */
             ft = (FragTracker *) ubi_btLeafNode((ubi_btNodePtr) FragRootPtr);
-            if((int)ft != (int)cft)
+            if(ft != cft)
             {
                 ZapFrag(ft);
                 pc.frag_incomp++;

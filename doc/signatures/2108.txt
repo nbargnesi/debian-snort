@@ -6,7 +6,8 @@ Sid:
 
 --
 Summary:
-This event is generated when an attempt is made to exploit a buffer overflow condition in the Post Office Protocol (POP) command CAPA.
+This event is generated when an attempt is made to exploit a buffer
+overflow condition in the Post Office Protocol (POP) command CAPA.
 
 --
 Impact:
@@ -46,3 +47,14 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+ZVON RFC Reference:
+http://www.zvon.org/tmRFC/RFC2449/Output/chapter5.html
+
+Gordano Knowledge Base:
+http://www.ntmail.co.uk/kb.htm?q=981
+
+ZVON RFC Reference:
+http://www.zvon.org/tmRFC/RFC2449/Output/chapter6.html
+
+--

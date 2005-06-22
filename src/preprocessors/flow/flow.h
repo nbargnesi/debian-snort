@@ -55,6 +55,9 @@ typedef struct _FLOWSTATS
     char first_talker;
     char last_talker;    
     u_int16_t alerts_seen;
+
+    char direction;
+
 } FLOWSTATS;
 
 typedef struct _FLOW

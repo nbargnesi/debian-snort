@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: x11.rules,v 1.16.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: x11.rules,v 1.19 2004/07/23 20:15:44 bmc Exp $
 #----------
 # X11 RULES
 #----------

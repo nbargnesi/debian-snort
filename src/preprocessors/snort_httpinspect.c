@@ -45,6 +45,7 @@
 #include "plugbase.h"
 #include "util.h"
 #include "event_queue.h"
+#include "stream.h"
 
 #include "hi_return_codes.h"
 #include "hi_ui_config.h"
@@ -445,7 +446,8 @@ static int ProcessIISUnicodeMap(int **iis_unicode_map,
         if(iRet == HI_INVALID_FILE)
         {
             snprintf(ErrorString, ErrStrLen,
-                     "Invalid file name for IIS Unicode Map file.");
+                     "Unable to open the IIS Unicode Map file '%s'.",
+                     filename);
         }
         else if(iRet == HI_FATAL_ERR)
         {
@@ -1519,6 +1521,7 @@ static int PrintConfOpt(HTTPINSPECT_CONF_OPT *ConfOpt, char *Option)
 
 static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
 {
+    char buf[STD_BUF+1];
     int iCtr;
     int iNonRfcChar = 0;
 
@@ -1527,7 +1530,8 @@ static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
         return HI_INVALID_ARG;
     }
 
-    LogMessage("      Ports: ");
+    memset(buf, 0, STD_BUF+1);
+    snprintf(buf, STD_BUF, "      Ports: ");
 
     /*
     **  Print out all the applicable ports.
@@ -1536,11 +1540,11 @@ static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
     {
         if(ServerConf->ports[iCtr])
         {
-            LogMessage("%d ", iCtr);
+            sfsnprintfappend(buf, STD_BUF, "%d ", iCtr);
         }
     }
 
-    LogMessage("\n");
+    LogMessage("%s\n", buf);
 
     LogMessage("      Flow Depth: %d\n", ServerConf->flow_depth);
     LogMessage("      Max Chunk Length: %d\n", ServerConf->chunk_length);
@@ -1591,22 +1595,23 @@ static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
     /*
     **  Print out the non-rfc chars
     */
-    LogMessage("      Non-RFC Compliant Characters: ");
+    memset(buf, 0, STD_BUF+1);
+    snprintf(buf, STD_BUF, "      Non-RFC Compliant Characters: ");
     for(iCtr = 0; iCtr < 256; iCtr++)
     {
         if(ServerConf->non_rfc_chars[iCtr])
         {
-            LogMessage("0x%.2x ", (u_char)iCtr);
+            sfsnprintfappend(buf, STD_BUF, "0x%.2x ", (u_char)iCtr);
             iNonRfcChar = 1;
         }
     }
 
     if(!iNonRfcChar)
     {
-        LogMessage("NONE");
+        sfsnprintfappend(buf, STD_BUF, "NONE");
     }
 
-    LogMessage("\n");
+    LogMessage("%s\n", buf);
 
     return 0;
 }
@@ -2093,15 +2098,26 @@ static inline int LogEvents(HI_SESSION *hi_ssn, Packet *p, int iInspectMode)
 
 static inline int SetSiInput(HI_SI_INPUT *SiInput, Packet *p)
 {
+    Session *ssnptr = NULL;
+
     SiInput->sip   = p->iph->ip_src.s_addr;
     SiInput->dip   = p->iph->ip_dst.s_addr;
     SiInput->sport = p->sp;
     SiInput->dport = p->dp;
 
+    if(p->ssnptr)
+    {
+        ssnptr = (Session *)p->ssnptr;
+    }
+
     /*
     **  We now set the packet direction
     */
-    if(p->packet_flags & PKT_FROM_SERVER)
+    if(ssnptr && ssnptr->session_flags & SSNFLAG_MIDSTREAM)
+    {
+        SiInput->pdir = HI_SI_NO_MODE;
+    }
+    else if(p->packet_flags & PKT_FROM_SERVER)
     {
         SiInput->pdir = HI_SI_SERVER_MODE;
     }
@@ -2245,8 +2261,7 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         */
         if(iInspectMode == HI_SI_CLIENT_MODE)
         {
-            if(!iCallDetect && (Session->client.request.pipeline_req || 
-               Session->server_conf->uri_only))
+            if(!iCallDetect || Session->server_conf->uri_only)
             {
                 UriBufs[0].decode_flags |= HTTPURI_PIPELINE_REQ;
             }
@@ -2255,14 +2270,14 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
             {
                 UriBufs[0].uri    = Session->client.request.uri_norm;
                 UriBufs[0].length = Session->client.request.uri_norm_size;
+                p->uri_count = 1;
             }
-            else
+            else if(Session->client.request.uri)
             {
                 UriBufs[0].uri    = Session->client.request.uri;
                 UriBufs[0].length = Session->client.request.uri_size;
+                p->uri_count = 1;
             }
-            
-            p->uri_count = 1;
         }
         else if(iInspectMode == HI_SI_SERVER_MODE)
         {
@@ -2339,6 +2354,9 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         */
         do_detect = 0;
         iCallDetect = 0;
+
+        p->preprocessors = 0;
+        p->preprocessors |= PP_STREAM4;
 
     } while(Session->client.request.pipeline_req);
 

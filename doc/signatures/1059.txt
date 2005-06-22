@@ -69,3 +69,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 Additional References:
 NGS Whitepaper - Advanced SQL Injection
 www.nextgenss.com/papers/advanced_sql_injection.pdf
+
+--

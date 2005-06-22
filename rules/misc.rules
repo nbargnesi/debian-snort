@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: misc.rules,v 1.48.2.5 2004/10/13 20:25:46 bmc Exp $
+# $Id: misc.rules,v 1.53.2.4 2005/01/17 23:52:48 bmc Exp $
 #-----------
 # MISC RULES
 #-----------
@@ -98,3 +98,5 @@ alert tcp $EXTERNAL_NET any -> $HOME_NET 8000 (msg:"MISC HP Web JetAdmin Execute
 
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET 873 (msg:"MISC rsync backup-dir directory traversal attempt"; flow:to_server,established; content:"--backup-dir"; pcre:"/--backup-dir\s+\x2e\x2e\x2f/"; reference:bugtraq,10247; reference:cve,2004-0426; reference:nessus,12230; classtype:string-detect; sid:2561; rev:4;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 3632 (msg:"MISC distccd command execution attempt"; flow:to_server,established; content:"DIST00000001"; nocase; depth:12; reference:url,distcc.samba.org/security.html; classtype:misc-activity; sid:3061; rev:1;)
+alert udp $EXTERNAL_NET any -> $HOME_NET 7787 (msg:"MISC Unreal Tournament secure overflow attempt"; content:"|5c|secure|5c|"; nocase; pcre:"/\x5csecure\x5c[^\x00]{50}/smi"; reference:cve,CAN-2004-0608; reference:bugtraq,10570; classtype:misc-attack; sid:3080; rev:1;)

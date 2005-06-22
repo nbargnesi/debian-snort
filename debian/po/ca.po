@@ -1,14 +1,14 @@
 # snort (debconf) translation to Catalan.
-# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
-# Aleix Badia i Bosch <abadia@ica.es> 2004
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
+# Aleix Badia i Bosch <a.badia@callusdigital.org> 2005
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: snort_2.0.1-2_templates\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-12-01 17:07+0100\n"
-"PO-Revision-Date: 2004-01-31 19:41GMT\n"
-"Last-Translator: Aleix Badia i Bosch <abadia@ica.es>\n"
+"POT-Creation-Date: 2005-06-22 23:37+0200\n"
+"PO-Revision-Date: 2005-02-26 10:41+0100\n"
+"Last-Translator: Aleix Badia i Bosch <a.badia@callusdigital.org>\n"
 "Language-Team: Debian L10n Catalan <debian-l10n-catalan@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-1\n"
@@ -29,32 +29,35 @@ msgstr "Quan s'hauria d'iniciar el Snort?"
 #. Type: select
 #. Description
 #: ../snort.templates:5 ../snort-mysql.templates:5 ../snort-pgsql.templates:5
-#, fuzzy
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only when you manually start it via /usr/sbin/snort."
 msgstr ""
 "El Snort es pot iniciar a l'arrencada del sistema, quan el sistema es "
-"connecti a la xarxa (útil pels ordinadors de marcatge que utilitzen els "
-"dispositiu ppp0 o ippp0) o manualment via \"/usr/sbin/snort\"."
+"connecti a la xarxa a través de pppd o iniciar-lo manualment via /usr/sbin/"
+"snort."
 
 #. Type: string
 #. Description
 #: ../snort.templates:12
-#, fuzzy
 msgid "On which interface(s) should Snort listen?"
-msgstr "Quina interfície hauria d'escoltar el Snort? (només una!)"
+msgstr "Quina interfície(s) hauria d'escoltar el Snort?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12
+#: ../snort.templates:12 ../snort-pgsql.templates:12
 msgid ""
-"Please enter the interface(s) name(s) which snort should listen on. The name "
-"of the available interfaces are provided by running 'ip link show'. This "
-"value usually is 'eth0', but you might want to vary this depending on your "
-"environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate."
+"Please enter the name(s) of the interface(s) which snort should listen on. "
+"The names of the available interfaces are provided by running 'ip link "
+"show'. This value usually is 'eth0', but you might want to vary this "
+"depending on your environment, if you are using a dialup connection 'ppp0' "
+"might be more appropiate."
 msgstr ""
+"Introduïu el nom de la interfície(s) que hauria d'escoltar el snort. El nom "
+"de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip "
+"link show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-"
+"lo en funció de l'entorn, si utilitzeu el marcatge directe probablement us "
+"interessi més el valor 'ppp0'."
 
 #. Type: string
 #. Description
@@ -66,6 +69,10 @@ msgid ""
 "either '/sbin/ip ro sh' or '/sbin/route -n' (look for 'default' or "
 "'0.0.0.0')."
 msgstr ""
+"Recordeu que el Snort acostuma a estar configurat per analitzar tot el "
+"tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la "
+"de la 'ruta per defecte'. Podeu obtenir la interfície executant l'ordre '/"
+"sbin/ip ro sh' o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0'). "
 
 #. Type: string
 #. Description
@@ -79,6 +86,12 @@ msgid ""
 "traffic is sent to this interface (either connected to a 'port mirroring/"
 "spanning' port in a switch, to a hub or to a tap)"
 msgstr ""
+"També es pot donar la situació d'executar el Snort en una interfície sense "
+"IP i configurada en mode promiscu, si és el vostre cas, seleccioneu la "
+"interfície que està físicament connectada a la xarxa que voleu analitzar, "
+"posteriorment habiliteu el mode promiscu i assegureu-vos que el tràfic de la "
+"xarxa s'envia a la interfície (connectada a un port 'port mirroring/"
+"spanning' d'un commutador, a un concentrador o a un tap)"
 
 #. Type: string
 #. Description
@@ -88,6 +101,8 @@ msgid ""
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
+"Podeu configurar múltiples interfície afegint més d'un nom d'interfície "
+"separat per espais. Cada interfície pot tenir una configuració específica."
 
 #. Type: string
 #. Description
@@ -106,9 +121,8 @@ msgid ""
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
 "Heu d'utilitzar el format CIDR, ex. 192.168.1.0/24 per un bloc de 256 IPs o "
-"192.268.1.42/32 per únicament una.  Especifiqueu múltiples adreces separades "
-"per ',' (caràcters de coma) i en una sola línia. Els espais no estan "
-"permesos!"
+"192.268.1.42/32 per una.  Especifiqueu múltiples adreces separades per "
+"',' (caràcters de coma) en una sola línia, no utilitzeu espais."
 
 #. Type: string
 #. Description
@@ -116,7 +130,9 @@ msgstr ""
 #: ../snort-pgsql.templates:35
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
-msgstr "Per no confiar amb banda de la xarxa, podeu especificar 'any'."
+msgstr ""
+"Per no establir una relació de confiança amb cap part de la xarxa, podeu "
+"especificar 'any'."
 
 #. Type: string
 #. Description
@@ -125,19 +141,19 @@ msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
 msgstr ""
+"Recordeu que si utilitzeu múltiples interfícies aquesta definició "
+"s'utilitzarà com a definició HOME_NET de totes."
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:52 ../snort-mysql.templates:45
-#, fuzzy
 msgid "Should Snort disable promiscuous mode on the interface?"
-msgstr "S'hauria d'inhabilitar el mode promiscu?"
+msgstr "S'hauria d'inhabilitar el mode promiscu de la interfície?"
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:52 ../snort-mysql.templates:45
 #: ../snort-pgsql.templates:45
-#, fuzzy
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to it's own interface. Enabling it allows Snort to check  every packet that "
@@ -145,9 +161,9 @@ msgid ""
 "computers."
 msgstr ""
 "Si s'inhabilita el mode promiscu, el Snort únicament veurà els paquets "
-"adreçats a la seva pròpia interfície. Cal que l'habiliteu per comprovar cada "
-"paquet que passa per la xarxa ethernet, encara que sigui entre altres "
-"ordinadors."
+"adreçats a la seva pròpia interfície. Si s'habilita, el Snort pot comprovar "
+"cada paquet que passa pel segment ethernet, encara que sigui entre d'altres "
+"ordinador."
 
 #. Type: boolean
 #. Description
@@ -157,6 +173,8 @@ msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
 msgstr ""
+"Si esteu configurant el Snort en una interfície sense una adreça d'IP "
+"inhabiliteu el mode promiscu."
 
 #. Type: boolean
 #. Description
@@ -171,7 +189,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:64 ../snort-mysql.templates:57
 #: ../snort-pgsql.templates:57
-#, fuzzy
 msgid ""
 "If you change Snort's rules testing order to Pass|Alert|Log, they will be "
 "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
@@ -179,16 +196,15 @@ msgid ""
 "command line arguments to filter their alert rules."
 msgstr ""
 "Si canvieu l'ordre de comprovació de les regles del Snort per Pass|Alert|"
-"Log, s'aplicaran en l'ordre Pass->Alert->Log, en compte del estàndard Alert-"
-">Pass->Log. Aquesta opció permetrà que els usuaris no hagin d'utilitzar una "
-"grna quantitat d'arguments de la línia d'ordres de BPF per filtrar les "
-"regles d'alerta."
+"Log, s'aplicaran en l'ordre Pass->Alert->Log, en comptes de l'estàndard "
+"Alert->Pass->Log. Aquesta opció permetrà que els usuaris no hagin "
+"d'utilitzar una gran quantitat d'arguments de la línia d'ordres del Berky "
+"Packet Filter per filtrar les regles d'alerta."
 
 #. Type: string
 #. Description
 #: ../snort.templates:73 ../snort-mysql.templates:66
 #: ../snort-pgsql.templates:66
-#, fuzzy
 msgid "Who should receive the daily statistics mails?"
 msgstr "Qui hauria de rebre els missatges estadístics diaris?"
 
@@ -202,51 +218,56 @@ msgid ""
 "you keep this value, make sure that the mail of the administrator is "
 "redirected to a user that actually reads those mails."
 msgstr ""
+"Una tasca programada diàriament resumirà la informació dels registres del "
+"Snort utilitzant una seqüència anomenada 'snort-stat'. Introduïu el "
+"destinatari dels correus electrònics. El valor predeterminat és "
+"l'administrador del sistema. Si manteniu el valor assegureu-vos que el "
+"correu electrònic de l'administrador es redireccioni a una usuari que "
+"llegeixi els missatges."
 
 #. Type: string
 #. Description
 #: ../snort.templates:83 ../snort-mysql.templates:70
 #: ../snort-pgsql.templates:70
-#, fuzzy
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
-msgstr "Si voleu definir opcions personalitzades del 'snort', feu-ho aquí:"
+msgstr "Si voleu definir opcions personalitzades del Snort, feu-ho aquí."
 
 #. Type: string
 #. Description
 #: ../snort.templates:88 ../snort-mysql.templates:75
 #: ../snort-pgsql.templates:75
-#, fuzzy
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
 msgstr ""
-"Una alerta ha d'aparèixer més vegades per aparèixer a les estadístiques."
+"Una alerta s'inclourà a les estadístiques diàries quan aparegui un nombre de "
+"vegades superior a l'indicat."
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:125
-#: ../snort-pgsql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:136
+#: ../snort-pgsql.templates:136
 msgid "You are running Snort manually."
 msgstr "Esteu executant el Snort manualment."
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:125
-#: ../snort-pgsql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:136
+#: ../snort-pgsql.templates:136
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
 "to let the settings take effect."
 msgstr ""
-"Per l'efectivitat dels canvis reinicieu el Snort utilitzant:\n"
+"Per fer efectius els canvis reinicieu el Snort utilitzant:\n"
 " /etc/init.d/snort start\n"
 
 #. Type: note
 #. Description
 #: ../snort.templates:99
 msgid "There is an error in your configuration"
-msgstr ""
+msgstr "Hi ha una error en la configuració"
 
 #. Type: note
 #. Description
@@ -259,24 +280,60 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
+"La configuració del Snort no és correcte i no es podrà iniciar correctament. "
+"Reviseu la configuració i arregleu-ne els errors. Si no ho feu probablement "
+"no es podran realitzar correctament les actualitzacions del paquet Snort. "
+"Per comprovar l'error executeu l'ordre '/usr/sbin/snort -T -c /etc/snort/"
+"snort.conf' (si utilitzeu diferents fitxers per a diferents interfícies feu "
+"referència a un altre fitxer de configuració)"
 
-#. Type: string
+#. Type: note
 #. Description
-#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
-#, fuzzy
-msgid "On which interface should Snort listen?"
-msgstr "Quina interfície hauria d'escoltar el Snort? (només una!)"
+#: ../snort.templates:109 ../snort-mysql.templates:79
+#: ../snort-pgsql.templates:79
+msgid "This system uses an obsolete configuration file"
+msgstr "El sistema utilitza un fitxer de configuració obsolet"
 
-#. Type: string
+#. Type: note
 #. Description
-#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
+#: ../snort.templates:109 ../snort-mysql.templates:79
+#: ../snort-pgsql.templates:79
 msgid ""
-"Please enter the interface name which snort should listen on. The name of "
-"the available interfaces are provided by running 'ip link show'. This value "
-"usually is 'eth0', but you might want to vary this depending on your "
-"environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate."
+"Your system has an obsolete configuration file  (/etc/snort/snort.common."
+"parameters) which has been automatically converted into the new "
+"configuration file format (at /etc/default/snort). Please review the new "
+"configuration and remove the obsolete one. Until you do this, the init.d "
+"script will not use the new configuration and you will not take advantage of "
+"the benefits introduced in newer releases."
 msgstr ""
+"El sistema té un fitxer de configuració obsolet (/etc/snort/snort.common."
+"parameters) que s'ha convertit automàticament al nou format de fitxer de "
+"configuració (a /etc/default/snort). Comproveu el nou fitxer de configuració "
+"i suprimiu l'obsolet. Fins que no ho feu, la seqüència de l'init.d no "
+"utilitzarà la nova configuració i no podreu utilitzar les característiques "
+"afegides en les noves versions."
+
+#. Type: string
+#. Description
+#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
+msgid "On which interface should Snort listen?"
+msgstr "Quina interfície hauria d'escoltar el Snort?"
+
+#. Type: string
+#. Description
+#: ../snort-mysql.templates:12
+msgid ""
+"Please enter the name(s) of the interface(s) which snort should listen on.  "
+"The names of the available interfaces are provided by running 'ip link "
+"show'. This value usually is 'eth0', but you might want to vary this "
+"depending on your environment, if you are using a dialup connection 'ppp0' "
+"might be more appropiate."
+msgstr ""
+"Introduïu el nom de la interfície(s) que hauria d'escoltar el snort. El nom "
+"de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip "
+"link show'. El valor acostuma a ser 'eth0', però us pot interessar modificar-"
+"lo en funció de l'entorn, si utilitzeu el marcatge directe probablement us "
+"interessi més el valor 'ppp0'."
 
 #. Type: string
 #. Description
@@ -287,18 +344,21 @@ msgid ""
 "route' is on.  You can determine which interface is used for this running "
 "either 'ip route show' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
+"Recordeu que el Snort acostuma a estar configurat per analitzar tot el "
+"tràfic d'internet, la interfície a afegir acostuma a ser la mateixa que la "
+"de la 'ruta per defecte'. Podeu obtenir-la executant l'ordre 'ip route show' "
+"o '/sbin/route -n' (cerqueu 'default' o '0.0.0.0')."
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:80
+#: ../snort-mysql.templates:91
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
-"Voleu configurar una base de dades perquè el snort-mysql hi registri dades?"
+"Voleu configurar una base de dades on el snort-mysql hi registri dades?"
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:80
-#, fuzzy
+#: ../snort-mysql.templates:91
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a mysql "
@@ -311,51 +371,49 @@ msgid ""
 msgstr ""
 "Aquestes tasques només les heu de realitzar la primera vegada que instal·leu "
 "el snort-mysql. Abans de continuar assegureu-vos de tenir(1) el nom d'un "
-"servidor central on s'estigui executant mysql i que permeti connexions tcp "
-"d'aquest ordinador. (2) una base de dades en aquest servidor. (3) un nom "
-"d'usuari i una contrasenya per accedir a la base de dades. Si no teniu tots "
-"els elements de la llista, solucioneu-ho o seleccioneu l'opció 'no' i "
-"utilitzeu el suport tradicional de registre per fitxer. Posteriorment, "
-"sempre podreu configurar el mode de registre reconfigurant el paquet snort-"
-"mysql."
+"servidor central on s'estigui executant un servidor de mysql que permeti "
+"connexions tcp d'aquest ordinador. (2) una base de dades, (3) un nom "
+"d'usuari i una contrasenya per accedir-hi. Si no teniu tots els elements de "
+"la llista, solucioneu-ho o seleccioneu l'opció 'no' i utilitzeu el suport "
+"tradicional de registre per fitxer. Posteriorment, sempre podreu configurar "
+"el mode de registre reconfigurant el paquet snort-mysql utilitzant 'dpkg-"
+"reconfigure -plow snort-mysql'"
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92 ../snort-pgsql.templates:92
+#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
 msgid "Snort needs a configured database to log to."
 msgstr ""
-"El Snort necessita una base de dades configurar per registrar-hi les dades."
+"El Snort necessita una base de dades configurada per registrar-hi les dades."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92
-#, fuzzy
+#: ../snort-mysql.templates:103
 msgid ""
 "Please create the database structure now, using the following command:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
+" cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>\n"
 "Fill in the correct values for the user, host, and database names. MySQL "
 "will prompt you for the password."
 msgstr ""
 "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
+" cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom "
 "base de dades>\n"
-"Omplint correctament les dades de l'usuari, ordinador central i nom de la "
+"Ompliu correctament les dades de l'usuari, ordinador central i nom de la "
 "base de dades. El MySQL us demanarà la contrasenya."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92 ../snort-pgsql.templates:92
-#, fuzzy
+#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
 msgid "After you created the database structure, press 'ok' to continue."
 msgstr ""
-"Un cop creada l'estructura de la base de dades segons el pas anterior, "
-"premeu 'd'acord' per continuar."
+"Un cop creada l'estructura de la base de dades, premeu 'd'acord' per "
+"continuar."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:103
+#: ../snort-mysql.templates:114
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr ""
 "Introduïu el nom de l'ordinador central del servidor de base de dades de "
@@ -363,25 +421,23 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
-#, fuzzy
+#: ../snort-mysql.templates:114 ../snort-pgsql.templates:114
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
 msgstr ""
 "Abans de permetre les connexions a aquest ordinador, assegureu-vos que "
-"s'hagi configurat correctament."
+"estigui configurat correctament."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:109 ../snort-pgsql.templates:109
+#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
 msgid "Please enter the name of the database to use."
 msgstr "Introduïu el nom de la base de dades a utilitzar."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:109 ../snort-pgsql.templates:109
-#, fuzzy
+#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
@@ -391,51 +447,46 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:115 ../snort-pgsql.templates:115
+#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
 msgid "Please enter the name of the database user you want to use."
 msgstr "Introduïu el nom de usuari de la base de dades que voleu utilitzar."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:115 ../snort-pgsql.templates:115
-#, fuzzy
+#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
 msgid "Make sure this user has been created and has write access."
-msgstr "Assegureu-vos que l'usuari està creat i té permís d'escriptura."
+msgstr "Assegureu-vos que l'usuari estigui creat i tingui permís d'escriptura."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
 msgid "Please enter the password for the database connection."
 msgstr "Introduïu la contrasenya per a la connexió amb la base de dades."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
-#, fuzzy
+#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
-"Introduïu la contrasenya per connectar-vos a la base de dades de d'alter del "
-"SNORT."
+"Introduïu la contrasenya per connectar-vos a la base de dades d'alertes del "
+"Snort."
 
 #. Type: boolean
 #. Description
 #: ../snort-pgsql.templates:45
-#, fuzzy
 msgid "Should Snort disable promiscous mode on the interface?"
-msgstr "S'hauria d'inhabilitar el mode promiscu?"
+msgstr "S'hauria d'inhabilitar el mode promiscu de la interfície?"
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:80
-#, fuzzy
+#: ../snort-pgsql.templates:91
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
-"Voleu configurar una base de dades perquè el snort-pgsql hi registri dades?"
+"Voleu configurar una base de dades on el snort-pgsql hi registri dades?"
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:80
-#, fuzzy
+#: ../snort-pgsql.templates:91
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a pgsql "
@@ -446,47 +497,47 @@ msgid ""
 "logging later, by reconfiguring the snort-pgsql package with 'dpkg-"
 "reconfigure -plow snort-pgsql'"
 msgstr ""
-"Aquestes tasques només les heu de realitzar la primera vegada que instal·leu "
-"el snort-mysql. Abans de continuar assegureu-vos de tenir(1) el nom d'un "
-"servidor central on s'estigui executant mysql i que permeti connexions tcp "
-"d'aquest ordinador. (2) una base de dades en aquest servidor. (3) un nom "
-"d'usuari i una contrasenya per accedir a la base de dades. Si no teniu tots "
-"els elements de la llista, solucioneu-ho o seleccioneu l'opció 'no' i "
-"utilitzeu el suport tradicional de registre per fitxer. Posteriorment, "
-"sempre podreu configurar el mode de registre reconfigurant el paquet snort-"
-"mysql."
+"Aquestes tasques només les heu de dur a terme la primera vegada que "
+"instal·leu el snort-pgsql. Abans de continuar assegureu-vos de tenir(1) el "
+"nom d'un servidor central on s'estigui executant el servidor de pgsql i que "
+"permeti connexions tcp d'aquest ordinador. (2) una base de dades en aquest "
+"servidor. (3) un nom d'usuari i una contrasenya per accedir a la base de "
+"dades. Si no teniu tots els elements de la llista, solucioneu-ho o "
+"seleccioneu l'opció 'no' i utilitzeu el suport tradicional de registre per "
+"fitxer. Posteriorment, sempre podreu configurar el mode de registre "
+"reconfigurant el paquet snort-pgsql a través de l'ordre 'dpkg-reconfigure -"
+"plow snort-pgsql'"
 
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:92
-#, fuzzy
+#: ../snort-pgsql.templates:103
 msgid ""
 "Please create the database structure now, using the following command:\n"
-" cd /usr/share/doc/snort-pgsql/contrib\n"
+" cd /usr/share/doc/snort-pgsql/\n"
 " zcat create_pgsql.gz | psql -U <user> -h <host> -W <databasename>\n"
 "Fill in the correct values for the user, host, and database names. "
 "PostgreSQL will prompt you for the password."
 msgstr ""
-"Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
-" zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom "
+"Creeu l'estructura de la base de dades utilitzant l'ordre següent:\n"
+" cd /usr/share/doc/snort-pgsql/\n"
+" zcat create_pgsql.gz | pgsql -U <usuari> -h <ordinador central> -W <nom "
 "base de dades>\n"
-"Omplint correctament les dades de l'usuari, ordinador central i nom de la "
-"base de dades. El MySQL us demanarà la contrasenya."
+"Ompliu correctament les dades de l'usuari, ordinador central i nom de la "
+"base de dades. El PostgreSQL us demanarà la contrasenya."
 
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:103
+#: ../snort-pgsql.templates:114
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr ""
 "Introduïu el nom de l'ordinador central del servidor de base de dades de "
-"PgSQL a utilitzar."
+"pgsql  a utilitzar."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:3
 msgid "Your configuration file is deprecated"
-msgstr ""
+msgstr "El fitxer de configuració és obsolet"
 
 #. Type: note
 #. Description
@@ -498,6 +549,11 @@ msgid ""
 "your configuration file with the one provided in this package or fix it "
 "manually by removing deprecated options."
 msgstr ""
+"El fitxer de configuració actual (/etc/snort/snort.conf) utilitza opcions "
+"obsoletes que ja no estaran disponibles per a aquesta versió del Snort. No "
+"el podreu iniciar si no utilitzeu un fitxer de configuració correcte. Podeu "
+"substituir el fitxer de configuració pel proporcionat pel paquet o arreglar-"
+"lo manualment suprimint les opcions obsoletes."
 
 #. Type: note
 #. Description
@@ -506,6 +562,21 @@ msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
 msgstr ""
+"S'han trobat les opcions obsoletes següents:\n"
+"${DEP_CONFIG}"
+
+#~ msgid ""
+#~ "Please enter the interface name which snort should listen on. The name of "
+#~ "the available interfaces are provided by running 'ip link show'. This "
+#~ "value usually is 'eth0', but you might want to vary this depending on "
+#~ "your environment, if you are using a dialup connection 'ppp0' might be "
+#~ "more appropiate."
+#~ msgstr ""
+#~ "Introduïu el nom de la interfície que haurà d'escoltar el snort. El nom "
+#~ "de les interfícies disponibles el podeu aconseguir executant l'ordre 'ip "
+#~ "link show'. El valor acostuma a ser 'eth0', però us pot interessar "
+#~ "modificar-lo en funció de l'entorn, si utilitzeu el marcatge directe "
+#~ "probablement us interessi més el valor 'ppp0'."
 
 #~ msgid "On which interface Snort should listen? (only one!)"
 #~ msgstr "Quina interfície hauria d'escoltar el Snort? (només una!)"
@@ -601,13 +672,13 @@ msgstr ""
 
 #~ msgid ""
 #~ "Please create the database structure now, using the following command:\n"
-#~ " cd /usr/share/doc/snort-pgsql/contrib\n"
+#~ " cd /usr/share/doc/snort-pgsql/\n"
 #~ " zcat create_postgresql.gz | psql -u <user> -h <host> <databasename>\n"
 #~ "Filling in the correct values for the user, host, and database names. The "
 #~ "pgsql tool will prompt you for the password."
 #~ msgstr ""
 #~ "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-#~ " cd /usr/share/doc/snort-pgsql/contrib\n"
+#~ " cd /usr/share/doc/snort-pgsql/\n"
 #~ " zcat create_postgresql.gz | pgsql -u <usuari> -h <ordinador central> "
 #~ "<nom base de dades>\n"
 #~ "Omplint correctament les dades de l'usuari, ordinador central i nom de la "

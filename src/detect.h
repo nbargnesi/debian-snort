@@ -1,4 +1,4 @@
-/* $Id: detect.h,v 1.10 2004/01/16 21:52:06 jh8 Exp $ */
+/* $Id: detect.h,v 1.11 2004/09/13 17:44:49 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -38,6 +38,11 @@ extern int do_detect;
 int PassAction();
 int ActivateAction(Packet *, OptTreeNode *, Event *);
 int AlertAction(Packet *, OptTreeNode *, Event *);
+#ifdef GIDS
+int DropAction(Packet *, OptTreeNode *, Event *);
+int SDropAction(Packet *, OptTreeNode *, Event *);
+int RejectAction(Packet *, OptTreeNode *, Event *);
+#endif /* GIDS */
 int DynamicAction(Packet *, OptTreeNode *, Event *);
 int LogAction(Packet *, OptTreeNode *, Event *);
 

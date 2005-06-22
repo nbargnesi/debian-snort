@@ -1,4 +1,4 @@
-/* $Id: syslog.h,v 1.4 2003/10/20 15:03:43 chrisgreen Exp $ */
+/* $Id: syslog.h,v 1.4.6.1 2005/01/13 20:36:23 jhewlett Exp $ */
 /* -/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/
  . Copyright (c) 2001 Michael Davis <mike@datanerds.net>
  . All rights reserved.
@@ -207,6 +207,8 @@ CODE facilitynames[] = {
  * for utilities to have to include one of them to include syslog.h, so we get
  * _BSD_VA_LIST_ from <machine/ansi.h> and use it.
  */
+#include <stdarg.h>
+
 #ifndef WIN32
 #include <machine/ansi.h>
 #include <sys/cdefs.h>

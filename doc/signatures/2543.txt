@@ -57,3 +57,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+US-CERT:
+http://www.us-cert.gov/cas/techalerts/TA04-104A.html
+
+--

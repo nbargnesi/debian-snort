@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.30.2.1 2004/08/05 18:21:29 jhewlett Exp $ */
+/* $Id: config.h,v 1.32.2.4 2005/01/13 20:36:21 jhewlett Exp $ */
 
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
@@ -87,7 +87,7 @@
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.2.0"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.3.0"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 
@@ -97,15 +97,23 @@
 
 #include <winsock2.h>
 #include <windows.h>
+#ifdef _MSC_VER
 #pragma warning( disable : 4028 )
+#endif
 #include <io.h>
 #include <process.h>
+#ifdef _MSC_VER
 #pragma warning( default : 4028 )
+#endif
 #include <sys/timeb.h>
 #include <direct.h>
 #include <getopt.h>
+#ifndef __MINGW32__
 typedef int            pid_t;
+#endif
+#ifndef _SSIZE_T_      /* MingW */
 typedef SSIZE_T        ssize_t;
+#endif
 #include "win32/WIN32-Includes/rpc/types.h"
 
 #undef interface
@@ -149,8 +157,12 @@ typedef SSIZE_T        ssize_t;
 #define SIGUSR2 31               /* user defined signal 2 */
 #define SIGPIPE 13               /* write on a pipe with no one to read it */
 // #define EEXIST                   17              /* File exists */
+#ifndef W_OK
 #define W_OK                     0x02    /* test for write permission */
+#endif
+#ifndef R_OK
 #define R_OK                     0x04    /* test for read permission */
+#endif
 #define S_ISDIR(x)               (((x) & 0170000) == 0040000)    /* directory */
 #define S_IRWXU                  0000700                 /* RWX mask for owner */
 #define S_IRWXG                  0000070                 /* RWX mask for group */
@@ -251,5 +263,5 @@ int   init_winsock(void);
 #endif  /* ENABLE_WIN32_SERVICE */
 
 
-#endif __CONFIG_H__
+#endif /* __CONFIG_H__ */
 

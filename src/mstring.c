@@ -1,4 +1,4 @@
-/* $Id: mstring.c,v 1.30 2004/06/03 20:11:05 jhewlett Exp $ */
+/* $Id: mstring.c,v 1.31 2004/09/13 17:44:49 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 
@@ -47,6 +47,10 @@
 #include "mstring.h"
 #include "debug.h"
 #include "plugbase.h" /* needed for fasthex() */
+
+#ifdef GIDS
+extern int detect_depth;
+#endif /* GIDS */
 
 #ifdef TEST_MSTRING
 #define FatalPrintError perror
@@ -566,6 +570,10 @@ int mSearch(char *buf, int blen, char *ptrn, int plen, int *skip, int *shift)
 
                 doe_ptr = &(buf[b_idx]) + plen;
 
+#ifdef GIDS
+                detect_depth = b_idx;
+#endif /* GIDS */
+
                 return 1;
             }
         }
@@ -630,6 +638,9 @@ int mSearchCI(char *buf, int blen, char *ptrn, int plen, int *skip, int *shift)
                             "match: compares = %d.\n", 
                             cmpcnt););
                 doe_ptr = &(buf[b_idx]) + plen;
+#ifdef GIDS
+                detect_depth = b_idx;
+#endif /* GIDS */
                 return 1;
             }
         }

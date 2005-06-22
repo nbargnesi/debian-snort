@@ -19,6 +19,8 @@ perf-event.c perf-event.h \
 sfprocpidstats.c sfprocpidstats.h \
 spp_httpinspect.c spp_httpinspect.h \
 snort_httpinspect.c snort_httpinspect.h \
-spp_flow.c spp_flow.h
+spp_flow.c spp_flow.h \
+portscan.c portscan.h \
+spp_sfportscan.c spp_sfportscan.h
 
 INCLUDES = @INCLUDES@

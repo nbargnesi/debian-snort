@@ -1026,7 +1026,6 @@ static Packet *flowps_mkpacket(SCORE_ENTRY *sep, FLOWPACKET *orig_packet, u_int3
 
     p->pkth->caplen = ETHERNET_HEADER_LEN + plen;
     p->pkth->len    = ETHERNET_HEADER_LEN + plen;
-    
         
     return p;
 }

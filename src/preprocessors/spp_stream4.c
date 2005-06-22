@@ -1,4 +1,4 @@
-/* $Id: spp_stream4.c,v 1.163.2.1 2004/08/11 17:42:18 jhewlett Exp $ */
+/* $Id: spp_stream4.c,v 1.165.2.5 2005/01/13 20:36:20 jhewlett Exp $ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
@@ -85,6 +85,7 @@
 #include "stream.h"
 #include "snort_packet_header.h"
 #include "event_queue.h"
+#include "inline.h"
 
 /*  D E F I N E S  **************************************************/
 
@@ -218,72 +219,6 @@ static char *state_names[] = { "CLOSED",
 #endif
 
 /*  D A T A   S T R U C T U R E S  **********************************/
-typedef struct _Stream4Data
-{
-    char stream4_active;
-
-    char stateful_inspection_flag;
-    u_int32_t timeout;
-    char state_alerts;
-    char evasion_alerts;
-    u_int32_t memcap;
-
-    char log_flushed_streams;
-
-    char ps_alerts;
-
-    char track_stats_flag;
-    char *stats_file;
-    
-    u_int32_t last_prune_time;
-
-    char reassemble_client;
-    char reassemble_server;
-    char reassembly_alerts;
-    char state_protection;
-    char zero_flushed_packets;
-    
-    u_int8_t assemble_ports[65536];
-    u_int8_t emergency_ports[65536];  /* alternate port set for self-preservation mode */
-
-    u_int32_t sp_threshold;
-    u_int32_t sp_period;
-
-    u_int32_t suspend_threshold;
-    u_int32_t suspend_period;
-    
-    
-    u_int8_t  stop_traverse;
-    u_int32_t stop_seq;
-    
-    u_int8_t  min_ttl;   /* min TTL we'll accept to insert a packet */
-    u_int8_t  ttl_limit; /* the largest difference we'll accept in the
-                            course of a TTL conversation */
-    u_int16_t path_mtu;  /* max segment size we'll accept */
-    u_int8_t  reassy_method;
-    u_int32_t ps_memcap;
-    int flush_data_diff_size;
-    
-
-    char asynchronous_link; /* used when you can only see part of the conversation
-                               it can't be anywhere NEAR as robust */
-} Stream4Data;
-
-//typedef struct _StreamPacketData
-//{
-//    ubi_trNode Node;
-//    u_int8_t *pkt;
-//    u_int8_t *payload;
-//    SnortPktHeader pkth;
-//    u_int32_t seq_num;
-//    u_int16_t payload_size;
-//    u_int16_t pkt_size;
-//    u_int32_t cksum;
-//    u_int8_t  chuck;   /* mark the spd for chucking if it's 
-//                        * been reassembled 
-//                        */
-//} StreamPacketData;
-
 typedef struct _BuildData
 {
     Stream *stream;
@@ -355,6 +290,9 @@ u_int32_t safe_alloc_faults;
 Packet *stream_pkt;
 
 /*  G L O B A L S  **************************************************/
+
+extern int do_detect;
+
 /* external globals from rules.c */
 FILE *session_log;
 Stream4Data s4data;
@@ -363,8 +301,6 @@ u_int32_t ps_memory_usage;
 
 /* stream4 emergency mode counters... */
 S4Emergency s4_emergency;
-
-
 
 /*  P R O T O T Y P E S  ********************************************/
 void *SafeAlloc(unsigned long, int, Session *);
@@ -884,6 +820,10 @@ void DisplayStream4Config(void)
     LogMessage("    Self preservation period: %d\n", s4data.sp_period);
     LogMessage("    Suspend threshold: %d\n", s4data.suspend_threshold);
     LogMessage("    Suspend period: %d\n", s4data.suspend_period);
+    LogMessage("    Enforce TCP State: %s\n",
+            s4data.enforce_state ? "ACTIVE" : "INACTIVE");
+    LogMessage("    Midstream Drop Alerts: %s\n\n",
+            s4data.ms_inline_alerts ? "ACTIVE" : "INACTIVE");
 
 }
 
@@ -1035,23 +975,31 @@ void ParseStream4Args(char *args)
         }
         else if(!strcasecmp(stoks[0], "ttl_limit"))
         {
-            if(stoks[1] == NULL || stoks[1][0] == '\0')
+            if(s_toks > 1)
             {
-                FatalError("%s(%d) => ttl_limit requires an integer argument\n",
-                           file_name,file_line);
-            }
+                if(stoks[1] == NULL || stoks[1][0] == '\0')
+                {
+                    FatalError("%s(%d) => ttl_limit requires an integer argument\n",
+                            file_name,file_line);
+                }
             
-            if(isdigit((int)stoks[1][0]))
-            {
-                s4data.ttl_limit = atoi(stoks[1]);
+                if(isdigit((int)stoks[1][0]))
+                {
+                    s4data.ttl_limit = atoi(stoks[1]);
+                }
+                else
+                {
+                    LogMessage("WARNING %s(%d) => Bad TTL Limit"
+                               "size, setting to default (%d\n", file_name, 
+                               file_line, STREAM4_TTL_LIMIT);
+
+                    s4data.ttl_limit = STREAM4_TTL_LIMIT;
+                }
             }
             else
             {
-                LogMessage("WARNING %s(%d) => Bad TTL Limit"
-                           "size, setting to default (%d\n", file_name, 
-                           file_line, STREAM4_TTL_LIMIT);
-
-                s4data.ttl_limit = STREAM4_TTL_LIMIT;
+                FatalError("%s(%d) => ttl_limit requires an integer argument\n",
+                        file_name,file_line);
             }
         }
         else if(!strcasecmp(stoks[0], "self_preservation_threshold"))
@@ -1112,6 +1060,14 @@ void ParseStream4Args(char *args)
 
                 s4data.suspend_period = SUSPEND_PERIOD;
             }
+        }
+        else if(!strcasecmp(stoks[0], "enforce_state"))
+        {
+            s4data.enforce_state = 1;
+        }
+        else if(!strcasecmp(stoks[0], "midstream_drop_alerts"))
+        {
+            s4data.ms_inline_alerts = 1;
         }
         else if(!strcasecmp(stoks[0], "state_protection"))
         {
@@ -1182,6 +1138,7 @@ void Stream4InitReassembler(u_char *args)
 
         if(!pv.quiet_flag)
         {
+            char buf[STD_BUF+1];
             LogMessage("Stream4_reassemble config:\n");
             LogMessage("    Server reassembly: %s\n", 
                     s4data.reassemble_server ? "ACTIVE": "INACTIVE");
@@ -1194,41 +1151,45 @@ void Stream4InitReassembler(u_char *args)
             LogMessage("    flush_data_diff_size: %d\n", 
                        s4data.flush_data_diff_size);
 
-            LogMessage("    Ports: "); 
+            memset(buf, 0, STD_BUF+1);
+            snprintf(buf, STD_BUF, "    Ports: "); 
 
             for(i=0;i<65536;i++)
             {
                 if(s4data.assemble_ports[i])
                 {
-                    LogMessage("%d ", i);
+                    sfsnprintfappend(buf, STD_BUF, "%d ", i);
                     j++;
                 }
 
                 if(j > 20)
                 { 
-                    LogMessage("...\n");
+                    LogMessage("%s...\n", buf);
                     return;
                 }
             }
 
-            LogMessage("\n    Emergency Ports: "); 
+            LogMessage("%s\n", buf);
+            memset(buf, 0, STD_BUF+1);
+            snprintf(buf, STD_BUF, "    Emergency Ports: ");
+            j=0;
 
             for(i=0;i<65536;i++)
             {
                 if(s4data.emergency_ports[i])
                 {
-                    LogMessage("%d ", i);
+                    sfsnprintfappend(buf, STD_BUF, "%d ", i);
                     j++;
                 }
 
                 if(j > 20)
                 { 
-                    LogMessage("...\n");
+                    LogMessage("%s...\n", buf);
                     return;
                 }
             }
 
-            LogMessage("\n");
+            LogMessage("%s\n", buf);
         }
         return;
     }
@@ -1285,9 +1246,9 @@ void Stream4InitReassembler(u_char *args)
                 s4data.assemble_ports[j] = 0;
             }
 
-            ports = mSplit(args, " ", 40, &num_ports, 0);
+            ports = mSplit(index, " ", 40, &num_ports, 0);
 
-            j = 0;
+            j = 1;
 
             while(j < num_ports)
             {
@@ -1429,6 +1390,7 @@ void Stream4InitReassembler(u_char *args)
 
     if(!pv.quiet_flag)
     {
+        char buf[STD_BUF+1];
         LogMessage("Stream4_reassemble config:\n");
         LogMessage("    Server reassembly: %s\n", 
                    s4data.reassemble_server ? "ACTIVE": "INACTIVE");
@@ -1441,41 +1403,45 @@ void Stream4InitReassembler(u_char *args)
         LogMessage("    flush_data_diff_size: %d\n", 
                    s4data.flush_data_diff_size);
 
-        LogMessage("    Ports: ");       
+        memset(buf, 0, STD_BUF+1);
+        snprintf(buf, STD_BUF, "    Ports: ");       
 
         for(i=0;i<65536;i++)
         {
             if(s4data.assemble_ports[i])
             {
-                LogMessage("%d ", i);
+                sfsnprintfappend(buf, STD_BUF, "%d ", i);
                 j++;
             }
 
             if(j > 20)
             { 
-                LogMessage("...\n");
+                LogMessage("%s...\n", buf);
                 return;
             }
         }
 
-        LogMessage("\n    Emergency Ports: "); 
+        LogMessage("%s\n", buf);
+        memset(buf, 0, STD_BUF+1);
+        snprintf(buf, STD_BUF, "    Emergency Ports: "); 
+        j=0;
 
         for(i=0;i<65536;i++)
         {
             if(s4data.emergency_ports[i])
             {
-                LogMessage("%d ", i);
+                sfsnprintfappend(buf, STD_BUF, "%d ", i);
                 j++;
             }
 
             if(j > 20)
             { 
-                LogMessage("...\n");
+                LogMessage("%s...\n", buf);
                 return;
             }
         }
 
-        LogMessage("\n");
+        LogMessage("%s\n", buf);
     }
 }
 
@@ -1795,6 +1761,54 @@ void ReassembleStream4(Packet *p)
 
     /* see if we have a stream for this packet */
     ssn = GetSession(p);
+    
+    /*
+    **  Let's leave this out for now until we figure out if we're going
+    **  to make the rule language handle this type of policy (a.k.a
+    **  not_established).
+    */
+    if(!ssn && s4data.enforce_state)
+    {
+        /*
+        **  We treat IDS and IPS mode differently, because in IDS mode
+        **  we are just monitoring so we pick up all legitimate traffic
+        **  connections, which in this case (thanks to linux) is any
+        **  flag combination (except RST) is valid as an initiator as
+        **  long as the SYN flag is included.
+        **
+        **  In InlineMode, we WILL enforce the correct flag combinations
+        **  or else we'll drop it.
+        */
+        if(!InlineMode())
+        {
+            if((p->tcph->th_flags & (TH_SYN|TH_RST)) != TH_SYN)
+            {
+                do_detect = 0;
+                p->preprocessors = 0;
+
+                return;
+            }
+        }
+        else
+        {
+            /*
+            **  We're in inline mode
+            */
+            if((p->tcph->th_flags & (TH_SYN|TH_ACK|TH_PUSH|TH_FIN|TH_RST)) 
+                    != TH_SYN)
+            {
+                do_detect = 0;
+                p->preprocessors = 0;
+
+                InlineDrop();
+            
+                DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
+                        "Lets drop this its not a synner\n"););
+
+                return;
+            }
+        }
+    }
 
     if(ssn == NULL)
     {
@@ -2694,7 +2708,6 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
         case TH_ACK: 
         case TH_ACK|TH_PUSH: 
         case TH_FIN|TH_ACK:
-        case TH_RST|TH_ACK:
         case TH_ACK|TH_URG:
         case TH_ACK|TH_PUSH|TH_URG:
         case TH_FIN|TH_ACK|TH_URG:
@@ -2893,6 +2906,7 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             break;
 
         case TH_RST:
+        case TH_RST|TH_ACK:
             break;
 
         default: /* 
@@ -4278,10 +4292,10 @@ void OpenStatsFile()
 
     if(stats_log->filename[0] == '/')
         value = snprintf(logdir, STD_BUF, "%s.%lu", stats_log->filename, 
-                         curr_time);
+                         (unsigned long)curr_time);
     else
         value = snprintf(logdir, STD_BUF, "%s/%s.%lu", pv.log_dir, 
-                         stats_log->filename, curr_time);
+                         stats_log->filename, (unsigned long)curr_time);
 
     if(value == -1)
     {
@@ -4359,7 +4373,7 @@ static void TcpAction(Session *ssn, Packet *p, int action, int direction,
             /* Once we reach here, the session is no longer a
                midstream session */
 
-            ssn->session_flags &= (SSNFLAG_ALL ^ SSNFLAG_MIDSTREAM);
+            //ssn->session_flags &= (SSNFLAG_ALL ^ SSNFLAG_MIDSTREAM);
         }      
         else if(action & ACTION_SET_SERVER_ISN)
         {
@@ -4384,6 +4398,12 @@ static void TcpAction(Session *ssn, Packet *p, int action, int direction,
         /* complete a three way handshake */
         if(action & ACTION_COMPLETE_TWH)
         {
+            /*
+            **  Set a packet flag to say that the TWH has been
+            **  completed.
+            */
+            p->packet_flags |= PKT_STREAM_TWH;
+
             /* this should be isn+1 */
             if(pkt_ack == ssn->server.isn+1)
             {
@@ -4585,6 +4605,8 @@ static void TcpAction(Session *ssn, Packet *p, int action, int direction,
                     FlushStream(&ssn->server, p, REVERSE);
                 }
             }
+
+            p->packet_flags |= PKT_STREAM_EST;
         }
 
         if(action & ACTION_FLUSH_CLIENT_STREAM)
@@ -4603,6 +4625,8 @@ static void TcpAction(Session *ssn, Packet *p, int action, int direction,
                     FlushStream(&ssn->client, p, REVERSE);
                 }
             }
+
+            p->packet_flags |= PKT_STREAM_EST;
         }
 
         if(action & ACTION_DROP_SESSION)
@@ -4667,6 +4691,12 @@ static void TcpActionAsync(Session *ssn, Packet *p, int action, int direction,
         /* complete a three way handshake */
         if(action & ACTION_COMPLETE_TWH)
         {
+            /*
+            **  Set a packet flag to say that the TWH has been
+            **  completed.
+            */
+            p->packet_flags |= PKT_STREAM_TWH;
+
             /* this should be isn+1 */
             if(pkt_ack == ssn->server.isn+1)
             {

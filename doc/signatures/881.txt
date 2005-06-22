@@ -65,3 +65,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+Guide to network resource tools:
+http://www.acad.bg/beginner/gnrt/specialist/archie.html
+
+--

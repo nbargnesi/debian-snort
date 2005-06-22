@@ -1,4 +1,4 @@
-/* $Id: sp_byte_jump.c,v 1.14 2003/10/20 15:03:28 chrisgreen Exp $ */
+/* $Id: sp_byte_jump.c,v 1.14.6.2 2005/01/13 20:36:20 jhewlett Exp $ */
 /* Copyright (C) 2002 Sourcefire Inc. */
 /* Author: Martin Roesch*/
 
@@ -77,9 +77,11 @@ typedef struct _ByteJumpData
     u_int32_t offset;
     u_int8_t relative_flag;
     u_int8_t data_string_convert_flag;
+    u_int8_t from_beginning_flag;
     u_int8_t align_flag;
     u_int8_t endianess;
     u_int32_t base;
+    u_int32_t multiplier;
 
 } ByteJumpData;
 
@@ -173,6 +175,8 @@ void ByteJumpParse(char *data, ByteJumpData *idx, OptTreeNode *otn)
     char *cptr;
     int i =0;
 
+    idx->multiplier = 1;
+
     toks = mSplit(data, ",", 12, &num_toks, 0);
 
     if(num_toks < 2)
@@ -219,6 +223,10 @@ void ByteJumpParse(char *data, ByteJumpData *idx, OptTreeNode *otn)
                 /* the offset is relative to the last pattern match */
                 idx->relative_flag = 1;
             }
+            else if(!strcasecmp(cptr, "from_beginning"))
+            {
+                idx->from_beginning_flag = 1;
+            }
             else if(!strcasecmp(cptr, "string"))
             {
                 /* the data will be represented as a string that needs 
@@ -250,6 +258,25 @@ void ByteJumpParse(char *data, ByteJumpData *idx, OptTreeNode *otn)
             else if(!strcasecmp(cptr, "align"))
             {
                 idx->align_flag = 1;
+            }
+            else if(!strncasecmp(cptr, "multiplier ", 11))
+            {
+                /* Format of this option is multiplier xx.
+                 * xx is a positive base 10 number.
+                 */
+                char *mval = &cptr[11];
+                long factor = 0;
+                int multiplier_len = strlen(cptr);
+                if (multiplier_len > 11)
+                {
+                    factor = strtol(mval, &endp, 10);
+                }
+                if ((factor <= 0) || (endp != cptr + multiplier_len))
+                {
+                    FatalError("%s(%d): invalid length multiplier \"%s\"\n", 
+                            file_name, file_line, cptr);
+                }
+                idx->multiplier = factor;
             }
             else
             {
@@ -394,8 +421,21 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                 "Grabbed %d bytes at offset %d, value = 0x%08X\n",
                 bjd->bytes_to_grab, bjd->offset, value););
 
-    doe_ptr = base_ptr + bjd->bytes_to_grab + value;
-    
+    if(bjd->from_beginning_flag)
+    {
+        /* Reset base_ptr if from_beginning */
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                                "jumping from beginning %d bytes\n", value););
+        base_ptr = start_ptr;
+
+        /* from base, push doe_ptr ahead "value" number of bytes */
+        doe_ptr = base_ptr + value * bjd->multiplier;
+    }
+    else
+    {
+        doe_ptr = base_ptr + bjd->bytes_to_grab + value * bjd->multiplier;
+    }
+   
     if(!inBounds(start_ptr, end_ptr, doe_ptr))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,

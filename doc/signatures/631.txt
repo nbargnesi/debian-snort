@@ -6,7 +6,8 @@ Sid:
 
 --
 Summary:
-This event is generated when an external user scans an internal SMTP server using Network Associates' Cybercop vulnerability scanner. 
+This event is generated when an external user scans an internal SMTP
+server using Network Associates' Cybercop vulnerability scanner. 
 
 --
 Impact:
@@ -14,7 +15,10 @@ Information gathering.
 
 --
 Detailed Information:
-Cybercop Scanner is scanning software that searches for system vulnerabilities. As one of its scanning procedures, it sends an EHLO command to SMTP server ports to determine if the SMTP server will return a list of remote commands that it accepts.   
+Cybercop Scanner is scanning software that searches for system
+vulnerabilities. As one of its scanning procedures, it sends an EHLO
+command to SMTP server ports to determine if the SMTP server will return
+a list of remote commands that it accepts.   
 
 --
 Affected Systems:
@@ -22,7 +26,8 @@ Any SMTP server that returns a list of acceptable commands for remote mailers.
 
 --
 Attack Scenarios:
-An attacker may run Cybercop Scanner against SMTP servers in order to determine vulnerabilities that can later be exploited.
+An attacker may run Cybercop Scanner against SMTP servers in order to
+determine vulnerabilities that can later be exploited.
 
 --
 Ease of Attack:
@@ -38,7 +43,8 @@ None known.
 
 --
 Corrective Action:
-Ensure that your SMTP server does not provide more information than is necessary when it receives an EHLO request.
+Ensure that your SMTP server does not provide more information than is
+necessary when it receives an EHLO request.
 
 --
 Contributors:
@@ -51,3 +57,7 @@ Jen Harvey <jennifer.harvey@sourcefire.com>
 --
 Additional References:
 
+General Cybercop information:
+http://www.securityfocus.com/products/126
+
+--

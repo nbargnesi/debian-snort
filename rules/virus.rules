@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: virus.rules,v 1.25.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: virus.rules,v 1.28 2004/07/23 20:15:44 bmc Exp $
 #------------
 # VIRUS RULES
 #------------

@@ -1,51 +1,108 @@
-2004-08-11 - Snort 2.2.0 Final Released
+2005-01-25 - Snort 2.3.0 Final Released
 
-* Updated database schema diagram from Chris Reid. Schema can be found in
-  ./doc/snort_schema_v106.pdf
+* Fixed issue with sfPortscan reporting incorrect IP datagram length.
+  Thanks Jon Hart for the test case and finding the bug, and Marc Norton
+  for resolving the issue.
 
-* Added --include-pcre* configuration option to help cross compiling.
-  Thanks Erik de Castro Lopo.
+* Threshold/Suppression now prints properly when logging to syslog.
+  Thanks Sekure for pointing out the problem. Thanks Steve Sturges for
+  working on the fix.
 
-* Fixed thresholding/suppression issue with queuing multiple
-  events per packet.  Thanks Andreas Ostling.
+* Threshold memcap argument now correctly handles non-integer input.
+  Thanks nnposter for the patch.
 
-* When a rebuilt stream causes an alert, log out the original packets
-  instead of the rebuilt packet.  Thanks sekure@gmail.com for the report.
+* Fixed issue reported by Allan Jensen, where on MacOS X, ppp links were
+  not decoded properly. Thanks Dan Roelker for the fix.
 
-* Turned off http_inspect alerts that were causing false positives in the
-  preset webserver profiles.
+* Snort manual and FAQ are updated for 2.3. Thanks Jen Harvey for your
+  work on putting it all together. 
 
-* Turn off encoding alerts in HTTP parameter field.  The parameter field
-  is still normalized, it just doesn't alert.  This helps reduce alerts
-  that are generated from complex parameter queries.
+2004-12-15 - Snort 2.3.0 RC2 Released
 
-* Fixed memory leak in "fast" output.  Thanks for your bug report
-  sekure@gmail.com.
+* Small performance improvement to arpspoof and also fixed a problem
+  where the list of configured IP/MAC entries would contain only one
+  entry and leaked memory (Jeff Nathan).
 
-* Clear error code which under Windows was causing a subsequent false
-  failure in parsing threshold rules.  (thanks to Rich Adamson)
+* Fixed a problem affecting MacOS X where linking may fail with
+  non-standard libraries when global symbols are encountered multiple
+  times (Jeff Nathan).
 
-2004-06-28 - Snort 2.2.0 RC1 Released
+* Ignore RST|ACK midstream pickup case so we don't get an evasive TCP
+  alerts.  Thanks for the report, Sekure. Thanks Dan Roelker for the fix.
 
-* Added new TCP state engine
+* Moved CheckLogDir() to after parsing snort.conf (for IDS mode) so the 
+  logdir config will work if the default or command-line logdir does not
+  exist on the system. Thanks Dan Roelker.
 
-* Added ASN.1 parsing and detection functionality to snort.  Please refer
-  to README.asn1 for more information on rule usage.
+* Fixed bug when setting the doe_ptr on a successful pcre match.
+  It is now set relative to base_ptr. Thanks Steve Sturges for the
+  fix.
 
-* Fixed rebuilt TCP packet munging reported by Steve Halligan.  Thanks a
-  lot for getting this problem down to pcap so we could analyze the problem.
+* Added from_beginning and multiplier options for byte_jump.
+  from_beginning skips bytes from the beginning of the content,
+  instead of from the location immediately following the number
+  of bytes to skip.  multiplier takes a numeric argument, and
+  skips x times that number of bytes. Thanks again to Steve Sturges.
 
-* Improve TCP reassembly flushing for TCP streams that have already
-  generated an alert.  This was illustrated by Brian Bailey in his SANS
-  GIAC practical examination.  Thanks for working with us on this one.
+* In "fast" output, now log only actual packet contents when UDP
+  data length is greater than actual data length. Thanks Brian
+  Caswell for spotting this, and Andrew Mullican for working on the fix.
 
-* Added webroot alert.  This alert is generated when a URL directory
-  traversal traverses past the webroot.  Added new URI discovery
-  technique pointed out by Kanatoko.
+* Please check the ChangeLog for further details.  
 
-* New Aho-Corasick pattern matchers.  Added content length tracking on
-  otnx structures.
+2004-11-18 - Snort 2.3.0 RC1 Released
 
-* Chunked Encoding false positives fixed in http_inspect. Thanks Lindsey
-  Cheng for finding the problem.
- 
+* Added IPS functionality from Snort-Inline.  A big thanks to the
+  Snort-Inline guys (Jed Haile, Rob McMillen, William Metcalf, and Victor
+  Julien).  Also, Thanks Dan Roelker for doing the integrating of
+  Snort-Inline into the official Snort project.  
+
+* Added new portscan detector.  The design and implementation was headed
+  up by Dan Roelker, and included Marc Norton and Jeremy Hewlett.  
+
+* Numerous changes for better 64bit Snort support from Jeremy Hewlett and
+  Marc Norton.  Additionally, an --enable-64bit-gcc option was added to
+  configure.  However, there are still some memory alignment issues to
+  work out before 64bit mode is fully functional, patches are welcomed.
+  Thanks Chris Baker for doing 64bit testing.  
+
+* Added not_established keyword to the flow detection option.  This allows
+  snort to do dynamic firewall rulesets.  Experimental for now.  
+
+* Added an enforce_state keyword to stream4 so we won't pick up midstream
+  sessions.  This works well for asynchronous links and also for
+  just monitoring legitimate traffic.  
+
+* Relocated ./contrib files to http://www.snort.org/dl/contrib as many
+  are not maintained by Sourcefire and are out of date. The rpm and
+  schema files have been relocated in their respective 'rpm' and 'schemas'
+  directories under the snort parent directory.
+
+* perfmonitor config line can now be configured with "accumulate" or
+  "reset."  Thanks Marc Norton for the feature, and Barry Basselgia for
+  pointing out the issue.  Thanks Scott Dexter and Andreas Ostling for
+  doing some initial testing.  
+
+* Fixed 64-bit bug in sfmemcap.c found and tested by Ryan Matteson
+  and Clay McClure.  Thanks guys.  
+
+* Fixed reference times to match log time for first packet, for an event
+  generated by a reassembled packet.  Incremented event ID to give
+  unique ID for each packet.  Also made unified logging compatible with
+  Windows.  Thanks Andrew Mullican for the fix.  
+
+* Fixed linux perfmonitoring stats for the 2.6 kernel.  Thanks to
+  everyone that reported this bug.  Thanks Dan Roelker for the fix.  
+
+* Get thresholding/suppression to work for alerts that do not
+  contain an ip header (primarily decode alerts).  Thanks
+  Brian Caswell.  
+
+* Fix conditions where snort would log double web alerts that
+  contained only content options (no uricontents).  Thanks to kawa for
+  finding and reporting this bug.  
+
+* Fix suppression/thresholding bug for non-rule alerts.  Thanks to
+  Alex Butcher for reporting it to us.  
+
+* Many other bug fixes, please check the ChangeLog for details.  

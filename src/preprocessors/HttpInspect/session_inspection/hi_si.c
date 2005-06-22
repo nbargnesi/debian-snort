@@ -224,6 +224,12 @@ static INLINE int ResetSession(HI_SESSION *Session)
     
     Session->client.event_list.stack_count      = 0;
     Session->anom_server.event_list.stack_count = 0;
+
+    Session->client.request.uri                 = NULL;
+    Session->client.request.uri_norm            = NULL;
+    Session->client.request.uri_size            = 0;
+    Session->client.request.uri_norm_size       = 0;
+
     Session->client.request.pipeline_req        = NULL;
 
     return HI_SUCCESS;

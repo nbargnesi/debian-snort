@@ -60,3 +60,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 Additional References:  
 cve: CAN-2000-0096
 bugtraq: 948
+
+--

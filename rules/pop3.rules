@@ -1,13 +1,13 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: pop3.rules,v 1.16.2.5 2004/10/13 20:25:47 bmc Exp $
+# $Id: pop3.rules,v 1.22.2.2 2004/11/30 02:39:03 bmc Exp $
 #--------------
 # POP3 RULES
 #--------------
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 DELE negative argument attempt"; flow:to_server,established; content:"DELE"; nocase; pcre:"/^DELE\s+-\d/smi"; reference:bugtraq,6053; reference:bugtraq,7445; reference:cve,2002-1539; classtype:misc-attack; sid:2121; rev:9;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 UIDL negative argument attempt"; flow:to_server,established; content:"UIDL"; nocase; pcre:"/^UIDL\s+-\d/smi"; reference:bugtraq,6053; reference:cve,2002-1539; reference:nessus,11570; classtype:misc-attack; sid:2122; rev:10;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 USER overflow attempt"; flow:to_server,established; content:"USER"; nocase; isdataat:50,relative; pcre:"/^USER\s[^\n]{50,}/smi"; reference:bugtraq,789; reference:cve,1999-0494; reference:nessus,10311; classtype:attempted-admin; sid:1866; rev:10;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 USER overflow attempt"; flow:to_server,established; content:"USER"; nocase; isdataat:50,relative; pcre:"/^USER\s[^\n]{50,}/smi"; reference:bugtraq,11256; reference:bugtraq,789; reference:cve,1999-0494; reference:nessus,10311; classtype:attempted-admin; sid:1866; rev:11;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 CAPA overflow attempt"; flow:to_server,established; content:"CAPA"; nocase; isdataat:10,relative; pcre:"/^CAPA\s[^\n]{10}/smi"; classtype:attempted-admin; sid:2108; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 TOP overflow attempt"; flow:to_server,established; content:"TOP"; nocase; isdataat:10,relative; pcre:"/^TOP\s[^\n]{10}/smi"; classtype:attempted-admin; sid:2109; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 110 (msg:"POP3 STAT overflow attempt"; flow:to_server,established; content:"STAT"; nocase; isdataat:10,relative; pcre:"/^STAT\s[^\n]{10}/smi"; classtype:attempted-admin; sid:2110; rev:3;)

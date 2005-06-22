@@ -6,14 +6,12 @@ Sid:
 
 --
 Summary:
-This event is generated when an attempt is made to exploit a known 
-vulnerability in a CGI web application running on a server.
+This event is generated when an attempt is made to access the file
+upload.pl via a web browser.
 
 --
 Impact:
-Information gathering and system integrity compromise. Possible unauthorized
-administrative access to the server or application. Possible execution
-of arbitrary code of the attackers choosing in some cases.
+Information gathering.
 
 --
 Detailed Information:
@@ -23,7 +21,13 @@ not perform stringent checks when validating the credentials of a client
 host connecting to the services offered on a host server. This can lead
 to unauthorized access and possibly escalated privileges to that of the
 administrator. Data stored on the machine can be compromised and trust
-relationships between the victim server and other hosts can be exploited by the attacker.
+relationships between the victim server and other hosts can be exploited
+by the attacker.
+
+This event indicates an attempt to access the CGI application upload.pl,
+this perl script can be used to upload files to a system and may be used
+by an attacker to place files of their choosing onto a server for
+further use.
 
 If stringent input checks are not performed by the CGI application, it
 may also be possible for an attacker to execute system binaries or
@@ -57,6 +61,9 @@ Corrective Action:
 Ensure the system is using an up to date version of the software and has
 had all vendor supplied patches applied.
 
+Ensure that access controls are in place to limit access to the
+application to authorized users only.
+
 --
 Contributors:
 Sourcefire Research Team
@@ -65,3 +72,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+--

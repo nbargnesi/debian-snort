@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 1.97.2.1 2004/08/04 14:28:25 jhewlett Exp $ */
+/* $Id: parser.c,v 1.99.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
@@ -56,6 +56,7 @@
 #include "sfthreshold.h"
 #include "sfutil/sfthd.h"
 #include "snort.h"
+#include "inline.h"
 #include "event_queue.h"
 #include "asn1.h"
 
@@ -64,6 +65,9 @@ ListHead Log;           /* Log Block Header */
 ListHead Pass;          /* Pass Block Header */
 ListHead Activation;    /* Activation Block Header */
 ListHead Dynamic;       /* Dynamic Block Header */
+ListHead Drop;
+ListHead SDrop;
+ListHead Reject;
 
 RuleTreeNode *rtn_tmp;      /* temp data holder */
 OptTreeNode *otn_tmp;       /* OptTreeNode temp ptr */
@@ -75,8 +79,6 @@ struct VarEntry *VarHead = NULL;
 
 char *file_name;        /* current rules file being processed */
 int file_line;          /* current line being processed in the rules
-                         * file */
-int list_file_line;     /* current line being processed in the list
                          * file */
 int rule_count;         /* number of rules generated */
 int head_count;         /* number of header blocks (chain heads?) */
@@ -94,6 +96,12 @@ extern PreprocessKeywordList *PreprocessKeywords;   /* preprocessor plugin
                              * keywords */
 extern OutputFuncNode *AlertList;   /* Alert function list */
 extern OutputFuncNode *LogList; /* log function list */
+
+#ifdef GIDS
+extern OutputFuncNode *DropList;
+extern OutputFuncNode *SDropList;
+extern OutputFuncNode *RejectList;
+#endif /* GIDS */
 
 /* Local Function Declarations */
 void ProcessHeadNode(RuleTreeNode *, ListHead *, int);
@@ -216,7 +224,7 @@ void ParseRulesFile(char *file, int inclevel)
         index = buf;
 
 #ifdef DEBUG2
-	LogMessage("Got line %s (%d): %s", file_name, file_line, buf);
+	LogMessage("Got line %s (%d): %s\n", file_name, file_line, buf);
 #endif
         /* advance through any whitespace at the beginning of the line */
         while(*index == ' ' || *index == '\t')
@@ -499,6 +507,41 @@ void ParseRule(FILE *rule_file, char *prule, int inclevel)
     /* handle non-rule entries */
     switch(rule_type)
     {
+#ifdef GIDS
+        case RULE_DROP:
+            DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"Drop\n"););
+
+            /* if we are not listening to iptables, let's ignore
+             * any drop rules in the configuration file */
+            if (!InlineMode())
+            {
+                return;
+            }
+            break;
+				
+        case RULE_SDROP:
+            DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"SDrop\n"););
+			  
+            /* if we are not listening to iptables, let's ignore
+             * any sdrop rules in the configuration file */
+            if (!InlineMode())
+            {
+                return;
+            }
+            break;
+				
+        case RULE_REJECT:
+            DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"Reject\n"););
+			  
+            /* if we are not listening to iptables, let's ignore
+             * any reject rules in the configuration file */
+            if (!InlineMode())
+            {
+                return;
+            }
+            break;
+#endif /* GIDS */
+				
         case RULE_PASS:
             DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"Pass\n"););
             break;
@@ -728,6 +771,29 @@ void ParseRule(FILE *rule_file, char *prule, int inclevel)
 
     switch(rule_type)
     {
+#ifdef GIDS
+        case RULE_DROP:
+            if (InlineMode())
+            {
+                ProcessHeadNode(&proto_node, &Drop, protocol);
+            }
+            break;
+			 
+        case RULE_SDROP:
+            if (InlineMode())
+            {
+                ProcessHeadNode(&proto_node, &SDrop, protocol);
+            }
+            break;
+			 
+        case RULE_REJECT:
+            if (InlineMode())
+            {
+                ProcessHeadNode(&proto_node, &Reject, protocol);
+            }
+            break;
+#endif /* GIDS */		 
+		 
         case RULE_ALERT:
             ProcessHeadNode(&proto_node, &Alert, protocol);
             break;
@@ -1342,14 +1408,14 @@ void ParsePreprocessor(char *rule)
             break;
     }
 
-    mSplitFree(&toks, num_arg_toks);
-    mSplitFree(&pp_head, num_head_toks);
-
     if(!found)
     {
         FatalError(" unknown preprocessor \"%s\"\n",
                    funcname);
     }
+
+    mSplitFree(&toks, num_arg_toks);
+    mSplitFree(&pp_head, num_head_toks);
 }
 
 
@@ -1380,7 +1446,6 @@ void ParseOutputPlugin(char *rule)
     }
 
     plugin = GetOutputPlugin(plugin_name);
-
     if( plugin != NULL )
     {
         switch(plugin->node_type)
@@ -1394,6 +1459,7 @@ void ParseOutputPlugin(char *rule)
                             "plugin!\n");
                 plugin->func(pp_args);
                 break;
+
             case NT_OUTPUT_ALERT:
                 if(!pv.alert_cmd_override)
                 {
@@ -1422,6 +1488,7 @@ void ParseOutputPlugin(char *rule)
 
                 break;
         }
+
     }
 
     mSplitFree(&toks, num_arg_toks);
@@ -1576,10 +1643,12 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             /* can't free opts[0] later if it has been incremented, so
              * must use another variable here */
             option_name = opts[0];
-            option_args = opts[1];
-
             DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"   option name: %s\n", option_name););
-            DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"   option args: %s\n", option_args););
+            if (num_opts > 1)
+            {
+                option_args = opts[1];
+                DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"   option args: %s\n", option_args););
+            }
 
             /* advance to the beginning of the data (past the whitespace) */
             while(isspace((int) *option_name))
@@ -1588,7 +1657,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             /* figure out which option tag we're looking at */
             if(!strcasecmp(option_name, "msg"))
             {
-		ONE_CHECK (one_msg, option_name);
+                ONE_CHECK (one_msg, option_name);
                 if(num_opts == 2)
                 {
                     ParseMessage(option_args);
@@ -1603,7 +1672,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "logto"))
             {
-		ONE_CHECK (one_logto, option_name);
+                ONE_CHECK (one_logto, option_name);
                 if(num_opts == 2)
                 {
                     ParseLogto(option_args);
@@ -1618,7 +1687,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "activates"))
             {
-		ONE_CHECK (one_activates, option_name);
+                ONE_CHECK (one_activates, option_name);
                 if(num_opts == 2)
                 {
                     ParseActivates(option_args);
@@ -1634,7 +1703,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "activated_by"))
             {
-		ONE_CHECK (one_activated_by, option_name);
+                ONE_CHECK (one_activated_by, option_name);
                 if(num_opts == 2)
                 {
                     ParseActivatedBy(option_args);
@@ -1650,7 +1719,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "count"))
             {
-		ONE_CHECK (one_count, option_name);
+                ONE_CHECK (one_count, option_name);
                 if(num_opts == 2)
                 {
                     if(otn_tmp->type != RULE_DYNAMIC)
@@ -1668,7 +1737,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "tag"))
             {
-		ONE_CHECK (one_tag, opts[0]);
+                ONE_CHECK (one_tag, opts[0]);
                 if(num_opts == 2)
                 {
                     ParseTag(opts[1], otn_tmp);
@@ -1683,7 +1752,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "threshold"))
             {
-		ONE_CHECK (one_threshold, opts[0]);
+                ONE_CHECK (one_threshold, opts[0]);
                 if(num_opts == 2)
                 {
                     ParseThreshold2(&thdx, opts[1]);
@@ -1698,7 +1767,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "sid"))
             {
-		ONE_CHECK (one_sid, opts[0]);
+                ONE_CHECK (one_sid, opts[0]);
                 if(num_opts == 2)
                 {
                     ParseSID(opts[1], otn_tmp);
@@ -1713,7 +1782,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "rev"))
             {
-		ONE_CHECK (one_rev, opts[0]);
+                ONE_CHECK (one_rev, opts[0]);
                 if(num_opts == 2)
                 {
                     ParseRev(opts[1], otn_tmp);
@@ -1742,7 +1811,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "priority"))
             {
-		ONE_CHECK (one_priority, opts[0]);
+                ONE_CHECK (one_priority, opts[0]);
                 if(num_opts == 2)
                 {
                     ParsePriority(opts[1], otn_tmp);
@@ -1757,7 +1826,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "classtype"))
             {
-		ONE_CHECK (one_classtype, opts[0]);
+                ONE_CHECK (one_classtype, opts[0]);
                 if(num_opts == 2)
                 {
                     ParseClassType(opts[1], otn_tmp);
@@ -1772,7 +1841,7 @@ void ParseRuleOptions(char *rule, int rule_type, int protocol)
             }
             else if(!strcasecmp(option_name, "stateless"))
             {
-		ONE_CHECK (one_stateless, opts[0]);
+                ONE_CHECK (one_stateless, opts[0]);
                 otn_tmp->stateless = 1;
             }
             else
@@ -1866,7 +1935,18 @@ int RuleType(char *func)
     {
         FatalError("%s(%d) => NULL rule type\n", file_name, file_line);
     }
-    
+   
+#ifdef GIDS
+    if (!strcasecmp(func, "drop"))
+        return RULE_DROP;
+	 
+    if (!strcasecmp(func, "sdrop"))
+        return RULE_SDROP;
+	 
+    if (!strcasecmp(func, "reject"))
+        return RULE_REJECT;
+#endif /* GIDS */ 
+	 
     if(!strcasecmp(func, "log"))
         return RULE_LOG;
 
@@ -3296,6 +3376,33 @@ void ProcessDetectionOptions( char ** args, int nargs )
     }
 }
 
+void ProcessResetMac(char ** args, int nargs)
+{
+#ifdef GIDS
+#ifndef IPFW
+
+    int i = 0;
+    int num_macargs=nargs; 
+    char **macargs;
+
+    macargs = mSplit(args[0], ":", 6, &num_macargs, '\\');
+
+    if(num_macargs != 6)
+    {
+	FatalError("%s (%d)=> '%s' is not a valid macaddress "
+	           "for layer2resets\n",
+		   file_name, file_line, args[0]);
+    }
+
+    for(i = 0; i < num_macargs; i++)
+        pv.enet_src[i] = (u_int8_t) strtoul(macargs[i], NULL, 16);
+
+#endif /* IPFW */
+#endif /* GIDS */
+
+    return;
+} 
+
 void ParseConfig(char *rule)
 {
     char ** toks;
@@ -3380,6 +3487,30 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "layer2resets"))
+    {   
+        if(args)
+        {
+            toks = mSplit(args, " ", 1, &num_toks, 0);
+            ProcessResetMac(toks, num_toks);
+
+            mSplitFree( &toks, num_toks );
+        }
+
+#ifdef GIDS
+#ifndef IPFW
+
+        pv.layer2_resets = 1;
+
+#endif
+#endif
+
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+
+        return;
+        
+    }
     else if(!strcasecmp(config, "asn1"))
     {
         toks = mSplit(args, ", ", 20, &num_toks, 0);
@@ -3428,6 +3559,15 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_decode_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of decoder alerts\n"););
+        pv.decoder_flags.drop_alerts = 0;
+    
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }
     else if(!strcasecmp(config, "disable_tcpopt_experimental_alerts"))
     {
         /* dump the application layer */
@@ -3438,6 +3578,16 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_tcpopt_experimental_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of tcpopt exprimental alerts\n"););
+        pv.decoder_flags.drop_tcpopt_experiment = 0;
+   
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }              
+
     else if(!strcasecmp(config, "disable_tcpopt_obsolete_alerts"))
     {
         /* dump the application layer */
@@ -3448,6 +3598,16 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_tcpopt_obsolete_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of tcpopt obsolete alerts\n"););
+        pv.decoder_flags.drop_tcpopt_obsolete = 0;
+   
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }              
+
     else if(!strcasecmp(config, "disable_ttcp_alerts") ||
             !strcasecmp(config, "disable_tcpopt_ttcp_alerts"))
     {
@@ -3459,6 +3619,16 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_ttcp_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of ttcp alerts\n"););
+        pv.decoder_flags.drop_tcpopt_ttcp = 0;
+   
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }              
+
     else if(!strcasecmp(config, "disable_tcpopt_alerts"))
     {
         /* dump the application layer */
@@ -3469,6 +3639,16 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_tcpopt_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of all other tcpopt alerts\n"););
+        pv.decoder_flags.drop_tcpopt_decode = 0;
+   
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }              
+
     else if(!strcasecmp(config, "disable_ipopt_alerts"))
     {
         /* dump the application layer */
@@ -3479,6 +3659,16 @@ void ParseConfig(char *rule)
         mSplitFree(&config_decl,num_config_decl_toks);
         return;
     }
+    else if(!strcasecmp(config, "disable_ipopt_drops"))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_INIT, "disabling the drop of all the ipopt alerts\n"););
+        pv.decoder_flags.drop_ipopt_decode = 0;
+   
+        mSplitFree(&rule_toks,num_rule_toks);
+        mSplitFree(&config_decl,num_config_decl_toks);
+        return;
+    }              
+
     else if(!strcasecmp(config, "decode_data_link"))
     {
         /* dump the data link layer as text only */
@@ -4022,7 +4212,7 @@ char *ReadLine(FILE * file)
         index = buf;
 
 #ifdef DEBUG2
-	LogMessage("Got line %s (%d): %s", file_name, file_line, buf);
+	LogMessage("Got line %s (%d): %s\n", file_name, file_line, buf);
 #endif
         /* if it's not a comment or a <CR>, we return it */
         if((*index != '#') && (*index != 0x0a) && (*index != ';')

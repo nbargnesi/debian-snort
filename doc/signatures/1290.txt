@@ -1,7 +1,3 @@
-# $Id: 1290.txt,v 1.2.2.2 2004/08/10 13:52:03 bmc Exp $
-#
-# 
-
 Rule:  
 
 --
@@ -10,56 +6,76 @@ Sid:
 
 --
 Summary:
-An internet page from an external webserver contained code to load and run readme.eml, which is used as an Infection Vector for the nimda worm.
+This event is generated when an attempt is made to load and run
+readme.eml, which is used as an infection vector for the nimda worm.
 
 --
 Impact:
-The Source Address is likely infected with the Nimda worm. The destination, without adequate AntiVirus protection and the proper patches, may now be infected and may attempt to infect other hosts using this or any of the other infection vectors that the Nimda worm uses.
+The source address is likely infected with the Nimda worm. The
+destination, without adequate AntiVirus protection and the proper
+patches, may now be infected and may attempt to infect other hosts using
+this or any of the other infection vectors that the Nimda worm uses.
 
 --
 Detailed Information:
-More information, including links to other third parties, can be found at CERT http://www.cert.org/advisories/CA-2001-26.html
+The nimda worm affects Microsoft Windows systems and attempts to spread
+via email, network shares and Microsoft IIS servers. A compromised
+server will attempt to spread and infect other vulnerable hosts.
 
 --
 Affected Systems:
- 
+	Microsoft Windows 95, 98, ME, NT and 2000 
+
 --
 Attack Scenarios:
-
+This is worm activity.
 
 --
 Ease of Attack:
-Nimda is a worm, so the attack is automated. Exposure of unprotected systems to the internet has been know to result in an infection within 15minutes.
+Simple. Nimda is a worm, so the attack is automated. Exposure of unprotected
+systems to the internet has been know to result in an infection within
+15 minutes.
 
 --
 False Positives:
 None Known
-Web pages containing the Javascript as text in a web page may activate this alert. Web-sites detailing Nimda infection vectors may also trigger this event.
+Web pages containing the Javascript as text in a web page may activate
+this alert. Web-sites detailing Nimda infection vectors may also trigger this event.
 
 --
 False Negatives:
-None Known
-Nimda has multiple infection vectors. This rule alone will not detect all instances, especially as the Nimda worm seems to enter phases where it exclusively uses a particular type of infection vector.
+Nimda has multiple infection vectors. This rule alone will only detect
+a particular type.
 
 --
 Corrective Action:
-Ensure all servers within your domain are protected to the appropriate patch-levels to mitigate infection and spread of the Nimda worm. Ensure network clients in your domain are also appropriately patched and are running up to date AntiVirus software. The Nimda worm specifically only affects Microsoft Operating Systems.
+Ensure all servers within your domain are protected to the appropriate
+patch-levels to mitigate infection and spread of the Nimda worm.
+
+Ensure network clients in your domain are also appropriately patched and are
+running up to date AntiVirus software.
 
 --
 Contributors:
 Original rule writer unknown
-Original document author unkown
+Snort documentation contributed by Giles Coochey	and Josh Gray
 Sourcefire Vulnerability Research Team
 Nigel Houghton <nigel.houghton@sourcefire.com>
-Giles Coochey	Initial Research
-Josh Gray	Edits
 
 -- 
 Additional References:
+
+CERT:
 http://www.cert.org/advisories/CA-2001-26.html
+
+Cisco:
 http://www.cisco.com/warp/public/cc/so/cuso/epso/sqfr/snam_wp.htm
+
+Microsoft:
 http://www.microsoft.com/technet/treeview/default.asp?url=/technet/security/topics/Nimda.asp
 http://www.microsoft.com/technet/treeview/default.asp?url=/technet/security/topics/NimdaIE6.asp
+
+SecurityFocus
 http://online.securityfocus.com/archive/75/215118
 
-
+--

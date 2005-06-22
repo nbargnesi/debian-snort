@@ -15,7 +15,6 @@ static INLINE int hi_eo_generate_event(HI_SESSION *Session, int iAlert)
     return HI_BOOL_FALSE;
 }
 
-
 int hi_eo_client_event_log(HI_SESSION *Session, int iEvent, void *data,
         void (*free_data)(void *));
 

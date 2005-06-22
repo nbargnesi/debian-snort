@@ -18,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: tag.c,v 1.35 2004/06/03 20:11:05 jhewlett Exp $ */
+/* $Id: tag.c,v 1.35.4.1 2004/09/21 14:47:00 jhewlett Exp $ */
 
 /*  I N C L U D E S  ************************************************/
 #ifdef HAVE_CONFIG_H
@@ -691,7 +691,6 @@ static int PruneTime(ubi_trRootPtr tree, u_int32_t thetime)
     return pruned;
 }
 
-
 void SetTags(Packet *p, OptTreeNode *otn, u_int32_t event_id)
 {
    DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "Setting tags\n"););
@@ -716,7 +715,7 @@ void SetTags(Packet *p, OptTreeNode *otn, u_int32_t event_id)
 			       DebugMessage(DEBUG_FLOW,"SIP: 0x%X  SP: %d   DIP: 0x%X  "
 					    "DP: %d\n", p->iph->ip_src.s_addr,p->sp,
 					    p->iph->ip_dst.s_addr,p->dp););
-		    TagHost(p, otn->tag, p->pkth->ts.tv_sec, event_id);
+                    TagHost(p, otn->tag, p->pkth->ts.tv_sec, event_id);
                     break;    
     
                 default:

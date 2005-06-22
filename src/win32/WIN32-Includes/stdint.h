@@ -1,4 +1,4 @@
-/* $Id: stdint.h,v 1.1 2003/12/03 15:22:23 chris_reid Exp $ */
+/* $Id: stdint.h,v 1.1.6.1 2005/01/13 20:36:23 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2003 Chris Reid <chris.reid@codecraftconsultants.com>
 **
@@ -29,6 +29,10 @@
  * signed values instead.
  */
 
+#if defined(__GNUC__) && !defined(__int64)
+#define __in64 long long
+#endif
+
 typedef char               int8_t;
 typedef short              int16_t;
 typedef long               int32_t;
@@ -39,15 +43,15 @@ typedef unsigned short     uint16_t;
 typedef unsigned long      uint32_t;
 typedef   signed __int64   uint64_t;
 
-
 typedef uint8_t            u_int8_t;
 typedef uint16_t           u_int16_t;
+#ifndef HAVE_U_INT32_T
 typedef uint32_t           u_int32_t;
+#define HAVE_U_INT32_T
+#endif
 
 #define UINT64             uint64_t
 typedef uint64_t           uint64;
 
-
-
-
 #endif
+

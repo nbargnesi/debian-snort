@@ -1,5 +1,5 @@
 /*
-** $Id: sfprocpidstats.c,v 1.3 2003/10/20 15:03:37 chrisgreen Exp $
+** $Id: sfprocpidstats.c,v 1.3.6.1 2004/11/02 22:07:18 jhewlett Exp $
 **
 **  sfprocpidstats.c
 **
@@ -63,15 +63,20 @@ static int GetProcStatCpu(USERSYS *pStatCPUs, int iCPUs)
     u_long ulNice;
     u_long ulSys;
     u_long ulIdle;
+    char buf[256];
 
     rewind(proc_stat);
 
     /*
     **  Read the total CPU usage, don't use right now.
+    **
+    **  But we do want to read it if there is only one CPU.
     */
-    iRet = fscanf(proc_stat, "%*s %*u %*u %*u %*u");
-    if(iRet == EOF)
-        return -1;
+    if(iCPUs != 1)
+    {
+        if(!fgets(buf, sizeof(buf), proc_stat))
+            return -1;
+    }
 
     /*
     **  Read the individual CPU usages.  This tells us where
@@ -79,7 +84,10 @@ static int GetProcStatCpu(USERSYS *pStatCPUs, int iCPUs)
     */
     for(iCtr = 0; iCtr < iCPUs; iCtr++)
     {
-        iRet = fscanf(proc_stat, "%*s %lu %lu %lu %lu",
+        if(!fgets(buf, sizeof(buf), proc_stat))
+            return -1;
+
+        iRet = sscanf(buf, "%*s %lu %lu %lu %lu",
                       &ulUser, &ulNice, &ulSys, &ulIdle);
 
         if(iRet == EOF || iRet < 4)
@@ -98,12 +106,16 @@ static int GetCpuNum()
     int iRet;
     int iCPUs = 0;
     char acCpuName[10+1];
+    char buf[256];
 
     rewind(proc_stat);
 
     while(1)
     {
-        iRet = fscanf(proc_stat, "%10s %*u %*u %*u %*u", acCpuName);
+        if(!fgets(buf, sizeof(buf), proc_stat))
+            return 0;
+
+        iRet = sscanf(buf, "%10s %*u %*u %*u %*u", acCpuName);
         if(iRet < 1 || iRet == EOF)
         {
             return 0;
@@ -120,10 +132,12 @@ static int GetCpuNum()
     }
 
     /*
-    **  We subtract one here for the "total" combined CPU
-    **  counter.
+    **  If there are more then one CPU, then we subtract one because
+    **  the first CPU entry combines all CPUs.  This should be
+    **  backward compatible with 2.2 not compiled with SMP support.
     */
-    iCPUs--;
+    if(iCPUs > 1)
+        iCPUs--;
 
     return iCPUs;
 }
@@ -137,7 +151,7 @@ int sfInitProcPidStats(SFPROCPIDSTATS *sfProcPidStats)
     }
 
     giCPUs = GetCpuNum();
-    if(giCPUs == 0)
+    if(giCPUs <= 0)
     {
         FatalError("PERFMONITOR ERROR: Error reading CPUs from %s.",
                    PROC_STAT);

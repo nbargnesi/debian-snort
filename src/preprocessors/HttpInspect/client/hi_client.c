@@ -1415,7 +1415,8 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
     **  was some errors while setting the variables.  This could save some
     **  false positives on a bad URI setting.
     */
-    CheckLongDir(Session, &uri_ptr, ptr);
+    if(uri_ptr.uri_end)
+        CheckLongDir(Session, &uri_ptr, uri_ptr.uri_end);
 
     /*
     **  Check for absolute URI and alert for proxy comm if necessary

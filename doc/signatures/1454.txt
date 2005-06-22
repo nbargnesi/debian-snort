@@ -7,13 +7,12 @@ Sid:
 --
 Summary:
 This event is generated when an attempt is made to exploit a known 
-vulnerability in a CGI web application running on a server.
+vulnerability in a CGI web application running on a server, in this case
+the wwwwais cgi application.
 
 --
 Impact:
-Information gathering and system integrity compromise. Possible unauthorized
-administrative access to the server or application. Possible execution
-of arbitrary code of the attackers choosing in some cases.
+Possible execution of arbitrary code of the attackers choosing.
 
 --
 Detailed Information:
@@ -65,3 +64,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+Securiteam:
+http://www.securiteam.com/unixfocus/5SP140035A.html
+
+--

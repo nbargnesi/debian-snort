@@ -61,3 +61,5 @@ Jon Hart <warchild@spoofed.org>
 -- 
 Additional References:
 http://rr.sans.org/firewall/egress.php
+
+--

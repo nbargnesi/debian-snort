@@ -1,4 +1,4 @@
-/* $Id: generators.h,v 1.35 2004/03/11 22:25:52 jh8 Exp $ */
+/* $Id: generators.h,v 1.36 2004/09/13 17:44:49 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -208,6 +208,38 @@
 #define     FLOW_TALKER_FIXED_ALERT                  3
 #define     FLOW_TALKER_SLIDING_ALERT                4
 
+#define GENERATOR_PSNG                             122
+#define     PSNG_TCP_PORTSCAN                      1
+#define     PSNG_TCP_DECOY_PORTSCAN                2
+#define     PSNG_TCP_PORTSWEEP                     3
+#define     PSNG_TCP_DISTRIBUTED_PORTSCAN          4
+#define     PSNG_TCP_FILTERED_PORTSCAN             5
+#define     PSNG_TCP_FILTERED_DECOY_PORTSCAN       6
+#define     PSNG_TCP_PORTSWEEP_FILTERED            7
+#define     PSNG_TCP_FILTERED_DISTRIBUTED_PORTSCAN 8
+
+#define     PSNG_IP_PORTSCAN                       9
+#define     PSNG_IP_DECOY_PORTSCAN                 10
+#define     PSNG_IP_PORTSWEEP                      11
+#define     PSNG_IP_DISTRIBUTED_PORTSCAN           12
+#define     PSNG_IP_FILTERED_PORTSCAN              13
+#define     PSNG_IP_FILTERED_DECOY_PORTSCAN        14
+#define     PSNG_IP_PORTSWEEP_FILTERED             15
+#define     PSNG_IP_FILTERED_DISTRIBUTED_PORTSCAN  16
+
+#define     PSNG_UDP_PORTSCAN                      17
+#define     PSNG_UDP_DECOY_PORTSCAN                18
+#define     PSNG_UDP_PORTSWEEP                     19
+#define     PSNG_UDP_DISTRIBUTED_PORTSCAN          20
+#define     PSNG_UDP_FILTERED_PORTSCAN             21
+#define     PSNG_UDP_FILTERED_DECOY_PORTSCAN       22
+#define     PSNG_UDP_PORTSWEEP_FILTERED            23
+#define     PSNG_UDP_FILTERED_DISTRIBUTED_PORTSCAN 24
+
+#define     PSNG_ICMP_PORTSWEEP                    25
+#define     PSNG_ICMP_PORTSWEEP_FILTERED           26
+
+#define     PSNG_OPEN_PORT                         27
 
 /*  This is where all the alert messages will be archived for each
     internal alerts */
@@ -325,5 +357,37 @@
 #define RPC_MULTIPLE_RECORD_STR "(spp_rpc_decode) Multiple RPC Records"
 #define RPC_LARGE_FRAGSIZE_STR  "(spp_rpc_decode) Large RPC Record Fragment"
 #define RPC_INCOMPLETE_SEGMENT_STR "(spp_rpc_decode) Incomplete RPC segment"
+
+#define PSNG_TCP_PORTSCAN_STR "(portscan) TCP Portscan"
+#define PSNG_TCP_DECOY_PORTSCAN_STR "(portscan) TCP Decoy Portscan"
+#define PSNG_TCP_PORTSWEEP_STR "(portscan) TCP Portsweep"
+#define PSNG_TCP_DISTRIBUTED_PORTSCAN_STR "(portscan) TCP Distributed Portscan"
+#define PSNG_TCP_FILTERED_PORTSCAN_STR "(portscan) TCP Filtered Portscan"
+#define PSNG_TCP_FILTERED_DECOY_PORTSCAN_STR "(portscan) TCP Filtered Decoy Portscan"
+#define PSNG_TCP_FILTERED_DISTRIBUTED_PORTSCAN_STR "(portscan) TCP Filtered Distributed Portscan"
+#define PSNG_TCP_PORTSWEEP_FILTERED_STR "(portscan) TCP Filtered Portsweep"
+
+#define PSNG_IP_PORTSCAN_STR "(portscan) IP Protocol Scan"
+#define PSNG_IP_DECOY_PORTSCAN_STR "(portscan) IP Decoy Protocol Scan"
+#define PSNG_IP_PORTSWEEP_STR "(portscan) IP Protocol Sweep"
+#define PSNG_IP_DISTRIBUTED_PORTSCAN_STR "(portscan) IP Distributed Protocol Scan"
+#define PSNG_IP_FILTERED_PORTSCAN_STR "(portscan) IP Filtered Protocol Scan"
+#define PSNG_IP_FILTERED_DECOY_PORTSCAN_STR "(portscan) IP Filtered Decoy Protocol Scan"
+#define PSNG_IP_FILTERED_DISTRIBUTED_PORTSCAN_STR "(portscan) IP Filtered Distributed Protocol Scan"
+#define PSNG_IP_PORTSWEEP_FILTERED_STR "(portscan) IP Filtered Protocol Sweep"
+
+#define PSNG_UDP_PORTSCAN_STR "(portscan) UDP Portscan"
+#define PSNG_UDP_DECOY_PORTSCAN_STR "(portscan) UDP Decoy Portscan"
+#define PSNG_UDP_PORTSWEEP_STR "(portscan) UDP Portsweep"
+#define PSNG_UDP_DISTRIBUTED_PORTSCAN_STR "(portscan) UDP Distributed Portscan"
+#define PSNG_UDP_FILTERED_PORTSCAN_STR "(portscan) UDP Filtered Portscan"
+#define PSNG_UDP_FILTERED_DECOY_PORTSCAN_STR "(portscan) UDP Filtered Decoy Portscan"
+#define PSNG_UDP_FILTERED_DISTRIBUTED_PORTSCAN_STR "(portscan) UDP Filtered Distributed Portscan"
+#define PSNG_UDP_PORTSWEEP_FILTERED_STR "(portscan) UDP Filtered Portsweep"
+
+#define PSNG_ICMP_PORTSWEEP_STR "(portscan) ICMP Sweep"
+#define PSNG_ICMP_PORTSWEEP_FILTERED_STR "(portscan) ICMP Filtered Sweep"
+
+#define PSNG_OPEN_PORT_STR "(portscan) Open Port"
 
 #endif /* __GENERATORS_H__ */

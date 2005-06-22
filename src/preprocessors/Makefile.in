@@ -100,7 +100,9 @@ perf-event.c perf-event.h \
 sfprocpidstats.c sfprocpidstats.h \
 spp_httpinspect.c spp_httpinspect.h \
 snort_httpinspect.c snort_httpinspect.h \
-spp_flow.c spp_flow.h
+spp_flow.c spp_flow.h \
+portscan.c portscan.h \
+spp_sfportscan.c spp_sfportscan.h
 
 subdir = src/preprocessors
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -118,7 +120,7 @@ am_libspp_a_OBJECTS = spp_arpspoof.$(OBJEXT) spp_bo.$(OBJEXT) \
 	perf.$(OBJEXT) perf-base.$(OBJEXT) perf-flow.$(OBJEXT) \
 	perf-event.$(OBJEXT) sfprocpidstats.$(OBJEXT) \
 	spp_httpinspect.$(OBJEXT) snort_httpinspect.$(OBJEXT) \
-	spp_flow.$(OBJEXT)
+	spp_flow.$(OBJEXT) portscan.$(OBJEXT) spp_sfportscan.$(OBJEXT)
 libspp_a_OBJECTS = $(am_libspp_a_OBJECTS)
 
 DEFS = @DEFS@

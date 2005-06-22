@@ -1,18 +1,17 @@
-; $Id: snort_installer.nsi,v 1.8.2.1 2004/08/04 14:28:25 jhewlett Exp $
+; $Id: snort_installer.nsi,v 1.9.2.1 2004/11/17 15:54:23 jhewlett Exp $
 ;
-; NSIS Installation script for Snort 2.2 Win32
+; NSIS Installation script for Snort 2.3 Win32
 ; Written by Chris Reid <chris.reid@codecraftconsultants.com>
 ;
-; This script will create a Win32 installer for Snort 2.2 (Win32 only).
+; This script will create a Win32 installer for Snort 2.3 (Win32 only).
 ; For more information about NSIS, see their homepage:
-;     http://www.nullsoft.com/free/nsis/
+;     http://nsis.sourceforge.net/
 ;
-; By default, only Windows Service configurations of Snort
-; are installed.  See the "Installer Sections" of this file
-; for more information about this.
+; Note that this NSIS script is designed for NSIS version 2.02.
+;
 
-!define MUI_PRODUCT "Snort" ;Define your own software name here
-!define MUI_VERSION "2.2"   ;Define your own software version here
+Name "Snort 2.3"
+
 CRCCheck On
 
 !include "MUI.nsh"
@@ -23,10 +22,10 @@ CRCCheck On
 ;Configuration
 
   ;General
-  OutFile "Snort_22_Installer.exe"  ; The name of the installer executable
+  OutFile "Snort_23_Installer.exe"  ; The name of the installer executable
 
   ;Folder selection page
-  InstallDir "C:\${MUI_PRODUCT}"
+  InstallDir "C:\Snort"
 
 
 ;--------------------------------
@@ -54,7 +53,7 @@ CRCCheck On
   ;Description
   LangString DESC_Snort   ${LANG_ENGLISH} "Install snort, configuration files, and rules."
   LangString DESC_Doc     ${LANG_ENGLISH} "Install snort documentation."
-  LangString DESC_Contrib ${LANG_ENGLISH} "Copy additional user-contributed add-on modules and tools."
+  LangString DESC_Schemas ${LANG_ENGLISH} "Copy database schemas."
   
   ;Header
   LangString TEXT_IO_TITLE    ${LANG_ENGLISH} "Installation Options"
@@ -71,11 +70,14 @@ CRCCheck On
 ;--------------------------------
 ;Pages
   
-  !insertmacro MUI_PAGECOMMAND_LICENSE
-  Page custom SetCustomOptions "$(TEXT_IO_PAGETITLE_OPTIONS)"
-  !insertmacro MUI_PAGECOMMAND_COMPONENTS
-  !insertmacro MUI_PAGECOMMAND_DIRECTORY
-  !insertmacro MUI_PAGECOMMAND_INSTFILES
+  !insertmacro MUI_PAGE_LICENSE "..\..\..\LICENSE"
+  Page custom fnSelectCustomOptions
+  Page custom fnSetHeaderText
+  !insertmacro MUI_PAGE_COMPONENTS
+  Page custom fnSetHeaderText
+  !insertmacro MUI_PAGE_DIRECTORY
+  Page custom fnSetHeaderText
+  !insertmacro MUI_PAGE_INSTFILES
 
   ; Call .onDirectoryLeave whenever user leaves
   ; the directory selection page
@@ -97,7 +99,7 @@ Function .onInstSuccess
   StrCpy $0 "Snort has successfully been installed.$\r$\n"
   StrCpy $0 "$0$\r$\n"
   StrCpy $0 "$0$\r$\n"
-  StrCpy $0 "$0Snort also requires WinPcap 2.3 to be installed on this machine.$\r$\n"
+  StrCpy $0 "$0Snort also requires WinPcap 3.0 to be installed on this machine.$\r$\n"
   StrCpy $0 "$0WinPcap can be downloaded from:$\r$\n"
   StrCpy $0 "$0    http://winpcap.polito.it/ $\r$\n"
   StrCpy $0 "$0$\r$\n"
@@ -108,6 +110,7 @@ Function .onInstSuccess
   MessageBox MB_OK $0
 FunctionEnd
 
+
 ;--------------------------------
 ;Installer Sections
 
@@ -115,11 +118,7 @@ Section "Snort" Snort
   ; --------------------------------------------------------------------
   ; NOTE: The installer, as delivered here, will only allow the user
   ;       to install configurations which can optionally be run as a
-  ;       Windows Service.  This is only a subset of the configurations
-  ;       of Snort which can be built.  To enable the non-Service
-  ;       configurations, uncomment the appropriate lines throughout
-  ;       this section.  You will also need to tweak the file
-  ;       snort_installer_options.ini.
+  ;       Windows Service.
   ; --------------------------------------------------------------------
 
   ; Search for a space embedded within $INSTDIR
@@ -208,27 +207,33 @@ Section "Documentation" Doc
   CreateDirectory "$INSTDIR\doc\signatures"
   SetOutPath "$INSTDIR\doc\signatures"
   File "..\..\..\doc\signatures\*.*"
-SectionEnd
 
-Section "Contrib" Contrib
   CreateDirectory "$INSTDIR\contrib"
   SetOutPath "$INSTDIR\contrib"
   File "..\..\..\contrib\*.*"
   Delete "$INSTDIR\contrib\.cvsignore"
 SectionEnd
 
+Section "Schemas" Schemas
+  CreateDirectory "$INSTDIR\schemas"
+  SetOutPath "$INSTDIR\schemas"
+  File "..\..\..\schemas\*.*"
+  Delete "$INSTDIR\schemas\Makefile.am"
+SectionEnd
+
 ;Display the Finish header
 ;Insert this macro after the sections if you are not using a finish page
-!insertmacro MUI_SECTIONS_FINISHHEADER
+;!insertmacro MUI_SECTIONS_FINISHHEADER
+
 
 ;--------------------------------
 ;Descriptions
 
-!insertmacro MUI_FUNCTIONS_DESCRIPTION_BEGIN
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${Snort}   $(DESC_Snort)
   !insertmacro MUI_DESCRIPTION_TEXT ${Doc}     $(DESC_Doc)
-  !insertmacro MUI_DESCRIPTION_TEXT ${Contrib} $(DESC_Contrib)
-!insertmacro MUI_FUNCTIONS_DESCRIPTION_END
+  !insertmacro MUI_DESCRIPTION_TEXT ${Schemas} $(DESC_Schemas)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
 ;Installer Functions
@@ -238,9 +243,14 @@ Function .onInit
   !insertmacro MUI_INSTALLOPTIONS_EXTRACT "snort_installer_options.ini"
 FunctionEnd
 
-Function SetCustomOptions
+Function fnSelectCustomOptions
   !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "snort_installer_options.ini"
+FunctionEnd
+
+
+Function fnSetHeaderText
+  !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_PAGETITLE_OPTIONS)" ""
 FunctionEnd
 
 ;--------------------------------
@@ -264,6 +274,6 @@ Section "Uninstall"
    
   finished_unregistering_service:
     RMDir /r "$INSTDIR"
-    !insertmacro MUI_UNFINISHHEADER
+    ;!insertmacro MUI_UNFINISHHEADER
 
 SectionEnd

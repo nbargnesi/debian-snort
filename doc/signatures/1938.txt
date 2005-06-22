@@ -49,3 +49,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+RFC 1082:
+http://www.faqs.org/rfcs/rfc1082.html
+
+--

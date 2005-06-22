@@ -6,18 +6,19 @@ Sid:
 
 --
 Summary:
-This event is generated when an attempt is made to exploit a known 
-vulnerability on a web server or a web application resident on a web
-server.
+This event is generated when an attempt is made to access the file
+nstelemetry.adp on a web server.
 
 --
 Impact:
-Information gathering and system integrity compromise. Possible unauthorized
-administrative access to the server. Possible execution of arbitrary code of 
-the attackers choosing in some cases.
+Information gathering.
 
 --
 Detailed Information:
+Access to nstelemetry.adp may indicate that a malicious user is trying to
+exploit a well known vulnerability in AOLserver that allows the attacker to read
+password protected files.
+
 This event is generated when an attempt is made to compromise a host
 running a Web server or a vulnerable application on a web server.
 
@@ -33,7 +34,7 @@ other hosts can be exploited by the attacker.
 
 --
 Affected Systems:
-	All systems using a web server.
+	AOLServer.
 
 --
 Attack Scenarios:
@@ -67,3 +68,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+--

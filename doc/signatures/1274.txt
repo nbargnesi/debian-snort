@@ -1,51 +1,65 @@
 Rule:
 
-Sid: 
+--
+Sid:
 1274
 
+--
 Summary:
-This event is generated when a TFTP GET request is made for Admin.dll.  This is normally an indication that a system on the network is infected with the W32/Nimda worm.
+This event is generated when an attempt is made through a portmap GETPORT request to discover the port where the Remote Procedure Call (RPC) ttdbserverd is listening.
 
+
+--
 Impact:
-In normal situations this is a good indication that the host transmitting the request has been compromised in the past by Code Red, Code Red II, or the sacmind/IIS worm.  All of these worms created backdoors that could allow remote attackers to run abitrary commands on the machine.
+Information disclosure.  This request is used to discover which port ttdbserverd is using.  Attackers can also learn what versions of the ttdbserverd protocol are accepted by ttdbserverd. 
 
+--
 Detailed Information:
-The Nimda worm propogates in several ways.  After it infects a host it begins scanning for other compromised hosts, sending infected emails, infecting .html files, and adding trojans to system binaries.  To further expose the infected system it enables sharing of the c: drive, creates a Guest account, and adds the guest account to the Administrators group.  
+The portmapper service registers all RPC services on UNIX hosts. It can be queried to determine the port where RPC services such as ttdbserverd run.  The ttdbserverd RPC service, more commonly known as the ToolTalk database server, allows applications used in Common Desktop Environment (CDE) to communicate.  The ToolTalk service receives ToolTalk messages created and sent by applications and delivers them to the appropriate recipient applications.  The ToolTalk database server comes enabled on hosts with CDE.  Multiple vulernabilities have been associated with the ToolTalk database server. 
 
-Currently this rule searches for "Admin.dll" in TFTP GET requests.  This rule will detect hosts that have just been compromised by Nimba and are searching for Admin.dll to elevate its system privileges to Local/System.
+--
+Affected Systems:
+All hosts running the UNIX portmapper.
 
-Affected Systems
-Windows 95
-Windows 98
-Windows ME
-Windows NT
-Windows 2000
-
+--
 Attack Scenarios:
-Once W32/Nimba infects a compromised host it will make a request for "Admin.dll".  This binary file is used to elevate the privilege level of the W32/Nimba worm to Local/System, so it can begin infecting system files and other hosts.
+An attacker can query the portmapper to discover the port where ttdbserverd runs.  This may be a precursor to accessing ttdbserverd.
 
+--
 Ease of Attack:
-Simple.  Nimba uses backdoors left by other worms and trojans that target IIS.  A large number of scripts and exploits exist in the wild that mimic the behavior of the Nimba worm.
+Easy.  
 
+--
 False Positives:
-This rule is triggered by any TFTP GET request for Admin.dll, if this file name is being used during a legitimate TFTP session this rule will generate a false positive.
+If a legitimate remote user is allowed to access ttdbserverd, this rule may trigger.
 
+--
 False Negatives:
-This rule was created to catch the generic version of the W32/Nimba worm.  Any attacker who changes "Admin.dll" to a another filename will bypass this rule.
+This rule detects probes of the portmapper service for ttdbserverd, not probes of the ttdbserverd service itself. Because RPC services often listen on fairly arbitrary ports, it may not be possible to detect misuses of the ttdbserverd service itself. An attacker may attempt to go directly to the ttdbserverd port without querying the portmapper service, which would not trigger the rule.
 
+--
 Corrective Action:
-The host generating the request should be investigated for evidence of a compromise.  Check for the presence of root.exe, Admin.dll, and unexpected .eml or .nws files.  If it is determined that the system has been compromised the only safe way to recover the system is to format the system drives and re-install the system.  
+Limit remote access to RPC services.
 
+Filter RPC ports at the firewall to ensure access is denied to RPC-enabled machines. 
+
+Disable unneeded RPC services.
+
+--
 Contributors:
+Original rule written by Max Vision <vision@whitehats.com>
+Modified by Brian Caswell <bmc@sourcefire.com>
 Sourcefire Research Team
-Brian Caswell <bmc@sourcefire.com>
-Matthew Watchinski Matt.Watchinski@sourcefire.com
+Judy Novak <judy.novak@sourcefire.com>
 
-Additional References
+--
+Additional References:
 
-Microsoft:
-http://www.microsoft.com/technet/security/bulletin/MS01-044.asp
+CVE
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2001-0717
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0003
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0687
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-1999-1075
 
-CERT:
-http://www.cert.org/advisories/CA-2001-26.html
-http://www.cert.org/tech_tips/win-UNIX-system_compromise.html
+
+--

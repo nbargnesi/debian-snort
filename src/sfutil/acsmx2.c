@@ -1,5 +1,5 @@
 /*
-**   $Id: acsmx2.c,v 1.4.2.1 2004/08/11 19:50:40 jhewlett Exp $
+**   $Id: acsmx2.c,v 1.5.2.1 2004/11/02 22:07:18 jhewlett Exp $
 ** 
 **   acsmx2.c
 **
@@ -1490,7 +1490,7 @@ int acsmAddKey2(ACSM_STRUCT2 * p, unsigned char *key, int klen, int nocase, void
   plist->offset = 0;
   plist->depth  = 0;
   plist->id     = 0;
-  plist->iid = (unsigned)data;
+  plist->iid = 0;
 
   plist->next = p->acsmPatterns;
   p->acsmPatterns = plist;

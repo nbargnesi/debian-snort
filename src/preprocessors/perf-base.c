@@ -1,5 +1,5 @@
 /*
-** $Id: perf-base.c,v 1.6 2004/01/13 22:54:46 jh8 Exp $
+** $Id: perf-base.c,v 1.7.2.2 2005/01/13 20:36:20 jhewlett Exp $
 **
 ** perf-base.c
 **
@@ -30,19 +30,13 @@
 **    has reached capacity and to measure the true processing 
 **    that the app is currently doing.
 **
-**    There is a define for the type of pkt drop statistics that are
-**    kept by the OS.  The defines are:
-**      ACCUMULATE_PKTS
-**        -*BSD
-**      RESET_PKTS
-**        -Linux 2.4.*
-**      NO_PKTS
-**
 **  NOTES
-**    4.8.02  : Initial Code (DJR,MWM)
+**    4.8.02  : Initial Code (DJR,MAN)
 **    4.22.02 : Added Comments (DJR)
 **    7.10.02 : Added sfprocpidstats code for SMP linux (DJR)
 **    8.8.02  : Added stream4 instrumentation (cmg)
+**    9.1.04  : Removed NO_PKTS, ACCUMULATE/RESET #defines, now we use SFBASE->iReset
+**              and the permonitor command has 'reset' and 'accrue' commands instead.(MAN)
 */
 
 #include <time.h>
@@ -57,8 +51,6 @@
 #include "snort.h"
 #include "util.h"
 #include "mwm.h"
-
-#define ACCUMULATE_PKTS
 
 int GetPktDropStats(SFBASE *sfBase, SFBASE_STATS *sfBaseStats);
 int DisplayBasePerfStatsConsole(SFBASE_STATS *sfBaseStats, int iFlags);
@@ -639,25 +631,34 @@ int GetPktDropStats(SFBASE *sfBase, SFBASE_STATS *sfBaseStats)
     extern pcap_t *pd;
     struct pcap_stat pcapStats;
 
+    if(!pd)
+    {
+        sfBaseStats->pkt_stats.pkts_recv = sfBaseStats->total_packets;
+        sfBaseStats->pkt_stats.pkts_drop = 0.0;
+        sfBaseStats->pkt_drop_percent    = 0.0;
+	return 0;
+    }
+	    
     if(pcap_stats(pd, &pcapStats) < 0)
     {
-        sfBaseStats->pkt_stats.pkts_recv = -1;
-        sfBaseStats->pkt_stats.pkts_drop = -1;
-        sfBaseStats->pkt_drop_percent    = -1;
+        sfBaseStats->pkt_stats.pkts_recv = sfBaseStats->total_packets;
+        sfBaseStats->pkt_stats.pkts_drop = 0.0;
+        sfBaseStats->pkt_drop_percent    = 0.0;
     }
     else
     {
-#ifdef ACCUMULATE_PKTS
+	if( sfBase->iReset == 0 )
+	{
         sfBaseStats->pkt_stats.pkts_recv = pcapStats.ps_recv -
                                            sfBase->pkt_stats.pkts_recv;
         sfBaseStats->pkt_stats.pkts_drop = pcapStats.ps_drop -
-                                           sfBase->pkt_stats.pkts_drop;
-#endif
-
-#ifdef RESET_PKTS
+	                                   sfBase->pkt_stats.pkts_drop;
+	}
+	else
+	{
         sfBaseStats->pkt_stats.pkts_recv = pcapStats.ps_recv;
         sfBaseStats->pkt_stats.pkts_drop = pcapStats.ps_drop;
-#endif
+	}
 
         sfBaseStats->pkt_drop_percent    = ((double)sfBaseStats->pkt_stats.pkts_drop /
                                            (double)sfBaseStats->pkt_stats.pkts_recv) * 100;
@@ -809,17 +810,12 @@ int DisplayBasePerfStatsConsole(SFBASE_STATS *sfBaseStats, int iFlags)
     int iCtr;
 #endif
 
-    LogMessage("\n\nSnort Realtime Performance  : %s", 
+    LogMessage("\n\nSnort Realtime Performance  : %s--------------------------\n", 
                ctime(&sfBaseStats->time));
-    LogMessage("--------------------------\n");
 
-#ifndef NO_PKTS
     LogMessage("Pkts Recv:   %llu\n",   sfBaseStats->pkt_stats.pkts_recv);
     LogMessage("Pkts Drop:   %llu\n",   sfBaseStats->pkt_stats.pkts_drop);
     LogMessage("%% Dropped:   %.2f%%\n\n",sfBaseStats->pkt_drop_percent);
-#else
-    LogMessage("Pkts Recv:   %llu\n\n", sfBaseStats->total_packets);
-#endif
 
     LogMessage("KPkts/Sec:   %.2f\n",    sfBaseStats->kpackets_per_sec.realtime);
     LogMessage("Bytes/Pkt:   %d\n\n",      sfBaseStats->avg_bytes_per_packet);

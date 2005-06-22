@@ -1,7 +1,7 @@
 Document: snort-paper
 Title: Snort - Lightweight Intrusion Detection for Networks
 Author: Martin Roesch
-Abstract: An overview of Snort
+Abstract: An overview of Snort NIDS
  Network intrusion detection systems (NIDS) are an important part of any
  network security architecture.  They provide a layer of defense which
  monitors network traffic for predefined suspicious activity or patterns, and
@@ -13,4 +13,4 @@ Abstract: An overview of Snort
 Section: Apps/Net
 
 Format: text
-Files: /usr/share/doc/snort/lisapaper.txt
+Files: /usr/share/doc/snort-doc/lisapaper.txt.gz

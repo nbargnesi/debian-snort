@@ -24,6 +24,14 @@ running Microsoft FrontPage Server Extensions. Many known
 vulnerabilities exist for this platform and the attack scenarios are
 legion.
 
+This event indicates that an attempt has been made to access the file
+svcacl.cnf which may contain sensitive information about the host and
+applications using the FrontPage extensions.
+
+Svcacl.cnf contains data about permissions and IP address restrictions
+on all of the sub-webs.  This information would be very valuable to a
+hacker and could be used to plan future attacks.
+
 --
 Affected Systems:
 	Systems using Microsoft FrontPage Server Extensions 98
@@ -55,9 +63,12 @@ Contributors:
 Sourcefire Research Team
 Brian Caswell <bmc@sourcefire.com>
 Nigel Houghton <nigel.houghton@sourcefire.com>
+Ricky McAtee <rmcatee@sourcefire.com>
 
 --
 Additional References:
 
 Microsoft:
 http://support.microsoft.com/default.aspx?scid=http://support.microsoft.com:80/support/kb/articles/Q188/2/57.ASP&NoWebContent=1&NoWebContent=1
+
+--

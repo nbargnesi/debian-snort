@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: smtp.rules,v 1.38.2.5 2004/10/13 20:25:47 bmc Exp $
+# $Id: smtp.rules,v 1.44.2.1 2004/10/13 20:25:57 bmc Exp $
 #-----------
 # SMTP RULES
 #-----------

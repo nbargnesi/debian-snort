@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: web-iis.rules,v 1.72.2.5 2004/10/13 20:25:47 bmc Exp $
+# $Id: web-iis.rules,v 1.78.2.3 2005/01/17 23:52:48 bmc Exp $
 #--------------
 # WEB-IIS RULES
 #--------------
@@ -18,7 +18,7 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS NewsPro a
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS pbserver access"; flow:to_server,established; uricontent:"/pbserver/pbserver.dll"; nocase; reference:url,www.microsoft.com/technet/security/bulletin/ms00-094.mspx; classtype:web-application-activity; sid:1772; rev:4;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS trace.axd access"; flow:to_server,established; uricontent:"/trace.axd"; nocase; reference:nessus,10993; classtype:web-application-activity; sid:1660; rev:6;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS /isapi/tstisapi.dll access"; flow:to_server,established; uricontent:"/isapi/tstisapi.dll"; nocase; reference:bugtraq,2381; reference:cve,2001-0302; classtype:web-application-activity; sid:1484; rev:5;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS mkilog.exe access"; flow:to_server,established; uricontent:"/mkilog.exe"; nocase; reference:nessus,10359; classtype:web-application-activity; sid:1485; rev:6;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS mkilog.exe access"; flow:to_server,established; uricontent:"/mkilog.exe"; nocase; reference:nessus,10359; reference:url,www.osvdb.org/274; classtype:web-application-activity; sid:1485; rev:7;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS ctss.idc access"; flow:to_server,established; uricontent:"/ctss.idc"; nocase; reference:nessus,10359; classtype:web-application-activity; sid:1486; rev:6;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS /iisadmpwd/aexp2.htr access"; flow:to_server,established; uricontent:"/iisadmpwd/aexp2.htr"; reference:bugtraq,2110; reference:bugtraq,4236; reference:cve,1999-0407; reference:cve,2002-0421; reference:nessus,10371; classtype:web-application-activity; sid:1487; rev:10;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS WebDAV file lock attempt"; flow:to_server,established; content:"LOCK "; depth:5; reference:bugtraq,2736; classtype:web-application-activity; sid:969; rev:5;)
@@ -145,3 +145,4 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS SmarterTo
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS SmarterTools SmarterMail login.aspx buffer overflow attempt"; flow:to_server,established; uricontent:"/login.aspx"; nocase; content:"txtusername="; isdataat:980,relative; content:!"|0A|"; within:980; nocase; reference:bugtraq,9805; classtype:web-application-attack; sid:2572; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS SmarterTools SmarterMail frmCompose.asp access"; flow:to_server,established; uricontent:"/frmCompose.aspx"; reference:bugtraq,9805; classtype:web-application-activity; sid:2573; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-IIS ping.asp access"; flow:to_server,established; uricontent:"/ping.asp"; nocase; reference:nessus,10968; classtype:web-application-activity; sid:2667; rev:2;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"WEB-IIS w3who.dll buffer overflow attempt"; flow:to_server,established; uricontent:"/w3who.dll?"; nocase; pcre:"/w3who.dll\x3F[^\r\n]{519}/i"; classtype:attempted-admin; reference:bugtraq,11820; reference:cve,2004-1134; sid:3087; rev:1;)

@@ -6,6 +6,13 @@
 #define SNORT_EVENTQ_PRIORITY    1
 #define SNORT_EVENTQ_CONTENT_LEN 2
 
+typedef struct s_SNORT_EVENTQ_USER
+{
+    char rule_alert;
+    void *pkt;
+
+} SNORT_EVENTQ_USER;
+
 typedef struct s_SNORT_EVENT_QUEUE
 {
     int max_events;

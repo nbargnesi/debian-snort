@@ -5,7 +5,8 @@ Sid:
 2110
 --
 Summary:
-This event is generated when an attempt is made to exploit a buffer overflow condition in the Post Office Protocol (POP) command STAT.
+This event is generated when an attempt is made to exploit a buffer
+overflow condition in the Post Office Protocol (POP) command STAT.
 
 --
 Impact:
@@ -14,7 +15,8 @@ compromise.
 
 --
 Detailed Information:
-A vulnerability exists such that an attacker may overflow a buffer by sending a line feed character to a POP server via the STAT command.
+A vulnerability exists such that an attacker may overflow a buffer by
+sending a line feed character to a POP server via the STAT command.
 
 --
 Attack Scenarios:
@@ -44,3 +46,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+RFC 1939:
+http://www.faqs.org/rfcs/rfc1939.html
+
+--

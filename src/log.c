@@ -1,4 +1,4 @@
-/* $Id: log.c,v 1.118.2.1 2004/08/04 14:28:25 jhewlett Exp $ */
+/* $Id: log.c,v 1.121.2.1 2004/12/09 17:38:46 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -347,7 +347,7 @@ void PrintIPPkt(FILE * fp, int type, Packet * p)
                 {
                     PrintNetData(fp, (u_char *) 
 				 ((u_char *)p->iph + (IP_HLEN(p->iph) << 2)), 
-				 (ntohs(p->iph->ip_len) - (IP_HLEN(p->iph) << 2)));
+				 (p->actual_ip_len - (IP_HLEN(p->iph) << 2)));
                 }
 
                 break;
@@ -361,7 +361,7 @@ void PrintIPPkt(FILE * fp, int type, Packet * p)
                 {
                     PrintNetData(fp, (u_char *) 
 				 ((u_char *)p->iph + (IP_HLEN(p->iph) << 2)), 
-				 (ntohs(p->iph->ip_len) - (IP_HLEN(p->iph) << 2)));
+				 (p->actual_ip_len - (IP_HLEN(p->iph) << 2)));
                 }
 
                 break;
@@ -1705,6 +1705,8 @@ void SnortSetEvent
         event->event_reference = event_ref;
     else
         event->event_reference = event->event_id;
+
+    event->ref_time.tv_sec = 0;
 
     return;
 }
