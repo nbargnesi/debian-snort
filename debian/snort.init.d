@@ -50,6 +50,15 @@ check_log_dir() {
 
 case "$1" in
   start)
+        if [ -e /etc/snort/db-pending-config ] ; then
+		echo "WARN: /etc/snort/db-pending-config file found"
+		echo "WARN: Snort will not start as its database is not yet configured."
+		echo "WARN: Please configure the database as described in"
+		echo "WARN: /usr/share/doc/snort-{pgsql,mysql}/README-database.Debian"
+		echo "WARN: and remove /etc/snort/db-pending-config"
+		exit 1
+	fi
+
 	echo -n "Starting $DESC: "
         if ! check_log_dir; then
 		echo " will not start $DESC!"

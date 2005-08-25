@@ -1,4 +1,35 @@
 
+ SNORT WITH DATABASE SUPPORT
+------------------------------
+ If you are using snort-pgsql or snort-mysql please notice that you have
+ to create the database structure right after installing the package
+ and start Snort manually.
+
+ In order to create the database structure do:
+
+ - if using PostgreSQL
+   $ cd /usr/share/doc/snort-pgsql/
+   $  zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>
+
+ - if using MySQL
+   $ cd /usr/share/doc/snort-mysql/
+   $ zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>
+
+ In either case fill in the correct values for the user, host, and 
+ database names. Depending on the user priviledges set on the database
+ you can use the same user that Snort will use to access the
+ database or an admin user. In either case, the user you use should
+ have priviledges to create tables and indexes. Once created you have
+ to grant the user your configured in Debconf so that it has priviledges
+ over the tables created through the schema.
+
+ Once you have setup the database, you will need to start Snort manually
+ since it was left unstarted after the installation. To do this
+ remove the file '/etc/snort/db-pending-config' and then
+ do '/etc/init.d/snort start'. Confirm that snort is working and up
+ by running '/etc/init.d/snort status' and reviewing the messages in
+ the /var/log/daemon.log syslog file.
+
  SNORT ON MULTIPLE INTERFACES
 ------------------------------
 

@@ -50,7 +50,8 @@ TODO things for Snort in Debian
 - Provide support to avoid specifying the address range for multiple
   interfaces (or skip this if you have more than once and substitute
   by a note telling the admin to configure this in the snort.$IFACE.conf 
-  file). 
+  file).  This could be done using 'ip addr show $IFACE' and extracting
+  the vaule from the 'inet' component.
 
 - Rewrite the "address range" question. It actually does not explain what
   it is actually used for (HOME_NET)
@@ -60,13 +61,14 @@ TODO things for Snort in Debian
   This should also handle multiple interfaces.
   (see bug #248000)
 
-- Provide an update script, as required in #191105, snort-rules-default
-  currently recommends: 'oinkmaster' but that is sub-optimal
-
 - Add some common logcheck rules (see #222584, and #217175)
 
 DONE
 
 - Have a way in preinst to migragte from the old common.parameters to the
   new /etc/default/snort so that all users can benefit from it. 
+
+- Provide an update script, as required in #191105
+  Done: snort-rules-default currently recommends: 'oinkmaster' better
+  that than maintaining a separate update script unmaintained upstream.
 

@@ -89,6 +89,11 @@ case "$1" in
 	    mv /etc/cron.daily/snort /etc/cron.daily/5snort
 	fi
 
+	# If this is the first time we are installation then create
+	# the /etc/snort/db-pending-config
+	if [ "$1" = "install" ] && [ -z "$2" ] ; then
+	touch /etc/snort/db-pending-config
+	fi
 
     ;;
     configure)
