@@ -1,3 +1,10 @@
+snort (2.3.2-8) unstable; urgency=low
+
+  * _Really_ use debhelper compat version 4 now
+  * Remove debian/*conffiles since debhelper now marks them as config files
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat, 27 Aug 2005 01:50:40 +0200
+
 snort (2.3.2-7) unstable; urgency=low
 
   * Fix lintian warnings
