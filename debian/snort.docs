@@ -8,5 +8,6 @@ doc/README.PLUGINS
 doc/USAGE
 doc/README.database
 doc/README.csv
+debian/my/lisapaper.txt
 debian/my/snort_rules.html
 debian/README.Maintainer

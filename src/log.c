@@ -1478,10 +1478,8 @@ void PrintIpOptions(FILE * fp, Packet * p)
                 {
                     for(j = 0; j < p->ip_options[i].len; j++)
                     {
-			if (p->ip_options[i].data)
-				fprintf(fp, "%02X", p->ip_options[i].data[j]);
-			else
-				fprintf(fp, "%02X", 0);
+                        fprintf(fp, "%02X", p->ip_options[i].data[j]);
+                        
                         if((j % 2) == 0)
                             fprintf(fp, " ");
                     }
@@ -1524,8 +1522,7 @@ void PrintTcpOptions(FILE * fp, Packet * p)
             case TCPOPT_MAXSEG:
                 bzero((char *) tmp, 5);
                 fwrite("MSS: ", 5, 1, fp);
-                if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 2);
+                memcpy(tmp, p->tcp_options[i].data, 2);
                 fprintf(fp, "%u ", EXTRACT_16BITS(tmp));
                 break;
 
@@ -1538,20 +1535,15 @@ void PrintTcpOptions(FILE * fp, Packet * p)
                 break;
 
             case TCPOPT_WSCALE:
-                if (p->tcp_options[i].data)
-			fprintf(fp, "WS: %u ", p->tcp_options[i].data[0]);
-                else
-			fprintf(fp, "WS: %u ", 0);
+                fprintf(fp, "WS: %u ", p->tcp_options[i].data[0]);
                 break;
 
             case TCPOPT_SACK:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 2);
+                memcpy(tmp, p->tcp_options[i].data, 2);
                 fprintf(fp, "Sack: %u@", EXTRACT_16BITS(tmp));
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-                	memcpy(tmp, (p->tcp_options[i].data) + 2, 2);
+                memcpy(tmp, (p->tcp_options[i].data) + 2, 2);
                 fprintf(fp, "%u ", EXTRACT_16BITS(tmp));
                 break;
 
@@ -1561,47 +1553,40 @@ void PrintTcpOptions(FILE * fp, Packet * p)
 
             case TCPOPT_ECHO:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "Echo: %u ", EXTRACT_32BITS(tmp));
                 break;
 
             case TCPOPT_ECHOREPLY:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "Echo Rep: %u ", EXTRACT_32BITS(tmp));
                 break;
 
             case TCPOPT_TIMESTAMP:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "TS: %u ", EXTRACT_32BITS(tmp));
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, (p->tcp_options[i].data) + 4, 4);
+                memcpy(tmp, (p->tcp_options[i].data) + 4, 4);
                 fprintf(fp, "%u ", EXTRACT_32BITS(tmp));
                 break;
 
             case TCPOPT_CC:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "CC %u ", EXTRACT_32BITS(tmp));
                 break;
 
             case TCPOPT_CCNEW:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "CCNEW: %u ", EXTRACT_32BITS(tmp));
                 break;
 
             case TCPOPT_CCECHO:
                 bzero((char *) tmp, 5);
-		if (p->tcp_options[i].data)
-			memcpy(tmp, p->tcp_options[i].data, 4);
+                memcpy(tmp, p->tcp_options[i].data, 4);
                 fprintf(fp, "CCECHO: %u ", EXTRACT_32BITS(tmp));
                 break;
 
@@ -1613,10 +1598,7 @@ void PrintTcpOptions(FILE * fp, Packet * p)
 
                     for(j = 0; j < p->tcp_options[i].len; j++)
                     {
-			if (p->tcp_options[i].data)
-				fprintf(fp, "%02X", p->tcp_options[i].data[j]);
-			else
-				fprintf(fp, "%02X", 0);
+                        fprintf(fp, "%02X", p->tcp_options[i].data[j]);
                         
                         if((j % 2) == 0)
                             fprintf(fp, " ");

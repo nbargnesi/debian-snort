@@ -243,13 +243,13 @@ SpoAlertFastData *ParseAlertFastArgs(char *args)
 
     data = (SpoAlertFastData *)SnortAlloc(sizeof(SpoAlertFastData));
 
+    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "ParseAlertFastArgs: %s\n", args););
+
     if(args == NULL)
     {
         data->file = OpenAlertFile(NULL);
         return data;
     }
-
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "ParseAlertFastArgs: %s\n", args););
 
     toks = mSplit(args, " ", 2, &num_toks, 0);
     if(strcasecmp("stdout", toks[0]) == 0)

@@ -8,4 +8,4 @@ Abstract: Frequently Asked Questions for the Snort NIDS
 Section: Apps/Net
 
 Format: pdf
-Files: /usr/share/doc/snort-doc/faq.pdf.gz
+Files: /usr/share/doc/snort-doc/faq.pdf

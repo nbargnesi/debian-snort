@@ -1896,8 +1896,8 @@ int CheckDBVersion(DatabaseData * data)
 
    select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
 
-#if defined(ENABLE_MSSQL) || defined(ENABLE_ODBC) 
-   if ( data->shared->dbtype_id == DB_MSSQL || 
+#if defined(ENABLE_MSSQL) || defined(ENABLE_ODBC)
+   if ( data->shared->dbtype_id == DB_MSSQL ||
         (data->shared->dbtype_id==DB_ODBC && data->u_underlying_dbtype_id==DB_MSSQL) )
    {
       /* "schema" is a keyword in SQL Server, so use square brackets
@@ -1910,23 +1910,9 @@ int CheckDBVersion(DatabaseData * data)
    else
 #endif
    {
-#if defined(ENABLE_MYSQL)
-      if (data->shared->dbtype_id == DB_MYSQL)
-      {
-         /* "schema" is a keyword in MYSQL, so use `schema`
-          *  to indicate that we are referring to the table
-          */
-         snprintf(select0, MAX_QUERY_LENGTH,
-               "SELECT vseq "
-               "FROM `schema`");
-     }
-     else
-#endif
-      {
       snprintf(select0, MAX_QUERY_LENGTH,
                "SELECT vseq "
                "FROM schema");
-      }
    }
 
    schema_version = Select(select0,data);

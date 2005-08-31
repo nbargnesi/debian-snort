@@ -35,16 +35,16 @@ case "$1" in
 		fi
 
 		# Remove configuration dir
-		[ -d /etc/snort ] && rmdir --ignore-fail-on-non-empty /etc/snort
+		rmdir --ignore-fail-on-non-empty /etc/snort
 		
 		# Remove init.d
 		update-rc.d -f snort remove >/dev/null
 
 		# Remove user/group
-		if getent passwd | grep -q "^snort:"; then
+		if ! getent passwd | grep -q "^snort:"; then
 			userdel snort 2>/dev/null || true
 		fi
-		if getent group | grep -q "^snort:" ; then
+		if ! getent group | grep -q "^snort:" ; then
 			delgroup --only-if-empty snort 2>/dev/null || true
 		fi
 		;;

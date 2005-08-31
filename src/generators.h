@@ -91,8 +91,6 @@
 #define     STREAM4_MULTIPLE_ACKED              18
 #define     STREAM4_EMERGENCY                   19
 #define     STREAM4_SUSPEND                     20
-/* Some missing here which were introduced in 2.4.0 */
-#define     STREAM4_EVASIVE_FIN                 24
 
 #define GENERATOR_SPP_ARPSPOOF      112
 #define     ARPSPOOF_UNICAST_ARP_REQUEST         1
@@ -308,7 +306,6 @@
 "(spp_stream4) TCP TOO FAST RETRANSMISSION WITH DIFFERENT DATA SIZE (possible fragroute) detection"
 #define STREAM4_EMERGENCY_STR "(spp_stream4) Shifting to Emergency Session Mode"
 #define STREAM4_SUSPEND_STR "(spp_stream4) Shifting to Suspend Mode"
-#define STREAM4_EVASIVE_FIN_STR "(spp_stream4) possible EVASIVE FIN detection"
 
 
 #define DECODE_NOT_IPV4_DGRAM_STR "(snort_decoder) WARNING: Not IPv4 datagram!"

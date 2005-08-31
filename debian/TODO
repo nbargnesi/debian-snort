@@ -30,10 +30,6 @@ TODO things for Snort in Debian
    * Additional /etc/default/snort parameters similar to the RPM ones for
      compatibility
 
-- Include ntop improvements to init.d script: check if interface is up
-
-- Use LSB functions in Init.d script
-
 - Use ucf to integrate changes by the maintainer when upgrading
 
 - Break up the init.d script into reusable functions 

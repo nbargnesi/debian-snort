@@ -82,8 +82,6 @@ typedef int (*LOOKUP_FCN)(HI_SESSION *, u_char *, u_char *, u_char **,
 */
 static LOOKUP_FCN lookup_table[256];
 static int hex_lookup[256];
-static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
-        u_char *end, u_char **ptr, URI_PTR *uri_ptr);
 
 /*
 **  NAME
@@ -454,7 +452,7 @@ static int find_rfc_delimiter(HI_SESSION *Session, u_char *start,
         return URI_END;
     }
 
-    return NextNonWhiteSpace(Session, start, end, ptr, uri_ptr);
+    return NO_URI;
 }
 
 /*
@@ -665,7 +663,7 @@ static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
             (*ptr)++;
             continue;
         }
-        else if((**ptr == '\t') || (**ptr == '\r'))
+        else if((**ptr == '\t'))
         {
             if(ServerConf->apache_whitespace.on)
             {

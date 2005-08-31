@@ -7,9 +7,6 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 CONFIG=/etc/snort/snort.debian.conf
 . $CONFIG
 
-# Don't generate stats if we are configured not to
-[ "$DEBIAN_SNORT_SEND_STATS" = "false" ] && exit 0
-
 export DEBIAN_SNORT_STATS_RCPT DEBIAN_SNORT_STATS_THRESHOLD
 
 # Just in case it's not properly configured for whatever reason

@@ -1,4 +1,4 @@
-# $Id: gen-msg.map,v 1.16.2.3 2005/04/22 19:03:55 jhewlett Exp $
+# $Id: gen-msg.map,v 1.13.4.1 2004/09/14 21:09:08 bmc Exp $
 # GENERATORS -> msg map
 # Format: generatorid || signatureid || MSG
 
@@ -91,7 +91,7 @@
 116 || 106 || snort_decoder: ICMP Timestamp Header Truncated!
 116 || 107 || snort_decoder: ICMP Address Header Truncated!
 116 || 108 || snort_decoder: Unknown Datagram decoding problem!
-116 || 109 || snort_decoder: Truncated ARP Packet!
+116 || 109 || snort_decoder: Unknown Datagram decoding problem!
 116 || 110 || snort_decoder: Truncated EAP Header!
 116 || 111 || snort_decoder: EAP Key Truncated!
 116 || 112 || snort_decoder: EAP Header Truncated!
@@ -124,38 +124,8 @@
 119 || 15 || http_inspect: OVERSIZE REQUEST-URI DIRECTORY
 119 || 16 || http_inspect: OVERSIZE CHUNK ENCODING
 119 || 17 || http_inspect: UNAUTHORIZED PROXY USE DETECTED
-119 || 18 || http_inspect: WEBROOT DIRECTORY TRAVERSAL
 120 || 1 || http_inspect: ANOMALOUS HTTP SERVER ON UNDEFINED HTTP PORT
 121 || 1 || flow-portscan: Fixed Scale Scanner Limit Exceeded
 121 || 2 || flow-portscan: Sliding Scale Scanner Limit Exceeded
 121 || 3 || flow-portscan: Fixed Scale Talker Limit Exceeded
 121 || 4 || flow-portscan: Sliding Scale Talker Limit Exceeded
-122 || 1 || portscan: TCP Portscan
-122 || 2 || portscan: TCP Decoy Portscan
-122 || 3 || portscan: TCP Portsweep
-122 || 4 || portscan: TCP Distributed Portscan
-122 || 5 || portscan: TCP Filtered Portscan
-122 || 6 || portscan: TCP Filtered Decoy Portscan
-122 || 7 || portscan: TCP Filtered Portsweep
-122 || 8 || portscan: TCP Filtered Distributed Portscan
-122 || 9 || portscan: IP Protocol Scan
-122 || 10 || portscan: IP Decoy Protocol Scan
-122 || 11 || portscan: IP Protocol Sweep
-122 || 12 || portscan: IP Distributed Protocol Scan
-122 || 13 || portscan: IP Filtered Protocol Scan
-122 || 14 || portscan: IP Filtered Decoy Protocol Scan
-122 || 15 || portscan: IP Filtered Protocol Sweep
-122 || 16 || portscan: IP Filtered Distributed Protocol Scan
-122 || 17 || portscan: UDP Portscan
-122 || 18 || portscan: UDP Decoy Portscan
-122 || 19 || portscan: UDP Portsweep
-122 || 20 || portscan: UDP Distributed Portscan
-122 || 21 || portscan: UDP Filtered Portscan
-122 || 22 || portscan: UDP Filtered Decoy Portscan
-122 || 23 || portscan: UDP Filtered Portsweep
-122 || 24 || portscan: UDP Filtered Distributed Portscan
-122 || 25 || portscan: ICMP Sweep
-122 || 26 || portscan: ICMP Filtered Sweep
-122 || 27 || portscan: Open Port
-124 || 1 || xlink2state: X-Link2State length greater than 1024
-
