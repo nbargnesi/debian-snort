@@ -1,3 +1,15 @@
+snort (2.3.3-4) unstable; urgency=low
+
+  * Build-Depend on newer automake version: 1.7 (Closes: #335143)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 17 Jan 2006 02:10:41 +0100
+
+snort (2.3.3-3) unstable; urgency=low
+
+  * Properly remove the snort user on purge.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 20 Oct 2005 01:13:47 +0200
+
 snort (2.3.3-2) unstable; urgency=high
 
   * Backport the following changes introduced in 2.4.1. Upstream changelog:
