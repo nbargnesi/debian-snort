@@ -59,6 +59,16 @@ _Description: Should Snort disable promiscuous mode on the interface?
  Disable promiscuous mode if you are configuring Snort on an interface
  without a configured IP address.
 
+Template: snort/invalid_interface
+Type: note
+_Description: Invalid interface
+ One of the interfaces you specified is not valid (it might not exist on the system
+ or be down). Please introduce a valid interface when answering the question
+ of which interface(s) should Snort listen on.
+ .
+ If you did not configure an interface then the package is trying to use the default
+ ('eth0') which does not seem to be valid in your system.
+
 Template: snort/reverse_order
 Type: boolean
 Default: false
@@ -67,6 +77,14 @@ _Description: Should Snort's rules testing order be changed to Pass|Alert|Log?
  applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log.
  This will prevent people from having to make huge Berky Packet Filter
  command line arguments to filter their alert rules.
+
+Template: snort/send_stats
+Type: boolean
+Default: true
+_Description: Should daily summaries be sent by e-mail?
+ This Snort installation provides a cron job that runs daily and
+ summarises the information of Snort logs to a selected email address.
+ If you want to disable this feature say 'no' here.
 
 Template: snort/stats_rcpt
 Type: string

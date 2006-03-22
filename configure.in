@@ -2,6 +2,10 @@
 AC_PREREQ(2.50)
 AC_INIT(src/snort.c)
 AM_CONFIG_HEADER(config.h)
+
+# Added to change the output of aclocal and automake.
+AM_MAINTAINER_MODE
+
 # When changing the snort version, please also update the VERSION
 # definition in "src/win32/WIN32-Includes/config.h"
 AM_INIT_AUTOMAKE(snort,2.3.3)

@@ -47,7 +47,7 @@ if [ "$deprecated" -ne 1 ] ; then
 		set +e
 		/etc/init.d/snort config-check >/dev/null 2>&1
 		if [ $? -ne 0 ] ; then
-			db_input high snort/config_error || true
+			db_input critical snort/config_error || true
 			db_go || true
 		fi
 		set -e
