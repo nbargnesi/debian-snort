@@ -1,3 +1,23 @@
+snort (2.3.3-6) unstable; urgency=medium
+
+  * Recompile to use latest libmysqlclient libraries (Closes: #366748)
+  * Remove the following unused dependencies as suggested by  Stefan Huehner:
+    libsnmp4.2-dev and libssl-dev (and their --with calls in debian/rules) . I'm
+    still keeping the coreutils | fileutils dependency since I still want to
+    compile this package in woody.(Closes: #365874)
+  * Also remove DH_COMPAT from debian/rules as suggested by  Stefan Huehner in
+    #365874
+  * Move 'debian/my/lisapaper.txt' to snort-doc.docs and remove from snort,
+    snort-pgsql and snort-mysql doc files (Closes: #340091)
+  * Have faq.tex use hyperref.sty instead of latex2html's html.sty and comment
+    the \latexonly definitions. This makes latex2html unnecessary to
+    build the package (Closes: #365872)
+  * doc-base files now point to the compressed PDF documents (lintian fix)
+  * Updated debconf translations:
+    - French translation provided by Christian Perrier (Closes: #359285)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 29 May 2006 20:05:29 +0200
+
 snort (2.3.3-5) unstable; urgency=low
 
   * Updated Build-Dependencies to use libmysqlclient15-dev instead of the 
