@@ -1,3 +1,10 @@
+snort (2.3.3-7) unstable; urgency=low
+
+  * *Really* recompile to use latest libmysqlclient libraries (Closes:
+    #366748)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat,  3 Jun 2006 15:20:57 +0200
+
 snort (2.3.3-6) unstable; urgency=medium
 
   * Recompile to use latest libmysqlclient libraries (Closes: #366748)
