@@ -41,7 +41,7 @@
 
 /* Pointer to current session data */
 XLINK2STATE *_xlink;
-static u_int       _xlink2state_ports[65535];
+static u_int       _xlink2state_ports[65536];
 static u_int       _xlink2state_disabled = 0;
 static u_int       _xlink2state_drop = 0;
 static Packet      *_xlink2state_pkt = NULL;
@@ -67,9 +67,6 @@ static Packet      *_xlink2state_pkt = NULL;
  */
 void XLINK2STATE_Init(void)
 {
-    /*  Set up commands we will watch for */
-    SearchInit(1);
-    
     /*  Set up commands we will watch for */
     SearchInit(1);
     

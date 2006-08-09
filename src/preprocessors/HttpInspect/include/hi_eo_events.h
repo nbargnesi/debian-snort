@@ -24,13 +24,14 @@
 #define HI_EO_CLIENT_LARGE_CHUNK    15  /* done */
 #define HI_EO_CLIENT_PROXY_USE      16  /* done */
 #define HI_EO_CLIENT_WEBROOT_DIR    17  /* done */
+#define HI_EO_CLIENT_CR_IN_URI      18  /* done */
 
 /*
 **  IMPORTANT:
 **  Every time you add a client event, this number must be
 **  incremented.
 */
-#define HI_EO_CLIENT_EVENT_NUM      18
+#define HI_EO_CLIENT_EVENT_NUM      19
 
 /*
 **  These defines are the alert names for each event
@@ -71,6 +72,8 @@
     "(http_inspect) UNAUTHORIZED PROXY USE DETECTED"
 #define HI_EO_CLIENT_WEBROOT_DIR_STR                    \
     "(http_inspect) WEBROOT DIRECTORY TRAVERSAL"
+#define HI_EO_CLIENT_CR_IN_URI_STR                       \
+    "(http_inspect) NON-STD CARRIAGE RETURN IN URI"
 
 /*
 **  Anomalous Server Events

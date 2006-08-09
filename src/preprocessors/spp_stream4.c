@@ -337,7 +337,7 @@ void PreprocRestartFunction(int);
 void PreprocCleanExitFunction(int);
 static INLINE int isBetween(u_int32_t low, u_int32_t high, u_int32_t cur);
 static INLINE int NotForStream4(Packet *p);
-static INLINE int SetFinSent(Packet *p, Session *ssn, int direction);
+static INLINE int SetFinSent(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p);
 static INLINE int WithinSessionLimits(Packet *p, Stream *stream);
 
  /* helpers for dealing with session byte_counters */
@@ -1445,32 +1445,115 @@ void Stream4InitReassembler(u_char *args)
     }
 }
 
+/**
+ * Check a FIN is valid within the window
+ *
+ * @param s stream to set the next_seq on 
+ * @param direction direction of the packet
+ * @param pkt_seq sequence number for the packet
+ * @param p packet to grab the session from
+ * 
+ * @return 0 if everything went ok
+ */
+static INLINE int CheckFin(Stream *s, int direction, u_int32_t pkt_seq, Packet *p)
+{
+    DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "CheckFin() called for %s\n",
+                            direction ? "FROM_CLIENT":"FROM_SERVER"););
+
+    /* If not tracking state ignore it */
+    if( !s4data.stateful_inspection_flag )
+        return 0;
+
+    /*
+     *  We want to make sure the FIN has the next valid sequence that 
+     *  this side should be sending 
+     *  If the pkt_seq < next_seq it's essentially a duplicate 
+     *  sequence, and is probably going to be discarded, it certainly 
+     *  should be. Also, the base sequence includes the SYN sequence count.
+     *  If the packet seq is after the next seq than we should queue the 
+     *  packet for later, in case an out of order packet arrives. We 
+     *  should also honor the FIN-ACK requirements.
+     *
+     *  Ignoring a FIN implies we won't shutdown this session due to it.
+     *  
+     *  This is a standard TCP/IP stack 'in the window' check, but it's 
+     *  not always the way stacks handle FIN's:
+     *  
+     *  if(SEQ_LT(pkt_seq,s->base_seq+s->bytes_tracked) || 
+     *     SEQ_GEQ(pkt_seq,(s->last_ack+s->win_size))) 
+     *  
+     */
+    if(SEQ_LT(pkt_seq,s->base_seq+s->bytes_tracked) || 
+       SEQ_GEQ(pkt_seq,(s->last_ack+s->win_size))) 
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
+                    "Bad FIN packet, bad sequence!\n"
+                    "pkt seq: 0x%X   last_ack: 0x%X  win: 0x%X\n",
+                    pkt_seq, s->last_ack, s->win_size););
+
+        /* we should probably alert here */
+        if(s4data.evasion_alerts)
+        {
+            SnortEventqAdd(GENERATOR_SPP_STREAM4, /* GID */
+                    STREAM4_EVASIVE_FIN, /* SID */
+                    1,                      /* Rev */
+                    0,                      /* classification */
+                    3,                      /* priority (low) */
+                    STREAM4_EVASIVE_FIN_STR, /* msg string */
+                    0);
+        }
+        return 1;
+    }
+    return 0;
+}
+
+
 /** 
  * Set that this side of the session has sent a fin.
  *
  * This overloads the next_seq variable to also be used to tell how
  * far forward we can acknowledge data.
  * 
- * @param p packet to grab the session from
  * @param s stream to set the next_seq on 
+ * @param direction direction of the packet
+ * @param pkt_seq sequence number for the packet
+ * @param p packet to grab the session from
  * 
  * @return 0 if everything went ok
  */
-static INLINE int SetFinSent(Packet *p, Session *ssn, int direction)
+static INLINE int SetFinSent(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p)
 {
     Stream *stream;
 
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "SetFinSet() called for %s\n",
                             direction ? "FROM_CLIENT":"FROM_SERVER"););
 
+    /* If not tracking state ignore it */
+    if( !s4data.stateful_inspection_flag )
+        return 0;
+
+    if(direction == FROM_SERVER)
+    {        
+        stream = &ssn->server;
+        DEBUG_WRAP(DebugMessage(DEBUG_STREAM,"--RST From Server!\n"););
+    }
+    else
+    {        
+        stream = &ssn->client;
+        DEBUG_WRAP(DebugMessage(DEBUG_STREAM,"--RST From Client!\n"););
+    }
+
+    if (CheckFin(stream, direction, pkt_seq, p))
+    {
+        return 0;
+    }
+
     if(direction == FROM_SERVER)
     {
-        stream = &ssn->server;
         ssn->session_flags |= SSNFLAG_SERVER_FIN;
     }
     else
     {
-        stream = &ssn->client;
         ssn->session_flags |= SSNFLAG_CLIENT_FIN;
     }
     
@@ -2188,14 +2271,6 @@ int UpdateState2(Session *ssn, Packet *p, u_int32_t pkt_seq)
 
     direction = GetDirection(ssn, p);
 
-    if(p->tcph->th_flags & TH_FIN)
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
-                    "Marking that a fin was was sent %s\n",
-                    (direction ? "FROM_CLIENT" : "FROM_SERVER")););
-        SetFinSent(p, ssn, direction);
-    }
-
     if(direction == FROM_SERVER)
     {
         ssn->session_flags |= SSNFLAG_SEEN_SERVER;
@@ -2228,6 +2303,15 @@ int UpdateState2(Session *ssn, Packet *p, u_int32_t pkt_seq)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE, 
                     "   %s state: %s\n", l, state_names[listener->state]););
+    }
+
+    if(p->tcph->th_flags & TH_FIN)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
+                    "Marking that a fin was was sent %s\n",
+                    (direction ? "FROM_CLIENT" : "FROM_SERVER")););
+
+        SetFinSent(ssn, direction, pkt_seq, p);
     }
 
     StreamSegmentAdd(talker, p->dsize); 
@@ -2332,10 +2416,13 @@ int UpdateState2(Session *ssn, Packet *p, u_int32_t pkt_seq)
 
             if((p->tcph->th_flags & TH_FIN) == TH_FIN)
             {
-                talker->state = FIN_WAIT_1;
-                DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,  
-                            "   %s Transition: FIN_WAIT_1\n", t););
-                QueueState(CLOSE_WAIT, listener, TH_ACK, pkt_seq, CHK_SEQ);
+                if (!CheckFin(talker, direction, pkt_seq, p))
+                {
+                    talker->state = FIN_WAIT_1;
+                    DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,  
+                                "   %s Transition: FIN_WAIT_1\n", t););
+                    QueueState(CLOSE_WAIT, listener, TH_ACK, pkt_seq, CHK_SEQ);
+                }
             }
 
             break;
