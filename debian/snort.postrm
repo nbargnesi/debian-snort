@@ -35,7 +35,7 @@ case "$1" in
 		fi
 
 		# Remove configuration dir
-		rmdir --ignore-fail-on-non-empty /etc/snort
+		[ -d /etc/snort ] && rmdir --ignore-fail-on-non-empty /etc/snort
 		
 		# Remove init.d
 		update-rc.d -f snort remove >/dev/null
