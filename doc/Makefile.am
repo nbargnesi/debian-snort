@@ -24,7 +24,7 @@ README.sfportscan \
 snort_schema_v106.pdf \
 README.wireless PROBLEMS RULES.todo WISHLIST faq.pdf faq.tex
 
-DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux faq.pdf faq.tex snort_manual.pdf
+DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux faq.pdf snort_manual.pdf faq.log faq.toc faq.aux
 
 doc_DIR = $(prefix)/doc
 

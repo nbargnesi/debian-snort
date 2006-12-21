@@ -7,5 +7,5 @@ Abstract: Users manual to the Snort NIDS
 Section: Apps/Net
 
 Format: pdf
-Files: /usr/share/doc/snort-doc/snort_manual.pdf
+Files: /usr/share/doc/snort-doc/snort_manual.pdf.gz
 

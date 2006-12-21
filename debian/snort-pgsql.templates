@@ -68,6 +68,14 @@ _Description: Should Snort's rules testing order be changed to Pass|Alert|Log?
  This will prevent people from having to make huge Berky Packet Filter
  command line arguments to filter their alert rules.
 
+Template: snort-pgsql/send_stats
+Type: boolean
+Default: true
+_Description: Should daily summaries be sent by e-mail?
+ This Snort installation provides a cron job that runs daily and
+ summarises the information of Snort logs to a selected email address.
+ If you want to disable this feature say 'no' here.
+
 Template: snort-pgsql/stats_rcpt
 Type: string
 Default: root

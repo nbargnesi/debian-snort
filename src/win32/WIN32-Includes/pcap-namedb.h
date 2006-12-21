@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * @(#) $Header: /usr/cvsroot-snort/snort/src/win32/WIN32-Includes/pcap-namedb.h,v 1.4 2003/10/20 15:03:43 chrisgreen Exp $ (LBL)
+ * @(#) $Header: /cvsroot/snort/src/win32/WIN32-Includes/pcap-namedb.h,v 1.4 2003/10/20 15:03:43 chrisgreen Exp $ (LBL)
  */
 
 #ifndef lib_pcap_ethers_h

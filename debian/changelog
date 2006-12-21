@@ -1,3 +1,186 @@
+snort (2.3.3-10) unstable; urgency=low
+
+  * Fix snort-mysql template to prevent translators from duplicating work
+    (two templates were nearly identical except for a double space)
+  [ Translations update ]
+  * Updated Spanish translation
+  * Updated Japanese translation, courtesy of Hideki Yamane (Closes: #391894)
+  * Updated German translation, courtesy of Erik Schanze (Closes: #397017)
+  * Updated Dutch translation, courtesy of Peter Vandenabeele.
+  * Updated Vietnamese translation, courtesy of Clytie Siddall
+  * Fix error in Catalan translation (which made msgstat fail)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 21 Dec 2006 19:52:38 +0100
+
+snort (2.3.3-9) unstable; urgency=low
+
+  * Do not try to remove /etc/snort in postrm if it does not exist anymore
+    when purging (Closes: #389766)
+  * Simplify coreutils dependencies (Closes: #381836)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sun,  1 Oct 2006 23:29:20 +0200
+
+snort (2.3.3-8) unstable; urgency=medium
+
+  * Fix security issue CVE-2006-2769, potential evasion in URI content
+    buffers. This evasion only applies to Apache protected servers since
+    that server supports some characters. The patch used is from 2.4.5
+    and is *not* the one provided by Demarc (which is not fully
+    comprehensive and is much more intrusive).
+    Since this is an evasion issue and not a real security issue 
+    thus the 'medium' urgency even though it fixes security bug (Closes:
+    #381726)
+
+    From upstream (snort.org webpage, News item "Possible Evasion in
+    http_inspect"): 
+
+     «The Apache web server supports special characters in HTTP requests that
+     do not affect the processing of the particular request. The current
+     target-based profiles for Apache in the http_inspect preprocessor do not
+     properly handle these requests, resulting in the possibility that an
+     attacker can bypass detection of rules that use the "uricontent" keyword
+     by embedding special characters in a HTTP request.»
+
+     «It is important to note that this is an evasion and not a vulnerability.
+     This means that while it is possible for an attacker to bypass detection,
+     Snort sensors and the networks they protect are not at a heightened risk
+     of other attacks.»
+
+  * Backport fix of another (different) potential evasion in Stream4 (also in
+    the Snort 2.4.5 release, no CVE name)
+  * Relocate Czech translation, it was not under debian/po
+  * Add a warning in /etc/default/snort that the SNORT_USER will be 
+    modified (with usermod) every time you reinstall the package
+    (don't change it to 'root'!)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 10 Aug 2006 00:44:36 +0200
+
+snort (2.3.3-7) unstable; urgency=low
+
+  * *Really* recompile to use latest libmysqlclient libraries (Closes:
+    #366748)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat,  3 Jun 2006 15:20:57 +0200
+
+snort (2.3.3-6) unstable; urgency=medium
+
+  * Recompile to use latest libmysqlclient libraries (Closes: #366748)
+  * Remove the following unused dependencies as suggested by  Stefan Huehner:
+    libsnmp4.2-dev and libssl-dev (and their --with calls in debian/rules) . I'm
+    still keeping the coreutils | fileutils dependency since I still want to
+    compile this package in woody.(Closes: #365874)
+  * Also remove DH_COMPAT from debian/rules as suggested by  Stefan Huehner in
+    #365874
+  * Move 'debian/my/lisapaper.txt' to snort-doc.docs and remove from snort,
+    snort-pgsql and snort-mysql doc files (Closes: #340091)
+  * Have faq.tex use hyperref.sty instead of latex2html's html.sty and comment
+    the \latexonly definitions. This makes latex2html unnecessary to
+    build the package (Closes: #365872)
+  * doc-base files now point to the compressed PDF documents (lintian fix)
+  * Updated debconf translations:
+    - French translation provided by Christian Perrier (Closes: #359285)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Mon, 29 May 2006 20:05:29 +0200
+
+snort (2.3.3-5) unstable; urgency=low
+
+  * Updated Build-Dependencies to use libmysqlclient15-dev instead of the 
+    old libmysqlclient10 library (Closes: #356706)
+  * Add a 'DEBIAN_SNORT_SEND_STATS' option (controlled by debconf) to allow
+    users to define if snort should send daily stats. Users that want to
+    change the frequency should manually move over the cron.daily script
+    to other cron.XXX locations (Closes: #353035)
+  * Updated debconf translations:
+    - Dutch translation with patch provided by Peter Vandenabeele
+    - Spanish Debconf translation ('send_stats' template)
+  * Do not indent '@' in the e-mail of users that receive the stats (Closes: #335803)
+  * Preliminary code (only in snort.config) to detect if the default interface
+    is up when configuring Snort, the Debconf question priority is raised if
+    the interface is not up or it does not exist and the user is pestered
+    if he still provides an invalid answer (unless he doesn't see the
+    question, which is the case if running with debconf priority set to
+    'high', in this case, we bail out)
+    Note: will introduce this in the DB packages after it gets some testing
+    out there.
+  * Change the Debconf priority of the note that warns that  the configuration
+    is not working to 'critical' (was 'high')
+  * Acknowledge NMU made by Margarita:
+    * Drop automake1.6 dependency in Build-Depends (Closes: #335143)
+    * Updated config.guess and config.sub with the latest versions available
+      to prevent FTBFS on GNU/k*BSD (Closes: #342446)
+    * Updated german debconf translation with patch provided by Erik Schanze 
+      (Closes: #345855)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 22 Mar 2006 02:09:01 +0100
+
+snort (2.3.3-4) unstable; urgency=low
+
+  * Build-Depend on newer automake version: 1.7 (Closes: #335143)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 17 Jan 2006 02:10:41 +0100
+
+snort (2.3.3-3) unstable; urgency=low
+
+  * Properly remove the snort user on purge.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 20 Oct 2005 01:13:47 +0200
+
+snort (2.3.3-2.1) unstable; urgency=low
+
+  * NMU to drop automake1.6 dependency (Closes: #335143)
+  * Updated config.guess and config.sub (Closes: #342446)
+  * Updated german debconf translation (Closes: #345855)
+
+ -- Margarita Manterola <marga@debian.org>  Sun, 22 Jan 2006 21:54:43 -0300
+
+snort (2.3.3-2) unstable; urgency=high
+
+  * Backport the following changes introduced in 2.4.1. Upstream changelog:
+      * src/log.c:
+        Fix problem in sniffer mode when incomplete TCP option data is received.
+        Thanks A Hernandez for the find.
+    (Closes: #328134)
+    Note: This is a "security" bug but no CVE is assigned, it is actually
+    something that can happen only if a Snort user willingly shoots himself
+    on the foot (uses ASCII logging mode) or if he uses the fast output
+    mode with some non-default options.
+    For a detailed view see:
+    Martin Roesch's mail "Snort DoS Fallacies" to snort-users and bugtraq:
+    http://marc.theaimsgroup.com/?l=bugtraq&m=112665341207363&w=2
+    http://marc.theaimsgroup.com/?l=snort-users&m=112657845119746&w=2
+    http://marc.theaimsgroup.com/?l=snort-users&m=112667020331513&w=2
+    http://marc.theaimsgroup.com/?l=snort-devel&m=112672013010948&w=2
+    and also
+    http://www.snort.org/pub-bin/snortnews.cgi#58
+    To summarise: The only recommended alert methods in a production sensor
+    are unified, syslog or database. And unified is The Right Way to run
+    a sensor (others have important performance issues under high load )
+    NOTE to Debian Security teams: I don't believe this bug merits a DSA 
+    (or a DTSA for that matter)
+    (Closes: #328134)
+  * Backport the following changes introduced in 2.4.2. Upstream changelog:
+      * src/output-plugins/spo_log_database.c:
+      * schemas/create_mysql:
+        Fixes to address schema being a keyword in MySQL 5.0.  Thanks Wes Young,
+        Adolfo Gomez, and Aleem Mawji for the updates.
+    (Closes: #327791)
+  * Added Swedish translation provided by Daniel Nylander (Closes: #330834)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri, 30 Sep 2005 21:21:43 +0200
+
+snort (2.3.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Use upstream's FAQ in PDF format instead of debian/my/FAQ.txt, also
+    have the FAQ available only in the snort-doc package (after fixing 
+    the Makefile so that the faq.tex file does not get removed on distclean)
+  * Fix typo in snort.8 manpage (Closes: #326538)
+  * Fixed address of the FSF in debian/copyright
+  * Updated debconf translations:
+    - Vietnamese provided by Clytie Siddall
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 31 Aug 2005 19:47:16 +0200
+
 snort (2.3.2-8) unstable; urgency=low
 
   * _Really_ use debhelper compat version 4 now

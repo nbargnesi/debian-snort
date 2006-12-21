@@ -247,7 +247,7 @@ alert, then specify "yes", otherwise "no".  This alert may give false positives
 since some web sites refer to files using directory traversals.
 
 * apache_whitespace [yes/no] *
-This option deals with non-RFC standard of tab for a space delimiter.  Apache
+This option deals with non-RFC standard of tab or carriage return for a space delimiter.  Apache
 uses this, so if the emulated web server is Apache you need to enable this
 option.  Alerts on this option may be interesting, but may also be false
 positive prone.

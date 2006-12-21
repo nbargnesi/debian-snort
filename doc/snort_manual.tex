@@ -1,4 +1,4 @@
-% $Id: snort_manual.tex,v 1.36.2.6 2005/03/08 16:28:12 jhewlett Exp $
+% $Id: snort_manual.tex,v 1.36.2.8 2005/04/22 19:03:55 jhewlett Exp $
 % 
 % BUILDING HTML VERSION:
 % latex2html -info 0 -local_icons -show_section_numbers -link +2 -split +2 -noaddress snort_manual.tex
@@ -85,7 +85,7 @@
 
 \begin{document}
 
-\title{Snort\texttrademark  Users Manual\\  2.3.2 }
+\title{Snort\texttrademark  Users Manual\\  2.3.3 }
 
 \author{The Snort Project}
 
@@ -2815,7 +2815,46 @@ alert tcp any any -> any 80 (msg:"ASN1 Relative Foo"; content:"foo"; \
     asn1: bitstring_overflow, print, relative_offset, 0;)
 \end{verbatim}
 
+\subsection{X-Link2State Mini-Preprocessor\label{X-Link2State}}
+
+This mini-preprocessor is designed to detect the X-Link2State (\url{
+www.microsoft.com/technet/security/bulletin/MS05-021.mspx}) vulnerability
+in Microsoft Exchange Server.
+
+\begin{note}
+The X-Link2State functionality will be rolled up into an SMTP
+preprocessor in the Snort v2.5 timeframe.
+\end{note}
+
+\subsubsection{Format}
+\begin{verbatim}
+preprocessor xlink2state: ports { <port> [<port> <...>] } [drop]
+\end{verbatim}
+
+\subsubsection{Example Configuration}
+\begin{verbatim}
+preprocessor xlink2state: ports { 25 691 }
+\end{verbatim}
+
+\begin{table}[!hbpt]
+
+\caption{X-Link2State Options\label{X-Link2State Options}}
+
+\begin{center}\begin{tabular}{| l | l |}
+\hline
+\textbf{Option} & \textbf{Description}\\
+\hline
+\hline
+ports & List of space-separated ports to inspect\\
+\hline
+drop & Drop this connection (Inline-mode only)\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
 \clearpage
+
 \section{Event Thresholding}
 
 Event thresholding can be used to reduce the number of logged alerts for noisy

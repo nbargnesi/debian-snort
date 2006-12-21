@@ -1,4 +1,4 @@
-/* $Id: generators.h,v 1.36 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id: generators.h,v 1.36.2.1 2005/04/22 19:03:56 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -91,6 +91,8 @@
 #define     STREAM4_MULTIPLE_ACKED              18
 #define     STREAM4_EMERGENCY                   19
 #define     STREAM4_SUSPEND                     20
+/* Some missing here which were introduced in 2.4.0 */
+#define     STREAM4_EVASIVE_FIN                 24
 
 #define GENERATOR_SPP_ARPSPOOF      112
 #define     ARPSPOOF_UNICAST_ARP_REQUEST         1
@@ -241,6 +243,8 @@
 
 #define     PSNG_OPEN_PORT                         27
 
+#define GENERATOR_SMTP                             124
+
 /*  This is where all the alert messages will be archived for each
     internal alerts */
 
@@ -304,6 +308,7 @@
 "(spp_stream4) TCP TOO FAST RETRANSMISSION WITH DIFFERENT DATA SIZE (possible fragroute) detection"
 #define STREAM4_EMERGENCY_STR "(spp_stream4) Shifting to Emergency Session Mode"
 #define STREAM4_SUSPEND_STR "(spp_stream4) Shifting to Suspend Mode"
+#define STREAM4_EVASIVE_FIN_STR "(spp_stream4) possible EVASIVE FIN detection"
 
 
 #define DECODE_NOT_IPV4_DGRAM_STR "(snort_decoder) WARNING: Not IPv4 datagram!"

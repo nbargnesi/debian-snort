@@ -1,4 +1,4 @@
-/* @(#) $Header: /usr/cvsroot-snort/snort/src/win32/WIN32-Includes/libnet/gnuc.h,v 1.3 2003/10/20 15:03:44 chrisgreen Exp $ (LBL) */
+/* @(#) $Header: /cvsroot/snort/src/win32/WIN32-Includes/libnet/gnuc.h,v 1.3 2003/10/20 15:03:44 chrisgreen Exp $ (LBL) */
 
 /* Define __P() macro, if necessary */
 

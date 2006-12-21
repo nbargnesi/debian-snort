@@ -1,4 +1,4 @@
-# $Id: gen-msg.map,v 1.16.2.2 2004/09/28 15:06:50 jhewlett Exp $
+# $Id: gen-msg.map,v 1.16.2.3 2005/04/22 19:03:55 jhewlett Exp $
 # GENERATORS -> msg map
 # Format: generatorid || signatureid || MSG
 
@@ -157,3 +157,5 @@
 122 || 25 || portscan: ICMP Sweep
 122 || 26 || portscan: ICMP Filtered Sweep
 122 || 27 || portscan: Open Port
+124 || 1 || xlink2state: X-Link2State length greater than 1024
+

@@ -1,4 +1,3 @@
-debian/my/FAQ.txt
 doc/AUTHORS
 doc/BUGS
 doc/CREDITS
@@ -9,7 +8,6 @@ doc/README.PLUGINS
 doc/USAGE
 doc/README.database
 doc/README.csv
-debian/my/lisapaper.txt
 debian/my/snort_rules.html
 debian/README.Maintainer
 debian/README-database.Debian

@@ -19,6 +19,11 @@
 #define SSNFLAG_SERVER_FIN          0x00000400 /* client sent fin */
 #define SSNFLAG_ALL                 0xFFFFFFFF /* all that and a bag of chips */
 
+#define SSNPREPROC_HTTP             0x01
+#define SSNPREPROC_TELNET           0x02
+#define SSNPREPROC_FTP              0x03
+#define SSNPREPROC_SMTP             0x04
+
 typedef struct _Stream
 {
     u_int32_t ip;          /* IP addr */
@@ -55,6 +60,10 @@ typedef struct _Session
 
     u_int8_t flush_point;
     u_int8_t ttl; /* track the ttl of this current session ( only done on client side ) */
+
+    u_int8_t preproc_proto;
+    void *preproc_data;    /* preprocessor layer data structure */
+    void (*preproc_free)(void *); /* function to free preproc_data */
 } Session;
 
 /* used for the StreamPacketData chuck field */

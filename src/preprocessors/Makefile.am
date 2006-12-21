@@ -21,6 +21,11 @@ spp_httpinspect.c spp_httpinspect.h \
 snort_httpinspect.c snort_httpinspect.h \
 spp_flow.c spp_flow.h \
 portscan.c portscan.h \
-spp_sfportscan.c spp_sfportscan.h
+spp_sfportscan.c spp_sfportscan.h \
+spp_xlink2state.c spp_xlink2state.h \
+xlink2state.c xlink2state.h \
+str_search.c str_search.h \
+stream.h
+
 
 INCLUDES = @INCLUDES@

@@ -1,3 +1,10 @@
+2005-04-22 - Snort 2.3.3 Released
+
+* Fixed sfPortscan Open Ports not getting suppressed.
+
+* Added new mini-preprocessor to catch the X-Link2State vulnerability.
+  See Snort manual for details.
+
 2005-03-10 - Snort 2.3.2 Released
 
 * Removed end-of-line parser fix in favor of completely reworking

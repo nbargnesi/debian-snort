@@ -1,3 +1,27 @@
+2005-04-22 Andrew Mullican <amullican@sourcefire.com>
+
+    * etc/gen-msg.map:
+    * src/generators.h:
+    * src/plugbase.c:
+    * src/preprocessors/Makefile.am:
+    * src/preprocessors/spp_stream4.c:
+    * src/preprocessors/stream4.h:
+    * src/preprocessors/spp_xlink2state.c:
+    * src/preprocessors/spp_xlink2state.h:
+    * src/preprocessors/xlink2state.c:
+    * src/preprocessors/xlink2state.h:
+    * src/preprocessors/str_search.c:
+    * src/preprocessors/str_search.h:
+      Added xlink2state mini-preprocessor to catch MS Exchange buffer
+      X-Link2State data overflow.
+
+2005-04-01 Jeremy Hewlett <jh@sourcefire.com>
+
+    * src/preprocessors/spp_sfportscan.c:
+      Fixes for suppression issue with sfPortscan and Open Ports.  Fix
+      for packets logged with bogus ip lengths (related to Open Port
+      alerts). Thanks Andy Mullican.
+
 2005-03-10 Jeremy Hewlett <jh@sourcefire.com>
 
     * src/parser.c:

@@ -1,4 +1,3 @@
-debian/my/FAQ.txt
 debian/README.docs
 doc/README
 doc/README.alert_order
@@ -20,6 +19,8 @@ doc/README.wireless
 doc/RULES.todo
 doc/snort_schema_v106.pdf
 doc/snort_manual.pdf
+doc/faq.pdf
 doc/TODO
 doc/USAGE
 doc/WISHLIST
+debian/my/lisapaper.txt

@@ -1,55 +1,57 @@
 # Vietnamese translation for snort.
-# Copyright © 2005 Free Software Foundation, Inc.
-# Clytie Siddall <clytie@riverland.net.au>, 2005.
+# Copyright © 2006 Free Software Foundation, Inc.
+# Clytie Siddall <clytie@riverland.net.au>, 2005-2006.
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version:snort 2.3.2-5\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-08-25 17:23+0200\n"
-"PO-Revision-Date: 2005-07-17 14:02+0930\n"
+"Project-Id-Version: snort 2.3.3-9\n"
+"Report-Msgid-Bugs-To: jfs@computer.org\n"
+"POT-Creation-Date: 2006-12-28 23:00+0100\n"
+"PO-Revision-Date: 2006-12-26 19:21+1030\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
-"Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
+"Language-Team: Vietnamese <vi-VN@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0\n"
-"X-Generator: LocFactoryEditor 1.2.2\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: LocFactoryEditor 1.6fc1\n"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:3 ../snort-mysql.templates:3 ../snort-pgsql.templates:3
+#: ../snort.templates:1001 ../snort-mysql.templates:1001
+#: ../snort-pgsql.templates:1001
 msgid "boot, dialup, manual"
-msgstr "khởi động, quay số, thủ công"
+msgstr "khởi động, quay số, bằng tay"
 
 #. Type: select
 #. Description
-#: ../snort.templates:5 ../snort-mysql.templates:5 ../snort-pgsql.templates:5
+#: ../snort.templates:1002 ../snort-mysql.templates:1002
+#: ../snort-pgsql.templates:1002
 msgid "When should Snort be started?"
 msgstr "Khi nào nên khởi chạy Snort?"
 
 #. Type: select
 #. Description
-#: ../snort.templates:5 ../snort-mysql.templates:5 ../snort-pgsql.templates:5
+#: ../snort.templates:1002 ../snort-mysql.templates:1002
+#: ../snort-pgsql.templates:1002
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only when you manually start it via /usr/sbin/snort."
 msgstr ""
-"Có thể khởi chạy Snort trong khi khởi động máy, khi kết nối đến Mạng dùng "
-"pppd, hoặc chỉ khi bạn tự khởi chạy nó thông qua «/usr/sbin/snort»."
+"Có thể khởi chạy Snort trong khi khởi động máy, khi kết nối đến Mạng bằng "
+"pppd, hoặc chỉ khi bạn tự khởi chạy nó thông qua « /usr/sbin/snort »."
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid "On which interface(s) should Snort listen?"
-msgstr "Snort nên lắng nghe trên giao diện nào?"
+msgstr "Snort nên lắng nghe trên những giao diện nào?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
-#, fuzzy
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "Please enter the name(s) of the interface(s) which Snort should listen on.  "
 "The names of the available interfaces are provided by either running  'ip "
@@ -57,16 +59,16 @@ msgid ""
 "to vary this depending on your environment, if you are using a dialup "
 "connection 'ppp0' might be more appropiate."
 msgstr ""
-"Hãy nhập những tên giao diện nơi trình Snort nên lắng nghe trên chúng. (Có "
-"thể xem tên của mọi giao diện sẵn sàng bằng cách chạy lệnh «ip link show».) "
-"Giá trị này thường là «eth0», nhưng mà có lẽ bạn muốn chọn một giao diện "
-"khác: lấy thí dụ, nếu bạn kết nối bằng quay số, giá trị «ppp0» có thể là "
-"thích hợp hơn."
+"Hãy nhập tên của những giao diện trên chúng trình Snort nên lắng nghe. (Có "
+"thể xem tên của mọi giao diện sẵn sàng bằng cách chạy lệnh « ip link show » "
+"của « ifconfig ».) Giá trị này thường là « eth0 », nhưng mà bạn có thể chọn "
+"giá trị thích hợp với môi trường của mình. Chẳng hạn, nếu bạn quay số để kết "
+"nối, giá trị « ppp0 » có thể là thích hợp hơn."
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "Notice that Snort is usually configured to inspect all traffic coming from "
 "the Internet, so the interface you add here is usually the same the 'default "
@@ -74,16 +76,16 @@ msgid ""
 "either '/sbin/ip ro sh' or '/sbin/route -n' (look for 'default' or "
 "'0.0.0.0')."
 msgstr ""
-"Hãy ghi chú rằng trình Snort thường được cấu hình để kiểm tra tất cả tải từ "
-"Mạng, thì giao diện bạn thêm vào đây thường là cùng một giao diện với điều "
-"có «đường mặc định» (default route). Bạn có thể quyết định giao diện nào "
-"được dùng bằng cách chạy lệnh «/sbin/ip ro sh» hay «/sbin/route -n» (hãy tìm "
-"«default» hay «0.0.0.0»)."
+"Ghi chú rằng trình Snort thường được cấu hình để kiểm tra tất cả các tải cho "
+"Mạng, vì vậy giao diện bạn thêm vào đây thường là cùng một giao diện với "
+"điều trên đó có « đường mặc định » (default route). Bạn có thể quyết định "
+"giao diện nào được dùng như thế bằng cách chạy lệnh « /sbin/ip ro sh » hay "
+"« /sbin/route -n » (tìm « default » hay « 0.0.0.0 »)."
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "It is also not uncommon to run Snort on an interface with no IP and "
 "configured in promiscuous mode, if this is your case, select the interface "
@@ -92,136 +94,187 @@ msgid ""
 "traffic is sent to this interface (either connected to a 'port mirroring/"
 "spanning' port in a switch, to a hub or to a tap)"
 msgstr ""
-"Cũng thường là chạy trình Snort trên một giao diện không có địa chỉ IP được "
+"Cũng thường chạy trình Snort trên một giao diện không có địa chỉ IP và được "
 "cấu hình trong chế độ không phân biệt (promiscuous mode). Nếu bạn làm như "
-"thế, hãy chọn giao diện trong hệ thống này có kết nối hợp lý đến mạng bạn "
-"muốn kiểm tra, hiệu lực chế độ không phân biệt sau này, và đảm bảo tất cả "
-"tải trên mạng được gởi cho giao diện này (hoặc được kết nối đến một cổng "
-"«nhân bản/nối» trong công tắt, đến thiết bị trung tâm mạng, hoặc đến dây rẽ)."
+"thế, hãy chọn giao diện trong hệ thống này có kết nối vật chất đến mạng bạn "
+"muốn kiểm tra, hiệu lực chế độ không phân biệt vào lúc sau, và đảm bảo tất "
+"cả các tải cho mạng được gửi cho giao diện này (hoặc được kết nối đến một "
+"cổng kiểu « nhân bản/nối » trong công tắt, đến thiết bị trung tâm mạng, hoặc "
+"đến dây rẽ)."
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "You can configure multiple interfaces here, just by adding more than one "
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
-"Tại đây bạn có thể cấu hình nhiều giao diện, trong danh sách định giới bằng "
-"dấu cách. Mỗi giao diện có thể có cấu hình riêng."
+"Ở đây bạn có khả năng cấu hình nhiều giao diện, liệt kê các giao diện định "
+"giới bằng dấu cách. Cho phép mỗi giao diện có cấu hình riêng."
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid "Please enter the address range that Snort will listen on."
-msgstr "Hãy nhập phạm vị địa chỉ mà trình Snort sẽ lắng nghe trên nó."
+msgstr "Hãy nhập phạm vị địa chỉ trên đó trình Snort cần lắng nghe."
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
-"Bạn cần phải sử dụng dạng CIDR, tức là «192.168.1.0/24» cho một khối 256 địa "
-"chỉ IP, hay «192.168.1.42/32» cho chỉ một điều. Hãy ghi rõ nhiều địa chỉ "
-"trong một dòng riêng lẻ, định giới bằng dấu phẩy «,», không cho phép dấu "
-"cách nào."
+"Bạn cần phải sử dụng dạng CIDR, tức là « 192.168.1.0/24 » cho một khối 256 "
+"địa chỉ IP, hay « 192.168.1.42/32 » cho chỉ một điều. Hãy ghi rõ nhiều địa "
+"chỉ trong cùng một dòng riêng lẻ, định giới bằng dấu phẩy « , », không cho "
+"phép dấu cách nào."
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
-"Nếu bạn muốn, có thể ghi rõ «any» (bất cứ điều nào), để không tin bất cứ bên "
-"mạng nào."
+"Nếu bạn muốn, cũng có thể ghi rõ « any » (bất cứ điều nào), để không tin bất "
+"cứ bên mạng nào."
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
 msgstr ""
-"Hãy ghi chú rằng nếu bạn đang sử dụng nhiều giao diện thì lời định nghĩa này "
-"sẽ được dùng là lời định nghĩa «HOME_NET» của tất cả. "
+"Ghi chú rằng nếu bạn đang sử dụng nhiều giao diện, lời định nghĩa này sẽ "
+"được dùng như là lời định nghĩa « HOME_NET » của tất cả điều."
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr ""
 "Trình Snort nên vô hiệu hóa chế độ không phân biệt trong giao diện này không?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to it's own interface. Enabling it allows Snort to check  every packet that "
 "passes ethernet segment even if it's a connection between two other "
 "computers."
 msgstr ""
-"Vô hiệu hóa chế độ không phân biệt có nghĩa là trình Snort sẽ xem chỉ những "
-"gói tin được gởi cho địa chỉ của giao diện của chính nó. Hiệu lực chế độ này "
-"cho phép trình Snort kiểm tra mọi gói tin qua đoạn Ethernet, thậm chí nếu "
-"chỉ có kết nối giữa hai máy khác."
+"Vô hiệu hóa chế độ không phân biệt có nghĩa là trình Snort sẽ chỉ xem những "
+"gói tin được gửi cho giao diện của chính nó. Việc hiệu lực chế độ này thì "
+"cho phép trình Snort kiểm tra mọi gói tin đi qua đoạn Ethernet, thậm chí nếu "
+"nó là kết nối giữa hai máy tính khác."
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
 msgstr ""
-"Vô hiệu hóa chế độ không phân biệt nếu bạn đang cấu hình trình Snort trên "
-"một giao diện không có địa chỉ IP được cấu hình."
+"Hãy vô hiệu hóa chế độ không phân biệt nếu bạn đang cấu hình trình Snort "
+"trên một giao diện không có địa chỉ IP đã cấu hình."
+
+#. Type: note
+#. Description
+#: ../snort.templates:5001
+msgid "Invalid interface"
+msgstr "Giao diện không hợp lệ"
+
+#. Type: note
+#. Description
+#: ../snort.templates:5001
+msgid ""
+"One of the interfaces you specified is not valid (it might not exist on the "
+"system or be down). Please introduce a valid interface when answering the "
+"question of which interface(s) should Snort listen on."
+msgstr ""
+"Bạn đã xác định một giao diện không hợp lệ (có lẽ nó hiện thời không tồn tại "
+"trên hệ thống hoặc không hoạt động). Hãy giới thiệu một giao diện hợp lệ khi "
+"trả lời câu hỏi về những giao diện trên chúng trình Snort cần lắng nghe."
+
+#. Type: note
+#. Description
+#: ../snort.templates:5001
+msgid ""
+"If you did not configure an interface then the package is trying to use the "
+"default ('eth0') which does not seem to be valid in your system."
+msgstr ""
+"Chưa cấu hình giao diện thì gói đang cố sử dụng giao diện mặc định (eth0) có "
+"vẻ là không hợp lệ trên hệ thống của bạn."
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:65 ../snort-mysql.templates:65
-#: ../snort-pgsql.templates:65
+#: ../snort.templates:6001 ../snort-mysql.templates:5001
+#: ../snort-pgsql.templates:5001
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
 msgstr ""
-"Thứ tự kiểm tra quy tắc của Snort nên thay đổi thành «Pass|Alert|Log» không?"
+"Thứ tự kiểm tra quy tắc của Snort nên thay đổi thành « Pass|Alert|Log » "
+"không?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:65 ../snort-mysql.templates:65
-#: ../snort-pgsql.templates:65
+#: ../snort.templates:6001 ../snort-mysql.templates:5001
+#: ../snort-pgsql.templates:5001
 msgid ""
 "If you change Snort's rules testing order to Pass|Alert|Log, they will be "
 "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
 "This will prevent people from having to make huge Berky Packet Filter "
 "command line arguments to filter their alert rules."
 msgstr ""
-"Nếu bạn thay đổi thứ tự kiểm tra quy tắc của trình Snort thành «Pass|Alert|"
-"Log» thì nó sẽ áp dụng các quy tắc theo thứ tự «Pass→Alert→Log» (qua→báo "
-"động→ghi lưu), thay vào thứ tự chuẩn «Alert→Pass→Log» (báo động→qua→ghi "
-"lưu). Làm như thế sẽ tránh người cần phải tạo đối số dòng lệnh «Berky Packet "
-"Filter» (bộ lọc gói tin Berky) lớn quá để lọc những quy tắc báo động của họ."
+"Nếu bạn thay đổi thứ tự kiểm tra quy tắc của trình Snort thành « Pass|Alert|"
+"Log », nó sẽ áp dụng các quy tắc theo thứ tự « Pass > Alert > Log » (đi qua "
+"> báo động > ghi lưu), thay vào thứ tự chuẩn « Alert > Pass > Log » (báo "
+"động > đi qua > ghi lưu). Việc này sẽ ngăn cản người cần phải tạo đối số "
+"dòng lệnh kiểu « Berky Packet Filter » (bộ lọc gói tin Berky) rất lớn để lọc "
+"những quy tắc báo động của họ."
+
+#. Type: boolean
+#. Description
+#: ../snort.templates:7001 ../snort-mysql.templates:6001
+#: ../snort-pgsql.templates:6001
+msgid "Should daily summaries be sent by e-mail?"
+msgstr "Có nên gửi hàng ngày thư đính kèm bản tóm tắt không?"
+
+#. Type: boolean
+#. Description
+#: ../snort.templates:7001 ../snort-mysql.templates:6001
+#: ../snort-pgsql.templates:6001
+msgid ""
+"This Snort installation provides a cron job that runs daily and summarises "
+"the information of Snort logs to a selected email address. If you want to "
+"disable this feature say 'no' here."
+msgstr ""
+"Bản cài đặt Snort cung cấp một công việc định kỳ (cron job) chạy hàng ngày "
+"và tóm tắt thông tin trong các bản ghi Snort cho một địa chỉ thư điện tử đã "
+"chọn. Nếu bạn muốn tắt khả năng này, nói « Không » ở đây."
 
 #. Type: string
 #. Description
-#: ../snort.templates:74 ../snort-mysql.templates:74
-#: ../snort-pgsql.templates:74
+#: ../snort.templates:8001 ../snort-mysql.templates:7001
+#: ../snort-pgsql.templates:7001
 msgid "Who should receive the daily statistics mails?"
 msgstr "Ai nên nhận những thư thống kê hàng ngày?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:74 ../snort-mysql.templates:74
-#: ../snort-pgsql.templates:74
+#: ../snort.templates:8001 ../snort-mysql.templates:7001
+#: ../snort-pgsql.templates:7001
 msgid ""
 "A cron job running daily will summarise the information of the logs "
 "generated by Snort using a script called 'snort-stat'. Introduce here the "
@@ -230,62 +283,62 @@ msgid ""
 "redirected to a user that actually reads those mails."
 msgstr ""
 "Một công việc định kỷ (cron job) chạy hàng ngày sẽ tóm tắt thông tin của các "
-"bản ghi do trình Snort tạo ra, dùng một tập lệnh được gọi là «snort-stat». "
-"Tại đây hãy nhập tên của người sẽ nhận các thư này. Giá trị mặc định là quản "
-"trị hệ thống. Nếu bạn giữ giá trị này, hãy đảm bảo các thư được gởi cho quản "
-"trị hệ thống có phải được chuyển tiếp cho một người dùng thật sự đọc hết."
+"bản ghi do trình Snort tạo ra, dùng một văn lệnh được gọi như là « snort-"
+"stat ». Ở đây hãy nhập tên của người sẽ nhận các thư này. Giá trị mặc định "
+"là quản trị hệ thống. Nếu bạn giữ giá trị này, hãy đảm bảo các thư được gửi "
+"cho quản trị hệ thống thì được chuyển tiếp cho một người dùng thật sự đọc "
+"chúng."
 
 #. Type: string
 #. Description
-#: ../snort.templates:84 ../snort-mysql.templates:85
-#: ../snort-pgsql.templates:84
+#: ../snort.templates:9001 ../snort-mysql.templates:8001
+#: ../snort-pgsql.templates:8001
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
-msgstr ""
-"Nếu bạn muốn ghi rõ một số tùy chọn riêng cho trình Snort, hãy nhập vào đây."
+msgstr "Nếu bạn muốn ghi rõ tùy chọn riêng cho trình Snort, hãy nhập vào đây."
 
 #. Type: string
 #. Description
-#: ../snort.templates:89 ../snort-mysql.templates:90
-#: ../snort-pgsql.templates:89
+#: ../snort.templates:10001 ../snort-mysql.templates:9001
+#: ../snort-pgsql.templates:9001
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
 msgstr ""
-"Để được gồm trong thống kê hàng ngày, một báo động cần xuất hiện số lần hơn "
-"số này."
+"Một báo động cần xuất hiện số lần hơn số này để được gồm trong thống kê hàng "
+"ngày."
 
 #. Type: note
 #. Description
-#: ../snort.templates:93 ../snort-mysql.templates:154
-#: ../snort-pgsql.templates:153
+#: ../snort.templates:11001 ../snort-mysql.templates:17001
+#: ../snort-pgsql.templates:17001
 msgid "You are running Snort manually."
 msgstr "Bạn đang tự chạy trình Snort."
 
 #. Type: note
 #. Description
-#: ../snort.templates:93 ../snort-mysql.templates:154
-#: ../snort-pgsql.templates:153
+#: ../snort.templates:11001 ../snort-mysql.templates:17001
+#: ../snort-pgsql.templates:17001
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
 "to let the settings take effect."
 msgstr ""
-"Hãy khởi chạy lại trình Snort, dùng lệnh:\n"
-"/etc/init.d/snort start\n"
-"để hoạt hóa thiết lập."
+"Hãy khởi chạy lại trình Snort bằng:\n"
+"« /etc/init.d/snort start »\n"
+"để kích hoạt thiết lập."
 
 #. Type: note
 #. Description
-#: ../snort.templates:100 ../snort-mysql.templates:161
-#: ../snort-pgsql.templates:160
+#: ../snort.templates:12001 ../snort-mysql.templates:18001
+#: ../snort-pgsql.templates:18001
 msgid "There is an error in your configuration"
-msgstr "Gặp lỗi trong cấu hình bạn."
+msgstr "Gặp lỗi trong cấu hình của bạn."
 
 #. Type: note
 #. Description
-#: ../snort.templates:100 ../snort-mysql.templates:161
-#: ../snort-pgsql.templates:160
+#: ../snort.templates:12001 ../snort-mysql.templates:18001
+#: ../snort-pgsql.templates:18001
 msgid ""
 "Your Snort configuration is not correct and Snort will not be able to start "
 "up normally. Please review your configuration and fix it. If you do not do "
@@ -294,25 +347,34 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
-"Cấu hình Snort bạn không đúng, nên trình Snort sẽ không thể khởi chạy lại "
-"một cách bình thường. Hãy xem lại cấu hình rồi sửa nó. Nếu bạn không sửa thì "
-"rất có thể là các việc nâng cấp gói Snort sẽ không hoạt động. Để kiểm tra "
-"xem lỗi nào được tạo ra, hãy chạy lệnh «/usr/sbin/snort -T -c /etc/snort/"
-"snort.conf» (hoặc chỉ tới một tập tin cấu hình khác, nếu bạn đang sử dụng "
-"tập tin riêng cho giao diện riêng)."
+"Bạn có cấu hình Snort không đúng nên trình Snort sẽ không thể khởi chạy lại "
+"một cách bình thường. Hãy xem lại cấu hình rồi sửa chữa nó. Không sửa thì "
+"rất có thể là các việc nâng cấp gói Snort sẽ bị lỗi. Để kiểm tra xem lỗi nào "
+"được tạo ra, chạy lệnh « /usr/sbin/snort -T -c /etc/snort/snort.conf » (hoặc "
+"chỉ tới một tập tin cấu hình khác, nếu bạn sử dụng tập tin đặt trưng cho "
+"giao diện)."
 
 #. Type: note
 #. Description
-#: ../snort.templates:110 ../snort-mysql.templates:171
-#: ../snort-pgsql.templates:170
+#. Type: note
+#. Description
+#. Type: note
+#. Description
+#: ../snort.templates:13001 ../snort-mysql.templates:10001
+#: ../snort-mysql.templates:19001 ../snort-pgsql.templates:10001
+#: ../snort-pgsql.templates:19001
 msgid "This system uses an obsolete configuration file"
-msgstr "Hệ thống này dùng một tập tin cấu hình cũ."
+msgstr "Hệ thống này dùng một tập tin cấu hình cũ"
 
 #. Type: note
 #. Description
-#: ../snort.templates:110 ../snort-mysql.templates:171
-#: ../snort-pgsql.templates:170
-#, fuzzy
+#. Type: note
+#. Description
+#. Type: note
+#. Description
+#: ../snort.templates:13001 ../snort-mysql.templates:10001
+#: ../snort-mysql.templates:19001 ../snort-pgsql.templates:10001
+#: ../snort-pgsql.templates:19001
 msgid ""
 "Your system has an obsolete configuration file (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -321,41 +383,22 @@ msgid ""
 "script will not use the new configuration and you will not take advantage of "
 "the benefits introduced in newer releases."
 msgstr ""
-"Hệ thống bạn có một tập tin cấu hình cũ («/etc/snort/snort.common."
-"parameters») đã được chuyển đổi tự động sang khuôn dạng tập tin cấu hình mới "
-"(tại «/etc/default/snort»). Bạn hãy xem lại cấu hình mới là đúng, rồi loại "
-"bỏ tập tin cũ. Cho đến khi bạn làm như thế, tập lệnh «init.d» sẽ không dùng "
-"cấu hình mới, và bạn sẽ không thể nhớ dịp những lợi ích được giới thiệu "
-"trong phiên bản mới."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:94
-msgid ""
-"Your system has an obsolete configuration file  (/etc/snort/snort.common."
-"parameters) which has been automatically converted into the new "
-"configuration file format (at /etc/default/snort). Please review the new "
-"configuration and remove the obsolete one. Until you do this, the init.d "
-"script will not use the new configuration and you will not take advantage of "
-"the benefits introduced in newer releases."
-msgstr ""
-"Hệ thống bạn có một tập tin cấu hình cũ («/etc/snort/snort.common."
-"parameters») đã được chuyển đổi tự động sang khuôn dạng tập tin cấu hình mới "
-"(tại «/etc/default/snort»). Bạn hãy xem lại cấu hình mới là đúng, rồi loại "
-"bỏ tập tin cũ. Cho đến khi bạn làm như thế, tập lệnh «init.d» sẽ không dùng "
-"cấu hình mới, và bạn sẽ không thể nhớ dịp những lợi ích được giới thiệu "
-"trong phiên bản mới."
+"Hệ thống của bạn có một tập tin cấu hình cũ (/etc/snort/snort.common."
+"parameters) đã được chuyển đổi tự động sang định dạng tập tin cấu hình mới "
+"(ở « /etc/default/snort »). Bạn xem lại cấu hình mới, rồi gỡ bỏ tập tin cũ. "
+"Không thì văn lệnh « init.d » sẽ không dùng cấu hình mới và bạn sẽ không thể "
+"nhớ dịp các lợi ích được giới thiệu trong phiên bản mới."
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:106
+#: ../snort-mysql.templates:11001
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
-"Bạn có muốn thiết lập một cơ sở dữ liệu cho phép snort-mysql đăng nhập không?"
+"Bạn có muốn thiết lập một cơ sở dữ liệu vào đó snort-mysql đăng nhập không?"
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:106
+#: ../snort-mysql.templates:11001
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a mysql "
@@ -366,30 +409,29 @@ msgid ""
 "logging later, by reconfiguring the snort-mysql package with 'dpkg-"
 "reconfigure -plow snort-mysql'"
 msgstr ""
-"Bạn cần làm như thế chỉ lần đầu tiên cài đặt snort-mysql. Trước khi tiếp "
-"tục, bạn hãy đảm bảo có thông tin này:\n"
-" 1. tên máy của một máy có chạy một trình phục vụ MySQL, được thiết lập để "
-"cho phép sự kết nối TCP từ máy này;\n"
-" 2. một cơ sở dữ liệu trong trình phục vụ ấy;\n"
-" 3. tên người dùng và mật khẩu có thể truy cập cơ sở dữ liệu ấy.\n"
-"Nếu bạn chưa có _tất cả_ các điều này, hãy hoặc chọn «Không» (no) và chạy "
-"với cách hỗ trợ ghi lưu vào tập tin, hoặc tập hợp thông tin thiếu trước tiếp "
-"tục. Bạn vẫn có thể cấu hình ghi lưu vào cơ sở dữ liệu sau này, bằng cách "
-"cấu hình lại gói snort-mysql dùng lệnh «dpkg-reconfigure -plow snort-mysql»."
+"Cần phải làm việc thiết lập này chỉ lần đầu tiên cài đặt gói snort-mysql. "
+"Trước khi tiếp tục, bạn hãy đảm bảo có thông tin này:\n"
+" 1. tên máy của máy có chạy một trình phục vụ MySQL được thiết lập để cho "
+"phép sự kết nối TCP từ máy này;\n"
+" 2. cơ sở dữ liệu trên trình phục vụ đó ;\n"
+" 3. tên người dùng và mật khẩu có quyền truy cập cơ sở dữ liệu đó.\n"
+"Chưa có _tất cả_ các điều này thì hoặc chọn « Không » (no) và chạy với khả "
+"năng ghi lưu vào tập tin kiểu chuẩn, hoặc tập hợp thông tin bị thiếu trước "
+"khi tiếp tục. Bạn lúc sau vẫn có thể cấu hình khả năng ghi lưu cơ sở dữ "
+"liệu, bằng cách cấu hình lại gói snort-mysql bằng lệnh « dpkg-reconfigure -"
+"plow snort-mysql »."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:118 ../snort-pgsql.templates:117
-#, fuzzy
+#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
 msgid "Snort needs a configured database to log to before it starts."
 msgstr ""
-"Cần phải có một cơ sở dữ liệu được cấu hình để cho phép trình Snort đăng "
-"nhập."
+"Để khởi chạy được, trình Snort cần thiết một cơ sở dữ liệu đã cấu hình vào "
+"đó để ghi lưu."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:118
-#, fuzzy
+#: ../snort-mysql.templates:12001
 msgid ""
 "Snort needs a configured database before it can successfully start up. In "
 "order to create the structure you need to run the following commands AFTER "
@@ -399,89 +441,91 @@ msgid ""
 "Fill in the correct values for the user, host, and database names. MySQL "
 "will prompt you for the password."
 msgstr ""
-"Hãy tạo cấu trúc cơ sở dữ liệu ngay bây giờ, dùng hai lệnh này:\n"
-"«cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <người_dùng> -h <máy> -p <cơ_sở_dữ_liệu>»\n"
-"Bạn hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở "
-"dữ liệu. Trình MySQL sẽ nhắc bạn nhập mật khẩu."
+"Trình Snort cần thiết một cơ sở dữ liệu đã cấu hình, trước khi nó khởi chạy "
+"được. Để tạo cấu trúc này, hãy chạy những lệnh theo đây SAU KHI cài đặt xong "
+"gói này:\n"
+"« cd /usr/share/doc/snort-mysql/\n"
+" zcat create_mysql.gz | mysql -u <người_dùng> -h <máy> -p "
+"<tên_cơ_sở_dữ_liệu> »\n"
+"Hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở dữ "
+"liệu. Trình MySQL sẽ nhắc bạn nhập mật khẩu."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:118 ../snort-pgsql.templates:117
-#, fuzzy
+#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
 msgid ""
 "After you created the database structure, you will need to start Snort "
 "manually."
 msgstr ""
-"Sau khi bạn tạo cấu trúc cơ sở dữ liệu, hãy bấm «Được» (OK) để tiếp tục."
+"Sau khi tạo cấu trúc cơ sở dữ liệu, bạn cần phải tự khởi chạy trình Snort."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:132
+#: ../snort-mysql.templates:13001
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr ""
 "Hãy nhập tên máy của máy chạy trình phục vụ cơ sở dữ liệu MySQL cần dùng."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:132 ../snort-pgsql.templates:131
+#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
 msgstr ""
-"• Hãy đảm bảo nó đã được thiết lập cho đúng để cho phép sự kết nối đến từ "
-"máy này. •"
+"Đảm bảo nó đã được thiết lập cho đúng để cho phép các sự kết nối gửi đến từ "
+"máy này !"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:138 ../snort-pgsql.templates:137
+#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
 msgid "Please enter the name of the database to use."
-msgstr "Hãy nhập tên cơ sở dữ liệu cần dùng."
+msgstr "Hãy nhập tên của cơ sở dữ liệu cần dùng."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:138 ../snort-pgsql.templates:137
+#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
 msgstr ""
-"Hãy đảm bảo cơ sở dữ liệu này đã được tạo, và người dùng cơ sở dữ liệu có "
-"quyền ghi vào nó."
+"Đảm bảo cơ sở dữ liệu này đã được tạo, và người dùng cơ sở dữ liệu có quyền "
+"ghi vào nó."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:144 ../snort-pgsql.templates:143
+#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Please enter the name of the database user you want to use."
-msgstr "Hãy nhập tên của người dùng cơ sở dữ liệu mà bạn muốn dùng."
+msgstr "Hãy nhập tên của người dùng cơ sở dữ liệu bạn muốn dùng."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:144 ../snort-pgsql.templates:143
+#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Make sure this user has been created and has write access."
-msgstr "Hãy đảm bảo người dùng này đã được tạo, và có quyền ghi."
+msgstr "Đảm bảo người dùng này đã được tạo, cũng có quyền ghi."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:149 ../snort-pgsql.templates:148
+#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Please enter the password for the database connection."
-msgstr "Hãy nhập mật khẩu cho sự kết nối đến cơ sở dữ liệu."
+msgstr "Hãy nhập mật khẩu cho sự kết nối cơ sở dữ liệu."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:149 ../snort-pgsql.templates:148
+#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Please enter a password to connect to the Snort Alert database."
-msgstr "Hãy nhập mật khẩu để kết nối đến cơ sở dữ liệu Báo động Snort."
+msgstr "Hãy nhập mật khẩu để kết nối đến cơ sở dữ liệu Báo Động Snort."
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:105
+#: ../snort-pgsql.templates:11001
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
-"Bạn có muốn thiết lập một cơ sở dữ liệu cho phép snort-pgsql đăng nhập không?"
+"Bạn có muốn thiết lập một cơ sở dữ liệu vào đó snort-pgsql sẽ ghi lưu không?"
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:105
+#: ../snort-pgsql.templates:11001
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a pgsql "
@@ -492,21 +536,21 @@ msgid ""
 "logging later, by reconfiguring the snort-pgsql package with 'dpkg-"
 "reconfigure -plow snort-pgsql'"
 msgstr ""
-"Bạn cần làm như thế chỉ lần đầu tiên cài đặt snort-pgsql. Trước khi tiếp "
-"tục, bạn hãy đảm bảo có thông tin này:\n"
-" 1. tên máy của một máy có chạy một trình phục vụ PostgreSQL, được thiết lập "
-"để cho phép sự kết nối TCP từ máy này;\n"
-" 2. một cơ sở dữ liệu trong trình phục vụ ấy;\n"
-" 3. tên người dùng và mật khẩu có thể truy cập cơ sở dữ liệu ấy.\n"
-"Nếu bạn chưa có _tất cả_ các điều này, hãy hoặc chọn «Không» (no) và chạy "
-"với cách hỗ trợ ghi lưu vào tập tin, hoặc tập hợp thông tin thiếu trước tiếp "
-"tục. Bạn vẫn có thể cấu hình ghi lưu vào cơ sở dữ liệu sau này, bằng cách "
-"cấu hình lại gói snort-mysql dùng lệnh «dpkg-reconfigure -plow snort-pgsql»."
+"Cần phải làm việc thiết lập này chỉ lần đầu tiên cài đặt gói snort-pgsql. "
+"Trước khi tiếp tục, bạn hãy đảm bảo có thông tin này:\n"
+" 1. tên máy của máy có chạy một trình phục vụ PostgreSQL được thiết lập để "
+"cho phép sự kết nối TCP từ máy này;\n"
+" 2. cơ sở dữ liệu trên trình phục vụ đó ;\n"
+" 3. tên người dùng và mật khẩu có quyền truy cập cơ sở dữ liệu đó.\n"
+"Chưa có _tất cả_ các điều này thì hoặc chọn « Không » (no) và chạy với khả "
+"năng ghi lưu vào tập tin kiểu chuẩn, hoặc tập hợp thông tin bị thiếu trước "
+"khi tiếp tục. Bạn lúc sau vẫn có thể cấu hình khả năng ghi lưu cơ sở dữ "
+"liệu, bằng cách cấu hình lại gói snort-pgsql bằng lệnh « dpkg-reconfigure -"
+"plow snort-pgsql »."
 
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:117
-#, fuzzy
+#: ../snort-pgsql.templates:12001
 msgid ""
 "Snort needs a configured database before it can successfully start up. In "
 "order to create the structure you need to run the following commands AFTER "
@@ -516,15 +560,18 @@ msgid ""
 "Fill in the correct values for the user, host, and database names. "
 "PostgreSQL will prompt you for the password."
 msgstr ""
-"Hãy tạo cấu trúc cơ sở dữ liệu ngay bây giờ, dùng hai lệnh này:\n"
-"«cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_pgsql.gz | psql -u <người_dùng> -h <máy> -p <cơ_sở_dữ_liệu>»\n"
+"Trình Snort cần thiết một cơ sở dữ liệu đã cấu hình, trước khi nó khởi chạy "
+"được. Để tạo cấu trúc này, hãy chạy những lệnh theo đây SAU KHI cài đặt xong "
+"gói này:\n"
+"« cd /usr/share/doc/snort-pgsql/\n"
+" zcat create_pgsql.gz | psql -u <người_dùng> -h <máy> -p <tên_cơ_sở_dữ_liệu> "
+"»\n"
 "Bạn hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở "
 "dữ liệu. Trình PostgreSQL sẽ nhắc bạn nhập mật khẩu."
 
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:131
+#: ../snort-pgsql.templates:13001
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr ""
 "Hãy nhập tên máy của máy chạy trình phục vụ cơ sở dữ liệu PostgreSQL cần "
@@ -532,13 +579,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid "Your configuration file is deprecated"
-msgstr "Tập tin cấu hình bạn bị phản đối."
+msgstr "Tập tin cấu hình bị phản đối"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid ""
 "Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
 "options no longer available for this Snort release.  Snort will not be able "
@@ -546,51 +593,32 @@ msgid ""
 "your configuration file with the one provided in this package or fix it "
 "manually by removing deprecated options."
 msgstr ""
-"Tập tin cấu hình Snort («/etc/snort/snort.conf») có dùng tùy chọn bị phản "
-"đối không còn sẵn sàng lại cho phiên bản Snort này. Trình Snort không thể "
-"khởi chạy cho đến bạn cung cấp một tập tin cấu hình đúng. Bạn có thể thay "
-"thế tập tin cấu hình cũ bằng điều được cung cấp trong gói này, hoặc tự sửa "
-"nó bằng cách loại bỏ các tùy chọn bị phản đối."
+"Tập tin cấu hình Snort (/etc/snort/snort.conf) có dùng các tùy chọn bị phản "
+"đối không còn sẵn sàng lại cho phiên bản Snort này. Trình Snort sẽ không thể "
+"khởi chạy nếu bạn không cung cấp một tập tin cấu hình đúng. Bạn có khả năng "
+"thay thế tập tin cấu hình cũ bằng điều được cung cấp trong gói này, hoặc tự "
+"sửa chữa nó bằng cách gỡ bỏ các tùy chọn bị phản đối."
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
 msgstr ""
-"Tìm thấy những tùy chọn bị phản đối này trong tập tin cấu hình bạn:\n"
+"Trong tập tin cấu hình, tìm thấy những tùy chọn bị phản đối này:\n"
 "${DEP_CONFIG}"
 
-#~ msgid "On which interface should Snort listen?"
-#~ msgstr "Trình Snort nên lắng nghe trên giao diện nào?"
-
 #~ msgid ""
-#~ "Please enter the interface name which snort should listen on. The name of "
-#~ "the available interfaces are provided by running 'ip link show'. This "
-#~ "value usually is 'eth0', but you might want to vary this depending on "
-#~ "your environment, if you are using a dialup connection 'ppp0' might be "
-#~ "more appropiate."
+#~ "Your system has an obsolete configuration file  (/etc/snort/snort.common."
+#~ "parameters) which has been automatically converted into the new "
+#~ "configuration file format (at /etc/default/snort). Please review the new "
+#~ "configuration and remove the obsolete one. Until you do this, the init.d "
+#~ "script will not use the new configuration and you will not take advantage "
+#~ "of the benefits introduced in newer releases."
 #~ msgstr ""
-#~ "Hãy nhập tên của giao diện nơi trình Snort nên lắng nghe trên nó. (Có thể "
-#~ "xem tên của các giao diện sẵn sàng bằng cách chạy lệnh «ip link show».) "
-#~ "Giá trị này thường là «eth0» nhưng mà bạn có lẽ muốn chọn điều khác, phụ "
-#~ "thuộc vào môi trường mình. Lấy thí dụ, nếu bạn sử dụng sự kết nối quay số "
-#~ "thì «ppp0» có lẽ thích hợp hơn."
-
-#~ msgid ""
-#~ "Notice that Snort is usually configured to inspect all traffic coming "
-#~ "from the Internet, so the interface you add here is usually the same the "
-#~ "'default route' is on.  You can determine which interface is used for "
-#~ "this running either 'ip route show' or '/sbin/route -n' (look for "
-#~ "'default' or '0.0.0.0')."
-#~ msgstr ""
-#~ "Hãy ghi chú rằng trình Snort thường được cấu hình để kiểm tra tất cả tải "
-#~ "từ Mạng, thì giao diện bạn thêm vào đây thường là cùng một giao diện với "
-#~ "điều có «đường mặc định» (default route). Bạn có thể quyết định giao diện "
-#~ "nào được dùng bằng cách chạy lệnh «ip route show» hay «/sbin/route -"
-#~ "n» (hãy tìm «default» hay «0.0.0.0»)."
-
-#~ msgid "Should Snort disable promiscous mode on the interface?"
-#~ msgstr ""
-#~ "Trình Snort nên vô hiệu hóa chế độ không phân biệt trên giao diện không?"
+#~ "Hệ thống của bạn có một tập tin cấu hình cũ (/etc/snort/snort.common."
+#~ "parameters) đã được chuyển đổi tự động sang định dạng tập tin cấu hình "
+#~ "mới (ở « /etc/default/snort »). Bạn xem lại cấu hình mới, rồi gỡ bỏ tập "
+#~ "tin cũ. Không thì văn lệnh « init.d » sẽ không dùng cấu hình mới và bạn "
+#~ "sẽ không thể nhớ dịp các lợi ích được giới thiệu trong phiên bản mới."

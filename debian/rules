@@ -5,7 +5,6 @@
 # Some lines taken from debmake, by Christoph Lameter.
 
 export DH_VERBOSE=1
-export DH_COMPAT=4
 
 TMP=`pwd`/debian
 
@@ -23,9 +22,7 @@ export CFLAGS
 CONFFLAGS= --prefix=/usr \
 	--bindir=\$$\{exec_prefix\}/sbin \
 	--mandir=\$$\{exec_prefix\}/share/man \
-	--enable-smbalerts \
-	--with-snmp \
-	--with-openssl
+	--enable-smbalerts 
 # Cannot enable flexresp since it builds only with libnet 1.0.2a
 #	--enable-flexresp \
 
@@ -63,6 +60,7 @@ build-stamp:
 
 	# Add here commands to compile the package.
 	$(MAKE) 
+	cd doc && $(MAKE) faq.pdf
 	$(MAKE) clean
 
 	touch build-stamp
@@ -73,6 +71,7 @@ clean:
 	rm -f build-stamp install-stamp
 
 	# Add here commands to clean up after the build process.
+	-(cd doc && $(MAKE) distclean)
 	-$(MAKE) distclean
 	rm -f src/snort-mysql
 	rm -f src/snort-pgsql

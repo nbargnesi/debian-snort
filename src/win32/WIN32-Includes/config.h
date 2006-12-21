@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.32.2.5 2005/03/08 16:28:12 jhewlett Exp $ */
+/* $Id: config.h,v 1.32.2.7 2005/04/22 19:03:56 jhewlett Exp $ */
 
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
@@ -87,7 +87,7 @@
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.3.2"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.3.3"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 
