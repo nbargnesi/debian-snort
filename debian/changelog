@@ -1,3 +1,10 @@
+snort (2.3.3-11) unstable; urgency=low
+
+  * Restore German translation (somehow removed in previous upload), courtesy
+    of Erik Schanze (Closes: #397017)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue,  2 Jan 2007 17:26:10 +0100
+
 snort (2.3.3-10) unstable; urgency=low
 
   * Fix snort-mysql template to prevent translators from duplicating work
