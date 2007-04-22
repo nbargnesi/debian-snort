@@ -1,3 +1,12 @@
+snort (2.3.3-14) unstable; urgency=low
+
+  * Use the patch provided by Matt Kraai to fix the FTBFS due to the
+    tetex -> Texlive transition. Also make the package Build-Depend 
+    on texlive and texlive-latex-base instead of tetex-bin and tetex-extra
+    (Closes: 419454)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sun, 22 Apr 2007 16:41:50 +0200
+
 snort (2.3.3-13) unstable; urgency=low
 
   * Translations added:
