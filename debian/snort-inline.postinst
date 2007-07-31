@@ -85,10 +85,10 @@ EOF
 	update-rc.d snort defaults >/dev/null
 
 	# in the case we reconfigure we have to restart and not just to start.
-	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-		invoke-rc.d snort stop || exit $?
+	if [ -x /usr/sbin/invoke-rc.d ]; then
+		invoke-rc.d snort stop || true
 	else
-		/etc/init.d/snort stop || exit $?
+		/etc/init.d/snort stop || true
 	fi
 	;;
     abort-upgrade)
@@ -100,10 +100,10 @@ EOF
 esac
 
 if [ "$STARTUP" = "boot" ] || [ "$STARTUP" = "dialup" ]; then
-	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-		invoke-rc.d snort start || exit $?
+	if [ -x /usr/sbin/invoke-rc.d ]; then
+		invoke-rc.d snort start || true
 	else
-		/etc/init.d/snort start || exit $?
+		/etc/init.d/snort start || true
 	fi
 fi
 

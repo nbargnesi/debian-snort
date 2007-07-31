@@ -657,11 +657,8 @@ void DatabaseInitFinalize(int unused, void *arg)
                   "          doesn't appear to have any records in the 'schema' table.\n"
                   "          Please re-run the appropriate DB creation script (e.g. create_mysql,\n"
                   "          create_postgresql, create_oracle, create_mssql) located in the\n"
-                  "          /usr/share/doc/snort-mysql/ or  /usr/share/doc/snort-pgsql/ directory.\n\n"
-                  "          See the database documentation for cursory details (README.database),\n"
-                  "          the README-database.Debian for details on how to create the database\n"
-                  "          (both available in the Snort documentation directory /usr/share/doc/snort-mysql/\n"
-                  "          or /usr/share/doc/snort-pgsql/ depending on your Database)\n"
+                  "          contrib\\ directory.\n\n"
+                  "          See the database documentation for cursory details (doc/README.database).\n"
                   "          and the URL to the most recent database plugin documentation.\n",
                   LATEST_DB_SCHEMA_VERSION);
     }
@@ -676,11 +673,8 @@ void DatabaseInitFinalize(int unused, void *arg)
                   "          If migrating old data is not desired, merely create a new instance\n"
                   "          of the snort database using the appropriate DB creation script\n"
                   "          (e.g. create_mysql, create_postgresql, create_oracle, create_mssql)\n"
-                  "          located in the /usr/share/doc/snort-mysql/ or  /usr/share/doc/snort-pgsql/ directory.\n\n"
-                  "          See the database documentation for cursory details (README.database),\n"
-                  "          the README-database-upgrade.Debian for details on how to upgrade\n"
-                  "          (both available in the Snort documentation directory /usr/share/doc/snort-mysql/\n"
-                  "          or /usr/share/doc/snort-pgsql/ depending on your Database)\n"
+                  "          located in the contrib\\ directory.\n\n"
+                  "          See the database documentation for cursory details (doc/README.database).\n"
                   "          and the URL to the most recent database plugin documentation.\n",
                   data->DBschema_version, LATEST_DB_SCHEMA_VERSION);
     }

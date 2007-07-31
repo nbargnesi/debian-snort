@@ -194,7 +194,6 @@
 123 || 8 || frag3: Fragmentation overlap
 123 || 9 || frag3: IPv6 BSD mbufs remote kernel buffer overflow
 123 || 10 || frag3: Bogus fragmentation packet. Possible BSD attack
-123 || 11 || frag3: TTL value less than configured minimum, not using for reassembly
 124 || 1 || smtp: Attempted command buffer overflow
 124 || 2 || smtp: Attempted data header buffer overflow
 124 || 3 || smtp: Attempted response buffer overflow

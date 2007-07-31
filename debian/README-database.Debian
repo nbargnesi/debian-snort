@@ -48,16 +48,16 @@
   [ running as an mysql user with admin privileges ]
   $ mysql
   mysql> CREATE DATABASE snort
+  mysql> SET PASSWORD FOR snort@localhost=PASSWORD('snort-db');
   mysql> grant CREATE, INSERT, SELECT, UPDATE on snort.* to snort@localhost;
   mysql> grant CREATE, INSERT, SELECT, UPDATE on snort.* to snort;
-  mysql> SET PASSWORD FOR snort@localhost=PASSWORD('snort-db');
   mysql> flush privileges;
   [ you can confirm the changes above running ]
   mysql> show grants for 'snort'@'localhost';
 
   And then you can run the command above as:
 
-  $ zcat create_mysql.gz | mysql -u snort -D snort -psnort-db
+  $ zcat create_mysql.gz | mysql -u snort -p snort
 
   For PosgreSQL you can do this:
 
@@ -96,5 +96,5 @@ host   all        all        127.0.0.1        255.255.255.255   ident sameuser
 ------------------------------------------------------------------------------
 
 
- -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>
     Thu, 25 Aug 2005 16:44:46 +0200
