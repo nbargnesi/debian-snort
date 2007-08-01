@@ -3649,9 +3649,7 @@ void CleanExit(int exit_val)
 
         ret = unlink(pv.pid_filename);
 
-        /* Only complain if we are running as root user or
-         * writing to a place that is not in /var/run */
-        if (ret != 0 && ( userid == 0 || strncmp(pv.pid_filename, "/var/run/", 9) != 0 ) )
+        if (ret != 0)
         {
             ErrorMessage("Could not remove pid file %s: %s\n",
                          pv.pid_filename, strerror(errno));
@@ -3749,9 +3747,7 @@ static void Restart()
 
         ret = unlink(pv.pid_filename);
 
-        /* Only complain if we are running as root user or
-         * writing to a place that is not in /var/run */
-        if (ret != 0 && ( userid == 0 || strncmp(pv.pid_filename, "/var/run/", 9) != 0 ) )
+        if (ret != 0)
         {
             ErrorMessage("Could not remove pid file %s: %s\n",
                          pv.pid_filename, strerror(errno));

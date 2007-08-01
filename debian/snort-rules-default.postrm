@@ -3,7 +3,7 @@
 #
 # see: dh_installdeb(1)
 
-set +e
+set -e
 
 # summary of how this script can be called:
 #        * <postrm> `remove'
@@ -19,10 +19,10 @@ set +e
 case "$1" in
 	purge|disappear)
 		if [ -d /etc/snort/rules ]; then
-			rmdir --ignore-fail-on-non-empty /etc/snort/rules || true
+			rmdir --ignore-fail-on-non-empty /etc/snort/rules
 		fi
 		if [ -d /etc/snort ]; then
-			rmdir --ignore-fail-on-non-empty /etc/snort || true
+			rmdir --ignore-fail-on-non-empty /etc/snort
 		fi
 		;;
 		

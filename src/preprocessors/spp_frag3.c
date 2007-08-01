@@ -495,7 +495,7 @@ static void Frag3PrintEngineConfig(Frag3Context *context)
     LogMessage("    Fragment timeout: %d seconds\n", 
             context->frag_timeout);
     LogMessage("    Fragment min_ttl:   %d\n", context->min_ttl);
-    LogMessage("    Fragment ttl_limit (not used): %d\n", context->ttl_limit);
+    LogMessage("    Fragment ttl_limit: %d\n", context->ttl_limit);
     LogMessage("    Fragment Problems: %X\n", context->frag3_alerts);
     //LogMessage("    Bound Addresses:\n");
     IpAddrSetPrint("    Bound Addresses: ", context->bound_addrs);
@@ -692,29 +692,6 @@ static INLINE void EventAnomOverlap(Frag3Context *context)
 
    f3stats.alerts++;
    f3stats.anomalies++;
-}
-
-/**
- * Generate an event due to TTL below the configured minimum
- *
- * @param context Current run context
- *
- * @return none
- */
-static INLINE void EventAnomMinTTL(Frag3Context *context)
-{
-    if(!(context->frag3_alerts & FRAG3_DETECT_ANOMALIES))
-        return;
-
-    SnortEventqAdd(GENERATOR_SPP_FRAG3, /* GID */ 
-            FRAG3_MIN_TTL_EVASION,   /* SID */
-            1,                       /* rev */
-            0,                       /* classification enum */
-            3,                       /* priority (low) */
-            FRAG3_MIN_TTL_EVASION_STR,  /* event message */
-            NULL);                   /* rule info ptr */
-
-   f3stats.alerts++;
 }
 
 /**
@@ -1556,9 +1533,6 @@ void Frag3Defrag(Packet *p, void *context)
                  */
                 p->fragtracker = NULL;
             }
-            // This log Message shows up when fragmented traffic appears which
-            // a very high frequency, even when ttl_limit is not set in the configuration
-            // LogMessage("%s(%d) ==> The ttl_limit option will be ignored, and Use of the ttl_limit option will be deprecated in a future release\n", file_name, file_line);
         }
 
         Frag3RemoveTracker(&fkey, ft);
@@ -2218,7 +2192,6 @@ static int AddFragNode(FragTracker *ft,
             "(len: %d  slide: %d  trunc: %d)\n", 
             len, slide, trunc););
 
-        EventAnomMinTTL(f3context);
         f3stats.discards++;
 
 #ifdef DEBUG
@@ -2462,9 +2435,7 @@ static int Frag3Insert(Packet *p, FragTracker *ft, FRAGKEY *fkey,
     int done = 0;           /* flag for right-side overlap handling loop */
     int addthis = 1;           /* flag for right-side overlap handling loop */
     int i = 0;              /* counter */
-#if 0
     int delta = 0;
-#endif
     int firstLastOk;
     int ret = FRAG_INSERT_OK;
     unsigned char lastfrag = 0; /* Set to 1 when this is the 'last' frag */
@@ -2522,7 +2493,6 @@ static int Frag3Insert(Packet *p, FragTracker *ft, FRAGKEY *fkey,
         //return FRAG_INSERT_TIMEOUT;
     }
 
-#if 0
     delta = abs(ft->ttl - p->iph->ip_ttl);
     if (delta > f3context->ttl_limit)
     {
@@ -2532,7 +2502,6 @@ static int Frag3Insert(Packet *p, FragTracker *ft, FRAGKEY *fkey,
         PREPROC_PROFILE_END(frag3InsertPerfStats);
         return FRAG_INSERT_TTL;
     }
-#endif
 
     /*
      * Check to see if this fragment is the first or last one and

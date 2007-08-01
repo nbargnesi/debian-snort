@@ -2,37 +2,58 @@
 
 . /usr/share/debconf/confmodule
 
+
+# This is a list of deprecated preprocessors used to detect
+# bad configuration that will prevent Snort from running
+# based on http://cvs.snort.org/viewcvs.cgi/snort/src/preprocessors/Attic/
+OLD_PREPROCESSORS="http_decode anomsensor asn1 defrag defrag2 fnord httpflow minfrag tcp_stream tcp_stream2 tcp_stream3 unidecode"
+# List of valid preprocessors (taken from src/preprocessor)
+# [Currently not used since the user might have custom preprocessors]
+VALID_PREPROCESSORS="arpspoof bo conversation flow frag2 httpinspect perfmonitor portscan2 portscan rpc_decode stream4 telnet_negotiation"
+
+CONFIG_FILE=/etc/snort/snort.conf
+deprecated=0
+
+if test -f $CONFIG_FILE
+then
+	for prep in $OLD_PREPROCESSORS
+	do
+		found_deprecated=`egrep "^preprocessor $prep:+" $CONFIG_FILE | sed -e 's/:.*//'`
+		if [ -n "$found_deprecated" ] ; then
+			deprecated=1
+			deprecated_list="$found_deprecated $deprecated_list"
+		fi
+	done
+fi
+
+# We should warn the user if 
+# a) the snort.conf does not match the md5sum [TODO]
+# b) we found some deprecated preprocessor
+if [ "$deprecated" -eq 1 ] ; then
+	deprecated_list=`echo $deprecated_list |sed -e 's/ $//'`
+#	echo "Your $CONFIG_FILE is using out of date preprocessors ($deprecated_list) you should upgrade!"
+	db_subst snort/deprecated_config DEP_CONFIG "$deprecated_list" || true
+	db_input high snort/deprecated_config || true
+	db_go || true
+fi
+
 # Check if Snort will be able to run properly
-# Obviously, if you are using deprecated preprocessors (checked on config)
-# it's not going to work either, but we do not test for that here.
-#
+# Obviously, if you are using deprecated preprocessors it's not going
+# to work either
 # TODO: Maybe it's also best if we could tell dpkg that snort should
 # not be started if this fails.
-if [ -x /etc/init.d/snort ] ; then
-    # Try to find if we are expecting the script to run
-    enabled=0
-    if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-        set +e
-        invoke-rc.d --query snort start
-        if [ $? -ne 104 ] ; then
-        # Disabled, or does not work, do not check the configuration
-            enabled=1
-        fi
-        set -e
-    fi
-    if [ "$enabled" -eq 0 ] ; then
-        set +e
-        /etc/init.d/snort config-check >/dev/null 2>&1
-        if [ $? -ne 0 ] ; then
-            db_input critical snort/config_error || true
-            db_go || true
-        fi
-        set -e
-    fi
+if [ "$deprecated" -ne 1 ] ; then
+	if [ -x /etc/init.d/snort ] ; then
+		set +e
+		/etc/init.d/snort config-check >/dev/null 2>&1
+		if [ $? -ne 0 ] ; then
+			db_input critical snort/config_error || true
+			db_go || true
+		fi
+		set -e
+	fi
 fi
 
 db_stop
-
-#DEBHELPER# 
 
 exit 0
