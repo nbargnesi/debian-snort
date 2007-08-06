@@ -1,3 +1,14 @@
+snort (2.7.0-3) unstable; urgency=low
+
+  * Move over the package to unstable.
+  * Fix FBTFS at Ubuntu due to snort_manual.tex still using latex2html's
+    html.sty. Thanks Michael Bienia for spotting this and point at the
+    issue with a patch (Closes: 436244)
+  * Fixed a typo in the French translation (Closes: 432840)
+  * Fix documentation errors in debian/README-database.debian. (Closes: 416400)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 06 Aug 2007 23:28:02 +0200
+
 snort (2.7.0-2) experimental; urgency=low
 
   * Fix generation of the common snort binary, which was distributed without

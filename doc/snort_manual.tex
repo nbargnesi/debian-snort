@@ -15,7 +15,7 @@
 \IfFileExists{url.sty}{\usepackage{url}}
                       {\newcommand{\url}{\texttt}}
 
-\usepackage{html}
+\usepackage{hyperref}
 
 % \makeatletter
 
@@ -70,18 +70,18 @@
 }
 %\end{latexonly}
 
-\begin{htmlonly}
-\newenvironment{note}{
-        \begin{rawhtml}
-        <p><table border="1"><tr><td><b>
-        Note:&nbsp;&nbsp;</b>
-        \end{rawhtml}
-}{
-        \begin{rawhtml}
-        </b></td></tr></table></p>
-        \end{rawhtml}
-}
-\end{htmlonly}
+%\begin{htmlonly}
+%\newenvironment{note}{
+%        \begin{rawhtml}
+%        <p><table border="1"><tr><td><b>
+%        Note:&nbsp;&nbsp;</b>
+%        \end{rawhtml}
+%}{
+%        \begin{rawhtml}
+%        </b></td></tr></table></p>
+%        \end{rawhtml}
+%}
+%\end{htmlonly}
 
 \usepackage{babel}
 

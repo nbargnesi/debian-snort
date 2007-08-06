@@ -271,7 +271,7 @@ msgid ""
 "disable this feature say 'no' here."
 msgstr ""
 "Le paquet de Snort permet d'utiliser une tâche quotidienne de cron qui "
-"résume les informations contenues dans les journaux de Snort et l'envoie ç "
+"résume les informations contenues dans les journaux de Snort et l'envoie à "
 "une adresse électronique donnée. Ne choisissez pas cette option si vous ne "
 "voulez pas recevoir ces rapports."
 
