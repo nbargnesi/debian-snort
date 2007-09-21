@@ -5,8 +5,8 @@ snort (2.7.0-1) experimental; urgency=low
  ruleset, however, is provided only through a non-free license which prohibits
  redistribution within this package.
 
- As a consequence this package provides only free (GPL) rules. No rule whose
- whose sid is in the 3,465-1,000,000 range (VRT Certified) is included here.
+ As a consequence this package provides only free (GPL) rules. No rule 
+ with a sid in the 3,465-1,000,000 range (VRT Certified) is included here.
  The rules provided on this package are based on the official ruleset for
  Snort 2.4 (updated 7/27/05) and the Community ruleset.
 

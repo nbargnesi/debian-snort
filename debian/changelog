@@ -1,3 +1,16 @@
+snort (2.7.0-5) unstable; urgency=low
+
+  * Initialise variables in preinst to prevent collisions with predefined
+    environment variables (Closes: #443481)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 21 Sep 2007 22:49:25 +0200
+
+snort (2.7.0-4) unstable; urgency=low
+
+  * Fix phrase in the NEWS file
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Wed, 29 Aug 2007 18:26:45 +0200
+
 snort (2.7.0-3) unstable; urgency=low
 
   * Move over the package to unstable.
