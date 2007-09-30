@@ -165,6 +165,9 @@ install-stamp: build-stamp
 	mv src/snort	   $(TMP)/snort/usr/sbin/snort
 
 	mv $(TMP)/snort-common/usr/sbin/snort $(TMP)/snort/usr/sbin/snort
+# Move libraries to the snort-common-libraries package
+	mv $(TMP)/snort-common/usr/lib/ $(TMP)/snort-common-libraries/usr/
+	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
 
 	touch install-stamp
 
