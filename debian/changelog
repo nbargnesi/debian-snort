@@ -1,3 +1,66 @@
+snort (2.7.0-8) unstable; urgency=low
+
+  * Rewrite debian/rules:
+      - the documentation does not get build on the binary-arch target,
+      (Closes: #445113) 
+      - there is now a install-dep and install-arch
+      - install-* dependencies do not depend on build
+      - create a 'clean-sources' target, used only by the 'clean' target
+      - create a clean_sources.sh script to clean the sources properly before
+        each run
+      - call 'clean_sources.sh' before a binary (pgsql, mysql...) is built to
+        prevent the binary-* rule from calling 'distclean' at the end of each
+        run (and thus making issues more difficult to debug)
+      - generate a configure target and use it when building both -arch
+        and -indep (needed to generate doc/Makefile)
+      - copy, instead of moving, the binaries, so the 'install' target 
+        is more idempotent (still have to use dh_install more to make it so)
+  * Change Maintainer's email address
+  * Create a mechanism to generate all the templates using a "template of
+    templates" since all the questions where the same with small differences
+    per package.
+      - Also fixed snort-inline templates, which were not correct (pointed
+        to the wrong configuration file)
+      - Update Spanish translation myself
+  * Change the init.d script so it behaves like LSB demands:
+      - Do not exit with error if there are no running instances and we
+        try to stop
+      - With 'status', exit with a 1/3 error based on the existence (or not
+        of the pidfiles)
+      - Dot not exit with error when trying to start an instance that is
+        already started (use running() for that)
+      - Check if the user is root before attempting to star/stop/restart
+      - Adjust to LSB exit values (instead of just using always '1', use
+        3-6 to indicate several different errors)
+  * Lintian cleanup:
+      - Move Homepage: from the description to a pseudo-header in
+      debian/control
+      - do not ignore distclean errors
+      - remove call to dh_suidregister, we did not use it
+      - add DEBHELPER token to snort-common.postinst
+      - update config.guess and config.sub with automake's 1.7 versions
+        (this is not done automatically in the package, however)
+      - replace ${Source-Version} substvar with ${binary:version}
+      - Move the configuration check of snort-common over to the config
+        script and leave the postinst only to check the status of the
+        init.d script. Also, modify the snort-common.postinst so it only
+        does the configuration check if invoke-rc.d (if installed)
+      - Fix 'malformed-title-in-templates' in all templates by removing
+        the ending dot
+      - Fix the 'malformed-prompt-in-templates' by adjusting the contents
+        of all the titles affected
+      - Shorten the length of the 'interface' template
+      - Fix syntax on debian/NEWS
+      - Remove empty dirs
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Thu, 27 Dec 2007 09:14:00 +0100
+
+snort (2.7.0-7) unstable; urgency=low
+
+  * Remove empty comment line in lsb headers
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 01 Oct 2007 03:01:26 +0200
+
 snort (2.7.0-6) unstable; urgency=low
 
   * Create a separate snort-libraries package and move all the libraries that

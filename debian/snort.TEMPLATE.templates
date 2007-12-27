@@ -1,4 +1,4 @@
-Template: snort/startup
+Template: snort{PACKAGE}/startup
 Type: select
 _Choices: boot, dialup, manual
 Default: boot
@@ -6,7 +6,7 @@ _Description: When should Snort be started?
  Snort can be started during boot, when connecting to the net with pppd or
  only when you manually start it via /usr/sbin/snort.
 
-Template: snort/interface
+Template: snort{PACKAGE}/interface
 Type: string
 Default: eth0
 _Description: Interface(s) which Snort should listen on:
@@ -29,7 +29,7 @@ _Description: Interface(s) which Snort should listen on:
  one interface name separated by spaces. Each interface can have its
  specific configuration.
 
-Template: snort/address_range
+Template: snort{PACKAGE}/address_range
 Type: string
 Default: 192.168.0.0/16
 _Description: Address range that Snort will listen on:
@@ -42,7 +42,7 @@ _Description: Address range that Snort will listen on:
  Notice that if you are using multiple interfaces this definition will
  be used as the HOME_NET definition of all of them.
 
-Template: snort/disable_promiscuous
+Template: snort{PACKAGE}/disable_promiscuous
 Type: boolean
 Default: false
 _Description: Should Snort disable promiscuous mode on the interface?
@@ -51,7 +51,7 @@ _Description: Should Snort disable promiscuous mode on the interface?
  every packet that passes ethernet segment even if it's a connection
  between two other computers.
 
-Template: snort/invalid_interface
+Template: snort{PACKAGE}/invalid_interface
 Type: note
 _Description: Invalid interface
  One of the interfaces you specified is not valid (it might not exist on the
@@ -61,7 +61,7 @@ _Description: Invalid interface
  If you did not configure an interface then the package is trying to use the
  default ('eth0') which does not seem to be valid in your system.
 
-Template: snort/reverse_order
+Template: snort{PACKAGE}/reverse_order
 Type: boolean
 Default: false
 _Description: Should Snort's rules testing order be changed to Pass|Alert|Log?
@@ -70,7 +70,7 @@ _Description: Should Snort's rules testing order be changed to Pass|Alert|Log?
  This will prevent people from having to make huge Berky Packet Filter
  command line arguments to filter their alert rules.
 
-Template: snort/send_stats
+Template: snort{PACKAGE}/send_stats
 Type: boolean
 Default: true
 _Description: Should daily summaries be sent by e-mail?
@@ -78,7 +78,7 @@ _Description: Should daily summaries be sent by e-mail?
  summarises the information of Snort logs to a selected email address.
  If you want to disable this feature say 'no' here.
 
-Template: snort/stats_rcpt
+Template: snort{PACKAGE}/stats_rcpt
 Type: string
 Default: root
 _Description: Recipient of daily statistics mails:
@@ -89,26 +89,26 @@ _Description: Recipient of daily statistics mails:
  the administrator is redirected to a user that actually reads those
  mails.
 
-Template: snort/options
+Template: snort{PACKAGE}/options
 Type: string
 _Description: Additional custom options:
  If you want to specify custom options to Snort, please specify them here.
 
-Template: snort/stats_treshold
+Template: snort{PACKAGE}/stats_treshold
 Type: string
 Default: 1
 _Description: Minimum occurence to report alerts:
  An alert needs to appear more times than this number to be included in the
  daily statistics.
 
-Template: snort/please_restart_manually
+Template: snort{PACKAGE}/please_restart_manually
 Type: note
 _Description: You are running Snort manually
  Please restart Snort using:
   /etc/init.d/snort start
  to let the settings take effect.
 
-Template: snort/config_error
+Template: snort{PACKAGE}/config_error
 Type: note
 _Description: There is an error in your configuration
  Your Snort configuration is not correct and Snort will not be able to start
@@ -118,7 +118,7 @@ _Description: There is an error in your configuration
  (or point to an alternate configuration file if you are using different
  files for different interfaces)
 
-Template: snort/config_parameters
+Template: snort{PACKAGE}/config_parameters
 Type: note
 _Description: This system uses an obsolete configuration file
  Your system has an obsolete configuration file

@@ -5,7 +5,7 @@
 # Copyright (c) 2001 Christian Hammers 
 # Copyright (c) 2001-2002 Robert van der Meulen
 # Copyright (c) 2002-2004 Sander Smeenk <ssmeenk@debian.org>
-# Copyright (c) 200-42007 Javier Fernandez-Sanguino <jfs@debian.org>
+# Copyright (c) 2004-2007 Javier Fernandez-Sanguino <jfs@debian.org>
 #
 # This is free software; you may redistribute it and/or modify
 # it under the terms of the GNU General Public License as
@@ -34,7 +34,6 @@
 # Description:       Intrusion detection system that will
 #                    capture traffic from the network cards and will
 #                    match against a set of known attacks.
-#
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
@@ -47,9 +46,10 @@ DESC="Network Intrusion Detection System"
 
 . /lib/lsb/init-functions
 
+
 CONFIG=/etc/snort/snort.debian.conf
 # Old (obsolete) way to provide parameters
-if [ -r /etc/snort/snort.common.parameters ] ; then
+if [ -f /etc/snort/snort.common.parameters ] ; then
 	COMMON=`cat /etc/snort/snort.common.parameters`
 elif [ -r /etc/default/snort ] ; then
 # Only read this if the old configuration is not present
@@ -63,6 +63,22 @@ test -z "$DEBIAN_SNORT_HOME_NET" && DEBIAN_SNORT_HOME_NET="192.168.0.0/16"
 
 # to find the lib files
 cd /etc/snort
+
+running()
+{
+        PIDFILE=$1
+# No pidfile, probably no daemon present
+        [ ! -f "$PIDFILE" ] && return 1
+        pid=`cat $PIDFILE`
+# No pid, probably no daemon present
+        [ -z "$pid" ] && return 1
+        [ ! -d /proc/$pid ] &&  return 1
+        cmd=`cat /proc/$pid/cmdline | tr "\000" "\n"|head -n 1 |cut -d : -f 1`
+# No daemon
+        [ "$cmd" != "$DAEMON" ] &&  return 1
+        return 0
+}
+
 
 check_log_dir() {
 # Does the logging directory belong to Snort?
@@ -89,8 +105,16 @@ check_log_dir() {
 	return 0
 }
 
+check_root()  {
+    if [ "$(id -u)" != "0" ]; then
+        log_failure_msg "You must be root to start, stop or restart $NAME."
+        exit 4
+    fi
+}
+
 case "$1" in
   start)
+        check_root
 	log_daemon_msg "Starting $DESC " "$NAME"
 
         if [ -e /etc/snort/db-pending-config ] ; then
@@ -99,12 +123,12 @@ case "$1" in
 		log_failure_msg "Please configure the database as described in"
 		log_failure_msg "/usr/share/doc/snort-{pgsql,mysql}/README-database.Debian"
 		log_failure_msg "and remove /etc/snort/db-pending-config"
-		exit 1
+		exit 6
 	fi
 
         if ! check_log_dir; then
 		log_failure_msg " will not start $DESC!"
-		exit 1
+		exit 5
 	fi
 	if [ "$DEBIAN_SNORT_STARTUP" = "dialup" ]; then
 		shift
@@ -112,7 +136,7 @@ case "$1" in
 		/etc/ppp/ip-up.d/snort "$@"
 		ret=$?
                 if  [ $ret -eq 0 ] ; then
-                    log_end_msg 0
+                  log_end_msg 0
                 else
                   log_end_msg 1
                 fi
@@ -132,35 +156,32 @@ case "$1" in
 		log_progress_msg "($interface"
 
 		PIDFILE=/var/run/snort_$interface.pid
+                CONFIGFILE=/etc/snort/snort.$interface.conf
 
+                # Defaults:
 		fail="failed (check /var/log/syslog and /var/log/snort)"
-                if [ ! -e "$PIDFILE" -o -r "$PIDFILE" ] ; then
-		/sbin/start-stop-daemon --stop --signal 0 --quiet \
-			--pidfile "$PIDFILE" --exec $DAEMON >/dev/null &&
-				fail="already running"
+                run="yes"
+
+                if [ -e "$PIDFILE" ] && running $PIDFILE; then
+                        run="no" 
+                        # Do not start this instance, it is already runing
                 fi
 
-		CONFIGFILE=/etc/snort/snort.$interface.conf
-		if [ ! -e "$CONFIGFILE" ]; then
-			log_progress_msg "no /etc/snort/snort.$interface.conf found, defaulting to snort.conf"
-			CONFIGFILE=/etc/snort/snort.conf
-		fi
+                if [ "$run" = "yes" ] ; then
+                    if [ ! -e "$CONFIGFILE" ]; then
+                        log_progress_msg "no /etc/snort/snort.$interface.conf found, defaulting to snort.conf"
+                        CONFIGFILE=/etc/snort/snort.conf
+                    fi
 
-		set +e
-                if [ ! -e "$PIDFILE" -o -r "$PIDFILE" ] ; then
-                     /sbin/start-stop-daemon --start --quiet  \
+                    set +e
+                    /sbin/start-stop-daemon --start --quiet  \
                         --pidfile "$PIDFILE" \
-			--exec $DAEMON -- $COMMON $DEBIAN_SNORT_OPTIONS \
-			-c $CONFIGFILE \
-			-S "HOME_NET=[$DEBIAN_SNORT_HOME_NET]" \
-			-i $interface >/dev/null
-                     ret=$?
-                else
-                     fail="cannot read $PIDFILE"
-                     ret=1
-                fi
-                    
-		case "$ret" in
+                        --exec $DAEMON -- $COMMON $DEBIAN_SNORT_OPTIONS \
+                        -c $CONFIGFILE \
+                        -S "HOME_NET=[$DEBIAN_SNORT_HOME_NET]" \
+                        -i $interface >/dev/null
+                    ret=$?
+                    case "$ret" in
 			0)
                                 log_progress_msg  "...done)"
 				;;
@@ -168,13 +189,16 @@ case "$1" in
 				log_progress_msg "...ERROR: $fail)"
 				myret=$(expr "$myret" + 1)
 				;;
-		esac
-                set -e
+                     esac
+                     set -e
+                else
+                        log_progress_msg ": already running)"
+                fi
 	done
 
 	if [ "$got_instance" = 0 ]; then
 		log_failure_msg "No snort instance found to be started!" >&2
-		exit 1
+		exit 6
 	fi
 
         if  [ $myret -eq 0 ] ; then
@@ -185,6 +209,7 @@ case "$1" in
 	exit $myret
 	;;
   stop)
+        check_root
         log_daemon_msg "Stopping $DESC " "$NAME"
     
 	if [ "$DEBIAN_SNORT_STARTUP" = "dialup" ]; then
@@ -225,7 +250,7 @@ case "$1" in
                     rm -f "$PIDFILE"
                 else
                      log_progress_msg "cannot read $PIDFILE"
-                     ret=1
+                     ret=4
                 fi
 		case "$ret" in
 			0)
@@ -241,8 +266,8 @@ case "$1" in
 	done
 
 	if [ "$got_instance" = 0 ]; then
-		log_failure_msg "No snort instance found to be stopped!" >&2
-                exit 1
+		log_warning_msg "No running snort instance found"
+                exit 0 # LSB demands we don't exit with error here
 	fi
         if  [ $myret -eq 0 ] ; then
             log_end_msg 0
@@ -252,6 +277,7 @@ case "$1" in
 	exit $myret
 	;;
   restart|force-restart|reload|force-reload)
+        check_root
 	# Usually, we restart all current running interfaces
 	pidpattern=/var/run/snort_*.pid
 
@@ -271,21 +297,24 @@ case "$1" in
 
 	if [ "$got_instance" = 0 ]; then
 		log_failure_msg "No snort instance found to be stopped!" >&2
-                exit 1
+                exit 6
 	fi
 	;;
   status)
+# Non-root users can use this (if allowed to)
         log_daemon_msg "Status of snort daemon(s)"
 	interfaces="$DEBIAN_SNORT_INTERFACE"
 	# If we are requested to check for a specific interface...
 	test "$2" && interfaces="$2"
         err=0
+        pid=0
 	for interface in $interfaces; do
                 log_progress_msg " $interface "
                 pidfile=/var/run/snort_$interface.pid
                 if [ -f  "$pidfile" ] ; then
                         if [ -r "$pidfile" ] ; then
                             pidval=`cat $pidfile`
+                            pid=$(expr "$pid" + 1)
                             if ps -p $pidval | grep -q snort; then
                                 log_progress_msg "OK"
                             else
@@ -294,6 +323,7 @@ case "$1" in
 			    fi
                          else
 	       		     log_progress_msg "ERROR: cannot read status file"
+                             err=$(expr "$err" + 1)
                          fi
                  else
                        log_progress_msg "ERROR"
@@ -301,8 +331,17 @@ case "$1" in
                  fi
         done
         if [ $err -ne 0 ] ; then
-            log_end_msg  1
-            exit 1
+            if [ $pid -ne 0 ] ; then
+# More than one case where pidfile exists but no snort daemon
+# LSB demands a '1' exit value here
+                log_end_msg  1
+                exit 1
+            else
+# No pidfiles at all
+# LSB demands a '3' exit value here
+                log_end_msg  3
+                exit 3
+            fi
         fi
         log_end_msg  0
         ;;
@@ -310,8 +349,8 @@ case "$1" in
         log_daemon_msg "Checking $DESC configuration" 
 	if [ "$DEBIAN_SNORT_STARTUP" = "dialup" ]; then
 		log_failure_msg "Config-check is currently not supported for snort in Dialup configuration"
-                log_end_msg  1
-                exit 1
+                log_end_msg  3
+                exit 3
 	fi
 
 	# usually, we test all interfaces
@@ -340,7 +379,7 @@ case "$1" in
                     ret=$?
                 else
                     fail="cannot read $CONFIGFILE"
-                    ret=1
+                    ret=4
                 fi
 		set -e
 
@@ -356,7 +395,7 @@ case "$1" in
 	done
 	if [ "$got_instance" = 0 ]; then
 		log_failure_msg "no snort instance found to be started!" >&2
-		exit 1
+		exit 6
 	fi
 
         if  [ $myret -eq 0 ] ; then

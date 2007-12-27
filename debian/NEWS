@@ -1,19 +1,19 @@
 snort (2.7.0-1) experimental; urgency=low
 
- Sourcefire changed the license of the IDS ruleset in 2.4 introducing the "VRT
- Certified rules" ruleset which is the official ruleset for Snort. This
- ruleset, however, is provided only through a non-free license which prohibits
- redistribution within this package.
+  Sourcefire changed the license of the IDS ruleset in 2.4 introducing the "VRT
+  Certified rules" ruleset which is the official ruleset for Snort. This
+  ruleset, however, is provided only through a non-free license which prohibits
+  redistribution within this package.
 
- As a consequence this package provides only free (GPL) rules. No rule 
- with a sid in the 3,465-1,000,000 range (VRT Certified) is included here.
- The rules provided on this package are based on the official ruleset for
- Snort 2.4 (updated 7/27/05) and the Community ruleset.
+  As a consequence this package provides only free (GPL) rules. No rule 
+  with a sid in the 3,465-1,000,000 range (VRT Certified) is included here.
+  The rules provided on this package are based on the official ruleset for
+  Snort 2.4 (updated 7/27/05) and the Community ruleset.
 
- Certified rules download require users either to pay (if they want the latest
- rules) or register (for rules provided with a 30-delay period). Users
- whishing to go this way can use the 'oinkmaster' package to auomatically
- update their rulesets once they have registered at snort.org's site.
+  Certified rules download require users either to pay (if they want the latest
+  rules) or register (for rules provided with a 30-delay period). Users
+  whishing to go this way can use the 'oinkmaster' package to auomatically
+  update their rulesets once they have registered at snort.org's site.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 31 Jul 2007 23:42:44 +0200
 
