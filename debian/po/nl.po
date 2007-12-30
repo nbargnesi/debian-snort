@@ -15,12 +15,12 @@ msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
 "POT-Creation-Date: 2007-12-28 01:31+0100\n"
-"PO-Revision-Date: 2006-12-25 21:42+0100\n"
+"PO-Revision-Date: 2007-12-28 10:07+0100\n"
 "Last-Translator: Peter Vandenabeele <peter@vandenabeele.com>\n"
 "Language-Team: debian-l10n-dutch <debian-l10n-dutch@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=iso-8859-15\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Content-Transfer-Encoding: 8bit"
 
 #  Type: select
 #  Choices
@@ -60,7 +60,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
 msgstr "Op welke interface(s) moet Snort luisteren?"
@@ -73,13 +72,12 @@ msgid ""
 "This value usually is 'eth0', but you might want to vary this depending on "
 "your environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate (Hint: use 'ip link show' of 'ifconfig')."
-msgstr ""
+msgstr "Deze waarde is normaal 'eth0', maar misschien wil u dit aanpassen afhankelijk van uw omgeving. Als u een inbelverbinding gebruikt, is 'ppp0' misschien meer geschikt (hint: gebruik 'ip link show' of 'ifconfig')"
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid ""
 #| "Notice that Snort is usually configured to inspect all traffic coming "
 #| "from the Internet, so the interface you add here is usually the same the "
@@ -91,17 +89,12 @@ msgid ""
 "can determine which interface is used for this running either '/sbin/ip ro "
 "sh' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
-"Merk op dat snort normaal ingesteld is om alle van het Internet afkomstige "
-"verkeer te onderzoeken. Bijgevolg is de hier opgegeven interface normaal "
-"dezelfde die de 'default route' heeft. Om te bepalen welke interface "
-"gebruikt wordt, kunt u '/sbin/ip ro sh' of '/sbin/route -n' uitvoeren (zoek "
-"naar 'default' of '0.0.0.0')."
+"Deze interface is normaal dezelfde die de 'default route' heeft. Om te bepalen welke interface gebruikt wordt, kunt u '/sbin/ip ro sh' of '/sbin/route -n' uitvoeren (zoek naar 'default' of '0.0.0.0')."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid ""
 #| "It is also not uncommon to run Snort on an interface with no IP and "
 #| "configured in promiscuous mode, if this is your case, select the "
@@ -117,13 +110,7 @@ msgid ""
 "this interface (either connected to a 'port mirroring/spanning' port in a "
 "switch, to a hub or to a tap)"
 msgstr ""
-"Het is ook niet ongewoon om Snort te draaien op een interface zonder IP en "
-"geconfigureerd in promiscue modus. In dat geval selecteert u de interface "
-"die fysiek verbonden is met het netwerk dat u wilt onderzoeken, activeert u "
-"later de promiscue modus en verzekert u zich ervan dat het netwerkverkeer "
-"naar deze interface verzonden wordt (dus deze dient verbonden te zijn via "
-"een 'port mirroring/spanning'-poort op een switch, via een hub, of via een "
-"tap)"
+"Het is ook niet ongewoon om Snort te draaien op een interface zonder IP en geconfigureerd in promiscue modus. In dat geval, selecteert u de interface die fysiek verbonden is met het netwerk dat u wilt onderzoeken, activeert u later de promiscue modus en verzekert u zich ervan dat het netwerkverkeer naar deze interface verzonden wordt (verbonden via een 'port mirroring/spanning'-poort op een switch, via een hub, of via een tap)"
 
 #. Type: string
 #. Description
@@ -144,10 +131,9 @@ msgstr ""
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-#, fuzzy
 #| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range that Snort will listen on:"
-msgstr "Op welk adresbereik dient Snort te luisteren?"
+msgstr "Adresbereik waarop Snort zal luisteren?"
 
 #  Type: string
 #  Description
@@ -304,10 +290,9 @@ msgstr ""
 #. Description
 #: ../snort.templates:8001 ../snort-mysql.templates:8001
 #: ../snort-pgsql.templates:8001
-#, fuzzy
 #| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
-msgstr "Naar wie dienen de dagelijkse statistieken verstuurd te worden?"
+msgstr "Ontvanger van de dagelijkse statistiekmails:"
 
 #. Type: string
 #. Description
@@ -332,7 +317,7 @@ msgstr ""
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
 msgid "Additional custom options:"
-msgstr ""
+msgstr "Extra eigen opties:"
 
 #  Type: string
 #  Description
@@ -340,7 +325,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
-#, fuzzy
 #| msgid ""
 #| "If you want to specify custom options to Snort, please specify them here."
 msgid ""
@@ -353,7 +337,7 @@ msgstr ""
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
 msgid "Minimum occurence to report alerts:"
-msgstr ""
+msgstr "Minimum aantal keren voorkomen om alarmen te rapporteren:"
 
 #  Type: string
 #  Description
@@ -361,7 +345,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
-#, fuzzy
 #| msgid ""
 #| "An alert needs to appear more times than this number to be included in "
 #| "the daily statistics."
@@ -369,8 +352,7 @@ msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
 msgstr ""
-"Opdat een waarschuwing weergegeven zou worden in de dagelijkse statistieken "
-"dient het vaker dan het hier opgeven aantal keer voor te komen."
+"Een waarschuwing dient vaker dan het hier opgegeven aantal keren voor te komen om opdat die weergegeven zou worden in de dagelijkse statistieken."
 
 #  Type: note
 #  Description
@@ -378,7 +360,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:11001 ../snort-mysql.templates:11001
 #: ../snort-pgsql.templates:11001
-#, fuzzy
 #| msgid "You are running Snort manually."
 msgid "You are running Snort manually"
 msgstr "U voert Snort handmatig uit."
@@ -492,7 +473,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Database server hostname:"
-msgstr ""
+msgstr "Database server hostnaam:"
 
 #  Type: string
 #  Description
@@ -510,7 +491,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Database to use:"
-msgstr ""
+msgstr "Database om te gebruiken:"
 
 #  Type: string
 #  Description
@@ -528,7 +509,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
 msgid "Username for database access:"
-msgstr ""
+msgstr "gebruikersnaam (account) voor database toegang:"
 
 #  Type: string
 #  Description
@@ -545,10 +526,9 @@ msgstr ""
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
-#, fuzzy
 #| msgid "Please enter the password for the database connection."
 msgid "Password for the database connection:"
-msgstr "Wat is het wachtwoord voor de databaseverbinding?"
+msgstr "Gelieve het paswoord voor de databaseverbinding in te geven:"
 
 #  Type: password
 #  Description
@@ -564,12 +544,10 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:19001 ../snort-pgsql.templates:19001
-#, fuzzy
 #| msgid "Snort needs a configured database to log to before it starts."
 msgid "Snort needs a configured database to log to before it starts"
 msgstr ""
-"Snort heeft voor het starten een geconfigureerde database nodig voor het "
-"logboek."
+"Snort heeft een geconfigureerde database nodig voor het logboek vóór het kan starten."
 
 #  Type: note
 #  Description

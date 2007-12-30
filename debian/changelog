@@ -1,3 +1,23 @@
+snort (2.7.0-9) unstable; urgency=low
+
+  * Modify debian/rules to prevent autobuilders from building 
+    the binary-independent components: (Closes: #445113)
+    (Thanks dato for the tip)
+     * Create a new Build-Depends-Indep with all the TeX components used
+       to build documentation
+     * Since autobuilders call build, which in turns calls build-indep, hack
+       the debian rules file so that the documentation is only built
+       if ps2pdf, dvips and pslatex are available. 
+  * Enable prelude support in all variants (Closes: #458790)
+  * Debconf translation updates:
+     - Dutch, provided by Peter Vandenabeele
+     - Vietnamese, provided by Clytie Siddall (Closes: #458161)
+     - Portuguese, provided by Miguel Figueiredo (Closes: #458214)
+     - Galician, provided by Jacobo Tarrio (Closes: #458533)
+     - French, provided by Christian Perrier (Closes: #458621)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 31 Dec 2007 00:31:13 +0100
+
 snort (2.7.0-8) unstable; urgency=low
 
   * Rewrite debian/rules:

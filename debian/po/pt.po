@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: snort 2.3.3-11\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
 "POT-Creation-Date: 2007-12-28 01:31+0100\n"
-"PO-Revision-Date: 2007-01-28 10:52+0000\n"
+"PO-Revision-Date: 2007-12-28 23:54+0000\n"
 "Last-Translator: Miguel Figueiredo <elmig@debianpt.org>\n"
 "Language-Team: Portuguese <traduz@debianpt.org>\n"
 "MIME-Version: 1.0\n"
@@ -44,10 +44,9 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
-msgstr "Em que interface(s) deve o Snort escutar?"
+msgstr "Interface(s) em que o Snort deve escutar:"
 
 #. Type: string
 #. Description
@@ -58,12 +57,14 @@ msgid ""
 "your environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate (Hint: use 'ip link show' of 'ifconfig')."
 msgstr ""
+"Normalmente este valor é 'eth0', mas você pode querer variar este valor de "
+"acordo com o seu ambiente, se estiver a utilizar uma ligação 'dialup', "
+"'ppp0' poderá ser mais apropriado (Dica: utilize 'ip show link' ou 'ifconfig')."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid ""
 #| "Notice that Snort is usually configured to inspect all traffic coming "
 #| "from the Internet, so the interface you add here is usually the same the "
@@ -75,17 +76,14 @@ msgid ""
 "can determine which interface is used for this running either '/sbin/ip ro "
 "sh' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
-"Note que o Snort é normalmente configurado para inspeccionar todo o tráfego "
-"que vem da Internet, por isso o interface que acrescenta aqui é normalmente "
-"o mesmo da 'default route'.  Você pode determinar qual o interface utilizado "
-"para isto quer correndo '/sbin/ip ro sh' ou '/sbin/route -n (procure o "
-"'default' ou '0.0.0.0')."
+"Normalmente este é o mesmo interface onde está a 'default route'.  Você pode "
+"determinar qual o interface que é utilizado para isto quer correndo "
+"'/sbin/ip ro sh' ou '/sbin/route -n (procure o 'default' ou '0.0.0.0')."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
 #| msgid ""
 #| "It is also not uncommon to run Snort on an interface with no IP and "
 #| "configured in promiscuous mode, if this is your case, select the "
@@ -101,11 +99,11 @@ msgid ""
 "this interface (either connected to a 'port mirroring/spanning' port in a "
 "switch, to a hub or to a tap)"
 msgstr ""
-"Também não é incomum correr o Snort num interface sem IP e configurado em "
-"modo promíscuo, se este é o seu caso, escolha o interface neste sistema que "
+"Também não é incomum utilizar um interface sem IP e configurado em "
+"modo promíscuo, se este for o seu caso, escolha o interface neste sistema que "
 "está fisicamente ligado à rede que deseja inspeccionar, depois habilite o "
 "modo promíscuo e assegure-se que o tráfego de rede é enviado para este "
-"interface (quer ligado a um porto 'port mirroring/spanning' num switch, a um "
+"interface (quer ligado a um porto de 'mirroring/spanning' num switch, a um "
 "hub ou a um tap)."
 
 #. Type: string
@@ -117,18 +115,17 @@ msgid ""
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
-"Pode configurar aqui vários interfaces, acrescentando apenas mais um nome de "
-"interface separado por espaços. Cada interface pode ter a sua configuração "
+"Pode configurar aqui vários interfaces, apenas adicionando mais do que um nome "
+"de interface, separado por espaços. Cada interface pode ter a sua configuração "
 "específica."
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-#, fuzzy
 #| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range that Snort will listen on:"
-msgstr "Por favor introduza o intervalo de endereços que o Snort irá escutar."
+msgstr "Gama de endereços que o Snort irá escutar:"
 
 #. Type: string
 #. Description
@@ -139,7 +136,7 @@ msgid ""
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
-"Tem de utilizar o formato CIDR, i.e. 192.168.1.0/24 para um bloco de 256 IPs "
+"Tem de utilizar o formato CIDR, isto é 192.168.1.0/24 para um bloco de 256 IPs "
 "ou 192.168.1.42/32 para apenas um. Especifique vários endereços numa linha "
 "única separados por ',' (vírgulas), não são permitidos espaços!"
 
@@ -147,10 +144,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-msgid ""
-"If you want you can specify 'any', to not trust any side of the network."
-msgstr ""
-"Se quiser pode especificar 'any', para não confiar em nenhum lado da rede."
+msgid "If you want you can specify 'any', to not trust any side of the network."
+msgstr "Se quiser pode especificar 'any', para não confiar em nenhum lado da rede."
 
 #. Type: string
 #. Description
@@ -203,7 +198,7 @@ msgid ""
 msgstr ""
 "Um dos interfaces que especificou não é válido (pode não existir no sistema "
 "ou estar desligado). Por favor introduza um interface válido quando "
-"responder á questão acerca de qual interface(s) deve o Snort escutar."
+"responder á questão acerca de qual(is) interface(s) deve o Snort escutar."
 
 #. Type: note
 #. Description
@@ -213,17 +208,15 @@ msgid ""
 "If you did not configure an interface then the package is trying to use the "
 "default ('eth0') which does not seem to be valid in your system."
 msgstr ""
-"Se não configurou um interface então o pacote está a tentar utilizar o valor "
-"por omissão ('eth0') que não parece ser válido no seu sistema."
+"Se não configurar um interface então o pacote está a tentar utilizar o valor "
+"prédefinido ('eth0') que não parece ser válido no seu sistema."
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:6001 ../snort-mysql.templates:6001
 #: ../snort-pgsql.templates:6001
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
-msgstr ""
-"Deve a ordem das regras de teste do Snort serem alteradas para Pass|Alert!"
-"Log?"
+msgstr "Deve a ordem das regras de teste do Snort ser alterada para Pass|Alert!Log?"
 
 #. Type: boolean
 #. Description
@@ -237,7 +230,7 @@ msgid ""
 msgstr ""
 "Se alterar a ordem de teste das regras do Snort para Pass|Alert|Log, serão "
 "aplicadas na ordem Pass->Alert->Log, em vez do padrão Alert->Pass->Log. Isto "
-"irá previnir as pessoas de terem de fazer grandes argumentos de linha de "
+"irá previnir as pessoas de terem de fazer grandes argumentos na linha de "
 "comandos Berky Packet Filter para filtrar as suas regras de alerta."
 
 #. Type: boolean
@@ -265,10 +258,9 @@ msgstr ""
 #. Description
 #: ../snort.templates:8001 ../snort-mysql.templates:8001
 #: ../snort-pgsql.templates:8001
-#, fuzzy
 #| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
-msgstr "Quem deve receber mails das estatísticas diárias?"
+msgstr "Destinatário que deve receber mails diários das estatísticas:"
 
 #. Type: string
 #. Description
@@ -283,9 +275,9 @@ msgid ""
 msgstr ""
 "Um trabalho do cron que corre diariamente irá sumarizar a informação dos "
 "registos gerados pelo Snort utilizando um script chamado 'snort-stat'. "
-"Introduza aqui o destinatário para esses mails. O valor por omissão é o "
+"Introduza aqui o destinatário para esses mails. O valor prédefinido é o "
 "administrador do sistema. Se mantiver este valor, assegure-se que o mail do "
-"administrador é redireccionado para um utilizar que na realidade lê esses "
+"administrador é redireccionado para um utilizar que realmente lê esses "
 "mails."
 
 #. Type: string
@@ -293,19 +285,17 @@ msgstr ""
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
 msgid "Additional custom options:"
-msgstr ""
+msgstr "Opções adicionais de personalização:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
-#, fuzzy
 #| msgid ""
 #| "If you want to specify custom options to Snort, please specify them here."
-msgid ""
-"If you want to specify custom options to Snort, please specify them here."
+msgid "If you want to specify custom options to Snort, please specify them here."
 msgstr ""
-"Se quiser especificar opções personalizadas para o Snort, por favor "
+"Se quiser especificar opções de personalização para o Snort, por favor "
 "especifique-as aqui."
 
 #. Type: string
@@ -313,13 +303,12 @@ msgstr ""
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
 msgid "Minimum occurence to report alerts:"
-msgstr ""
+msgstr "Mínima ocorrência para relatar alertas:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
-#, fuzzy
 #| msgid ""
 #| "An alert needs to appear more times than this number to be included in "
 #| "the daily statistics."
@@ -334,10 +323,9 @@ msgstr ""
 #. Description
 #: ../snort.templates:11001 ../snort-mysql.templates:11001
 #: ../snort-pgsql.templates:11001
-#, fuzzy
 #| msgid "You are running Snort manually."
 msgid "You are running Snort manually"
-msgstr "Você está a correr manualmente o Snort."
+msgstr "Você está a correr o Snort manualmente"
 
 #. Type: note
 #. Description
@@ -437,7 +425,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Database server hostname:"
-msgstr ""
+msgstr "Nome da máquina do servidor da base de dados:"
 
 #. Type: string
 #. Description
@@ -453,7 +441,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Database to use:"
-msgstr ""
+msgstr "Base de dados a utilizar:"
 
 #. Type: string
 #. Description
@@ -469,7 +457,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
 msgid "Username for database access:"
-msgstr ""
+msgstr "Nome de utilizador para acesso à base de dados:"
 
 #. Type: string
 #. Description
@@ -480,27 +468,24 @@ msgstr "Assegure-se que este utilizador foi criado e tem acesso de escrita."
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
-#, fuzzy
 #| msgid "Please enter the password for the database connection."
 msgid "Password for the database connection:"
-msgstr "Por favor introduza a palavra chave para a ligação à base de dados."
+msgstr "Palavra chave para a ligação à base de dados:"
 
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
 msgid "Please enter a password to connect to the Snort Alert database."
-msgstr ""
-"Por favor introduza a palavra chave para ligar à base de dados Snort Alert."
+msgstr "Por favor introduza a palavra chave para ligar à base de dados Snort Alert."
 
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:19001 ../snort-pgsql.templates:19001
-#, fuzzy
 #| msgid "Snort needs a configured database to log to before it starts."
 msgid "Snort needs a configured database to log to before it starts"
 msgstr ""
-"O Snort necessita de uma base de dados configurada para registar antes de "
-"iniciar."
+"O Snort necessita, antes de ser iniciado, de uma base de dados configurada "
+"para registos"
 
 #. Type: note
 #. Description
@@ -613,7 +598,8 @@ msgid ""
 "${DEP_CONFIG}"
 msgstr ""
 "Foram encontradas as seguintes opções no seu ficheiro de configuração que "
-"foram depreciadas: ${DEP_CONFIG}"
+"foram depreciadas: "
+"${DEP_CONFIG}"
 
 #~ msgid ""
 #~ "Please enter the name(s) of the interface(s) which Snort should listen "
@@ -656,3 +642,4 @@ msgstr ""
 #~ msgstr ""
 #~ "Por favor introduza o nome da máquina do servidor de base de dados pgsql "
 #~ "a utilizar."
+

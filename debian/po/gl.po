@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
 "POT-Creation-Date: 2007-12-28 01:31+0100\n"
-"PO-Revision-Date: 2007-02-04 16:19+0100\n"
+"PO-Revision-Date: 2008-01-01 14:01+0000\n"
 "Last-Translator: Jacobo Tarrio <jtarrio@debian.org>\n"
 "Language-Team: Galician <proxecto@trasno.net>\n"
 "MIME-Version: 1.0\n"
@@ -43,10 +43,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
-msgstr "¿En que interfaces debe escoitar Snort?"
+msgstr "Interfaces nas que Snort debe escoitar:"
 
 #. Type: string
 #. Description
@@ -57,41 +55,27 @@ msgid ""
 "your environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate (Hint: use 'ip link show' of 'ifconfig')."
 msgstr ""
+"Este valor adoita ser \"eth0\", pero pode querer modificalo dependendo do "
+"ambiente. Se emprega unha conexión por módem, \"ppp0\" pode ser a opción "
+"axeitado (empregue \"ip link show\" ou \"ifconfig\")."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid ""
-#| "Notice that Snort is usually configured to inspect all traffic coming "
-#| "from the Internet, so the interface you add here is usually the same the "
-#| "'default route' is on.  You can determine which interface is used for "
-#| "this running either '/sbin/ip ro sh' or '/sbin/route -n' (look for "
-#| "'default' or '0.0.0.0')."
 msgid ""
 "Typically this is the same interface than the 'default route' is on.  You "
 "can determine which interface is used for this running either '/sbin/ip ro "
 "sh' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
-"Teña en conta que Snort adoita estar configurado para inspeccionar todo o "
-"tráfico que procede de Internet, así que a interface que engada aquí adoita "
-"ser a mesma da \"ruta por defecto\". Pode determinar a interface que se "
-"emprega executando \"/sbin/ip ro sh\" ou \"/sbin/route -n\" (busque \"default"
-"\" ou \"0.0.0.0\")."
+"Normalmente esta é a mesma interface na que está a \"ruta por defecto\". "
+"Pode determinar a interface que se emprega executando \"/sbin/ip ro sh\" ou "
+"\"/sbin/route -n\" (busque \"default\" ou \"0.0.0.0\")."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid ""
-#| "It is also not uncommon to run Snort on an interface with no IP and "
-#| "configured in promiscuous mode, if this is your case, select the "
-#| "interface in this system that is physically connected to the network you "
-#| "want to inspect, enable promiscuous mode later on and make sure that the "
-#| "network traffic is sent to this interface (either connected to a 'port "
-#| "mirroring/spanning' port in a switch, to a hub or to a tap)"
 msgid ""
 "It is also not uncommon to use an interface with no IP and configured in "
 "promiscuous mode, if this is your case, select the interface in this system "
@@ -100,12 +84,12 @@ msgid ""
 "this interface (either connected to a 'port mirroring/spanning' port in a "
 "switch, to a hub or to a tap)"
 msgstr ""
-"Tampouco é pouco habitual executar Snort nunha interface sen IP e "
-"configurada en modo promiscuo. Se este é o seu caso, escolla a interface "
-"deste sistema que estea conectada fisicamente á rede que quere inspeccionar, "
-"active despois o modo propiscuo e asegúrese de que o tráfico da rede se "
-"envíe a esta interface (conectada a un porto \"espello/árbore\" dun switch, "
-"a un concentrador de rede ou a unha toma)."
+"Tampouco é pouco habitual empregar unha interface sen IP e configurada en "
+"modo promiscuo. Se este é o seu caso, escolla a interface deste sistema que "
+"estea conectada fisicamente á rede que quere inspeccionar, active despois o "
+"modo propiscuo e asegúrese de que o tráfico da rede se envíe a esta "
+"interface (conectada a un porto \"espello/árbore\" dun switch, a un "
+"concentrador de rede ou a unha toma)."
 
 #. Type: string
 #. Description
@@ -124,10 +108,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-#, fuzzy
-#| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range that Snort will listen on:"
-msgstr "Escolla o rango de enderezos nos que ha escoitar Snort."
+msgstr "Rango de enderezos nos que ha escoitar Snort:"
 
 #. Type: string
 #. Description
@@ -263,10 +245,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:8001 ../snort-mysql.templates:8001
 #: ../snort-pgsql.templates:8001
-#, fuzzy
-#| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
-msgstr "¿Quen debe recibir os emails diarios de estatísticas?"
+msgstr "Destinatario dos emails diarios de estatísticas:"
 
 #. Type: string
 #. Description
@@ -290,15 +270,12 @@ msgstr ""
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
 msgid "Additional custom options:"
-msgstr ""
+msgstr "Opcións personalizadas adicionais:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
-#, fuzzy
-#| msgid ""
-#| "If you want to specify custom options to Snort, please specify them here."
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
 msgstr ""
@@ -309,16 +286,12 @@ msgstr ""
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
 msgid "Minimum occurence to report alerts:"
-msgstr ""
+msgstr "Aparicións mínimas para informar das alertas:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
-#, fuzzy
-#| msgid ""
-#| "An alert needs to appear more times than this number to be included in "
-#| "the daily statistics."
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
@@ -330,10 +303,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:11001 ../snort-mysql.templates:11001
 #: ../snort-pgsql.templates:11001
-#, fuzzy
-#| msgid "You are running Snort manually."
 msgid "You are running Snort manually"
-msgstr "Está a executar Snort manualmente."
+msgstr "Está a executar Snort manualmente"
 
 #. Type: note
 #. Description
@@ -433,7 +404,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Database server hostname:"
-msgstr ""
+msgstr "Nome do servidor de bases de datos:"
 
 #. Type: string
 #. Description
@@ -449,7 +420,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Database to use:"
-msgstr ""
+msgstr "Base de datos a empregar:"
 
 #. Type: string
 #. Description
@@ -465,7 +436,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
 msgid "Username for database access:"
-msgstr ""
+msgstr "Nome de usuario para acceder á base de datos:"
 
 #. Type: string
 #. Description
@@ -476,10 +447,8 @@ msgstr "Asegúrese de que este usuario estea creado e teña acceso de escritura.
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
-#, fuzzy
-#| msgid "Please enter the password for the database connection."
 msgid "Password for the database connection:"
-msgstr "Introduza o contrasinal para a conexión á base de datos."
+msgstr "Contrasinal para a conexión á base de datos:"
 
 #. Type: password
 #. Description
@@ -492,12 +461,10 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:19001 ../snort-pgsql.templates:19001
-#, fuzzy
-#| msgid "Snort needs a configured database to log to before it starts."
 msgid "Snort needs a configured database to log to before it starts"
 msgstr ""
-"Snort precisa dunha base de datos configurada para se conectar a ela antes "
-"de se iniciar."
+"Snort precisa dunha base de datos configurada para gardar nela os rexistros "
+"antes de se iniciar"
 
 #. Type: note
 #. Description

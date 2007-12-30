@@ -22,7 +22,8 @@ export CFLAGS
 CONFFLAGS= --prefix=/usr \
 	--bindir=\$$\{exec_prefix\}/sbin \
 	--mandir=\$$\{exec_prefix\}/share/man \
-	--enable-smbalerts 
+	--enable-smbalerts \
+        --enable-prelude 
 # Cannot enable flexresp since it builds only with libnet 1.0.2a
 #	--enable-flexresp \
 
@@ -56,8 +57,7 @@ configure-stamp:
 	# Standard package support
 	./configure $(CONFFLAGS) \
 		--without-mysql \
-		--without-postgresql \
-		--enable-prelude 
+		--without-postgresql 
 	touch $@
 
 build-basic: build-basic-stamp
@@ -77,7 +77,7 @@ build-pgsql-stamp:
 	./configure $(CONFFLAGS) \
 		--without-mysql \
 		--with-postgresql \
-		--with-pgsql-includes=`pg_config --includedir`
+		--with-pgsql-includes=`pg_config --includedir` 
 	$(MAKE) 
 	cp src/snort src/snort-pgsql
 	touch $@
@@ -89,7 +89,7 @@ build-mysql-stamp:
 	# MySQL package:
 	./configure $(CONFFLAGS) \
 		--with-mysql \
-		--without-postgresql
+		--without-postgresql 
 	$(MAKE) 
 	cp src/snort src/snort-mysql
 	touch $@
@@ -103,8 +103,7 @@ build-inline-stamp:
 		--without-mysql \
 		--without-postgresql \
 		--enable-inline \
-		--with-libipq-includes=/usr/include/libipq/ \
-		--enable-prelude 
+		--with-libipq-includes=/usr/include/libipq/ 
 	$(MAKE) 
 	cp src/snort src/snort-inline
 	touch $@
@@ -118,8 +117,8 @@ build-indep: configure build-indep-stamp
 build-indep-stamp: 
 	dh_testdir
 	# Build the documentation
-	cd doc && $(MAKE) snort_manual.pdf
-	cd doc && $(MAKE) faq.pdf
+	[ ! -x /usr/bin/ps2pdf ] || [ ! -x /usr/bin/pslatex ] || \
+	[ ! -x /usr/bin/dvips ] || $(MAKE) -C doc snort_manual.pdf faq.pdf 
 	touch $@
 
 build: build-arch build-indep build-stamp
