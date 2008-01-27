@@ -1,4 +1,4 @@
-## $Id: Makefile.am,v 1.30 2004/09/13 17:44:49 jhewlett Exp $
+## $Id$
 AUTOMAKE_OPTIONS=foreign no-dependencies
 
 bin_PROGRAMS = snort
@@ -18,8 +18,11 @@ decode.c decode.h \
 log.c log.h \
 mstring.c mstring.h \
 parser.c parser.h \
+profiler.c profiler.h \
 plugbase.c plugbase.h \
+preprocids.h \
 snort.c snort.h \
+build.h \
 snprintf.c snprintf.h \
 strlcatu.c strlcatu.h \
 strlcpyu.c strlcpyu.h \
@@ -45,17 +48,21 @@ event_wrapper.c event_wrapper.h \
 smalloc.h \
 snort_packet_header.h \
 event_queue.c event_queue.h \
-inline.c inline.h
+inline.c inline.h ipv6.c ipv6.h
 
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
+dynamic-plugins/libdynamic.a            \
 preprocessors/libspp.a                \
 preprocessors/flow/portscan/libportscan.a \
 preprocessors/flow/libflow.a \
 parser/libparser.a \
 preprocessors/HttpInspect/libhttp_inspect.a \
+preprocessors/Stream5/libstream5.a \
 sfutil/libsfutil.a
 
-SUBDIRS = sfutil win32 output-plugins detection-plugins preprocessors parser
+EXAMPLES_DIR = dynamic-examples
+
+SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors $(EXAMPLES_DIR)
 
 INCLUDES = @INCLUDES@

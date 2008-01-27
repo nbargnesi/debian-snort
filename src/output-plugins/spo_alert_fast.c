@@ -3,9 +3,10 @@
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_alert_fast.c,v 1.20 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id$ */
 
 /* spo_alert_fast
  * 
@@ -142,10 +143,21 @@ void AlertFast(Packet *p, char *msg, void *arg, Event *event)
     /* dump the timestamp */
     fwrite(timestamp, strlen(timestamp), 1, data->file);
 
+    if( p != NULL && p->packet_flags & PKT_INLINE_DROP )
+        fputs(" [Drop]",data->file);
 
     if(msg != NULL)
     {
+#ifdef MARK_TAGGED
+        char c=' ';
+        if ((p != NULL) && (p->packet_flags & PKT_REBUILT_STREAM))
+            c = 'R';
+        else if ((p != NULL) && (p->packet_flags & PKT_REBUILT_FRAG))
+            c = 'F';
+        fprintf(data->file, " [**] %c ", c);
+#else
         fwrite(" [**] ", 6, 1, data->file);
+#endif
 
         if(event != NULL)
         {
@@ -174,8 +186,6 @@ void AlertFast(Packet *p, char *msg, void *arg, Event *event)
         PrintPriorityData(data->file, 0);
 
         fprintf(data->file, "{%s} ", protocol_names[p->iph->ip_proto]);
-
-
 
         if(p->frag_flag)
         {

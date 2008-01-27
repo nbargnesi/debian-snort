@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
  * @file   flowps_snort.c
  * @author Chris Green <cmg@sourcefire.com>
@@ -15,6 +36,7 @@
 #include "plugbase.h" /* RegisterPreprocesor */
 #include "parser.h"   /* file_name, file_line */
 #include "snort.h"
+#include "util.h"
 
 #include "scoreboard.h"
 #include "server_stats.h"
@@ -29,6 +51,8 @@
 #include "common_defs.h"
 #include "util_str.h"
 #include "util_net.h"
+#include "snort_packet_header.h"
+#include "util.h"
 
 #ifndef WIN32
 #include <sys/socket.h>
@@ -229,18 +253,18 @@ static void FlowPSInit(u_char *args)
 
     if(flowps_init_pkt())
     {
-        flow_fatalerror("Error initializing flowps packet!\n");
+        FatalError("Error initializing flowps packet!\n");
     }
     
     if(!SppFlowIsRunning())
     {
-        flow_fatalerror("%s(%d) flow-portscan requires spp_flow to be enabled!\n",
+        FatalError("%s(%d) flow-portscan requires spp_flow to be enabled!\n",
                         file_name, file_line);
     }
     
     if(init_once)
     {
-        flow_fatalerror("%s(%d) Unable to reinitialize flow-portscan!\n",
+        FatalError("%s(%d) Unable to reinitialize flow-portscan!\n",
                         file_name, file_line);
     }
     else
@@ -250,20 +274,20 @@ static void FlowPSInit(u_char *args)
 
     FlowPSSetDefaults(&tconfig);
 
-    FlowPSParseArgs(&tconfig, args);
+    FlowPSParseArgs(&tconfig, (char *)args);
 
     
     if((ret = flowps_init(pstp, &tconfig)) != FLOW_SUCCESS)
     {
-        flow_fatalerror("Unable to initialize the flow cache!"
+        FatalError("Unable to initialize the flow cache!"
                         "-- try more memory (current memcap is %d)\n",
                         tconfig.sb_memcap_total);
     }
 
     FlowPSOutputConfig(pstp);
     
-    AddFuncToCleanExitList(FlowPSCleanExit, NULL);
-    AddFuncToRestartList(FlowPSRestart, NULL);
+    AddFuncToPreprocCleanExitList(FlowPSCleanExit, NULL, PRIORITY_LAST, PP_FLOW);
+    AddFuncToPreprocRestartList(FlowPSRestart, NULL, PRIORITY_LAST, PP_FLOW);
 }
 
 
@@ -275,7 +299,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
 
     if(!key || !value)
     {
-        flow_fatalerror("%s:(%d) Invalid command line arguments!\n");
+        FatalError("%s:(%d) Invalid command line arguments!\n");
     }
 
     if(s_debug > 1)
@@ -327,7 +351,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
 
         if(!ipset || ip4_setparse(ipset, value) !=0)
         {
-            flow_fatalerror("%s(%d) Unable to create an IPSet from %s\n",
+            FatalError("%s(%d) Unable to create an IPSet from %s\n",
                             file_name,file_line,value);
         }
 
@@ -339,7 +363,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
 
         if(!ipset || ip4_setparse(ipset, value) !=0)
         {
-            flow_fatalerror("%s(%d) Unable to create an IPSet from %s\n",
+            FatalError("%s(%d) Unable to create an IPSet from %s\n",
                             file_name,file_line,value);
         }
 
@@ -351,7 +375,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
 
         if(!ipset || ip4_setparse(ipset, value) !=0)
         {
-            flow_fatalerror("%s(%d) Unable to create an IPSet from %s\n",
+            FatalError("%s(%d) Unable to create an IPSet from %s\n",
                        file_name,file_line,value);
         }
 
@@ -361,7 +385,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
     {
         if(toggle_option(key, value, &config->tcp_penalties))
         {
-            flow_fatalerror("%s(%d) Error processing %s directive (value = %s)\n",
+            FatalError("%s(%d) Error processing %s directive (value = %s)\n",
                        file_name,file_line,key,value);
         }
     }
@@ -402,7 +426,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
     }
     else if(!strcasecmp(key, "talker-sliding-scale-factor"))
     {
-        config->limit_talker.window_scale = strtod(value, NULL);
+        config->limit_talker.window_scale = (float)strtod(value, NULL);
     }
     else if(!strcasecmp(key, "scanner-fixed-threshold"))
     {
@@ -426,7 +450,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
     }
     else if(!strcasecmp(key, "scanner-sliding-scale-factor"))
     {
-        config->limit_scanner.window_scale = strtod(value, NULL);
+        config->limit_scanner.window_scale = (float)strtod(value, NULL);
     }
     else if(!strcasecmp(key, "base-score"))
     {
@@ -448,7 +472,7 @@ static void FlowPSParseOption(PS_CONFIG *config,
         }
         else
         {
-            flow_fatalerror("%s(%d) Bad option to %s => %s\n",
+            FatalError("%s(%d) Bad option to %s => %s\n",
                        file_name, file_line, key, value);
         }
     }
@@ -464,13 +488,13 @@ static void FlowPSParseOption(PS_CONFIG *config,
         }
         else
         {
-            flow_fatalerror("%s(%d) Bad option to %s => %s\n",
+            FatalError("%s(%d) Bad option to %s => %s\n",
                        file_name, file_line, key, value);
         }
     }
     else        
     {
-        flow_fatalerror("%s(%d) Unknown Arguments: key(%s) value(%s)\n",
+        FatalError("%s(%d) Unknown Arguments: key(%s) value(%s)\n",
                    fname, lineno, key, value);
     }
     
@@ -495,7 +519,7 @@ static void FlowPSParseArgs(PS_CONFIG *config , char *args)
     
     if(!config)
     {
-        flow_fatalerror("FlowPSParseArgs: NULL config passed\n!");
+        FatalError("FlowPSParseArgs: NULL config passed\n!");
     }
 
     if(!args)
@@ -514,7 +538,9 @@ static void FlowPSParseArgs(PS_CONFIG *config , char *args)
     myargs = strdup(args);
 
     if(myargs == NULL)
-        flow_fatalerror("%s(%d) Unable to allocate memory!\n", file_name, file_line);
+    {
+        FatalError("%s(%d) Unable to allocate memory!\n", file_name, file_line);
+    }
 
     key = strtok(myargs, delim);
 
@@ -524,7 +550,7 @@ static void FlowPSParseArgs(PS_CONFIG *config , char *args)
 
         if(!value)
         {
-            flow_fatalerror("%s(%d) key %s has no value", file_name, file_line); 
+            FatalError("%s(%d) key %s has no value", file_name, file_line); 
         }
 
         FlowPSParseOption(config, file_name, file_line, key, value);                
@@ -540,7 +566,7 @@ static void FlowPSParseArgs(PS_CONFIG *config , char *args)
         if((config->server_scanner_limit == 0) &&
            (config->server_ignore_limit == 0))
         {
-            flow_fatalerror("A Server watchnet is set"
+            FatalError("A Server watchnet is set"
                             " with no scanner or ignore limit\n"
                             "Perhaps you should just remove"
                             " the server-watchnet option\n");
@@ -608,7 +634,8 @@ int flowps_newflow_callback(FLOW_POSITION position, FLOW *flowp,
     TRACKER_POSITION tr_pos = TRACKER_ACTIVE; /* where new nodes get inserted */
     PS_TRACKER *pstp = &s_tracker;
     SCORE_ENTRY *current_entry = NULL;
-    int ret, alert_flags, score;    
+    int ret, score;    
+    u_int32_t alert_flags;
     u_int8_t cflags;
     u_int32_t *address = &flowp->key.init_address;
 
@@ -747,9 +774,6 @@ int flowps_newflow_callback(FLOW_POSITION position, FLOW *flowp,
      */
     if(current_entry->position == TRACKER_ACTIVE && tr_pos == TRACKER_SCANNER)
     {
-        int ret;
-
-        
         //flow_printf("moving this one! (cur %d) -> (new %d) %s\n",
         //current_entry->position, tr_pos, inet_ntoa(*(struct in_addr *) address));
 
@@ -893,7 +917,7 @@ static int score_entry_sprint(unsigned char *buf, int buflen, SCORE_ENTRY *sep, 
     int printed = 0; /* tmp */
     int total_printed = 0;
     int remaining = buflen;
-    int i;
+    u_int32_t i;
     
     if(buf && buflen > 0 && sep && address)
     {
@@ -1044,25 +1068,12 @@ static int flowps_init_pkt(void)
     const char *flow_portscan_mac_addr = "MACDADDY";
     const char twiddlebytes = 2;
 
-    p = calloc(1,sizeof(Packet));
+    p = (Packet *)SnortAlloc(sizeof(Packet));
 
-    if(!p)
-    {
-        flow_fatalerror("Unable to alloc memory for the flow-portscan packet!\n");
-    }
+    p->pkth = (struct pcap_pkthdr *)SnortAlloc(sizeof(struct pcap_pkthdr) + ETHERNET_HEADER_LEN +
+                                               twiddlebytes + IP_MAXPACKET);
 
-    p->pkth = calloc(1,
-                     sizeof(struct pcap_pkthdr) + ETHERNET_HEADER_LEN
-                     + twiddlebytes + IP_MAXPACKET);
-
-    if(!p->pkth)
-    {
-        flow_fatalerror("Unable to alloc memory for the flow-portscan packet!\n");
-    }
-    else
-    {
-        p->pkth = (struct pcap_pkthdr *) (((u_int8_t *) p->pkth) + twiddlebytes);
-    }
+    p->pkth = (struct pcap_pkthdr *) (((u_int8_t *) p->pkth) + twiddlebytes);
 
     p->pkt  =  ((u_int8_t *)p->pkth) + sizeof(SnortPktHeader);
     p->eh   =   (EtherHdr *)((u_int8_t *)p->pkt);

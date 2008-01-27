@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_eo_log.c
 **
@@ -64,9 +85,7 @@ static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
     {HI_EO_CLIENT_PROXY_USE, HI_EO_LOW_PRIORITY,
         HI_EO_CLIENT_PROXY_USE_STR },
     {HI_EO_CLIENT_WEBROOT_DIR, HI_EO_HIGH_PRIORITY,
-        HI_EO_CLIENT_WEBROOT_DIR_STR },
-    { HI_EO_CLIENT_CR_IN_URI, HI_EO_MED_PRIORITY,
-        HI_EO_CLIENT_CR_IN_URI_STR },
+        HI_EO_CLIENT_WEBROOT_DIR_STR }
 };
 
 static HI_EVENT_INFO anom_server_event_info[HI_EO_ANOM_SERVER_EVENT_NUM] = {
@@ -106,6 +125,11 @@ int hi_eo_anom_server_event_log(HI_SESSION *Session, int iEvent, void *data,
 
     anom_server_events = &(Session->anom_server.event_list);
 
+    /* this won't happen since iEvent < HI_EO_ANOM_SERVER_EVENT_NUM and
+     * stack_count can at most equal HI_EO_ANOM_SERVER_EVENT_NUM */
+    if (anom_server_events->stack_count > HI_EO_ANOM_SERVER_EVENT_NUM)
+        return HI_INVALID_ARG;
+
     /*
     **  This is where we cycle through the current event stack.  If the event
     **  to be logged is already in the queue, then we increment the event
@@ -121,6 +145,11 @@ int hi_eo_anom_server_event_log(HI_SESSION *Session, int iEvent, void *data,
             return HI_SUCCESS;
         }
     }
+
+    /* this won't happen since iEvent will have been found above
+     * before this happens */
+    if (anom_server_events->stack_count >= HI_EO_ANOM_SERVER_EVENT_NUM)
+        return HI_INVALID_ARG;
 
     /*
     **  Initialize the event before putting it in the queue.

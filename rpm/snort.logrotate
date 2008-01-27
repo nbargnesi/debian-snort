@@ -1,11 +1,12 @@
 # /etc/logrotate.d/snort
-# $Id: snort.logrotate,v 1.1.2.1 2004/11/10 23:20:32 jhewlett Exp $
+# $Id$
 
 /var/log/snort/alert /var/log/snort/*log /var/log/snort/*/alert /var/log/snort/*/*log  {
     daily
     rotate 7
     missingok
     compress
+    sharedscripts
     postrotate
 	/etc/init.d/snortd restart 1>/dev/null || true
     endscript

@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_log_tcpdump.c,v 1.38 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id$ */
 
 /* spo_log_tcpdump 
  * 
@@ -66,6 +67,9 @@
 
 #include "snort.h"
 
+/* For the traversal of reassembled packets */
+#include "stream_api.h"
+
 typedef struct _LogTcpdumpData
 {
     char *filename;
@@ -78,6 +82,7 @@ typedef struct _LogTcpdumpData
 void LogTcpdumpInit(u_char *);
 LogTcpdumpData *ParseTcpdumpArgs(char *);
 void LogTcpdump(Packet *, char *, void *, Event *);
+void TcpdumpInitLogFileFinalize(int unused, void *arg);
 void TcpdumpInitLogFile(LogTcpdumpData *);
 void SpoLogTcpdumpCleanExitFunc(int, void *);
 void SpoLogTcpdumpRestartFunc(int, void *);
@@ -136,10 +141,11 @@ void LogTcpdumpInit(u_char *args)
     pv.log_plugin_active = 1;
 
     /* parse the argument list from the rules file */
-    data = ParseTcpdumpArgs(args);
+    data = ParseTcpdumpArgs((char *)args);
     log_tcpdump_ptr = data;
 
-    TcpdumpInitLogFile(data);
+    //TcpdumpInitLogFile(data);
+    AddFuncToPostConfigList(TcpdumpInitLogFileFinalize, data);
 
     pv.log_bitmap |= LOG_TCPDUMP;
 
@@ -168,7 +174,7 @@ LogTcpdumpData *ParseTcpdumpArgs(char *args)
 {
     LogTcpdumpData *data;
 
-    data = (LogTcpdumpData *) calloc(1, sizeof(LogTcpdumpData));
+    data = (LogTcpdumpData *) SnortAlloc(sizeof(LogTcpdumpData));
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Args: %s<>\n", args););
 
@@ -183,6 +189,11 @@ LogTcpdumpData *ParseTcpdumpArgs(char *args)
     else
     {
         data->filename = strdup("snort.log");
+    }
+
+    if (!data->filename)
+    {
+        FatalError("Unable to allocate memory for tcpdump log filename\n");
     }
 
     return data;
@@ -237,28 +248,36 @@ void LogTcpdumpSingle(Packet *p, char *msg, void *arg, Event *event)
     }
 }
 
+int LogTcpdumpStreamCallback(SnortPktHeader *pkth, u_int8_t *packet_data,
+        void *userdata)
+{
+    LogTcpdumpData *data = (LogTcpdumpData *)userdata;
+    struct pcap_pkthdr pcap_pkth;
+
+    pcap_pkth.ts.tv_sec = (time_t)pkth->ts.tv_sec;
+#if defined(LINUX) || defined(SOLARIS) || defined(FREEBSD)
+    pcap_pkth.ts.tv_usec = (suseconds_t)pkth->ts.tv_usec;
+#else /* WIN32, OpenBSD */
+    pcap_pkth.ts.tv_usec = (long)pkth->ts.tv_usec;
+#endif
+    pcap_pkth.caplen = (bpf_u_int32)pkth->caplen;
+    pcap_pkth.len = (bpf_u_int32)pkth->pktlen;
+
+    pcap_dump((u_char *)data->dumpd, 
+              &pcap_pkth, 
+              (u_char *) packet_data);
+
+    return 0;
+}
 
 void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
 {
     LogTcpdumpData *data = (LogTcpdumpData *)arg;
-    Stream *s = NULL;
-    StreamPacketData *spd;
 
     data->log_written = 1;
 
-    s = (Stream *) p->streamptr;
-
-    for(spd = (StreamPacketData *)ubi_btFirst((ubi_btNodePtr)&s->data);
-        spd;
-        spd = (StreamPacketData*)ubi_btNext((ubi_btNodePtr)spd))
-    {
-        if(spd->chuck != SEG_UNASSEMBLED)
-        {
-            pcap_dump((u_char *)data->dumpd, 
-                      (struct pcap_pkthdr *) &spd->pkth, 
-                      (u_char *) spd->pkt);
-        }
-    }
+    if (stream_api)
+        stream_api->traverse_reassembled(p, LogTcpdumpStreamCallback, data);
 
     if(!pv.line_buffer_flag)
     { 
@@ -271,6 +290,10 @@ void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
     }
 }
 
+void TcpdumpInitLogFileFinalize(int unused, void *arg)
+{
+    TcpdumpInitLogFile((LogTcpdumpData *)arg);
+}
 
 /*
  * Function: TcpdumpInitLogFile()
@@ -296,29 +319,32 @@ void TcpdumpInitLogFile(LogTcpdumpData *data)
     //strftime(timebuf,9,"%m%d@%H%M",loc_time);
 
     if(data->filename[0] == '/')
-        value = snprintf(logdir, STD_BUF-1, "%s.%lu", data->filename, 
-                (unsigned long)curr_time);
+        value = SnortSnprintf(logdir, STD_BUF, "%s.%lu", data->filename, 
+                              (unsigned long)curr_time);
     else
-        value = snprintf(logdir, STD_BUF-1, "%s/%s.%lu", pv.log_dir, 
-                data->filename, (unsigned long)curr_time);
+        value = SnortSnprintf(logdir, STD_BUF, "%s/%s.%lu", pv.log_dir, 
+                              data->filename, (unsigned long)curr_time);
 
-    if(value == -1)
+    if(value != SNORT_SNPRINTF_SUCCESS)
         FatalError("log file logging path and file name are too long\n");
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG, "Opening %s\n", logdir););
 
-    data->dumpd = pcap_dump_open(pd,logdir);
-    if(data->dumpd == NULL)
+    if(!pv.test_mode_flag)
     {
-        FatalError("log_tcpdump TcpdumpInitLogFile(): %s\n", strerror(errno));
-    }
+        data->dumpd = pcap_dump_open(pd,logdir);
+        if(data->dumpd == NULL)
+        {
+            FatalError("log_tcpdump TcpdumpInitLogFile(): %s\n", strerror(errno));
+        }
 
-    /* keep a copy of the filename for later reference */
-    if(data->filename != NULL)
-    {
-        bzero( data->filename, strlen(data->filename) );
-        free(data->filename);
-        data->filename = strdup(logdir);
+        /* keep a copy of the filename for later reference */
+        if(data->filename != NULL)
+        {
+            bzero( data->filename, strlen(data->filename) );
+            free(data->filename);
+            data->filename = strdup(logdir);
+        }
     }
 
     return;
@@ -354,9 +380,17 @@ void SpoLogTcpdumpCleanExitFunc(int signal, void *arg)
      * if we haven't written any data, dump the output file so there aren't
      * fragments all over the disk 
      */
-    if(data->filename!=NULL && pc.alert_pkts==0 && pc.log_pkts==0)
+    if(!pv.test_mode_flag && data->filename!=NULL && pc.alert_pkts==0 && pc.log_pkts==0)
     {
-        unlink(data->filename);
+        int ret;
+
+        ret = unlink(data->filename);
+
+        if (ret != 0)
+        {
+            ErrorMessage("Could not remove tcpdump output file %s: %s\n",
+                         data->filename, strerror(errno));
+        }
     }
 
     /* free up initialized memory */
@@ -400,7 +434,15 @@ void SpoLogTcpdumpRestartFunc(int signal, void *arg)
      */
     if(data->filename!=NULL && pc.alert_pkts==0 && pc.log_pkts==0)
     {
-        unlink(data->filename);
+        int ret;
+
+        ret = unlink(data->filename);
+
+        if (ret != 0)
+        {
+            ErrorMessage("Could not remove tcpdump output file %s: %s\n",
+                         data->filename, strerror(errno));
+        }
     }
 
     if( data->filename != NULL )

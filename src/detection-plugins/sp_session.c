@@ -1,12 +1,13 @@
-/* $Id: sp_session.c,v 1.29 2004/01/13 22:54:46 jh8 Exp $ */
+/* $Id$ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -229,18 +230,21 @@ int LogSessionData(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     FILE *session;         /* session file ptr */
 
     /* if there's data in this packet */
-    if((p != NULL && p->dsize != 0 && p->data != NULL) || p->frag_flag != 1)
-    {
-        session = OpenSessionFile(p);
-
-        if(session == NULL)
+    if(p != NULL) 
+    { 
+        if((p->dsize != 0 && p->data != NULL) || p->frag_flag != 1)
         {
-            return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+             session = OpenSessionFile(p);
+
+             if(session == NULL)
+             {
+                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+             }
+
+             DumpSessionData(session, p, otn);
+
+             fclose(session);
         }
-
-        DumpSessionData(session, p, otn);
-
-        fclose(session);
     }
 
     return fp_list->next->OptTestFunc(p, otn, fp_list->next);
@@ -320,17 +324,17 @@ FILE *OpenSessionFile(Packet *p)
     {
         if((p->iph->ip_src.s_addr & pv.netmask) != pv.homenet)
         {
-            sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
             }
             else
             {
-                sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
             }
         }
     }
@@ -338,17 +342,17 @@ FILE *OpenSessionFile(Packet *p)
     {
         if((p->iph->ip_src.s_addr & pv.netmask) == pv.homenet)
         {
-            sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
             }
             else
             {
-                sprintf(log_path, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
             }
         }
     }
@@ -366,17 +370,17 @@ FILE *OpenSessionFile(Packet *p)
     if(p->sp >= p->dp)
     {
 #ifdef WIN32
-        sprintf(session_file, "%s/SESSION_%d-%d", log_path, p->sp, p->dp);
+        SnortSnprintf(session_file, STD_BUF, "%s/SESSION_%d-%d", log_path, p->sp, p->dp);
 #else
-        sprintf(session_file, "%s/SESSION:%d-%d", log_path, p->sp, p->dp);
+        SnortSnprintf(session_file, STD_BUF, "%s/SESSION:%d-%d", log_path, p->sp, p->dp);
 #endif
     }
     else
     {
 #ifdef WIN32
-        sprintf(session_file, "%s/SESSION_%d-%d", log_path, p->dp, p->sp);
+        SnortSnprintf(session_file, STD_BUF, "%s/SESSION_%d-%d", log_path, p->dp, p->sp);
 #else
-        sprintf(session_file, "%s/SESSION:%d-%d", log_path, p->dp, p->sp);
+        SnortSnprintf(session_file, STD_BUF, "%s/SESSION:%d-%d", log_path, p->dp, p->sp);
 #endif
     }
 

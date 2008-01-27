@@ -3,9 +3,10 @@
 ** Author(s):   Andrew R. Baker <andrewb@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,10 +24,13 @@
 #include "util.h"
 #include "rules.h"
 #include "mstring.h"
+#include "sfutil/sfghash.h"
 
 extern char *file_name;
 extern int file_line;
 
+SFGHASH * soid_sg_otn_map = NULL;
+SFGHASH * sg_rule_otn_map = NULL;
 
 /********************* Reference Implementation *******************************/
 
@@ -41,18 +45,15 @@ ReferenceNode *AddReference(ReferenceNode *rn, char *system, char *id)
     }
     
     /* create the new node */
-    if(!(newNode = (ReferenceNode *)malloc(sizeof(ReferenceNode))))
-    {
-        FatalError("Out of memory in AddReference\n");
-    }
-    memset(newNode, 0, sizeof(ReferenceNode));
+    newNode = (ReferenceNode *)SnortAlloc(sizeof(ReferenceNode));
     
     /* lookup the reference system */
-    if(!(newNode->system = ReferenceSystemLookup(system)))
+    newNode->system = ReferenceSystemLookup(system);
+    if (!newNode->system)
     {
         newNode->system = ReferenceSystemAdd(system, NULL);
     }
-    newNode->id = strdup(id);
+    newNode->id = SnortStrdup(id);
     
     /* add the node to the list */
     newNode->next = rn;
@@ -84,7 +85,7 @@ void FPrintReference(FILE *fp, ReferenceNode *refNode)
 
 void ParseReference(char *args, OptTreeNode *otn)
 {
-    char **toks;
+    char **toks, *system, *id;
     int num_toks;
 
     /* 2 tokens: system, id */
@@ -96,7 +97,15 @@ void ParseReference(char *args, OptTreeNode *otn)
     }
     else
     {
-    otn->sigInfo.refs = AddReference(otn->sigInfo.refs, toks[0], toks[1]);
+        system = toks[0];
+        while ( isspace((int) *system) )
+            system++;
+
+        id = toks[1];
+        while ( isspace((int) *id) )
+            id++;
+            
+        otn->sigInfo.refs = AddReference(otn->sigInfo.refs, system, id);
     }
 
     mSplitFree(&toks, num_toks);
@@ -121,15 +130,11 @@ ReferenceSystemNode *ReferenceSystemAdd(char *name, char *url)
     }
 
     /* create the new node */
-    if(!(newNode = (ReferenceSystemNode *)malloc(sizeof(ReferenceSystemNode))))
-    {
-        FatalError("Out of memory in AddReferenceSystem\n");
-    }
-    memset(newNode, 0, sizeof(ReferenceSystemNode));
+    newNode = (ReferenceSystemNode *)SnortAlloc(sizeof(ReferenceSystemNode));
 
-    newNode->name = strdup(name);
+    newNode->name = SnortStrdup(name);
     if(url)
-        newNode->url = strdup(url);
+        newNode->url = SnortStrdup(url);
     else
         newNode->url = NULL;
 
@@ -204,6 +209,29 @@ void ParseSID(char *sid, OptTreeNode *otn)
     return;
 }
 
+void ParseGID(char *gid, OptTreeNode *otn)
+{
+    if(gid != NULL)
+    {
+        while(isspace((int)*gid)) { gid++; }
+
+        if(isdigit((int)gid[0]))
+        {
+            otn->sigInfo.generator = atoi(gid);
+            otn->event_data.sig_generator = atoi(gid);
+            return;
+        }
+
+        LogMessage("WARNING %s(%d) => Bad GID found: %s\n", file_name, 
+                file_line, gid);
+        return;
+    }
+
+    LogMessage("WARNING %s(%d) => GID found without ID number\n", file_name, 
+               file_line);
+
+    return;
+}
 void ParseRev(char *rev, OptTreeNode *otn)
 {
     if(rev != NULL)
@@ -264,6 +292,127 @@ void ParsePriority(char *priority, OptTreeNode *otn)
     return;
 }
 
+/*
+ *  metdadata: key value, key value, key value, ...;
+ *
+ *  This option may be used one or more times.
+ *
+ *  engine shared
+ *  soid   gid|sid    (pipe is the required separator, not an or operator iin this case)
+ *  rule-type decode | preproc | detect    (default = detect)
+ *  rule-flushing enabled | disabled       (default = disabled)
+ */
+void ParseMetadata(char * metadata, OptTreeNode *otn)
+{
+    char * key;
+    char * value;
+    char **toks;
+    int num_toks;
+    char *endPtr;
+    
+    if( !metadata )
+    {
+        LogMessage("WARNING %s(%d) => Metadata without an argument!\n", 
+            file_name,file_line);
+        return;
+    }
+    
+    //printf("****metdata: %s\n",metadata);
+        
+    while(isspace((int)*metadata)) 
+        metadata++;
+    
+    if( !strlen(metadata) ) return;
+    
+    for( key = strtok(metadata," ");key; key=strtok(0," ") )
+    {
+        /* value */
+        value = strtok(0,",");
+        if( !value )
+        { /* error */
+            FatalError("%s(%d)=> Metadata Key '%s' Missing a Value\n",
+                       file_name, file_line, key);
+        }
+        // printf("***metdata-key:%s, value:%s\n",key,value);
+
+        /* 
+         * process key/valuies 
+         */
+        if( strcmp(key,"engine")==0 )
+        {
+            if( strcmp(value,"shared")==0 )
+            {
+                otn->sigInfo.shared = 1;
+            }
+        }
+        /* this should follow 'rule-type' since it changes rule_flusing defaults set by rule-type */
+        else if( strcmp(key,"rule-flushing")==0 )
+        {
+            if(  strcmp(value,"enabled")==0 ||
+                 strcmp(value,"on")==0 )
+            {
+                otn->sigInfo.rule_flushing= SI_RULE_FLUSHING_ON;
+            }
+            else if( strcmp(value,"disabled")==0 ||
+                     strcmp(value,"off")==0 )
+            {
+                otn->sigInfo.rule_flushing = SI_RULE_FLUSHING_OFF;
+            }
+            else
+            {
+               /* error */
+               FatalError("%s(%d)=> Metadata Key 'rule-type', passed an invalid value '%s'\n",
+                    file_name, file_line, value);
+            }
+        }
+        else if( strcmp(key,"rule-type")==0 )
+        {
+            if( strcmp(value,"preproc")==0 )
+            {
+                otn->sigInfo.rule_type= SI_RULE_TYPE_PREPROC;
+                otn->sigInfo.rule_flushing = SI_RULE_FLUSHING_OFF;
+            }
+            else if( strcmp(value,"decode")==0 )
+            {
+                otn->sigInfo.rule_type = SI_RULE_TYPE_DECODE;
+                otn->sigInfo.rule_flushing = SI_RULE_FLUSHING_OFF;
+            }
+            else if( strcmp(value,"detect")==0 )
+            {
+                otn->sigInfo.rule_type = SI_RULE_TYPE_DETECT;
+                otn->sigInfo.rule_flushing = SI_RULE_FLUSHING_ON;
+            }
+            else
+            {
+               /* error */
+               FatalError("%s(%d)=> Metadata Key 'rule-type', passed an invalid value '%s'\n",
+                    file_name, file_line, value);
+            }
+        }
+        else if (strcmp(key, "soid")==0 )
+        {
+            /* value is a : separated pair of gid:sid representing
+             * the GID/SID of the original rule.  This is used when
+             * the rule is duplicated rule by a user with different
+             * IP/port info.
+             */
+            toks = mSplit(value, "|", 2, &num_toks, 0);
+            if (num_toks != 2)
+            {
+                FatalError("%s(%d)=> Metadata Key '%s' Invalid Value."
+                    "Must be a pipe (|) separated pair.\n",
+                    file_name, file_line, key);
+            }
+
+            otn->sigInfo.otnKey.generator = strtoul(toks[0], &endPtr, 10);
+            otn->sigInfo.otnKey.id = strtoul(toks[1], &endPtr, 10);
+            mSplitFree(&toks, num_toks);
+        }
+    }
+
+    return;
+}
+
 
 void ParseClassType(char *classtype, OptTreeNode *otn)
 {
@@ -275,7 +424,8 @@ void ParseClassType(char *classtype, OptTreeNode *otn)
 
         if(strlen(classtype) > 0)
         {
-            if((classType = ClassTypeLookupByType(classtype)))
+            classType = ClassTypeLookupByType(classtype);
+            if (classType)
             {
                 otn->sigInfo.classType = classType;
 
@@ -351,21 +501,17 @@ void ParseClassificationConfig(char *args)
     else
     {
         /* create the new node */
-        if(!(newNode = (ClassType *)malloc(sizeof(ClassType))))
-        {
-            FatalError("Out of memory in ParseClassificationConfig\n");
-        }
-        memset(newNode, 0, sizeof(ClassType));
+        newNode = (ClassType *)SnortAlloc(sizeof(ClassType));
 
         data = toks[0];
         while(isspace((int)*data)) 
             data++;
-        newNode->type = strdup(data);   /* XXX: oom check */
+        newNode->type = SnortStrdup(data);   /* XXX: oom check */
 
         data = toks[1];
         while(isspace((int)*data))
             data++;
-        newNode->name = strdup(data);   /* XXX: oom check */
+        newNode->name = SnortStrdup(data);   /* XXX: oom check */
 
         data = toks[2];
         while(isspace((int)*data))
@@ -421,6 +567,96 @@ int AddClassificationConfig(ClassType *newNode)
 
     return newNode->id;
 }
+
+static OptTreeNode *soidOTN;
         
+OptTreeNode * soid_sg_otn_lookup( u_int32_t gid, u_int32_t sid )
+{
+    OptTreeNode * otn = NULL;
+    sg_otn_key_t  key;
+
+    key.generator=gid;
+    key.id       =sid;
+    soidOTN = otn = (OptTreeNode*) sfghash_find(soid_sg_otn_map,&key);
+    return otn;
+}
+
+OptTreeNode * soid_sg_otn_lookup_next( u_int32_t gid, u_int32_t sid )
+{
+    OptTreeNode * otn = NULL;
+
+    if (soidOTN)
+    {
+        otn = soidOTN->nextSoid;
+        soidOTN = soidOTN->nextSoid;
+    }
+
+    return otn;
+}
+
+int soid_otn_lookup_init()
+{
+    if (!soid_sg_otn_map)
+    {
+        soid_sg_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,free);
+        if (!soid_sg_otn_map)
+            return -1;
+    }
+    return 0;
+}
+
+void soid_otn_lookup_add( OptTreeNode * otn_tmp )
+{
+    if (otn_tmp->sigInfo.otnKey.generator == 0)
+    {
+         otn_tmp->sigInfo.otnKey.generator= otn_tmp->sigInfo.generator;
+         otn_tmp->sigInfo.otnKey.id = otn_tmp->sigInfo.id;
+    }
+    if (sfghash_add(soid_sg_otn_map,&(otn_tmp->sigInfo.otnKey),otn_tmp) == SFGHASH_INTABLE)
+    {
+         OptTreeNode *otn_original = soid_sg_otn_map->cnode->data;
+         if (!otn_original)
+         {
+             /* */
+             FatalError("Missing Duplicate\n");
+         }
+         while (otn_original->nextSoid)
+         {
+             otn_original = otn_original->nextSoid;
+         }
+         otn_original->nextSoid = otn_tmp;
+    }
+}
+
+int otn_lookup_init()
+{
+    if (!sg_rule_otn_map)
+    {
+        sg_rule_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,free);
+        if (!sg_rule_otn_map)
+            return -1;
+    }
+    return 0;
+}
+void otn_lookup_add( OptTreeNode * otn )
+{
+    sg_otn_key_t key;
+    
+    key.generator = otn->sigInfo.generator;
+    key.id = otn->sigInfo.id;
+
+    sfghash_add(sg_rule_otn_map, &key, otn);
+}
+
+OptTreeNode * otn_lookup( u_int32_t gid, u_int32_t sid )
+{
+    OptTreeNode * otn;
+    sg_otn_key_t  key;
+
+    key.generator=gid;
+    key.id       =sid;
+    otn = (OptTreeNode*) sfghash_find(sg_rule_otn_map,&key);
+    return otn;
+}
         
 /***************** End of Class/Priority Implementation ***********************/

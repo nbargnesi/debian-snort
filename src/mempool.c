@@ -1,11 +1,12 @@
-/* $Id: mempool.c,v 1.7 2004/03/23 15:34:45 chris_reid Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,7 +37,7 @@
  * memory pool aside from the concerns of alloc/free
  */
 
-/* $Id: mempool.c,v 1.7 2004/03/23 15:34:45 chris_reid Exp $ */
+/* $Id$ */
 #include "mempool.h"
 
 /* Function: int mempool_init(MemPool *mempool,
@@ -176,7 +177,9 @@ int mempool_destroy(MemPool *mempool)
     if(mempool == NULL)
         return 1;
 
+    free(mempool->datapool);
     free(mempool->listpool);
+    free(mempool->bucketpool);
 
     /* TBD - callback to free up every stray pointer */
     bzero(mempool, sizeof(MemPool));

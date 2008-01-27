@@ -1,12 +1,13 @@
-/* $Id: spo_alert_unixsock.c,v 1.26 2004/01/13 22:54:46 jh8 Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -272,7 +273,7 @@ void OpenAlertSock(void)
     char srv[STD_BUF];
 
     /* srv is our filename workspace. Set it to file UNSOCK_FILE inside the log directory. */
-    snprintf(srv, STD_BUF - 1, "%s%s/%s", pv.chroot_dir == NULL ? "" : pv.chroot_dir, pv.log_dir, UNSOCK_FILE);
+    SnortSnprintf(srv, STD_BUF, "%s%s/%s", pv.chroot_dir == NULL ? "" : pv.chroot_dir, pv.log_dir, UNSOCK_FILE);
 
     if(access(srv, W_OK))
     {

@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2004-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 #ifndef __ASN1_H__
 #define __ASN1_H__
 
@@ -73,7 +94,7 @@ typedef struct s_ASN1_LEN
 
 typedef struct s_ASN1_IDENT
 {
-    unsigned char  class;
+    unsigned char  asn1_class;
     unsigned char  flag;
     unsigned char  tag_type;
     unsigned int   tag;
@@ -122,6 +143,7 @@ typedef struct s_ASN1_DATA
 #define ASN1_ERR_STACK               -8
 
 int asn1_init_mem(int iNodes);
+void asn1_free_mem();
 int asn1_decode(unsigned char *data, unsigned int len, ASN1_TYPE **asn1_type);
 int asn1_print_types(ASN1_TYPE *asn1_type, void *user);
 int asn1_traverse(ASN1_TYPE *asn1, void * user, 

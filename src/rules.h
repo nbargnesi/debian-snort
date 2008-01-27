@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: rules.h,v 1.40.2.1 2004/10/05 18:55:18 jhewlett Exp $ */
+/* $Id$ */
 #ifndef __RULES_H__
 #define __RULES_H__
 
@@ -56,6 +57,12 @@
 #define RULE_DROP        14
 #define RULE_SDROP       15
 #define RULE_REJECT      16
+#define RULE_STATE       17
+#ifdef DYNAMIC_PLUGIN
+#define RULE_DYNAMICENGINE 18
+#define RULE_DYNAMICDETECTION 19
+#define RULE_DYNAMICPREPROCESSOR 20
+#endif
 
 #define EXCEPT_SRC_IP  0x01
 #define EXCEPT_DST_IP  0x02
@@ -102,7 +109,11 @@
 #define DST                  1
 
 #ifndef PARSERULE_SIZE
-#define PARSERULE_SIZE	     8192
+#define PARSERULE_SIZE	     65535
+#endif
+
+#ifndef UINT64
+#define UINT64 unsigned long long
 #endif
 
 /*  D A T A  S T R U C T U R E S  *********************************************/
@@ -135,6 +146,8 @@ typedef struct _OptFpList
     int (*OptTestFunc)(Packet *, struct _OptTreeNode *, struct _OptFpList *);
 
     struct _OptFpList *next;
+
+    unsigned char isRelative;
 
 } OptFpList;
 
@@ -210,6 +223,22 @@ typedef struct _OptTreeNode
 
     struct _OptTreeNode *next;
     struct _RuleTreeNode *rtn;
+
+    struct _OptTreeNode *nextSoid;
+
+    u_int8_t failedCheckBits;
+
+    int rule_state; /* Enabled or Disabled */
+
+#ifdef PERF_PROFILING
+    UINT64 ticks;
+    UINT64 ticks_match;
+    UINT64 ticks_no_match;
+    UINT64 checks;
+    UINT64 matches;
+    UINT64 alerts;
+    u_int8_t noalerts; 
+#endif
 
 } OptTreeNode;
 

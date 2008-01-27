@@ -1,10 +1,30 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2004-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /*
 **   ACSMX2.H 
 **
 **   Version 2.0
 **
-**   Copyright (C) 2002,2003,2004 Marc Norton
-**   Copyright (C) 2003,2004 Sourcefire,Inc.
+**   Author: Marc Norton
 */
 
 #include <stdio.h>
@@ -22,6 +42,12 @@
 
 #define inline __inline
 
+#else
+#ifdef inline
+#undef inline
+#endif
+
+#define inline 
 #endif
 
 /*
@@ -112,10 +138,10 @@ enum {
 */
 typedef struct {
   
-	int acsmMaxStates;  
-	int acsmNumStates;  
+    int acsmMaxStates;  
+    int acsmNumStates;  
 
-	ACSM_PATTERN2    * acsmPatterns;
+    ACSM_PATTERN2    * acsmPatterns;
         acstate_t        * acsmFailState;
         ACSM_PATTERN2   ** acsmMatchList;
 
@@ -129,7 +155,7 @@ typedef struct {
         int          acsmSparseMaxRowNodes;
         int          acsmSparseMaxZcnt;
         
-	int          acsmNumTrans;
+        int          acsmNumTrans;
         int          acsmAlphabetSize;
         int          acsmFSA;
 
@@ -138,13 +164,13 @@ typedef struct {
 /*
 *   Prototypes
 */
-ACSM_STRUCT2 * acsmNew2 ();
+ACSM_STRUCT2 * acsmNew2 (void);
 int acsmAddPattern2( ACSM_STRUCT2 * p, unsigned char * pat, int n,
                     int nocase, int offset, int depth, void *  id, int iid );
 int acsmCompile2 ( ACSM_STRUCT2 * acsm );
 int acsmSearch2 ( ACSM_STRUCT2 * acsm,unsigned char * T, int n, 
-		  int (*Match)( void * id, int index, void * data ),
-                  void * data );
+          int (*Match)( void * id, int index, void * data ),
+                  void * data, int* current_state );
 void acsmFree2 ( ACSM_STRUCT2 * acsm );
 
 
@@ -154,11 +180,11 @@ int  acsmSelectFSA2( ACSM_STRUCT2 * acsm, int fsa );
 void acsmSetMaxSparseBandZeros2( ACSM_STRUCT2 * acsm, int n );
 void acsmSetMaxSparseElements2( ACSM_STRUCT2 * acsm, int n );
 int  acsmSetAlphabetSize2( ACSM_STRUCT2 * acsm, int n );
-void acsmSetVerbose2(int n);
+void acsmSetVerbose2(void);
 
 void acsmPrintInfo2( ACSM_STRUCT2 * p);
 
 int acsmPrintDetailInfo2(ACSM_STRUCT2*);
-int acsmPrintSummaryInfo2();
+int acsmPrintSummaryInfo2(void);
 
 #endif

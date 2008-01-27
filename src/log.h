@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: log.h,v 1.23 2003/10/20 15:03:19 chrisgreen Exp $ */
+/* $Id$ */
 #ifndef __LOG_H__
 #define __LOG_H__
 
@@ -60,10 +61,11 @@ void PrintArpHeader(FILE *, Packet *);
 void PrintIPHeader(FILE *, Packet *);
 void PrintEapolHeader(FILE *, Packet *);
 void PrintTCPHeader(FILE *, Packet *);
-void PrintEmbeddedTCPHeader(FILE *, Packet *, int);
 void PrintTcpOptions(FILE *, Packet *);
 void PrintIpOptions(FILE *, Packet *);
 void PrintICMPHeader(FILE *, Packet *);
+void PrintICMPEmbeddedIP(FILE *, Packet *);
+void PrintEmbeddedICMPHeader(FILE *, ICMPHdr *);
 void PrintUDPHeader(FILE *, Packet *);
 void PrintEAPHeader(FILE *, Packet *);
 void PrintPriorityData(FILE *, int);

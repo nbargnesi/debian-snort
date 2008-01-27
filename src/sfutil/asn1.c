@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2004-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       asn1.c
 **
@@ -5,7 +26,7 @@
 **
 **  @brief      ASN.1 Decoding API for BER and DER encodings.
 **
-**  Copyright (C) 2004, Daniel Roelker and Sourcefire, Inc.
+**  Author: Daniel Roelker
 **
 **  ASN.1 decoding functions that incorporate an internal stack for
 **  processing.  That way we don't have to worry about attackers trying
@@ -108,18 +129,41 @@ int asn1_init_mem(int iNodes)
         return ASN1_ERR_INVALID_ARG;
 
     /*
-    **  This makes sure that we don't initialize multipl times.
+    **  This makes sure that we don't initialize multiple times.
     */
     if(g_asn1_mem && g_asn1_max_nodes > 0)
         return ASN1_OK;
         
-    g_asn1_mem = (ASN1_TYPE *)malloc(sizeof(ASN1_TYPE)*iNodes);
+    g_asn1_mem = (ASN1_TYPE *)calloc(1,sizeof(ASN1_TYPE)*iNodes);
     if(!g_asn1_mem)
         return ASN1_ERR_MEM_ALLOC;
 
     g_asn1_max_nodes = iNodes;
 
     return ASN1_OK;
+}
+/*
+**  NAME
+**    asn1_free_mem::
+*/
+/**
+**  This function frees the number of nodes that we were tracking in
+**  an ASN.1 decode.
+**
+**  @return none
+**
+*/
+void asn1_free_mem()
+{
+    /*
+    **  This makes sure that we don't free garbage.
+    */
+    if(g_asn1_mem)
+    {
+        free(g_asn1_mem);
+        g_asn1_mem = NULL;
+    }
+    g_asn1_max_nodes = 0;
 }
 
 /*
@@ -205,7 +249,7 @@ static int asn1_decode_ident(ASN1_TYPE *asn1_type, ASN1_DATA *asn1_data)
 
     ident = &asn1_type->ident;
 
-    ident->class = SF_ASN1_CLASS(*asn1_data->data);
+    ident->asn1_class = SF_ASN1_CLASS(*asn1_data->data);
     ident->flag  = SF_ASN1_FLAG(*asn1_data->data);
     ident->tag   = SF_ASN1_TAG(*asn1_data->data);
 
@@ -363,7 +407,7 @@ static int asn1_decode_len(ASN1_TYPE *asn1_type, ASN1_DATA *asn1_data)
 
     len = &asn1_type->len;
 
-    len->type = asn1_decode_len_type(asn1_data->data);
+    len->type = (unsigned char)asn1_decode_len_type(asn1_data->data);
 
     switch(len->type)
     {
@@ -432,7 +476,7 @@ static int asn1_is_eoc(ASN1_TYPE *asn1)
     if(!asn1)
         return 0;
 
-    if(asn1->ident.class == 0x00 && asn1->ident.flag == 0x00 && 
+    if(asn1->ident.asn1_class == 0x00 && asn1->ident.flag == 0x00 && 
        asn1->ident.tag == 0x00 && asn1->len.type == SF_BER_LEN_DEF_SHORT &&
        asn1->len.size == 0)
     {
@@ -928,8 +972,8 @@ int asn1_traverse(ASN1_TYPE *asn1, void *user,
 */
 int asn1_print_types(ASN1_TYPE *asn1_type, void *user)
 {
-    int iTabs = 0;
-    int iCtr;
+    unsigned int iTabs = 0;
+    unsigned int iCtr;
 
     if(user)
         iTabs = *((int *)user);
@@ -942,8 +986,8 @@ int asn1_print_types(ASN1_TYPE *asn1_type, void *user)
     for(iCtr = 0; iCtr < iTabs; iCtr++)
         printf("    ");
 
-    printf("IDENT - class: %.2x | flag: %.2x | tag_type: %.2x | "
-           "tag_num: %d\n", asn1_type->ident.class, asn1_type->ident.flag,
+    printf("IDENT - asn1_class: %.2x | flag: %.2x | tag_type: %.2x | "
+           "tag_num: %d\n", asn1_type->ident.asn1_class, asn1_type->ident.flag,
            asn1_type->ident.tag_type, asn1_type->ident.tag);
 
     for(iCtr = 0; iCtr < iTabs; iCtr++)
@@ -1043,10 +1087,9 @@ int main(int argc, char **argv)
 
     buf_size >>= 1;
 
-    buf = (char *)malloc(buf_size + 1);
+    buf = (char *)calloc(1,buf_size + 1);
     if(!buf)
     {
-        printf("** Bad malloc\n");
         return 1;
     }
 

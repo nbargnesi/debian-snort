@@ -8,10 +8,10 @@
 --
 --  Maintainer: Roman Danyliw <rdd@cert.org>, <roman@danyliw.com>
 --
---  This program is free software; you can redistribute it and/or modify
---  it under the terms of the GNU General Public License as published by
---  the Free Software Foundation; either version 2 of the License, or
---  (at your option) any later version.
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation.  You may not use, modify or distribute
+-- this program under any other version of the GNU General Public License.
 --
 --  This program is distributed in the hope that it will be useful,
 --  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,7 +49,7 @@ CREATE TABLE schema ( vseq        INT          NOT NULL,
                       ctime       VARCHAR2(24) NOT NULL,
                       PRIMARY KEY (vseq));
 
-INSERT INTO schema  (vseq, ctime) VALUES ('106', sysdate);
+INSERT INTO schema  (vseq, ctime) VALUES ('107', sysdate);
 
 prompt event;
 drop table event;
@@ -67,6 +67,7 @@ CREATE TABLE signature ( sig_id   INT           NOT NULL,
                          sig_priority INT,
                          sig_rev      INT,
                          sig_sid      INT,
+                         sig_gid      INT,
                          PRIMARY KEY (sig_id));
 
 --

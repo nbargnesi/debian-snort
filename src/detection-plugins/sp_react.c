@@ -1,13 +1,14 @@
-/* $Id: sp_react.c,v 1.23 2004/03/23 15:34:46 chris_reid Exp $ */
+/* $Id$ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Maciej Szarpak
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -51,7 +52,7 @@
 #include "config.h"
 #endif
 
-#ifdef ENABLE_RESPONSE
+#if defined(ENABLE_RESPONSE) || defined(ENABLE_REACT)
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -86,10 +87,15 @@ void ParseReact(char *, OptTreeNode *, ReactData *);
 int React(Packet *, RspFpList *);
 int SendTCP(u_long, u_long, u_short, u_short, int, int, u_char, const u_char *,
                     int);
+#if defined(ENABLE_REACT) && !defined(ENABLE_RESPONSE)
+void ReactRestart(int signal, void *data);
+#endif
 
-
-
+#if defined(ENABLE_RESPONSE) && !defined(ENABLE_REACT)
 extern int nd; /* raw socket */
+#elif defined(ENABLE_REACT) && !defined(ENABLE_RESPONSE)
+int nd = -1;   /* raw socket */
+#endif
 
 
 /****************************************************************************
@@ -131,8 +137,10 @@ void SetupReact(void)
 void ReactInit(char *data, OptTreeNode *otn, int protocol)
 {
     ReactData *idx;
-
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"In ReactInit()\n"););
+#if defined(ENABLE_REACT) && !defined(ENABLE_RESPONSE)
+    AddFuncToRestartList(ReactRestart, NULL);
+#endif
 
     if(protocol != IPPROTO_TCP)
     {
@@ -183,6 +191,7 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
     ReactData *idx;
     char *tok;      /* token buffer */
     u_int buf_size; 
+    int ret;
 
     char tmp_buf1[] = "<HTML><HEAD><TITLE>Snort</TITLE></HEAD><BODY BGCOLOR=\"#FFFFFF\"><CENTER><BR><H1>Snort!</H1>Version ";
     char tmp_buf2[] = "<H1><BR><BR><FONT COLOR=\"#FF0000\">You are not authorized to open this site!</FONT><BR><BR></H1><H2>";
@@ -222,7 +231,7 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
 
                 tok = tok + 5;
                 
-                while(isspace(*tok))
+                while(isspace((int)(*tok)))
                     tok++;
 
                 idx->proxy_port_nr = strtoul(tok,&endp,10);
@@ -263,8 +272,7 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
         if(idx->reaction_flag == REACT_BLOCK)
         {
             /* count the respond buf size (max TCP_DATA_BUF) */
-            buf_size = strlen(tmp_buf1) + strlen(tmp_buf2) + strlen(tmp_buf3)
-                       + strlen(VERSION);
+            buf_size = strlen(tmp_buf1) + strlen(tmp_buf2) + strlen(tmp_buf3) + strlen(VERSION) + 1;
 
             if(buf_size > TCP_DATA_BUF)
             {
@@ -280,26 +288,31 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
                 }
 
                 /* create html response buffer */
-                if((idx->html_resp_buf=(char *)malloc(sizeof(char)*buf_size))==NULL)
+                idx->html_resp_buf = (char *)SnortAlloc(sizeof(char) * buf_size);
+
+                if (idx->html_resp_size == 1)
                 {
-                    FatalError("ParseReact() html_resp_buf malloc filed!\n");
+                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                                        "%s%s%s%s%s",
+                                        tmp_buf1, VERSION, tmp_buf2, otn->sigInfo.message, tmp_buf3);
                 }
-                bzero((char *)idx->html_resp_buf, buf_size);
-                tok = strcat(idx->html_resp_buf, tmp_buf1);
-                tok = strcat(idx->html_resp_buf, VERSION);
-                tok = strcat(idx->html_resp_buf, tmp_buf2);      
-                if(idx->html_resp_size == 1)
+                else
                 {
-                    tok = strcat(idx->html_resp_buf, otn->sigInfo.message);     
+                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                                        "%s%s%s%s",
+                                        tmp_buf1, VERSION, tmp_buf2, tmp_buf3);
                 }
-                tok = strcat(idx->html_resp_buf, tmp_buf3);      
+
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                {
+                    FatalError("%s(%d): SnortSnprintf failed\n", file_name, file_line);
+                }
             }
         }
         else if(idx->reaction_flag == REACT_WARN)
         {
             /* count the respond buf size (max TCP_DATA_BUF) */
-            buf_size = strlen(tmp_buf4) + strlen(tmp_buf5) + strlen(tmp_buf6)
-                       + strlen(VERSION);
+            buf_size = strlen(tmp_buf4) + strlen(tmp_buf5) + strlen(tmp_buf6) + strlen(VERSION) + 1;
 
             if(buf_size > TCP_DATA_BUF)
             {
@@ -310,25 +323,31 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
             {
                 /* msg included */
                 if((idx->html_resp_size == 1) && (buf_size + 
-                            strlen(otn->sigInfo.message) < TCP_DATA_BUF))
+                                                  strlen(otn->sigInfo.message) < TCP_DATA_BUF))
                 {
                     buf_size += strlen(otn->sigInfo.message);
                 }
 
                 /* create html response buffer */
-                if((idx->html_resp_buf=(char *)malloc(sizeof(char)*buf_size))==NULL)
+                idx->html_resp_buf = (char *)SnortAlloc(sizeof(char) * buf_size);
+
+                if (idx->html_resp_size == 1)
                 {
-                    FatalError("ParseReact() html_resp_buf malloc filed!\n");
+                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                                        "%s%s%s%s%s",
+                                        tmp_buf4, VERSION, tmp_buf5, otn->sigInfo.message, tmp_buf6);
                 }
-                bzero((char *)idx->html_resp_buf, buf_size);
-                tok = strcat(idx->html_resp_buf, tmp_buf4);
-                tok = strcat(idx->html_resp_buf, VERSION);
-                tok = strcat(idx->html_resp_buf, tmp_buf5);      
-                if(idx->html_resp_size == 1)
+                else
                 {
-                    tok = strcat(idx->html_resp_buf, otn->sigInfo.message);     
+                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                                        "%s%s%s%s",
+                                        tmp_buf4, VERSION, tmp_buf5, tmp_buf6);
                 }
-                tok = strcat(idx->html_resp_buf, tmp_buf6);      
+
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                {
+                    FatalError("%s(%d): SnortSnprintf failed\n", file_name, file_line);
+                }
             }
         }
 
@@ -510,4 +529,15 @@ int SendTCP(u_long saddr, u_long daddr, u_short sport, u_short dport, int seq,
 
 }
 
-#endif
+#if defined(ENABLE_REACT) && !defined(ENABLE_RESPONSE)
+void ReactRestart(int signal, void *data)
+{
+    if (nd != -1)
+    {
+        libnet_close_raw_sock(nd);
+        nd = -1;
+    }
+    return;
+}
+#endif /* ENABLE_REACT && !ENABLE_RESPONSE */
+#endif /* ENABLE_RESPONSE || ENABLE_REACT */

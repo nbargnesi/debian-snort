@@ -16,7 +16,6 @@ doc/README.sfportscan
 doc/README.thresholding
 doc/README.UNSOCK
 doc/README.wireless
-doc/RULES.todo
 doc/snort_schema_v106.pdf
 doc/snort_manual.pdf
 doc/faq.pdf

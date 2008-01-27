@@ -1,11 +1,12 @@
-/* $Id: event.h,v 1.9 2004/02/10 22:29:03 jh8 Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +35,8 @@
 #include <sys/time.h>
 #endif
 
+#include "snort_packet_header.h"
+
 typedef struct _Event
 {
     u_int32_t sig_generator;   /* which part of snort generated the alert? */
@@ -45,7 +48,11 @@ typedef struct _Event
     u_int32_t event_reference; /* reference to other events that have gone off,
                                 * such as in the case of tagged packets...
                                 */
-    struct timeval ref_time;   /* reference time for the event reference */
+    struct pcap_timeval ref_time;   /* reference time for the event reference */
+
+    /* Don't add to this structure because this is the serialized data
+     * struct for unified logging.
+     */
 } Event;
 
 #if 0

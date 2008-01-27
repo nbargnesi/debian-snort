@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_rpc_check.c,v 1.15.6.1 2004/11/02 22:07:18 jhewlett Exp $ */
+/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -145,7 +146,7 @@ void RpcCheckInit(char *data, OptTreeNode *otn, int protocol)
 void ParseRpc(char *data, OptTreeNode *otn)
 {
     RpcCheckData *ds_ptr;  /* data struct pointer */
-    char *tmp;
+    char *tmp = NULL;
 
     /* set the ds pointer to make it easier to reference the option's
        particular data struct */
@@ -161,7 +162,13 @@ void ParseRpc(char *data, OptTreeNode *otn)
         ds_ptr->flags|=RPC_CHECK_PROG;
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Set RPC program to %lu\n", ds_ptr->program););
     }
+    else
+    {
+        FatalError("%s(%d): Invalid applicaion number in rpc rule option\n",file_name,file_line);
+    }
+    
     if(*tmp == '\0') return;
+    
     data=++tmp;
     if(*data != '*')
     {

@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.32.2.7 2005/04/22 19:03:56 jhewlett Exp $ */
+/* $Id$ */
 
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
@@ -45,6 +45,15 @@
 /* Define if you have the pcap library (-lpcap).  */
 #define HAVE_LIBPCAP 1
 
+/* Define if you have vswprintf() function */
+#define HAVE_VSWPRINTF 1
+
+/* Define if you have wprintf() function */
+#define HAVE_WPRINTF 1
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#define HAVE_WCHAR_H 1
+
 /* Version number of package */
 #ifdef ENABLE_ODBC
     #define VERSION_ENABLE_ODBC "-ODBC"
@@ -87,7 +96,7 @@
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.3.3"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.7.0"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 
@@ -114,7 +123,7 @@ typedef int            pid_t;
 #ifndef _SSIZE_T_      /* MingW */
 typedef SSIZE_T        ssize_t;
 #endif
-#include "win32/WIN32-Includes/rpc/types.h"
+#include "rpc/types.h"
 
 #undef interface
 

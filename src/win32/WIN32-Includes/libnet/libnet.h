@@ -1,5 +1,5 @@
 /*
- *  $Id: libnet.h,v 1.2 2003/10/20 15:03:44 chrisgreen Exp $
+ *  $Id$
  *
  *  libnet.h - Network routine library header file
  *

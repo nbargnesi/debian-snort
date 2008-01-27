@@ -39,7 +39,8 @@ subdir = doc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	AUTHORS INSTALL NEWS TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
+	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -54,6 +55,7 @@ ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
+AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -63,14 +65,23 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+F77 = @F77@
+FFLAGS = @FFLAGS@
+HAVE_DYNAMIC_PLUGINS_FALSE = @HAVE_DYNAMIC_PLUGINS_FALSE@
+HAVE_DYNAMIC_PLUGINS_TRUE = @HAVE_DYNAMIC_PLUGINS_TRUE@
 INCLUDES = @INCLUDES@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -78,7 +89,16 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
+LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
+LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
+LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
+LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
+LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
+LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAINTAINER_MODE_FALSE = @MAINTAINER_MODE_FALSE@
@@ -93,15 +113,21 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
+ac_ct_F77 = @ac_ct_F77@
 ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
+am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
+am__fastdepCXX_TRUE = @am__fastdepCXX_TRUE@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -140,27 +166,38 @@ AUTOMAKE_OPTIONS = foreign no-dependencies
 EXTRA_DIST = AUTHORS NEWS BUGS README \
 CREDITS \
 snort_manual.pdf snort_manual.tex INSTALL USAGE \
-signatures \
 README.alert_order \
-README.event_queue \
+README.ARUBA \
+README.asn1 \
 README.csv \
 README.database \
+README.dcerpc \
+README.dns \
+README.event_queue \
 README.FLEXRESP \
+README.FLEXRESP2 \
 README.flow \
+README.flowbits \
 README.flow-portscan \
+README.frag3 \
+README.ftptelnet \
 README.http_inspect \
+README.INLINE \
+README.PerfProfiling \
 README.PLUGINS \
+README.sfportscan \
+README.SMTP \
+README.ssh \
+README.stream4 \
+README.stream5 \
 README.thresholding \
 README.UNSOCK \
 README.WIN32 \
-README.flowbits \
-README.asn1 \
-README.INLINE \
-README.sfportscan \
+README.wireless \
 snort_schema_v106.pdf \
-README.wireless PROBLEMS RULES.todo WISHLIST faq.pdf faq.tex
+PROBLEMS WISHLIST faq.pdf faq.tex
 
-DISTCLEANFILES = snort_manual.log snort_manual.toc snort_manual.aux faq.pdf snort_manual.pdf faq.log faq.toc faq.aux
+DISTCLEANFILES = snort_manual.log snort_manual.toc snort_manual.aux faq.log faq.toc faq.aux snort_manual.pdf faq.pdf snort_manual.out
 doc_DIR = $(prefix)/doc
 SUFFIXES = .tex .dvi .ps
 all: all-am
@@ -196,6 +233,15 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+	-rm -f libtool
 uninstall-info-am:
 tags: TAGS
 TAGS:
@@ -262,11 +308,11 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic mostlyclean-am
+clean-am: clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
-distclean-am: clean-am distclean-generic
+distclean-am: clean-am distclean-generic distclean-libtool
 
 dvi: dvi-am
 
@@ -294,7 +340,7 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-am
 
-mostlyclean-am: mostlyclean-generic
+mostlyclean-am: mostlyclean-generic mostlyclean-libtool
 
 pdf: pdf-am
 
@@ -306,13 +352,14 @@ ps-am:
 
 uninstall-am: uninstall-info-am
 
-.PHONY: all all-am check check-am clean clean-generic distclean \
-	distclean-generic distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-exec \
-	install-exec-am install-info install-info-am install-man \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic pdf pdf-am ps ps-am uninstall uninstall-am \
+.PHONY: all all-am check check-am clean clean-generic clean-libtool \
+	distclean distclean-generic distclean-libtool distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-exec install-exec-am \
+	install-info install-info-am install-man install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
 	uninstall-info-am
 
 

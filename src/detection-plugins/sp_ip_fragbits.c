@@ -1,11 +1,12 @@
-/* $Id: sp_ip_fragbits.c,v 1.16 2003/10/20 15:03:29 chrisgreen Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -376,8 +377,7 @@ void FragOffsetInit(char *data, OptTreeNode *otn, int protocol)
 {
     /* allocate the data structure and attach it to the
        rule's data struct list */
-    otn->ds_list[PLUGIN_FRAG_OFFSET] = (FragOffsetData *) calloc(sizeof(FragOffsetData),
-							       sizeof(char));
+    otn->ds_list[PLUGIN_FRAG_OFFSET] = (FragOffsetData *)SnortAlloc(sizeof(FragOffsetData));
 
     /* this is where the keyword arguments are processed and placed into the 
        rule option's data structure */

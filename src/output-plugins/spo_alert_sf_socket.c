@@ -2,9 +2,10 @@
 ** Copyright (C) 2003 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_alert_sf_socket.c,v 1.4 2003/10/20 15:03:34 chrisgreen Exp $ */
+/* $Id$ */
 
 /* We use some Linux only socket capabilities */
 
@@ -36,6 +37,7 @@
 #include <sys/un.h>
 #include <errno.h>
 #include <stdlib.h>
+#include "generators.h"
 
 /* error result codes */
 #define SNORT_SUCCESS 0
@@ -68,8 +70,8 @@ static void AlertSFSocketSid_Init(u_char *args);
 void AlertSFSocket(Packet *packet, char *msg, void *arg, Event *event);
 
 static int AlertSFSocket_Connect(void);
-static OptTreeNode *OptTreeNode_Search(u_int32_t sid);
-static int SignatureAddOutputFunc(u_int32_t sid, 
+static OptTreeNode *OptTreeNode_Search(u_int32_t gid, u_int32_t sid);
+static int SignatureAddOutputFunc(u_int32_t gid, u_int32_t sid, 
         void (*outputFunc)(Packet *, char *, void *, Event *),
         void *args);
 int String2ULong(char *string, unsigned long *result);
@@ -97,7 +99,7 @@ static void AlertSFSocket_Init(u_char *args)
     if(!args)
         FatalError("ERROR: AlertSFSocket: must specify a socket name\n");
 
-    sockname = args;
+    sockname = (char*)args;
 
     if(strlen(sockname) == 0)
         FatalError("ERROR: AlertSFSocket: must specify a socket name\n");
@@ -124,9 +126,82 @@ static void AlertSFSocket_Init(u_char *args)
     return;
 }
 
+/*
+ * Parse 'sidValue' or 'gidValue:sidValue'
+ */
+int GidSid2UInt(char * args, u_int32_t * sidValue, u_int32_t * gidValue)
+{
+    char gbuff[80];
+    char sbuff[80];
+    int  i;
+    unsigned long glong,slong;
+
+    *gidValue=GENERATOR_SNORT_ENGINE;
+    *sidValue=0;
+    
+    i=0;
+    while( args && *args && (i < 20) )
+    {
+        sbuff[i]=*args;
+        if( sbuff[i]==':' ) break;
+        args++;
+        i++;
+    }
+    sbuff[i]=0;
+    
+    if( i >= 20 )
+    {
+       return SNORT_EINVAL;
+    }
+
+    if( *args == ':' ) 
+    {
+        memcpy(gbuff,sbuff,i);
+        gbuff[i]=0;
+        
+        if(String2ULong(gbuff,&glong))
+        {
+            return SNORT_EINVAL;
+        }
+        *gidValue = (u_int32_t)glong;
+
+        args++;
+        i=0;
+        while( args && *args && i < 20 )
+        {
+          sbuff[i]=*args;
+          args++;
+          i++;
+        }
+        sbuff[i]=0;
+
+        if( i >= 20 )
+        {
+          return SNORT_EINVAL;
+        }
+
+        if(String2ULong(sbuff,&slong))
+        {
+            return SNORT_EINVAL;
+        }
+        *sidValue = (u_int32_t)slong;
+    }
+    else
+    {
+        if(String2ULong(sbuff,&slong))
+        {
+            return SNORT_EINVAL;
+        }
+        *sidValue=(u_int32_t)slong;
+    }
+    
+    return SNORT_SUCCESS;
+}
+
 static void AlertSFSocketSid_Init(u_char *args)
 {
-    unsigned long sidValue;
+    u_int32_t sidValue;
+    u_int32_t gidValue;
     int rval = 0;
     
     /* check configured value */
@@ -134,10 +209,10 @@ static void AlertSFSocketSid_Init(u_char *args)
         FatalError("AlertSFSocket must be configured before attaching it to a "
                 "sid");
     
-    if(String2ULong(args, &sidValue))
+    if (GidSid2UInt((char*)args, &sidValue, &gidValue) )
         FatalError("Invalid argument '%s' to alert_sf_socket_sid\n", args);
 
-    rval = SignatureAddOutputFunc((u_int32_t)sidValue, AlertSFSocket, NULL);
+    rval = SignatureAddOutputFunc( (u_int32_t)gidValue, (u_int32_t)sidValue, AlertSFSocket, NULL );
 
     switch(rval)
     {
@@ -267,7 +342,7 @@ void AlertSFSocket(Packet *packet, char *msg, void *arg, Event *event)
     return;
 }
 
-static int SignatureAddOutputFunc(u_int32_t sid, 
+static int SignatureAddOutputFunc( u_int32_t gid, u_int32_t sid, 
         void (*outputFunc)(Packet *, char *, void *, Event *),
         void *args)
 {
@@ -277,7 +352,7 @@ static int SignatureAddOutputFunc(u_int32_t sid,
     if(!outputFunc)
         return SNORT_EINVAL;  /* Invalid argument */
                        
-    if(!(optTreeNode = OptTreeNode_Search(sid)))
+    if(!(optTreeNode = OptTreeNode_Search(gid,sid)))
     {
         LogMessage("Unable to find OptTreeNode for SID %u\n", sid);
         return SNORT_ENOENT;
@@ -301,7 +376,7 @@ static int SignatureAddOutputFunc(u_int32_t sid,
 
 
 /* search for an OptTreeNode by sid */
-static OptTreeNode *OptTreeNode_Search(u_int32_t sid)
+static OptTreeNode *OptTreeNode_Search(u_int32_t gid, u_int32_t sid)
 {
     RuleListNode *ruleListNode = RuleLists;
     
@@ -321,7 +396,8 @@ static OptTreeNode *OptTreeNode_Search(u_int32_t sid)
             optTreeNode = ruleTreeNode->down;
             while(optTreeNode)
             {
-                if(optTreeNode->sigInfo.id == sid)
+                if(optTreeNode->sigInfo.generator == gid && 
+                   optTreeNode->sigInfo.id == sid)
                     return optTreeNode;
                     
                 optTreeNode = optTreeNode->next;

@@ -7,9 +7,10 @@
 --                     Todd Schrubb <tls@cert.org>
 --
 -- This program is free software; you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation; either version 2 of the License, or
--- (at your option) any later version.
+-- it under the terms of the GNU General Public License Version 2 as
+-- published by the Free Software Foundation.  You may not use, modify or
+-- distribute this program under any other version of the GNU General
+-- Public License.
 --
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,7 +24,7 @@
 CREATE TABLE schema ( vseq        INT4     NOT NULL,
                       ctime       TIMESTAMP with time zone NOT NULL,
                       PRIMARY KEY (vseq));
-INSERT INTO schema  (vseq, ctime) VALUES ('106', now());
+INSERT INTO schema  (vseq, ctime) VALUES ('107', now());
 
 CREATE TABLE signature ( sig_id       SERIAL NOT NULL,
                          sig_name     TEXT NOT NULL,
@@ -31,6 +32,7 @@ CREATE TABLE signature ( sig_id       SERIAL NOT NULL,
                          sig_priority INT8,
                          sig_rev      INT8,
                          sig_sid      INT8,
+                         sig_gid      INT8,
                          PRIMARY KEY (sig_id));
 CREATE INDEX sig_name_idx ON signature (sig_name);
 CREATE INDEX sig_class_idx ON signature (sig_class_id);

@@ -1,4 +1,23 @@
-/* $Id: sp_clientserver.c,v 1.21 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id$ */
+/*
+ ** Copyright (C) 2002-2006 Sourcefire, Inc.
+ ** Author: Martin Roesch
+ **
+ ** This program is free software; you can redistribute it and/or modify
+ ** it under the terms of the GNU General Public License Version 2 as
+ ** published by the Free Software Foundation.  You may not use, modify or
+ ** distribute this program under any other version of the GNU General
+ ** Public License.
+ **
+ ** This program is distributed in the hope that it will be useful,
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ ** GNU General Public License for more details.
+ **
+ ** You should have received a copy of the GNU General Public License
+ ** along with this program; if not, write to the Free Software
+ ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 /* sp_clientserver 
  * 
@@ -45,7 +64,7 @@
 #include "plugin_enum.h"
 #include "snort.h"
 
-
+#include "stream_api.h"
 
 typedef struct _ClientServerData
 {
@@ -101,11 +120,22 @@ void SetupClientServer(void)
  ****************************************************************************/
 void FlowInit(char *data, OptTreeNode *otn, int protocol)
 {
-    if(protocol != IPPROTO_TCP)
+#ifdef STREAM4_UDP
+    if ((protocol != IPPROTO_TCP) && (protocol != IPPROTO_UDP))
     {
         FatalError("%s(%d): Cannot check flow connection "
-                   "for non-TCP traffic\n", file_name, file_line);
+                   "for non-TCP and non-UDP traffic\n", file_name, file_line);
     }
+#else
+    if(protocol != IPPROTO_TCP)
+    {
+        if (!stream_api || (stream_api->version != STREAM_API_VERSION5))
+        {
+            FatalError("%s(%d): Cannot check flow connection "
+                   "for non-TCP traffic\n", file_name, file_line);
+        }
+    }
+#endif
 
     /* multiple declaration check */
     if(otn->ds_list[PLUGIN_CLIENTSERVER])

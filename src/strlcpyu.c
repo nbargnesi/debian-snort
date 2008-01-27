@@ -25,7 +25,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: strlcpyu.c,v 1.4 2003/10/20 15:03:27 chrisgreen Exp $ */
+/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -45,10 +45,7 @@ static char *rcsid = "$OpenBSD: strlcpy.c,v 1.4 1999/05/01 18:56:41 millert Exp 
  * will be copied.  Always NUL terminates (unless siz == 0).
  * Returns strlen(src); if retval >= siz, truncation occurred.
  */
-size_t strlcpy(dst, src, siz)
-	char *dst;
-	const char *src;
-	size_t siz;
+size_t strlcpy(char *dst, const char *src, size_t siz)
 {
 	register char *d = dst;
 	register const char *s = src;

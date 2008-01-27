@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2004-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 #ifndef __PORTSCAN_H__
 #define __PORTSCAN_H__
 
@@ -6,22 +27,11 @@
 #endif
 
 #include <time.h>
-
 #ifndef WIN32
-#include <sys/time.h>
-#endif
+    #include <sys/time.h>
+#endif /* !WIN32 */
 
 #include "ipobj.h"
-
-#ifndef WIN32
-#ifndef INLINE
-#define INLINE inline
-#endif
-#else
-#ifndef INLINE
-#define INLINE __inline
-#endif
-#endif
 
 #define PS_OPEN_PORTS 8
 
@@ -108,6 +118,8 @@ int  ps_init(int detect_scans, int detect_scan_type, int sense_level,
         
 int  ps_detect(PS_PKT *p);
 void ps_tracker_print(PS_TRACKER *tracker);
+
+int  ps_get_protocols();
 
 #endif
 

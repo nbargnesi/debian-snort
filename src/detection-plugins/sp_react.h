@@ -1,12 +1,13 @@
-/* $Id: sp_react.h,v 1.14 2003/10/20 15:03:31 chrisgreen Exp $ */
+/* $Id$ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,10 +21,9 @@
 
 #ifndef __SP_REACT_H__
 #define __SP_REACT_H__
-
-#ifdef ENABLE_RESPONSE
+#if defined(ENABLE_RESPONSE) || defined(ENABLE_REACT)
 
 void SetupReact(void);
 
-#endif  /* ENABLE_RESPONSE */
+#endif  /* ENABLE_RESPONSE || ENABLE_REACT */
 #endif  /* __SP_REACT_H__ */

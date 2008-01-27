@@ -13,6 +13,7 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
+
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
@@ -38,12 +39,14 @@ host_triplet = @host@
 subdir = src/win32
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
+	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
 depcomp =
 am__depfiles_maybe =
 SOURCES =
@@ -53,6 +56,7 @@ ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
+AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -62,14 +66,23 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+F77 = @F77@
+FFLAGS = @FFLAGS@
+HAVE_DYNAMIC_PLUGINS_FALSE = @HAVE_DYNAMIC_PLUGINS_FALSE@
+HAVE_DYNAMIC_PLUGINS_TRUE = @HAVE_DYNAMIC_PLUGINS_TRUE@
 INCLUDES = @INCLUDES@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -77,7 +90,16 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
+LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
+LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
+LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
+LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
+LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
+LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAINTAINER_MODE_FALSE = @MAINTAINER_MODE_FALSE@
@@ -92,15 +114,21 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
+ac_ct_F77 = @ac_ct_F77@
 ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
+am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
+am__fastdepCXX_TRUE = @am__fastdepCXX_TRUE@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -136,53 +164,25 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 
-# $Id: Makefile.am,v 1.10 2004/06/23 15:01:01 jhewlett Exp $
+# $Id$
 AUTOMAKE_OPTIONS = foreign no-dependencies
 # find . -type f | grep -ve 'CVS\|Makefile\.\(in\|am\)'
-EXTRA_DIST = ./WIN32-Code/getopt.c \
+EXTRA_DIST = \
+./WIN32-Code/getopt.c \
+./WIN32-Code/getopt_long.c \
+./WIN32-Code/inet_aton.c \
 ./WIN32-Code/misc.c \
 ./WIN32-Code/name.aps \
 ./WIN32-Code/name.h \
 ./WIN32-Code/name.mc \
 ./WIN32-Code/name.rc \
-./WIN32-Code/syslog.c \
-./WIN32-Code/inet_aton.c \
 ./WIN32-Code/strtok_r.c \
+./WIN32-Code/syslog.c \
 ./WIN32-Code/win32_service.c \
-./WIN32-Includes/pcre.h \
-./WIN32-Includes/pcreposix.h \
-./WIN32-Includes/stdint.h \
-./WIN32-Includes/NET/Bpf.h \
-./WIN32-Includes/rpc/auth.h \
-./WIN32-Includes/rpc/auth_unix.h \
-./WIN32-Includes/rpc/clnt.h \
-./WIN32-Includes/rpc/pmap_clnt.h \
-./WIN32-Includes/rpc/pmap_prot.h \
-./WIN32-Includes/rpc/pmap_rmt.h \
-./WIN32-Includes/rpc/rpc.h \
-./WIN32-Includes/rpc/rpc_des.h \
-./WIN32-Includes/rpc/rpc_msg.h \
-./WIN32-Includes/rpc/svc.h \
-./WIN32-Includes/rpc/svc_auth.h \
-./WIN32-Includes/rpc/types.h \
-./WIN32-Includes/rpc/xdr.h \
 ./WIN32-Includes/config.h \
 ./WIN32-Includes/getopt.h \
+./WIN32-Includes/getopt1.h \
 ./WIN32-Includes/gnuc.h \
-./WIN32-Includes/pcap-namedb.h \
-./WIN32-Includes/pcap.h \
-./WIN32-Includes/syslog.h \
-./WIN32-Includes/unistd.h \
-./WIN32-Includes/NETINET/IF_ETHER.H \
-./WIN32-Includes/NETINET/IN_SYSTM.H \
-./WIN32-Includes/NETINET/IP.H \
-./WIN32-Includes/NETINET/IP_ICMP.H \
-./WIN32-Includes/NETINET/IP_VAR.H \
-./WIN32-Includes/NETINET/TCP.H \
-./WIN32-Includes/NETINET/TCPIP.H \
-./WIN32-Includes/NETINET/TCP_VAR.H \
-./WIN32-Includes/NETINET/UDP.H \
-./WIN32-Includes/NETINET/UDP_VAR.H \
 ./WIN32-Includes/libnet/Devioctl.h \
 ./WIN32-Includes/libnet/IPExport.h \
 ./WIN32-Includes/libnet/IPHlpApi.h \
@@ -201,27 +201,90 @@ EXTRA_DIST = ./WIN32-Code/getopt.c \
 ./WIN32-Includes/libnet/libnet-structures.h \
 ./WIN32-Includes/libnet/libnet.h \
 ./WIN32-Includes/libnet/packet_types.h \
-./WIN32-Includes/mysql/Libmysql.def \
-./WIN32-Includes/mysql/dbug.h \
+./WIN32-Includes/mysql/config-netware.h \
+./WIN32-Includes/mysql/config-os2.h \
+./WIN32-Includes/mysql/config-win.h \
 ./WIN32-Includes/mysql/errmsg.h \
+./WIN32-Includes/mysql/libmysqld.def \
+./WIN32-Includes/mysql/libmysql.def \
 ./WIN32-Includes/mysql/m_ctype.h \
 ./WIN32-Includes/mysql/m_string.h \
+./WIN32-Includes/mysql/my_alloc.h \
+./WIN32-Includes/mysql/my_dbug.h \
+./WIN32-Includes/mysql/my_getopt.h \
+./WIN32-Includes/mysql/my_global.h \
 ./WIN32-Includes/mysql/my_list.h \
 ./WIN32-Includes/mysql/my_pthread.h \
-./WIN32-Includes/mysql/my_sys.h \
-./WIN32-Includes/mysql/mysql.h \
 ./WIN32-Includes/mysql/mysql_com.h \
-./WIN32-Includes/mysql/mysql_version.h \
 ./WIN32-Includes/mysql/mysqld_error.h \
+./WIN32-Includes/mysql/mysql_embed.h \
+./WIN32-Includes/mysql/mysql.h \
+./WIN32-Includes/mysql/mysql_time.h \
+./WIN32-Includes/mysql/mysql_version.h \
+./WIN32-Includes/mysql/my_sys.h \
 ./WIN32-Includes/mysql/raid.h \
+./WIN32-Includes/mysql/typelib.h \
+./WIN32-Includes/NET/Bpf.h \
+./WIN32-Includes/NETINET/IF_ETHER.H \
+./WIN32-Includes/NETINET/IN_SYSTM.H \
+./WIN32-Includes/NETINET/IP.H \
+./WIN32-Includes/NETINET/IP_ICMP.H \
+./WIN32-Includes/NETINET/IP_VAR.H \
+./WIN32-Includes/NETINET/TCP.H \
+./WIN32-Includes/NETINET/TCPIP.H \
+./WIN32-Includes/NETINET/TCP_VAR.H \
+./WIN32-Includes/NETINET/UDP.H \
+./WIN32-Includes/NETINET/UDP_VAR.H \
+./WIN32-Includes/pcre.h \
+./WIN32-Includes/pcreposix.h \
+./WIN32-Includes/rpc/auth.h \
+./WIN32-Includes/rpc/auth_unix.h \
+./WIN32-Includes/rpc/clnt.h \
+./WIN32-Includes/rpc/pmap_clnt.h \
+./WIN32-Includes/rpc/pmap_prot.h \
+./WIN32-Includes/rpc/pmap_rmt.h \
+./WIN32-Includes/rpc/rpc_des.h \
+./WIN32-Includes/rpc/rpc.h \
+./WIN32-Includes/rpc/rpc_msg.h \
+./WIN32-Includes/rpc/svc_auth.h \
+./WIN32-Includes/rpc/svc.h \
+./WIN32-Includes/rpc/types.h \
+./WIN32-Includes/rpc/xdr.h \
+./WIN32-Includes/stdint.h \
+./WIN32-Includes/syslog.h \
+./WIN32-Includes/unistd.h \
+./WIN32-Includes/WinPCAP/bittypes.h \
+./WIN32-Includes/WinPCAP/bucket_lookup.h \
+./WIN32-Includes/WinPCAP/count_packets.h \
+./WIN32-Includes/WinPCAP/Devioctl.h \
+./WIN32-Includes/WinPCAP/Gnuc.h \
+./WIN32-Includes/WinPCAP/ip6_misc.h \
+./WIN32-Includes/WinPCAP/memory_t.h \
+./WIN32-Includes/WinPCAP/normal_lookup.h \
+./WIN32-Includes/WinPCAP/Ntddndis.h \
+./WIN32-Includes/WinPCAP/Ntddpack.h \
+./WIN32-Includes/WinPCAP/Packet32.h \
+./WIN32-Includes/WinPCAP/pcap-bpf.h \
+./WIN32-Includes/WinPCAP/pcap.h \
+./WIN32-Includes/WinPCAP/pcap-int.h \
+./WIN32-Includes/WinPCAP/pcap-stdinc.h \
+./WIN32-Includes/WinPCAP/pthread.h \
+./WIN32-Includes/WinPCAP/remote-ext.h \
+./WIN32-Includes/WinPCAP/sched.h \
+./WIN32-Includes/WinPCAP/semaphore.h \
+./WIN32-Includes/WinPCAP/tcp_session.h \
+./WIN32-Includes/WinPCAP/time_calls.h \
+./WIN32-Includes/WinPCAP/tme.h \
+./WIN32-Includes/WinPCAP/Win32-Extensions.h \
 ./WIN32-Libraries/libnet/.cvswrappers \
 ./WIN32-Libraries/libnet/LibnetNT.lib \
 ./WIN32-Libraries/.cvswrappers \
-./WIN32-Libraries/Packet.lib \
-./WIN32-Libraries/pcre.lib \
 ./WIN32-Libraries/libpcap.lib \
 ./WIN32-Libraries/mysql/.cvswrappers \
 ./WIN32-Libraries/mysql/mysqlclient.lib \
+./WIN32-Libraries/Packet.lib \
+./WIN32-Libraries/pcre.lib \
+./WIN32-Libraries/wpcap.lib \
 ./WIN32-Prj/build_releases.bat \
 ./WIN32-Prj/LibnetNT.dll \
 ./WIN32-Prj/pcre.dll \
@@ -229,9 +292,11 @@ EXTRA_DIST = ./WIN32-Code/getopt.c \
 ./WIN32-Prj/snort_installer_options.ini \
 ./WIN32-Prj/snort.dep \
 ./WIN32-Prj/snort.dsp \
-./WIN32-Prj/snort.dsw \
-./WIN32-Prj/snort.mak
+./WIN32-Prj/build_all.dsp \
+./WIN32-Prj/sf_engine.dsp \
+./WIN32-Prj/snort.dsw
 
+noinst_LIBRARIES = 
 all: all-am
 
 .SUFFIXES:
@@ -264,6 +329,18 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+	-rm -f libtool
 uninstall-info-am:
 tags: TAGS
 TAGS:
@@ -273,7 +350,7 @@ CTAGS:
 
 
 distdir: $(DISTFILES)
-	$(mkdir_p) $(distdir)/./WIN32-Code $(distdir)/./WIN32-Includes $(distdir)/./WIN32-Includes/NET $(distdir)/./WIN32-Includes/NETINET $(distdir)/./WIN32-Includes/libnet $(distdir)/./WIN32-Includes/mysql $(distdir)/./WIN32-Includes/rpc $(distdir)/./WIN32-Libraries $(distdir)/./WIN32-Libraries/libnet $(distdir)/./WIN32-Libraries/mysql $(distdir)/./WIN32-Prj
+	$(mkdir_p) $(distdir)/./WIN32-Code $(distdir)/./WIN32-Includes $(distdir)/./WIN32-Includes/NET $(distdir)/./WIN32-Includes/NETINET $(distdir)/./WIN32-Includes/WinPCAP $(distdir)/./WIN32-Includes/libnet $(distdir)/./WIN32-Includes/mysql $(distdir)/./WIN32-Includes/rpc $(distdir)/./WIN32-Libraries $(distdir)/./WIN32-Libraries/libnet $(distdir)/./WIN32-Libraries/mysql $(distdir)/./WIN32-Prj
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \
@@ -302,7 +379,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile
+all-am: Makefile $(LIBRARIES)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -330,11 +407,12 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic mostlyclean-am
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
-distclean-am: clean-am distclean-generic
+distclean-am: clean-am distclean-generic distclean-libtool
 
 dvi: dvi-am
 
@@ -362,7 +440,7 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-am
 
-mostlyclean-am: mostlyclean-generic
+mostlyclean-am: mostlyclean-generic mostlyclean-libtool
 
 pdf: pdf-am
 
@@ -374,14 +452,15 @@ ps-am:
 
 uninstall-am: uninstall-info-am
 
-.PHONY: all all-am check check-am clean clean-generic distclean \
-	distclean-generic distdir dvi dvi-am html html-am info info-am \
+.PHONY: all all-am check check-am clean clean-generic clean-libtool \
+	clean-noinstLIBRARIES distclean distclean-generic \
+	distclean-libtool distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-exec \
 	install-exec-am install-info install-info-am install-man \
 	install-strip installcheck installcheck-am installdirs \
 	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic pdf pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-info-am
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	uninstall uninstall-am uninstall-info-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

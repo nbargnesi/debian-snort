@@ -14,9 +14,10 @@
 ** Copyright (C) 2003 Sourcefire, Inc
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,34 +33,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <sys/types.h>
 #include <ctype.h>
 
 #include "sfksearch.h"
+#include "bounds.h"
 
+static void KTrieFree(KTRIENODE *n);
+
+static u_int32_t mtot = 0;
+
+u_int32_t KTrieMemUsed(void) { return mtot; }
+    
 /*
 *  Allocate Memory
 */
-static void * KTRIE_MALLOC( int n )
+static void * KTRIE_MALLOC(int n)
 {
-   void * p;
+    void *p;
 
-   p = malloc( n );
+    if (n < 1)
+        return NULL;
 
-   memset(p,0,n);
+    p = calloc(1, n);
 
-   return p;
+    if (p)
+        mtot += n;
+
+    return p;
 }
 
 /*
 *  Free Memory
 */
-/*
-static void KTRIE_FREE( void * p )
+static void KTRIE_FREE(void *p) 
 {
-   if( p ) free( p );
+    if (p == NULL)
+        return;
+
+    free(p);
 }
-*/
 
 /*
 *   Local/Tmp nocase array
@@ -74,7 +87,7 @@ static unsigned char xlatcase[256];
 /*
 *
 */
-static void init_xlatcase()
+static void init_xlatcase(void)
 {
    int i;
    static int first=1;
@@ -105,7 +118,7 @@ static inline void ConvertCaseEx( unsigned char * d, unsigned char *s, int m )
 /*
 *
 */
-KTRIE_STRUCT * KTrieNew()
+KTRIE_STRUCT * KTrieNew(void)
 {
    KTRIE_STRUCT * ts = (KTRIE_STRUCT*) KTRIE_MALLOC( sizeof(KTRIE_STRUCT) );
 
@@ -123,29 +136,97 @@ KTRIE_STRUCT * KTrieNew()
 }
 
 /*
+ * Deletes memory that was used in creating trie
+ * and nodes
+ */
+void KTrieDelete(KTRIE_STRUCT *k)
+{
+    KTRIEPATTERN *p = NULL;
+    KTRIEPATTERN *pnext = NULL;
+    int i;
+
+    if (k == NULL)
+        return;
+
+    p = k->patrn;
+
+    while (p != NULL)
+    {
+        pnext = p->next;
+
+        KTRIE_FREE(p->P);
+        KTRIE_FREE(p->Pcase);
+        KTRIE_FREE(p);
+
+        p = pnext;
+    }
+
+    for (i = 0; i < KTRIE_ROOT_NODES; i++)
+        KTrieFree(k->root[i]);
+
+    KTRIE_FREE(k);
+}
+
+/* 
+ * Recursively delete all nodes in trie
+ */
+static void KTrieFree(KTRIENODE *n)
+{
+    if (n == NULL)
+        return;
+
+    KTrieFree(n->child);
+    KTrieFree(n->sibling);
+
+    KTRIE_FREE(n);
+}
+
+/*
 *
 */
 static KTRIEPATTERN * KTrieNewPattern(unsigned char * P, int n)
 {
-   KTRIEPATTERN *p = (KTRIEPATTERN*) KTRIE_MALLOC( sizeof(KTRIEPATTERN) );
+   KTRIEPATTERN *p;
+   int ret;
 
-   if( !p ) return 0;
+   if (n < 1)
+       return NULL;
+       
+   p = (KTRIEPATTERN*) KTRIE_MALLOC( sizeof(KTRIEPATTERN) );
+
+   if (p == NULL)
+       return NULL;
 
    /* Save as a nocase string */   
    p->P = (unsigned char*) KTRIE_MALLOC( n );
    if( !p->P ) 
-       return 0;
+   {
+       KTRIE_FREE(p); 
+       return NULL;
+   }
 
    ConvertCaseEx( p->P, P, n );
 
    /* Save Case specific version */
    p->Pcase = (unsigned char*) KTRIE_MALLOC( n );
    if( !p->Pcase ) 
-       return 0;
-   memcpy( p->Pcase, P, n );
+   {
+       KTRIE_FREE(p->P); 
+       KTRIE_FREE(p); 
+       return NULL;
+   }
+
+   ret = SafeMemcpy(p->Pcase, P, n, p->Pcase, p->Pcase + n);
+   if (ret != SAFEMEM_SUCCESS)
+   {
+       KTRIE_FREE(p->Pcase); 
+       KTRIE_FREE(p->P); 
+       KTRIE_FREE(p); 
+       return NULL;
+   }
    
    p->n    = n;
-   p->next = 0;
+   p->next = NULL;
 
    return p;
 }
@@ -156,28 +237,28 @@ static KTRIEPATTERN * KTrieNewPattern(unsigned char * P, int n)
 int KTrieAddPattern( KTRIE_STRUCT * ts, unsigned char * P, int n, 
                       int nocase, void * id )
 {
-   KTRIEPATTERN  *new;
+   KTRIEPATTERN  *pnew;
 
    if( !ts->patrn )
    {
-       new = ts->patrn = KTrieNewPattern( P, n );
+       pnew = ts->patrn = KTrieNewPattern( P, n );
 
-       if( !new ) return -1;
+       if( !pnew ) return -1;
    }
    else
    {
-       new = KTrieNewPattern(P, n );
+       pnew = KTrieNewPattern(P, n );
 
-       if( !new ) return -1;
+       if( !pnew ) return -1;
 
-       new->next = ts->patrn; /* insert at head of list */
+       pnew->next = ts->patrn; /* insert at head of list */
 
-       ts->patrn = new;
+       ts->patrn = pnew;
    }
 
-   new->nocase = nocase;
-   new->id     = id;
-   new->mnext  = NULL;
+   pnew->nocase = nocase;
+   pnew->id     = id;
+   pnew->mnext  = NULL;
 
    ts->npats++;
    ts->memory += sizeof(KTRIEPATTERN) + 2 * n ; /* Case and nocase */
@@ -202,6 +283,7 @@ static KTRIENODE * KTrieCreateNode(KTRIE_STRUCT * ts)
    
    return t;
 }
+
 
 
 /*
@@ -343,7 +425,7 @@ static void Build_Bad_Character_Shifts( KTRIE_STRUCT * kt )
     /*
     *  Initialze the Bad Character shift table.  
     */
-    for(i=0;i<256;i++)
+    for (i = 0; i < KTRIE_ROOT_NODES; i++)
     {
       kt->bcShift[i] = (unsigned short)kt->bcSize;  
     }

@@ -1,11 +1,12 @@
-/* $Id: win32_service.c,v 1.9 2003/12/20 18:14:38 chris_reid Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Chris Reid <chris.reid@codecraftconsulants.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -125,11 +126,20 @@ static VOID  ShowSnortServiceParams();
 int SnortServiceMain(int argc, char* argv[]) 
 {
     int i;
+    /*
     SERVICE_TABLE_ENTRY   steDispatchTable[] = 
     { 
         { g_lpszServiceName, SnortServiceStart }, 
         { NULL,       NULL                     } 
     }; 
+    */
+
+    SERVICE_TABLE_ENTRY   steDispatchTable[2]; 
+
+    steDispatchTable[0].lpServiceName = g_lpszServiceName;
+    steDispatchTable[0].lpServiceProc = SnortServiceStart;
+    steDispatchTable[1].lpServiceName = NULL;
+    steDispatchTable[1].lpServiceProc = NULL;
 
     for( i=1; i<argc; i++ )
     {
@@ -183,7 +193,7 @@ int SnortServiceMain(int argc, char* argv[])
         SvcFormatMessage(szString, sizeof(szString));
 
         SvcDebugOut(szString, 0); 
-        SvcDebugOut(" [SNORT_SERVICE] StartServiceCtrlDispatcher error = %d\n%s\n", GetLastError()); 
+        SvcDebugOut(" [SNORT_SERVICE] StartServiceCtrlDispatcher error = %d\n", GetLastError()); 
         FatalError (" [SNORT_SERVICE] StartServiceCtrlDispatcher error = %d\n%s\n", GetLastError(), szString); 
     }
 
@@ -220,7 +230,10 @@ VOID SvcFormatMessage(LPSTR szString, int iCount)
                        NULL 
                      );
 
-        strncpy(szString, (LPCTSTR) lpMsgBuf, iCount);
+        strncpy(szString, (LPCTSTR) lpMsgBuf, iCount-1);
+        
+        szString[iCount-1]=0;
+        
         /* Free the buffer. */
         LocalFree( lpMsgBuf );
         lpMsgBuf = NULL;
@@ -275,8 +288,8 @@ VOID ReadServiceCommandLineParams( int * piArgCounter, char** * pargvDynamic )
 
     (*piArgCounter) = * ((int*)&byData);
 
-    (*pargvDynamic) = calloc( (*piArgCounter)+2, sizeof(char*) );
-    (*pargvDynamic)[0] = _strdup(g_lpszServiceName);
+    (*pargvDynamic) = SnortAlloc( ((*piArgCounter) + 2) * sizeof(char *) );
+    (*pargvDynamic)[0] = SnortStrdup(g_lpszServiceName);
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Preparing to use the following command-line arguments:\n"););
 
@@ -375,11 +388,11 @@ void logmsg(char* msg)
     {
         if( msg != NULL )
         {
-            fprintf(pFile, msg);
+            fprintf(pFile,"%s",msg);
         }
         else
         {
-            fprintf(pFile, "Message String is NULL\n");
+            fprintf(pFile,"%s","Message String is NULL\n");
         }
         fclose(pFile);
         pFile = NULL;
@@ -647,13 +660,24 @@ VOID InstallSnortService(int argc, char* argv[])
         SvcFormatMessage(szMsg, sizeof(szMsg));
         FatalError(" [SNORT_SERVICE] Unable to determine current working directory. %s", szMsg); 
     }
-    if( buffer[strlen(buffer)-1] != '\\' )
+
+    if( buffer[strlen(buffer) - 1] != '\\' )
     {
-        strcat(buffer, "\\");
+        if (strlen(buffer) < _MAX_PATH)
+        {
+            int len = strlen(buffer);
+
+            buffer[len] = '\\';
+            buffer[len + 1] = '\0';
+        }
+        else
+        {
+            FatalError(" [SNORT_SERVICE] Unable to create full path to Snort binary."); 
+        }
     }
-    strcat(buffer, argv[0]);
-    strcat(buffer, " ");
-    strcat(buffer, SERVICE_CMDLINE_PARAM);
+
+    SnortSnprintfAppend(buffer, _MAX_PATH + 1, "%s ", argv[0]);
+    SnortSnprintfAppend(buffer, _MAX_PATH + 1, "%s", SERVICE_CMDLINE_PARAM);
     lpszBinaryPathName = buffer;
 
     printf("\n");
@@ -879,7 +903,7 @@ VOID InstallSnortService(int argc, char* argv[])
 VOID UninstallSnortService() 
 { 
     SC_HANDLE schSCManager, schService;
-    HKEY hkSnort = NULL;
+    //HKEY hkSnort = NULL;
     long lRegRC = 0;
 
     printf("\n\n");

@@ -40,7 +40,8 @@ bin_PROGRAMS = snort$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
+	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -51,27 +52,34 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_snort_OBJECTS = codes.$(OBJEXT) debug.$(OBJEXT) decode.$(OBJEXT) \
 	log.$(OBJEXT) mstring.$(OBJEXT) parser.$(OBJEXT) \
-	plugbase.$(OBJEXT) snort.$(OBJEXT) snprintf.$(OBJEXT) \
-	strlcatu.$(OBJEXT) strlcpyu.$(OBJEXT) tag.$(OBJEXT) \
-	ubi_BinTree.$(OBJEXT) ubi_SplayTree.$(OBJEXT) util.$(OBJEXT) \
-	detect.$(OBJEXT) signature.$(OBJEXT) mempool.$(OBJEXT) \
-	sf_sdlist.$(OBJEXT) fpcreate.$(OBJEXT) fpdetect.$(OBJEXT) \
-	pcrm.$(OBJEXT) byte_extract.$(OBJEXT) sfthreshold.$(OBJEXT) \
-	packet_time.$(OBJEXT) event_wrapper.$(OBJEXT) \
-	event_queue.$(OBJEXT) inline.$(OBJEXT)
+	profiler.$(OBJEXT) plugbase.$(OBJEXT) snort.$(OBJEXT) \
+	snprintf.$(OBJEXT) strlcatu.$(OBJEXT) strlcpyu.$(OBJEXT) \
+	tag.$(OBJEXT) ubi_BinTree.$(OBJEXT) ubi_SplayTree.$(OBJEXT) \
+	util.$(OBJEXT) detect.$(OBJEXT) signature.$(OBJEXT) \
+	mempool.$(OBJEXT) sf_sdlist.$(OBJEXT) fpcreate.$(OBJEXT) \
+	fpdetect.$(OBJEXT) pcrm.$(OBJEXT) byte_extract.$(OBJEXT) \
+	sfthreshold.$(OBJEXT) packet_time.$(OBJEXT) \
+	event_wrapper.$(OBJEXT) event_queue.$(OBJEXT) inline.$(OBJEXT) \
+	ipv6.$(OBJEXT)
 snort_OBJECTS = $(am_snort_OBJECTS)
 snort_DEPENDENCIES = output-plugins/libspo.a \
-	detection-plugins/libspd.a preprocessors/libspp.a \
+	detection-plugins/libspd.a dynamic-plugins/libdynamic.a \
+	preprocessors/libspp.a \
 	preprocessors/flow/portscan/libportscan.a \
 	preprocessors/flow/libflow.a parser/libparser.a \
-	preprocessors/HttpInspect/libhttp_inspect.a sfutil/libsfutil.a
+	preprocessors/HttpInspect/libhttp_inspect.a \
+	preprocessors/Stream5/libstream5.a sfutil/libsfutil.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp =
 am__depfiles_maybe =
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(snort_SOURCES)
 DIST_SOURCES = $(snort_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
@@ -88,6 +96,7 @@ ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
+AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -97,14 +106,23 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+F77 = @F77@
+FFLAGS = @FFLAGS@
+HAVE_DYNAMIC_PLUGINS_FALSE = @HAVE_DYNAMIC_PLUGINS_FALSE@
+HAVE_DYNAMIC_PLUGINS_TRUE = @HAVE_DYNAMIC_PLUGINS_TRUE@
 INCLUDES = @INCLUDES@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -112,7 +130,16 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
+LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
+LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
+LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
+LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
+LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
+LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAINTAINER_MODE_FALSE = @MAINTAINER_MODE_FALSE@
@@ -127,15 +154,21 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
+ac_ct_F77 = @ac_ct_F77@
 ac_ct_RANLIB = @ac_ct_RANLIB@
 ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
+am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
+am__fastdepCXX_TRUE = @am__fastdepCXX_TRUE@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -186,8 +219,11 @@ decode.c decode.h \
 log.c log.h \
 mstring.c mstring.h \
 parser.c parser.h \
+profiler.c profiler.h \
 plugbase.c plugbase.h \
+preprocids.h \
 snort.c snort.h \
+build.h \
 snprintf.c snprintf.h \
 strlcatu.c strlcatu.h \
 strlcpyu.c strlcpyu.h \
@@ -213,22 +249,25 @@ event_wrapper.c event_wrapper.h \
 smalloc.h \
 snort_packet_header.h \
 event_queue.c event_queue.h \
-inline.c inline.h
+inline.c inline.h ipv6.c ipv6.h
 
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
+dynamic-plugins/libdynamic.a            \
 preprocessors/libspp.a                \
 preprocessors/flow/portscan/libportscan.a \
 preprocessors/flow/libflow.a \
 parser/libparser.a \
 preprocessors/HttpInspect/libhttp_inspect.a \
+preprocessors/Stream5/libstream5.a \
 sfutil/libsfutil.a
 
-SUBDIRS = sfutil win32 output-plugins detection-plugins preprocessors parser
+EXAMPLES_DIR = dynamic-examples
+SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors $(EXAMPLES_DIR)
 all: all-recursive
 
 .SUFFIXES:
-.SUFFIXES: .c .o .obj
+.SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -264,10 +303,11 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	@list='$(bin_PROGRAMS)'; for p in $$list; do \
 	  p1=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
 	  if test -f $$p \
+	     || test -f $$p1 \
 	  ; then \
 	    f=`echo "$$p1" | sed 's,^.*/,,;$(transform);s/$$/$(EXEEXT)/'`; \
-	   echo " $(INSTALL_PROGRAM_ENV) $(binPROGRAMS_INSTALL) '$$p' '$(DESTDIR)$(bindir)/$$f'"; \
-	   $(INSTALL_PROGRAM_ENV) $(binPROGRAMS_INSTALL) "$$p" "$(DESTDIR)$(bindir)/$$f" || exit 1; \
+	   echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) --mode=install $(binPROGRAMS_INSTALL) '$$p' '$(DESTDIR)$(bindir)/$$f'"; \
+	   $(INSTALL_PROGRAM_ENV) $(LIBTOOL) --mode=install $(binPROGRAMS_INSTALL) "$$p" "$(DESTDIR)$(bindir)/$$f" || exit 1; \
 	  else :; fi; \
 	done
 
@@ -280,7 +320,11 @@ uninstall-binPROGRAMS:
 	done
 
 clean-binPROGRAMS:
-	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+	@list='$(bin_PROGRAMS)'; for p in $$list; do \
+	  f=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
+	  echo " rm -f $$p $$f"; \
+	  rm -f $$p $$f ; \
+	done
 snort$(EXEEXT): $(snort_OBJECTS) $(snort_DEPENDENCIES) 
 	@rm -f snort$(EXEEXT)
 	$(LINK) $(snort_LDFLAGS) $(snort_OBJECTS) $(snort_LDADD) $(LIBS)
@@ -296,6 +340,18 @@ distclean-compile:
 
 .c.obj:
 	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+.c.lo:
+	$(LTCOMPILE) -c -o $@ $<
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+	-rm -f libtool
 uninstall-info-am:
 
 # This directory's subdirectories are mostly independent; you can cd
@@ -506,12 +562,12 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-libtool distclean-tags
 
 dvi: dvi-recursive
 
@@ -539,7 +595,8 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-compile mostlyclean-generic
+mostlyclean-am: mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool
 
 pdf: pdf-recursive
 
@@ -554,8 +611,9 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 uninstall-info: uninstall-info-recursive
 
 .PHONY: $(RECURSIVE_TARGETS) CTAGS GTAGS all all-am check check-am \
-	clean clean-binPROGRAMS clean-generic clean-recursive ctags \
-	ctags-recursive distclean distclean-compile distclean-generic \
+	clean clean-binPROGRAMS clean-generic clean-libtool \
+	clean-recursive ctags ctags-recursive distclean \
+	distclean-compile distclean-generic distclean-libtool \
 	distclean-recursive distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-binPROGRAMS \
 	install-data install-data-am install-exec install-exec-am \
@@ -563,8 +621,8 @@ uninstall-info: uninstall-info-recursive
 	installcheck installcheck-am installdirs installdirs-am \
 	maintainer-clean maintainer-clean-generic \
 	maintainer-clean-recursive mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-recursive pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am \
+	mostlyclean-generic mostlyclean-libtool mostlyclean-recursive \
+	pdf pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-info-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

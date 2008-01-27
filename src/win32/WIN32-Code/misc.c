@@ -1,11 +1,12 @@
-/* $Id: misc.c,v 1.6 2003/10/20 15:03:42 chrisgreen Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -127,12 +128,15 @@ char *print_interface(char *szInterface)
 {
     static char device[128];
 
+    if (szInterface == NULL)
+        return("NULL");
+
     /* Device always ends with a double \0, so this way to
        determine its length should be always valid */
-    if(IsTextUnicode(szInterface, wcslen((short*)szInterface), NULL))
-        sprintf(device, "%ws", szInterface);
+    if(IsTextUnicode(szInterface, wcslen((wchar_t *)szInterface), NULL))
+        SnortSnprintf(device, 128, "%S", (wchar_t *)szInterface);
     else
-        sprintf(device, "%s", szInterface);
+        SnortSnprintf(device, 128, "%s", szInterface);
 
     return(device);
 }
@@ -273,15 +277,14 @@ int init_winsock(void)
     if (WSAStartup(wVersionRequested, &wsaData))
     {
         FatalError("[!] ERROR: Unable to find a usable Winsock.\n");
-        return 0;
     }
 
     if (LOBYTE(wsaData.wVersion) < 1 || HIBYTE(wsaData.wVersion) < 1)
     {
         FatalError("[!] ERROR: Unable to find Winsock version 1.1 or greater. You have version %d.%d.\n",
 	               LOBYTE(wsaData.wVersion), HIBYTE(wsaData.wVersion));
-        WSACleanup();
-        return 0;
+        //WSACleanup();
+        //return 0;
     }
 
     return 1;

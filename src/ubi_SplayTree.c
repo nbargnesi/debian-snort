@@ -1,5 +1,5 @@
 /* ========================================================================== **
- * $Id: ubi_SplayTree.c,v 1.5 2004/02/02 18:49:51 droelker Exp $
+ * $Id$
  *
  *                              ubi_SplayTree.c
  *
@@ -50,16 +50,16 @@
  */
 
 static char ModuleID[] = "ubi_SplayTree\n\
-\t$Revision: 1.5 $\n\
-\t$Date: 2004/02/02 18:49:51 $\n\
-\t$Author: droelker $\n";
+\t$Revision$\n\
+\t$Date$\n\
+\t$Author$\n";
 
 
 /* ========================================================================== **
  * Private functions...
  */
-
-static void Rotate( ubi_btNodePtr p )
+/* This is no longer private */
+void Rotate( ubi_btNodePtr p )
   /* ------------------------------------------------------------------------ **
    * This function performs a single rotation, moving node *p up one level
    * in the tree.

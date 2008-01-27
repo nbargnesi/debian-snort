@@ -1,4 +1,4 @@
-/*  $Id: types.h,v 1.4 2003/12/03 15:22:23 chris_reid Exp $ */
+/*  $Id$ */
 /*	$OpenBSD: types.h,v 1.2 1997/09/21 10:46:17 niklas Exp $	*/
 /*	$NetBSD: types.h,v 1.8 1995/04/29 05:28:05 cgd Exp $	*/
 

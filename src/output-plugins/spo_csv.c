@@ -3,9 +3,10 @@
 ** Copyright (C) 2001 Brian Caswell <bmc@mitre.org>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_csv.c,v 1.25 2004/02/25 15:49:27 jh8 Exp $ */
+/* $Id$ */
 
 /* spo_csv
  * 
@@ -161,7 +162,6 @@ AlertCSVData *AlertCSVParseArgs(char *args)
     char *filename;
     AlertCSVData *data;
     /*    SpoCSVConfig *config; */
-    int num;
 
     data = (AlertCSVData *)SnortAlloc(sizeof(AlertCSVData));
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "ParseCSVArgs: %s\n", args););
@@ -183,20 +183,20 @@ AlertCSVData *AlertCSVParseArgs(char *args)
 
     if(!strncasecmp("default", toks[1], 7))
     {
-	    data->csvargs = DEFAULT_CSV;
+	    data->csvargs = strdup(DEFAULT_CSV);
     }
     else
     {
-	    data->csvargs = toks[1]; 
+	    data->csvargs = strdup(toks[1]); 
     } 
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertCSV Got Config ARGS\n"););
     
+    mSplitFree(&toks, num_toks);
     toks = mSplit(data->csvargs, ",", 128, &num_toks, 0);
 
-    num = num_toks;
     data->args = toks;
-    data->numargs = num;
+    data->numargs = num_toks;
 
     return data;
 }
@@ -206,9 +206,16 @@ void AlertCSVCleanExit(int signal, void *arg)
     AlertCSVData *data = (AlertCSVData *)arg;
     /* close alert file */
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"CSVCleanExitFunc\n"););
-    fclose(data->file);
-    /* free memory from SpoCSVData */
-    free(data);
+    
+    if(data) 
+    {
+        mSplitFree(&data->args, data->numargs);
+        fclose(data->file);
+        free(data->csvargs);
+        /* free memory from SpoCSVData */
+        free(data);
+    }
+    
 }
 
 void AlertCSVRestart(int signal, void *arg)
@@ -216,9 +223,15 @@ void AlertCSVRestart(int signal, void *arg)
     AlertCSVData *data = (AlertCSVData *)arg;
     /* close alert file */
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"CSVRestartFunc\n"););
-    fclose(data->file);
-    /* free memory from SpoCSVData */
-    free(data);
+
+    if(data) 
+    {
+        mSplitFree(&data->args, data->numargs);
+        fclose(data->file);
+        free(data->csvargs);
+        /* free memory from SpoCSVData */
+        free(data);
+    }
 }
 
 
@@ -296,10 +309,13 @@ void RealAlertCSV(Packet * p, char *msg, FILE * file, char **args,
 	{
         /* Escape the msg */
         char *escaped_msg;
-        if(!(escaped_msg = CSVEscape(msg)))
+
+        escaped_msg = CSVEscape(msg);
+        if (!escaped_msg)
         {
             FatalError("Out of memory escaping msg string");
         }
+
 	    fwrite(escaped_msg, strlen(escaped_msg),1,file);
         free(escaped_msg);
 	}
@@ -413,15 +429,13 @@ void RealAlertCSV(Packet * p, char *msg, FILE * file, char **args,
 	}
 	else if(!strncasecmp("icmpid",type,6))
 	{
-	    if(p->ext)
-	    {
-		fprintf(file,"%d",ntohs(p->ext->id));
-	    }
+	    if(p->icmph)
+            fprintf(file,"%d",ntohs(p->icmph->s_icmp_id));	   
 	}
 	else if(!strncasecmp("icmpseq",type,7))
 	{
-	    if(p->ext)
-		fprintf(file,"%d",ntohs(p->ext->seqno));
+	    if(p->icmph)
+		    fprintf(file,"%d",ntohs(p->icmph->s_icmp_seq));
 	}
 	else if(!strncasecmp("ttl",type,3))
 	{

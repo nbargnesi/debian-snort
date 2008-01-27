@@ -1,11 +1,12 @@
-/* $Id: sf_sdlist.c,v 1.3 2003/10/20 15:03:24 chrisgreen Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,7 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "util.h"
 
 /* Function: int sf_sdlist_init(sfSDlist *list, void (*destroy)(void *data))
  * 
@@ -243,14 +244,14 @@ int main(void) {
     SDListItem listpool[1000];
     
     sf_sdlist_init(&a, &bad);
-    if(sf_sdlist_append(&a, (char *) strdup("hello"), &listpool[0]))
+    if(sf_sdlist_append(&a, (char *) SnortStrdup("hello"), &listpool[0]))
     {
         printf("error appending!\n");
     }
     
-    sf_sdlist_append(&a, (char *) strdup("goodbye"), &listpool[1]);
+    sf_sdlist_append(&a, (char *)SnortStrdup("goodbye"), &listpool[1]);
 
-    sf_sdlist_insert_next(&a, NULL, (char *) strdup("woo"), &listpool[2]);
+    sf_sdlist_insert_next(&a, NULL, (char *)SnortStrdup("woo"), &listpool[2]);
 
     printf("list size %d\n", a.size);
     

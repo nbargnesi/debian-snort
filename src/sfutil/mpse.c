@@ -1,5 +1,5 @@
 /*
-*  $Id: mpse.c,v 1.4 2004/06/03 20:11:06 jhewlett Exp $
+*  $Id$
 *
 *   mpse.c
 *    
@@ -9,11 +9,14 @@
 *   Copyright (C) 2002 SourceFire, Inc
 *   Marc A Norton <mnorton@sourcefire.com>
 *
+*   Updates:
+*   3/06 - Added AC_BNFA search
 **  
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,276 +33,308 @@
 #endif
 
 #include "bitop.h"
-#include "mwm.h"
+#include "bnfa_search.h"
 #include "acsmx.h"
 #include "acsmx2.h"
 #include "sfksearch.h"
 #include "mpse.h"  
+#include "debug.h"  
+
+
+#include "profiler.h"
+#ifdef PERF_PROFILING
+#include "snort.h"
+PreprocStats mpsePerfStats;
+#endif
+
+int LogMessage(char *,...);
 
 static UINT64 s_bcnt=0;
 
 typedef struct _mpse_struct {
 
-  int    method;
-  void * obj;
+    int    method;
+    void * obj;
+    int    verbose;
 
-}MPSE;
+} MPSE;
 
 void * mpseNew( int method )
 {
-   MPSE * p;
+    MPSE * p;
 
-   p = (MPSE*)malloc( sizeof(MPSE) );
-   if( !p ) return NULL;
+    p = (MPSE*)calloc( 1,sizeof(MPSE) );
+    if( !p ) return NULL;
 
-   p->method=method;
-   p->obj   =NULL;
-   s_bcnt  =0;
+    p->method=method;
+    p->verbose=0;
+    p->obj   =NULL;
+    s_bcnt  =0;
 
-   switch( method )
-   {
-     case MPSE_AUTO:
-     case MPSE_MWM:
-	p->obj = mwmNew();
-        return (void*)p;
-     break;
-     case MPSE_AC:
-       p->obj = acsmNew();
-       return (void*)p;
-     break;
-     case MPSE_ACF:
-       p->obj = acsmNew2();
-       if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_FULL  );
-       return (void*)p;
-     break;
-     case MPSE_ACS:
-       p->obj = acsmNew2();
-       if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_SPARSE  );
-       return (void*)p;
-     break;
-     case MPSE_ACB:
-       p->obj = acsmNew2();
-       if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_BANDED  );
-       return (void*)p;
-     break;
-     case MPSE_ACSB:
-       p->obj = acsmNew2();
-       if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_SPARSEBANDS  );
-       return (void*)p;
-     break;
-     case MPSE_KTBM:
-     case MPSE_LOWMEM:
-	p->obj = KTrieNew();
-       return (void*)p;
-     break; 
-     
-     default:
-       return 0;
-     break; 
-   }
+    switch( method )
+    {
+        case MPSE_AC_BNFA:
+            p->obj=bnfaNew();
+            return (void*)p;
+        case MPSE_AC:
+            p->obj = acsmNew();
+            return (void*)p;
+        case MPSE_ACF:
+            p->obj = acsmNew2();
+            if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_FULL  );
+            return (void*)p;
+        case MPSE_ACS:
+            p->obj = acsmNew2();
+            if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_SPARSE  );
+            return (void*)p;
+        case MPSE_ACB:
+            p->obj = acsmNew2();
+            if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_BANDED  );
+            return (void*)p;
+        case MPSE_ACSB:
+            p->obj = acsmNew2();
+            if(p->obj)acsmSelectFormat2((ACSM_STRUCT2*)p->obj,ACF_SPARSEBANDS  );
+            return (void*)p;
+        case MPSE_LOWMEM:
+            p->obj = KTrieNew();
+            return (void*)p;
+
+        default:
+            free(p);
+            return 0;
+    }
 }
 
-
-void   mpseFree( void * pv )
+void   mpseVerbose( void * pvoid )
 {
-  MPSE * p = (MPSE*)pv;
- 
-  switch( p->method )
-   {
-     case MPSE_AC:
-       if(p->obj)acsmFree(p->obj);
-       free(p);
-       return ;
-     break;
-     case MPSE_ACF:
-     case MPSE_ACS:
-     case MPSE_ACB:
-     case MPSE_ACSB:
-       if(p->obj)acsmFree2(p->obj);
-       free(p);
-       return ;
-     break;
-     case MPSE_AUTO:
-     case MPSE_MWM:
-       if(p->obj)mwmFree( p->obj );
-       free( p );
-     break;
-     case MPSE_KTBM:
-     case MPSE_LOWMEM:
-       return ;
-     break;
-     default:
-       return ;
-     break; 
-   }
+    MPSE * p = (MPSE*)pvoid;
+    p->verbose = 1;
+} 
+
+
+void   mpseFree( void * pvoid )
+{
+    MPSE * p = (MPSE*)pvoid;
+
+    if (p == NULL)
+        return;
+
+    switch( p->method )
+    {
+        case MPSE_AC_BNFA:
+            if (p->obj)
+                bnfaFree((bnfa_struct_t*)p->obj);
+            free(p);
+            return;
+
+        case MPSE_AC:
+            if (p->obj)
+                acsmFree((ACSM_STRUCT *)p->obj);
+            free(p);
+            return;
+
+        case MPSE_ACF:
+        case MPSE_ACS:
+        case MPSE_ACB:
+        case MPSE_ACSB:
+            if (p->obj)
+                acsmFree2((ACSM_STRUCT2 *)p->obj);
+            free(p);
+            return;
+
+        case MPSE_LOWMEM:
+            if (p->obj)
+                KTrieDelete((KTRIE_STRUCT *)p->obj);
+            free(p);
+            return;
+
+        default:
+            return;
+    }
 }
 
-int  mpseAddPattern ( void * pv, void * P, int m, 
+int  mpseAddPattern ( void * pvoid, void * P, int m, 
              unsigned noCase,unsigned offset, unsigned depth,  void* ID, int IID )
 {
-  MPSE * p = (MPSE*)pv;
+  MPSE * p = (MPSE*)pvoid;
 
   switch( p->method )
    {
+     case MPSE_AC_BNFA:
+       return bnfaAddPattern( (bnfa_struct_t*)p->obj, (unsigned char *)P, m,
+              noCase, ID );
+
      case MPSE_AC:
        return acsmAddPattern( (ACSM_STRUCT*)p->obj, (unsigned char *)P, m,
               noCase, offset, depth, ID, IID );
-     break;
+
      case MPSE_ACF:
      case MPSE_ACS:
      case MPSE_ACB:
      case MPSE_ACSB:
        return acsmAddPattern2( (ACSM_STRUCT2*)p->obj, (unsigned char *)P, m,
               noCase, offset, depth, ID, IID );
-     break;
-     case MPSE_MWM:
-       return mwmAddPatternEx( p->obj, (unsigned char *)P, m, 
-              noCase, offset, depth, (void*)ID, IID );
-     break;
-     case MPSE_KTBM:
+
      case MPSE_LOWMEM:
-       return KTrieAddPattern( (KTRIE_STRUCT *)p->obj, (unsigned char *)P, m, 
-              noCase, ID );
-     break; 
+       return KTrieAddPattern( (KTRIE_STRUCT *)p->obj, (unsigned char *)P, m,
+                                noCase, ID );
+
      default:
        return -1;
-     break; 
    }
 }
 
-void mpseLargeShifts   ( void * pv, int flag )
+void mpseLargeShifts   ( void * pvoid, int flag )
 {
-  MPSE * p = (MPSE*)pv;
+  MPSE * p = (MPSE*)pvoid;
  
   switch( p->method )
    {
-     case MPSE_AUTO:
-     case MPSE_MWM:
-       mwmLargeShifts( p->obj, flag );
-     break; 
-     
      default:
        return ;
-     break; 
    }
 }
 
-int  mpsePrepPatterns  ( void * pv )
+int  mpsePrepPatterns  ( void * pvoid )
 {
-  MPSE * p = (MPSE*)pv;
+  int retv;
+  MPSE * p = (MPSE*)pvoid;
 
   switch( p->method )
    {
-     case MPSE_AC:
-       return acsmCompile( (ACSM_STRUCT*) p->obj);
+     case MPSE_AC_BNFA:
+       retv = bnfaCompile( (bnfa_struct_t*) p->obj);
      break;
+     
+     case MPSE_AC:
+       retv = acsmCompile( (ACSM_STRUCT*) p->obj);
+     break;
+     
      case MPSE_ACF:
      case MPSE_ACS:
      case MPSE_ACB:
      case MPSE_ACSB:
-       return acsmCompile2( (ACSM_STRUCT2*) p->obj);
+       retv = acsmCompile2( (ACSM_STRUCT2*) p->obj);
      break;
-     case MPSE_AUTO:
-     case MPSE_MWM:
-       return mwmPrepPatterns( p->obj );
-     break;
-     case MPSE_KTBM:
+     
      case MPSE_LOWMEM:
        return KTrieCompile( (KTRIE_STRUCT *)p->obj);
-     break; 
-     
+
      default:
-       return 1;
+       retv = 1;
      break; 
    }
+  
+  return retv;
 }
 
-void mpseSetRuleMask ( void *pv, BITOP * rm )
+void mpseSetRuleMask ( void *pvoid, BITOP * rm )
 {
-  MPSE * p = (MPSE*)pv;
+  MPSE * p = (MPSE*)pvoid;
 
   switch( p->method )
    {
-     case MPSE_AUTO:
-     case MPSE_MWM:
-       mwmSetRuleMask( p->obj, rm );
-     break;
-     
      default:
        return ;
-     break; 
    }
 
 
 }
-int mpsePrintDetail( void *pv )
+int mpsePrintInfo( void *pvoid )
 {
-  MPSE * p = (MPSE*)pv;
+  MPSE * p = (MPSE*)pvoid;
 
+  fflush(stderr);
+  fflush(stdout);
   switch( p->method )
    {
+     case MPSE_AC_BNFA:
+      bnfaPrintInfo( (bnfa_struct_t*) p->obj );
+     break;
      case MPSE_AC:
       return acsmPrintDetailInfo( (ACSM_STRUCT*) p->obj );
-     break;
      case MPSE_ACF:
      case MPSE_ACS:
      case MPSE_ACB:
      case MPSE_ACSB:
       return acsmPrintDetailInfo2( (ACSM_STRUCT2*) p->obj );
-      break;
-     case MPSE_AUTO:
-     case MPSE_MWM:
-      return 0;
-     break;
-     case MPSE_LOWMEM:
-       return 0;;
-     break; 
      
      default:
        return 1;
-     break; 
    }
+   fflush(stderr);
+   fflush(stdout);
 
  return 0;
-}	
+}
 
-
-int mpsePrintSummary( )
+int mpsePrintSummary(void )
 {
+   fflush(stderr);
+   fflush(stdout);
+
    acsmPrintSummaryInfo();
    acsmPrintSummaryInfo2();
+   bnfaPrintSummary();
+  
+   if( KTrieMemUsed() )
+   {
+     double x;
+     x = (double) KTrieMemUsed();
+     LogMessage("[ LowMem Search-Method Memory Used : %g %s ]\n",
+     (x > 1.e+6) ?  x/1.e+6 : x/1.e+3,
+     (x > 1.e+6) ? "MBytes" : "KBytes" );
+     
+   }
+   fflush(stderr);
+   fflush(stdout);
+
    return 0;
-}	
+}
 
-int mpseSearch( void *pv, unsigned char * T, int n, 
+int mpseSearch( void *pvoid, unsigned char * T, int n, 
     int ( *action )(void*id, int index, void *data), 
-    void * data ) 
+    void * data, int* current_state ) 
 {
-  MPSE * p = (MPSE*)pv;
+  MPSE * p = (MPSE*)pvoid;
+  int ret;
+  PROFILE_VARS;
 
+  PREPROC_PROFILE_START(mpsePerfStats);
   s_bcnt += n;
   
   switch( p->method )
    {
+     case MPSE_AC_BNFA:
+      /* return is actually the state */
+      ret = bnfaSearch( (bnfa_struct_t*) p->obj, T, n, action, data, 0 /* start-state */, current_state );
+      PREPROC_PROFILE_END(mpsePerfStats);
+      return ret;
+
      case MPSE_AC:
-      return acsmSearch( (ACSM_STRUCT*) p->obj, T, n, action, data );
-     break;
+      ret = acsmSearch( (ACSM_STRUCT*) p->obj, T, n, action, data,
+                   current_state );
+      PREPROC_PROFILE_END(mpsePerfStats);
+      return ret;
+     
      case MPSE_ACF:
      case MPSE_ACS:
      case MPSE_ACB:
      case MPSE_ACSB:
-      return acsmSearch2( (ACSM_STRUCT2*) p->obj, T, n, action, data );
-      break;
-     case MPSE_AUTO:
-     case MPSE_MWM:
-      return mwmSearch( p->obj, T, n, action, data );
-     break;
+      ret = acsmSearch2( (ACSM_STRUCT2*) p->obj, T, n, action, data,
+                   current_state );
+      PREPROC_PROFILE_END(mpsePerfStats);
+      return ret;
+
      case MPSE_LOWMEM:
-       return  KTrieSearch( (KTRIE_STRUCT *)p->obj, T, n, action, data );
-     break; 
+        ret = KTrieSearch( (KTRIE_STRUCT *)p->obj, T, n, action, data);
+        *current_state = 0;
+        PREPROC_PROFILE_END(mpsePerfStats);
+        return ret;
+
      default:
+       PREPROC_PROFILE_START(mpsePerfStats);
        return 1;
-     break; 
    }
 
 }

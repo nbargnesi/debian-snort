@@ -1,10 +1,31 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /*
 *
 *  sfghash.h
 *
 *  generic hash table - stores and maps key + data pairs
 *
-*  Copyright (C) 2001 Marc A Norton
+*  Author: Marc Norton
 *
 */
 
@@ -78,21 +99,7 @@ int       sfghash_count( SFGHASH * h);
 void    * sfghash_find( SFGHASH * h, void * key );
 SFGHASH_NODE * sfghash_findfirst( SFGHASH * h );
 SFGHASH_NODE * sfghash_findnext ( SFGHASH * h );
-
-/*
-*  ATOM PROTOTYPES  - A Global Hash of String+Data Pointers
-*  this could be generalized to do a Global ptr to ptr map as well....
-*  
-*/
-int    sfatom_setsize( int n );
-int    sfatom_init();
-int    sfatom_reset();
-int    sfatom_add(char * str, void * data);
-int    sfatom_remove(char * str);
-int    sfatom_count();
-void * sfatom_find(char * str);
-SFGHASH_NODE * sfatom_findfirst();
-SFGHASH_NODE * sfatom_findnext();
+void sfghash_splaymode( SFGHASH * t, int n );
 
 #endif
 

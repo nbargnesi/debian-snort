@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_icmp_type_check.c,v 1.14 2003/10/20 15:03:29 chrisgreen Exp $ */
+/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -121,6 +122,7 @@ void ParseIcmpType(char *data, OptTreeNode *otn)
 {
     char *type;
     IcmpTypeCheckData *ds_ptr;  /* data struct pointer */
+    char *endptr = NULL;
 
     /* set the ds pointer to make it easier to reference the option's
        particular data struct */
@@ -131,18 +133,18 @@ void ParseIcmpType(char *data, OptTreeNode *otn)
 
     if(!data)
     {
-        FatalError("%s (%d): No ICMP Type Specified : %s\n", file_name, 
-                file_line, type);
+        FatalError("%s (%d): No ICMP Type Specified\n",
+                   file_name, file_line);
     }
     
     /* get rid of spaces before the data */
     while(isspace((int)*data))
         data++;
 
-    if(data[0] == '\0')
+    if (*data == '\0')
     {
-        FatalError( "%s (%d): No ICMP Type Specified : %s\n", file_name,
-                file_line, type);
+        FatalError("%s (%d): No ICMP Type Specified : %s\n",
+                   file_name, file_line, type);
     }
 
     /*
@@ -150,44 +152,77 @@ void ParseIcmpType(char *data, OptTreeNode *otn)
      * icmp_type2
      */
 
-    if (isdigit((int)*data) && strchr(data, '<') && strchr(data, '>'))
+    if (isdigit((int)*data) && strstr(data, "<>"))
     {
-        ds_ptr->icmp_type  = atoi(strtok(data, " <>"));
-        ds_ptr->icmp_type2 = atoi(strtok(NULL, " <>"));
-        ds_ptr->operator = ICMP_TYPE_TEST_RG;
+        ds_ptr->icmp_type = strtol(data, &endptr, 10);
+        while (isspace((int)*endptr))
+            endptr++;
 
-        /* all done */
-        return;
+        if (*endptr != '<')
+        {
+            FatalError("%s (%d): Invalid ICMP itype in rule: %s\n",
+                       file_name, file_line, type);
+        }
+
+        data = endptr;
+
+        data += 2;   /* move past <> */
+
+        while (isspace((int)*data))
+            data++;
+
+        ds_ptr->icmp_type2 = strtol(data, &endptr, 10);
+        if (*data == '\0' || *endptr != '\0')
+        {
+            FatalError("%s (%d): Invalid ICMP itype in rule: %s\n",
+                       file_name, file_line, type);
+        }
+
+        ds_ptr->operator = ICMP_TYPE_TEST_RG;
     }
     /* otherwise if its greater than... */
     else if (*data == '>')
     {
         data++;
-        while(isspace((int)*data)) data++;
+        while (isspace((int)*data))
+            data++;
 
-        ds_ptr->icmp_type = atoi(data);
+        ds_ptr->icmp_type = strtol(data, &endptr, 10);
+        if (*data == '\0' || *endptr != '\0')
+        {
+            FatalError("%s (%d): Invalid ICMP itype in rule: %s\n",
+                       file_name, file_line, type);
+        }
+
         ds_ptr->operator = ICMP_TYPE_TEST_GT;
     }
     /* otherwise if its less than ... */
     else if (*data == '<')
     {
         data++;
-        while(isspace((int)*data)) data++;
+        while (isspace((int)*data))
+            data++;
 
-        ds_ptr->icmp_type = atoi(data);
+        ds_ptr->icmp_type = strtol(data, &endptr, 10);
+        if (*data == '\0' || *endptr != '\0')
+        {
+            FatalError("%s (%d): Invalid ICMP itype in rule: %s\n",
+                       file_name, file_line, type);
+        }
+
         ds_ptr->operator  = ICMP_TYPE_TEST_LT;
     }
     /* otherwise check if its a digit */
-    else if (isdigit((int)*data))
+    else
     {
-        ds_ptr->icmp_type = atoi(data);
+        ds_ptr->icmp_type = strtol(data, &endptr, 10);
+        if (*endptr != '\0')
+        {
+            FatalError("%s (%d): Invalid ICMP itype in rule: %s\n",
+                       file_name, file_line, type);
+        }
+
         ds_ptr->operator = ICMP_TYPE_TEST_EQ;
-    }
-    /* uh oh */
-    else 
-    {
-        FatalError("%s (%d): Bad ICMP type: %s\n", file_name, file_line, 
-                type);
     }
 
     return;
