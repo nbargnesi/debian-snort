@@ -163,7 +163,8 @@ case "$1" in
 		log_progress_msg "($interface"
 
                 # Check if the interface is available
-                if ip link show dev "$interface" >/dev/null 2>&1; then
+                # (only if iproute is available) 
+                if ! [ -x /sbin/ip ] || ip link show dev "$interface" >/dev/null 2>&1; then
 
 		PIDFILE=/var/run/snort_$interface.pid
                 CONFIGFILE=/etc/snort/snort.$interface.conf
@@ -264,10 +265,12 @@ case "$1" in
 
 		set +e
                 if [ ! -e "$PIDFILE" -o -r "$PIDFILE" ] ; then
+# Change ownership of the pidfile
 		    /sbin/start-stop-daemon --stop --retry 5 --quiet --oknodo \
 			--pidfile "$PIDFILE" --exec $DAEMON >/dev/null
                     ret=$?
                     rm -f "$PIDFILE"
+                    rm -f "$PIDFILE.lck"
                 else
                      log_progress_msg "cannot read $PIDFILE"
                      ret=4
