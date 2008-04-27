@@ -47,8 +47,10 @@ clean: clean-sources
 	rm -f src/snort
 # Clean documents
 	cd doc && [ ! -f Makefile ] || $(MAKE) distclean
-	rm -f doc/snort_manual.{pdf,ps,aux,log,toc}
-	rm -f doc/faq.{idx,out,log,toc,aux,pdf,ps}
+	rm -f doc/snort_manual.pdf doc/snort_manual.ps doc/snort_manual.aux \
+	    doc/snort_manual.log doc/snort_manual.toc
+	rm -f doc/faq.idx doc/faq.out doc/faq.log doc/faq.toc doc/faq.aux \
+	    doc/faq.pdf doc/faq.ps
 	dh_clean
 
 configure: configure-stamp
@@ -184,7 +186,9 @@ install-arch:
 
 # Move libraries to the snort-common-libraries package
 	mv $(TMP)/snort-common/usr/lib/ $(TMP)/snort-common-libraries/usr/
-	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
+# Remove headers, as this is not a -dev package
+#	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
+	rm -rf $(TMP)/sort-common/usr/src/
 
 # Remove useless (empty) directories
 	rmdir $(TMP)/snort-pgsql/usr/share/doc/snort
