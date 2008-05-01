@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -996,25 +996,25 @@ static int ip4_parse(char *ipstr, int network_order, int *not_flag, unsigned *ho
 
 int ip4_setparse(IPSET *ipset, char *ipstr) 
 {
-    char *s_copy, *startIP, *endIP;
+    char *copy, *startIP, *endIP;
     int parse_count = 0;
     int set_not_flag = 0;
     int item_not_flag;
     unsigned host, mask;
     PORTSET portset;
 
-    s_copy = strdup(ipstr);
+    copy = strdup(ipstr);
 
-    if(!s_copy)
+    if(!copy)
         return -2;
 
-    if (*s_copy == '!')
+    startIP = copy;
+
+    if (*startIP == '!')
     {
         set_not_flag = 1;
-        s_copy++;
+        startIP++;
     }
-
-    startIP = s_copy;
 
     while (startIP)
     {
@@ -1036,14 +1036,14 @@ int ip4_setparse(IPSET *ipset, char *ipstr)
 
         if(ip4_parse(startIP, 0, &item_not_flag, &host, &mask, &portset) != 0)
         {
-            free(s_copy);
+            free(copy);
             return -5;
         }
 
         if(ipset_add(ipset, &host, &mask, &portset,
                      (item_not_flag ^ set_not_flag), IPV4_FAMILY) != 0)
         {
-            free(s_copy);
+            free(copy);
             return -6;
         }
 
@@ -1055,7 +1055,7 @@ int ip4_setparse(IPSET *ipset, char *ipstr)
         startIP = endIP;
     }
 
-    free(s_copy);
+    free(copy);
 
     if (!parse_count)
         return -7; 

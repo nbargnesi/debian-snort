@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -58,6 +58,7 @@
 #include "flow_callback.h"
 #include "flow_hash.h"
 #include "bitop_funcs.h"
+#include "sf_types.h"
 
 /* helper functions */
 static int flowcache_anrfree( void *key, void *data);
@@ -573,7 +574,7 @@ void flowcache_stats(FILE *stream, FLOWCACHE *flowcachep)
     }
 
     flow_printf(",----[ FLOWCACHE STATS ]----------\n");
-    flow_printf("Memcap: %u Overhead Bytes %u used(%%%lf)/blocks (%u/%u)\nOverhead blocks: %u Could Hold: (%u)\n",
+    flow_printf("Memcap: %u Overhead Bytes %u used(%%%f)/blocks (%u/%u)\nOverhead blocks: %u Could Hold: (%u)\n",
                 flowcachep->ipv4_table->mc.memcap,
                 flowcache_overhead_bytes(flowcachep),
                 calc_percent(flowcachep->ipv4_table->mc.memused,
@@ -592,8 +593,8 @@ void flowcache_stats(FILE *stream, FLOWCACHE *flowcachep)
                 diff_hours,diff_min,diff_sec);
     
 
-    flow_printf("    finds: %llu reversed: %llu(%%%lf) \n    find_success: %llu "
-                "find_fail: %llu\npercent_success: (%%%lf) new_flows: %llu\n",
+    flow_printf("    finds: " STDu64 " reversed: " STDu64 "(%%%f) \n    find_success: " STDu64 " "
+                "find_fail: " STDu64 "\npercent_success: (%%%f) new_flows: " STDu64 "\n",
                 flowcachep->total.find_ops,
                 flowcachep->total.reversed_ops,
                 calc_percent64(flowcachep->total.reversed_ops,
@@ -608,13 +609,13 @@ void flowcache_stats(FILE *stream, FLOWCACHE *flowcachep)
     {
         if(flowcachep->per_proto[i].find_ops > 0)
         {
-            flow_printf(" Protocol: %d (%%%lf)\n"
-                        "   finds: %llu\n"
-                        "   reversed: %llu(%%%lf)\n"
-                        "   find_success: %llu\n"
-                        "   find_fail: %llu\n"
-                        "   percent_success: (%%%lf)\n"
-                        "   new_flows: %llu\n",
+            flow_printf(" Protocol: %d (%%%f)\n"
+                        "   finds: " STDu64 "\n"
+                        "   reversed: " STDu64 "(%%%f)\n"
+                        "   find_success: " STDu64 "\n"
+                        "   find_fail: " STDu64 "\n"
+                        "   percent_success: (%%%f)\n"
+                        "   new_flows: " STDu64 "\n",
                         i,
                         calc_percent64(flowcachep->per_proto[i].find_ops,
                                      flowcachep->total.find_ops),

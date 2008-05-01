@@ -1,17 +1,17 @@
 ; $Id$
 ;
-; NSIS Installation script for Snort 2.7.0 Win32
+; NSIS Installation script for Snort 2.8.1 Win32
 ; Written by Chris Reid <chris.reid@codecraftconsultants.com>
 ; Updated by Steven Sturges <ssturges@sourcefire.com>
 ;
-; This script will create a Win32 installer for Snort 2.7.0 (Win32 only).
+; This script will create a Win32 installer for Snort 2.8.1 (Win32 only).
 ; For more information about NSIS, see their homepage:
 ;     http://nsis.sourceforge.net/
 ;
 ; Note that this NSIS script is designed for NSIS version 2.09.
 ;
 
-Name "Snort 2.7.0"
+Name "Snort 2.8.1"
 
 CRCCheck On
 
@@ -23,7 +23,7 @@ CRCCheck On
 ;Configuration
 
   ;General
-  OutFile "Snort_270_Installer.exe"  ; The name of the installer executable
+  OutFile "Snort_281_Installer.exe"  ; The name of the installer executable
 
   ;Folder selection page
   InstallDir "C:\Snort"
@@ -210,7 +210,8 @@ Section "Dynamic Modules" Dynamic
   File "..\..\dynamic-preprocessors\ssh\Release\sf_ssh.dll"
   File "..\..\dynamic-preprocessors\dcerpc\Release\sf_dcerpc.dll"
   File "..\..\dynamic-preprocessors\dns\Release\sf_dns.dll"
-
+  File "..\..\dynamic-preprocessors\ssl\Release\sf_ssl.dll"
+  
   CreateDirectory "$INSTDIR\lib\snort_dynamicengine"
   SetOutPath "$INSTDIR\lib\snort_dynamicengine"
   File ".\SF_Engine_Release\sf_engine.dll"

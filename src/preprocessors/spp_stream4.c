@@ -2,7 +2,7 @@
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
-** Copyright (C) 2003-2005 Sourcefire, Inc.
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -74,6 +74,7 @@
  */
 
 /*  I N C L U D E S  ************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -113,9 +114,9 @@
 #include "snort.h"
 #include "stream.h"
 #include "spp_stream4.h"
-#include "snort_packet_header.h"
 #include "event_queue.h"
 #include "inline.h"
+#include "sfsnprintfappend.h"
 
 #include "snort_stream4_session.h"
 #include "snort_stream4_udp.h"
@@ -126,6 +127,10 @@
 #include "flow.h" /* For flowbits, now handled by Stream API */
 
 #include "profiler.h"
+
+#ifdef TARGET_BASED
+#include "target-based/sftarget_reader.h"
+#endif
 
 /*  D E F I N E S  **************************************************/
 
@@ -276,7 +281,7 @@ typedef struct _OverlapData
 typedef struct _BuildData
 {
     Stream *stream;
-    u_int8_t *buf;
+    const u_int8_t *buf;
     u_int32_t total_size;
     /* u_int32_t build_flags; -- reserved for the day when we generate 1 stream event and log the stream */
 } BuildData;
@@ -285,8 +290,8 @@ typedef struct _BinStats
 {
     u_int32_t start_time;
     u_int32_t end_time;
-    u_int32_t sip;
-    u_int32_t cip;
+    snort_ip      sip;
+    snort_ip      cip;
     u_int16_t sport;
     u_int16_t cport;
     u_int32_t spackets;
@@ -374,8 +379,8 @@ PreprocStats stream4ProcessRebuiltPerfStats;
 /*  P R O T O T Y P E S  ********************************************/
 void *SafeAlloc(unsigned long, int, Session *);
 void ParseStream4Args(char *);
-void Stream4InitReassembler(u_char *);
-void Stream4InitExternalOptions(u_char *);
+void Stream4InitReassembler(char *);
+void Stream4InitExternalOptions(char *);
 void ReassembleStream4(Packet *, void *);
 Session *CreateNewSession(Packet *, u_int32_t, u_int32_t);
 void DropSession(Session *);
@@ -386,6 +391,8 @@ static int s4_shutdown = 0;
 void Stream4ShutdownFunction(int, void *);
 void Stream4CleanExitFunction(int, void *);
 void Stream4RestartFunction(int, void *);
+static void Stream4ResetFunction(int, void *);
+static void Stream4ResetStatsFunction(int, void *);
 void PrintSessionCache();
 int CheckRst(Session *, int, u_int32_t, Packet *);
 int PruneSessionCache(u_int8_t, u_int32_t, int, Session *);
@@ -400,10 +407,11 @@ void PortscanDeclare(Packet *);
 int LogStream(Stream *);
 void WriteSsnStats(BinStats *);
 void OpenStatsFile();
-void Stream4Init(u_char *);
+void Stream4Init(char *);
 void PreprocFunction(Packet *);
 void PreprocRestartFunction(int);
 void PreprocCleanExitFunction(int);
+static void Stream4PrintStats(int);
 static INLINE int isBetween(u_int32_t low, u_int32_t high, u_int32_t cur);
 static INLINE int NotForStream4(Packet *p);
 static INLINE int SetFinSent(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p);
@@ -440,7 +448,7 @@ static int Stream4MidStreamDropAlert() { return s4data.ms_inline_alerts; }
 static void Stream4UpdateDirection(
                     void * ssnptr,
                     char dir,
-                    u_int32_t ip,
+                    snort_ip_p ip,
                     u_int16_t port) { }
 static u_int32_t Stream4GetPacketDirection(
                     Packet *p) { return 0;} 
@@ -451,9 +459,9 @@ static void SetIgnoreChannel(
                     int32_t bytes,
                     int response);
 static int Stream4IgnoreChannel(
-                    u_int32_t srcIP,
+                    snort_ip_p srcIP,
                     u_int16_t srcPort,
-                    u_int32_t dstIP,
+                    snort_ip_p dstIP,
                     u_int16_t dstPort,
                     char protocol,
                     char direction,
@@ -491,6 +499,8 @@ static char Stream4SetReassembly(void *ssnptr,
 static char Stream4GetReassemblyDirection(void *ssnptr);
 static char Stream4GetReassemblyFlushPolicy(void *ssnptr, char dir);
 static char Stream4IsStreamSequenced(void *ssnptr, char dir);
+static char Stream4MissingInReassembled(void *ssnptr, char dir);
+static char Stream4MissingPackets(void *ssnptr, char dir);
 
 /* Not an API function but part of the Session alert tracking */
 void CleanSessionAlerts(Session *ssn, Packet *flushed_pkt);
@@ -500,6 +510,10 @@ static int Stream4TraverseReassembly(
                     void *userdata);
 static StreamFlowData *Stream4GetFlowData(
                     Packet *p);
+#ifdef TARGET_BASED
+static int16_t Stream4GetApplicationProtocolId(void *ssnptr) { return 0; }
+static int16_t Stream4SetApplicationProtocolId(void *ssnptr, int16_t id) { return 0; }
+#endif
 
 StreamAPI s4api = {
     STREAM_API_VERSION4,
@@ -524,7 +538,14 @@ StreamAPI s4api = {
     Stream4SetReassembly,
     Stream4GetReassemblyDirection,
     Stream4GetReassemblyFlushPolicy,
-    Stream4IsStreamSequenced
+    Stream4IsStreamSequenced,
+    Stream4MissingInReassembled,  /* Not supported in Stream4 */
+    Stream4MissingPackets    /* Not supported in Stream4 */
+#ifdef TARGET_BASED
+    ,
+    Stream4GetApplicationProtocolId, /* Not supported in Stream4 */
+    Stream4SetApplicationProtocolId /* Not supported in Stream4 */
+#endif
             /* More to follow */
 };
 
@@ -562,7 +583,7 @@ static void TraverseFunc(StreamPacketData *NodePtr, void *build_data)
     spd = (StreamPacketData *) NodePtr;
     bd = (BuildData *) build_data;
     s = bd->stream;
-    buf = bd->buf;
+    buf = (u_int8_t *)bd->buf;
 
     /* Don't reassemble if there's nothing to reassemble.
      * The first two cases can probably never happen. I personally
@@ -842,7 +863,6 @@ void *SafeAlloc(unsigned long size, int tv_sec, Session *ssn)
     return tmp;
 }
 
-
 /*
  * Function: SetupStream4()
  *
@@ -865,9 +885,8 @@ void SetupStream4()
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM,  "Preprocessor: Stream4 is setup...\n"););
 }
 
-
 /*
- * Function: Stream4Init(u_char *)
+ * Function: Stream4Init(char *)
  *
  * Purpose: Calls the argument parsing function, performs final setup on data
  *          structs, links the preproc function into the function list.
@@ -876,7 +895,7 @@ void SetupStream4()
  *
  * Returns: void function
  */
-void Stream4Init(u_char *args)
+void Stream4Init(char *args)
 {
     char logfile[STD_BUF];
 
@@ -884,6 +903,11 @@ void Stream4Init(u_char *args)
         stream_api = &s4api;
     else
         FatalError("Cannot use both Stream4 & Stream5 simultaneously\n");
+
+#ifdef SUP_IP6
+    FatalError("Stream4 cannot be used when IPv6 support is compiled into Snort. "
+                "Please switch to Stream5.\n");
+#endif    
 
     s4data.stream4_active = 1;
     pv.stateful = 1;
@@ -908,7 +932,7 @@ void Stream4Init(u_char *args)
     s4_emergency.status = OPS_NORMAL;
    
     /* parse the argument list from the rules file */
-    ParseStream4Args(args);
+    ParseStream4Args((char *)args);
 
     SnortSnprintf(logfile, STD_BUF, "%s/%s", pv.log_dir, "session.log");
     
@@ -942,7 +966,10 @@ void Stream4Init(u_char *args)
     AddFuncToPreprocShutdownList(Stream4ShutdownFunction, NULL, PRIORITY_FIRST, PP_STREAM4);
     AddFuncToPreprocCleanExitList(Stream4CleanExitFunction, NULL, PRIORITY_FIRST, PP_STREAM4);
     AddFuncToPreprocRestartList(Stream4RestartFunction, NULL, PRIORITY_FIRST, PP_STREAM4);    
+    AddFuncToPreprocResetList(Stream4ResetFunction, NULL, PRIORITY_FIRST, PP_STREAM4);    
+    AddFuncToPreprocResetStatsList(Stream4ResetStatsFunction, NULL, PRIORITY_FIRST, PP_STREAM4);    
     AddFuncToConfigCheckList(Stream4VerifyConfig);
+    RegisterPreprocStats("stream4", Stream4PrintStats);
 
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("s4", &stream4PerfStats, 0, &totalPerfStats);
@@ -968,6 +995,14 @@ void Stream4VerifyConfig()
 #ifdef STREAM4_UDP
     Stream4UdpConfigure();
 #endif
+
+#ifdef TARGET_BASED
+    if (SFAT_NumberOfHosts() || (pv.attribute_reload_thread_pid != 0))
+    {
+        LogMessage("WARNING: Configuration using attribute table and Stream4.  Stream4 cannot leverage attribute data\n");
+    }
+#endif
+
 }
 
 void DisplayStream4Config(void) 
@@ -1420,7 +1455,7 @@ void ParseStream4Args(char *args)
     DisplayStream4Config();
 }
 
-void Stream4InitExternalOptions(u_char *args)
+void Stream4InitExternalOptions(char *args)
 {
     char **toks;
     int num_toks;
@@ -1441,7 +1476,7 @@ void Stream4InitExternalOptions(u_char *args)
 #endif
     char **stoks = NULL;
     int s_toks;
-    toks = mSplit(args, ",", 12, &num_toks, 0);
+    toks = mSplit((char *)args, ",", 12, &num_toks, 0);
 
     if ((s4data.reassemble_client == 0) &&
         (s4data.reassemble_server == 0))
@@ -1638,7 +1673,7 @@ void Stream4InitExternalOptions(u_char *args)
     mSplitFree(&toks, num_toks);
 }
 
-void Stream4InitReassembler(u_char *args)
+void Stream4InitReassembler(char *args)
 {
     char buf[STD_BUF+1];
     char **toks = NULL;
@@ -1675,8 +1710,10 @@ void Stream4InitReassembler(u_char *args)
     s4data.assemble_ports[143] = 1;
     s4data.assemble_ports[445] = 1;
     s4data.assemble_ports[513] = 1;
+    s4data.assemble_ports[514] = 1;
     s4data.assemble_ports[1433] = 1;
     s4data.assemble_ports[1521] = 1;
+    s4data.assemble_ports[2401] = 1;
     s4data.assemble_ports[3306] = 1;
     s4data.reassy_method = METHOD_FAVOR_OLD;
 
@@ -1696,13 +1733,15 @@ void Stream4InitReassembler(u_char *args)
     s4data.emergency_ports[143] = 1;
     s4data.emergency_ports[445] = 1;
     s4data.emergency_ports[513] = 1;
+    s4data.emergency_ports[514] = 1;
     s4data.emergency_ports[1433] = 1;
     s4data.emergency_ports[1521] = 1;
+    s4data.emergency_ports[2401] = 1;
     s4data.emergency_ports[3306] = 1;
    
     if (args != NULL) 
     {
-        toks = mSplit(args, ",", 12, &num_toks, 0);
+        toks = mSplit((char *)args, ",", 12, &num_toks, 0);
     }
 
     i=0;
@@ -1923,7 +1962,7 @@ void Stream4InitReassembler(u_char *args)
                 s4data.emergency_ports[j] = 0;
             }
 
-            ports = mSplit(args, " ", 40, &num_ports, 0);
+            ports = mSplit((char *)args, " ", 40, &num_ports, 0);
 
             j = 0;
 
@@ -2686,9 +2725,9 @@ void ReassembleStream4(Packet *p, void *context)
             CreateTCPFlagString(p, flagbuf);
             DebugMessage((DEBUG_STREAM|DEBUG_STREAM_STATE), 
                 "Got Packet 0x%X:%d ->  0x%X:%d %s\nseq: 0x%X   ack:0x%X\n",
-                p->iph->ip_src.s_addr,
+                GET_SRC_IP(p),
                 p->sp,
-                p->iph->ip_dst.s_addr,
+                GET_DST_IP(p),
                 p->dp,
                 flagbuf,
                 ntohl(p->tcph->th_seq), ntohl(p->tcph->th_ack));
@@ -2872,6 +2911,7 @@ void ReassembleStream4(Packet *p, void *context)
 
 #ifdef DEBUG
         {
+#ifndef SUP_IP6
             /* Have to allocate & copy one of these since inet_ntoa
              * clobbers the info from the previous call. */
             struct in_addr tmpAddr;
@@ -2884,6 +2924,7 @@ void ReassembleStream4(Packet *p, void *context)
                    "Ignoring channel %s:%d --> %s:%d\n",
                    srcAddr, p->sp,
                    inet_ntoa(tmpAddr), p->dp););
+#endif
         }
 #endif
         PREPROC_PROFILE_END(stream4PerfStats);
@@ -3824,10 +3865,14 @@ void NewSessionSetReassemble(Session *ssn)
         ssn->reassemble_server = 0;
 }
 
+static u_int8_t savedfpi = 0; /* current flush point index */
+
 Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
 {
     Session *idx = NULL;
-    static u_int8_t savedfpi; /* current flush point index */
+    /* make this global because we may need to reset if
+     * reading multiple pcaps
+    static u_int8_t savedfpi; */
     u_int8_t fpi;            /* flush point index */
     PROFILE_VARS;
 
@@ -3848,7 +3893,7 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
     {
         case TH_RES1|TH_RES2|TH_SYN: /* possible ECN traffic */
         case TH_RES1|TH_SYN: /* possible ECN traffic */
-            if(p->iph->ip_tos == 0x02)
+            if(GET_IPH_TOS(p) == 0x02)
             {
                 /* it is ECN traffic */
                 p->packet_flags |= PKT_ECN;
@@ -3866,11 +3911,11 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             idx->server.seglist = idx->server.seglist_tail = NULL;
 
             idx->server.state = LISTEN;        
-            idx->server.ip = p->iph->ip_dst.s_addr;
+            IP_COPY_VALUE(idx->server.ip, GET_DST_IP(p));
             idx->server.port = p->dp;
 
             idx->client.state = SYN_SENT;
-            idx->client.ip = p->iph->ip_src.s_addr;
+            IP_COPY_VALUE(idx->client.ip, GET_SRC_IP(p));
             idx->client.port = p->sp;
             idx->client.isn = pkt_seq;
             idx->server.win_size = ntohs(p->tcph->th_win);
@@ -3890,7 +3935,7 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             break;
 
         case TH_RES2|TH_SYN|TH_ACK:
-            if(p->iph->ip_tos == 0x02)
+            if(GET_IPH_TOS(p) == 0x02)
             {
                 p->packet_flags |= PKT_ECN;
             }
@@ -3927,12 +3972,12 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             idx->server.state = SYN_RCVD;
             idx->client.state = SYN_SENT;
 
-            idx->server.ip = p->iph->ip_src.s_addr;
+            IP_COPY_VALUE(idx->server.ip, GET_SRC_IP(p));
             idx->server.port = p->sp;
             idx->server.isn = pkt_seq;
             idx->client.win_size = ntohs(p->tcph->th_win);
 
-            idx->client.ip = p->iph->ip_dst.s_addr;
+            IP_COPY_VALUE(idx->client.ip, GET_DST_IP(p));
             idx->client.port = p->dp;
             idx->client.isn = pkt_ack-1;
 
@@ -3974,14 +4019,14 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
 
             if ( p->dp <= p->sp )  /* guess this is a client packet */
             {
-                idx->server.ip = p->iph->ip_dst.s_addr;
+                IP_COPY_VALUE(idx->server.ip, GET_DST_IP(p));
                 idx->server.port = p->dp;
                 idx->server.isn = pkt_ack-1;
                 idx->server.last_ack = pkt_ack;
                 idx->server.base_seq = idx->server.last_ack;
                 idx->server.win_size = ntohs(p->tcph->th_win);
 
-                idx->client.ip = p->iph->ip_src.s_addr;
+                IP_COPY_VALUE(idx->client.ip, GET_SRC_IP(p));
                 idx->client.port = p->sp;
                 idx->client.isn = pkt_seq-1;
                 idx->client.last_ack = pkt_seq;
@@ -3990,14 +4035,14 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             }
             else  /*  sp > dp, guess this is a server packet */
             {
-                idx->client.ip = p->iph->ip_dst.s_addr;
+                IP_COPY_VALUE(idx->client.ip, GET_DST_IP(p));
                 idx->client.port = p->dp;
                 idx->client.isn = pkt_ack-1;
                 idx->client.last_ack = pkt_ack;
                 idx->client.base_seq = idx->client.last_ack;
                 idx->client.win_size = ntohs(p->tcph->th_win);
 
-                idx->server.ip = p->iph->ip_src.s_addr;
+                IP_COPY_VALUE(idx->server.ip, GET_SRC_IP(p));
                 idx->server.port = p->sp;
                 idx->server.isn = pkt_seq-1;
                 idx->server.last_ack = pkt_seq;
@@ -4023,10 +4068,10 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
             idx->server.state = NMAP_FINGERPRINT_2S;
             idx->client.state = NMAP_FINGERPRINT_2S;
 
-            idx->server.ip = p->iph->ip_dst.s_addr;
+            IP_COPY_VALUE(idx->server.ip, GET_DST_IP(p));
             idx->server.port = p->dp;
 
-            idx->client.ip = p->iph->ip_src.s_addr;
+            IP_COPY_VALUE(idx->client.ip, GET_SRC_IP(p));
             idx->client.port = p->sp; /* cp incs by one for each packet */
             idx->client.port++;
             idx->client.isn = pkt_seq;
@@ -4185,7 +4230,9 @@ Session *CreateNewSession(Packet *p, u_int32_t pkt_seq, u_int32_t pkt_ack)
 
 void DeleteSession(Session *ssn, u_int32_t time, char flag)
 {
+#ifndef SUP_IP6
     struct in_addr foo;
+#endif
     register int s;
     struct tm *lt;
     struct tm *et;
@@ -4222,6 +4269,7 @@ void DeleteSession(Session *ssn, u_int32_t time, char flag)
                 et->tm_mon+1, et->tm_mday, et->tm_year - 100, s/3600, 
                 (s%3600)/60, s%60);
 
+#ifndef SUP_IP6
         foo.s_addr = ssn->server.ip;
         fprintf(session_log, "   %s IP: %s  ", 
             tcp_ssn ? "Server" : "Responder", inet_ntoa(foo));
@@ -4231,6 +4279,7 @@ void DeleteSession(Session *ssn, u_int32_t time, char flag)
         foo.s_addr = ssn->client.ip;
         fprintf(session_log, "   %s IP: %s  ", 
             tcp_ssn ? "Client" : "Sender", inet_ntoa(foo));
+#endif
         fprintf(session_log, "port: %d  pkts: %u  bytes: %u\n", 
                 ssn->client.port, ssn->client.pkts_sent, 
                 ssn->client.bytes_sent);
@@ -4252,6 +4301,7 @@ void DeleteSession(Session *ssn, u_int32_t time, char flag)
                 et->tm_mon+1, et->tm_mday, et->tm_year - 100, s/3600, 
                 (s%3600)/60, s%60);
 
+#ifndef SUP_IP6
         foo.s_addr = ssn->server.ip;
         fprintf(session_log, "[%s IP: %s  ", 
             tcp_ssn ? "Server" : "Responder", inet_ntoa(foo));
@@ -4261,6 +4311,7 @@ void DeleteSession(Session *ssn, u_int32_t time, char flag)
         foo.s_addr = ssn->client.ip;
         fprintf(session_log, " [%s IP: %s  ", 
             tcp_ssn ? "Client" : "Sender", inet_ntoa(foo));
+#endif
         fprintf(session_log, "port: %d  pkts: %u  bytes: %u]\n", 
                 ssn->client.port, ssn->client.pkts_sent, 
                 ssn->client.bytes_sent);
@@ -4346,6 +4397,7 @@ int CheckRst(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p)
     }
 
     {
+#ifndef SUP_IP6
         DEBUG_WRAP(struct in_addr foo;);
         DEBUG_WRAP(foo.s_addr=s->ip; 
                 DebugMessage(DEBUG_STREAM, 
@@ -4355,6 +4407,7 @@ int CheckRst(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p)
                     "bytes-sent: %u bytes-tracked: %u win: %u \n",
                     pkt_seq,s->last_ack,s->base_seq,s->next_seq,s->bytes_sent,
                     s->bytes_tracked,s->win_size););
+#endif
     }
 
     /*
@@ -4470,12 +4523,12 @@ void PurgeFlushStream(Session *ssn, Stream *s)
             }
 #endif
             pc.tcp--;
-            //memcpy(&pkth, &spd->pkth, sizeof(SnortPktHeader));
+            //memcpy(&pkth, &spd->pkth, sizeof(struct pcap_pkthdr));
             /* Do each field individually because of size differences on 64bit OS */
             pkth.ts.tv_sec = spd->pkth.ts.tv_sec;
             pkth.ts.tv_usec = spd->pkth.ts.tv_usec;
             pkth.caplen = spd->pkth.caplen;
-            pkth.len = spd->pkth.pktlen;
+            pkth.len = spd->pkth.len;
             pktOrig = pkt = malloc(pkth.caplen + SPARC_TWIDDLE);
             memcpy(pktOrig, spd->pktOrig, pkth.caplen + SPARC_TWIDDLE);
             pkt += SPARC_TWIDDLE;
@@ -4573,6 +4626,7 @@ void DeleteSpd(StreamPacketData **seglist)
 
 int GetDirection(Session *ssn, Packet *p)
 {
+#ifndef SUP_IP6
     if((p->iph->ip_src.s_addr == ssn->client.ip) &&
        (p->sp == ssn->client.port))
     {
@@ -4582,12 +4636,13 @@ int GetDirection(Session *ssn, Packet *p)
             !(ssn->session_flags & SSNFLAG_ESTABLISHED))
     {
         ssn->client.port = p->sp;
-        ssn->client.ip   = p->iph->ip_src.s_addr;
+        IP_COPY_VALUE(ssn->client.ip, GET_SRC_IP(p));
         ssn->server.port = p->dp;
-        ssn->server.ip   = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(ssn->server.ip, GET_DST_IP(p));
         return FROM_CLIENT;
     }
         
+#endif
     return FROM_SERVER;
 }
 
@@ -4634,6 +4689,37 @@ void Stream4RestartFunction(int signal, void *foo)
     }
 }
 
+static void Stream4ResetFunction(int signal, void *foo)
+{
+    DecoderFlags decoder_flags;
+    int ret;
+
+    ret = SafeMemcpy(&decoder_flags, &pv.decoder_flags, sizeof(decoder_flags),
+                     &decoder_flags,
+                     (u_int8_t *)(&decoder_flags) + sizeof(decoder_flags));
+    if (ret != SAFEMEM_SUCCESS)
+        return;
+
+    memset(&pv.decoder_flags, 0, sizeof(pv.decoder_flags));
+    s4_shutdown = 1;
+
+    PurgeSessionCache();
+
+    ret = SafeMemcpy(&pv.decoder_flags, &decoder_flags, sizeof(pv.decoder_flags),
+                     &pv.decoder_flags,
+                     (u_int8_t *)(&pv.decoder_flags) + sizeof(pv.decoder_flags));
+    if (ret != SAFEMEM_SUCCESS)
+        return;
+
+    s4_shutdown = 0;
+
+    savedfpi = 0;
+}
+
+static void Stream4ResetStatsFunction(int signal, void *foo)
+{
+    return;
+}
 
 static u_int32_t GetTcpTimestamp(Packet *p, u_int32_t *ts)
 {
@@ -4798,7 +4884,7 @@ static int DupSpd(Packet *p, Stream *s, StreamPacketData *left, StreamPacketData
                                 p->pkth->ts.tv_sec, (Session *)p->ssnptr);
 
     memcpy(spd->pktOrig, left->pktOrig, left->pkth.caplen);
-    memcpy(&spd->pkth, &left->pkth, sizeof(SnortPktHeader));
+    memcpy(&spd->pkth, &left->pkth, sizeof(struct pcap_pkthdr));
 
 
     spd->pkt_size = left->pkt_size;
@@ -4874,12 +4960,12 @@ static int InsertPkt(Stream *s, Packet *p, int16_t len, u_int32_t slide,
     spd->pkt_size = p->pkth->caplen + SPARC_TWIDDLE;
 
     memcpy(spd->pkt, p->pkt, p->pkth->caplen);
-    //memcpy(&spd->pkth, p->pkth, sizeof(SnortPktHeader));
+    //memcpy(&spd->pkth, p->pkth, sizeof(struct pcap_pkthdr));
     /* Do each field individually because of size differences on 64bit OS */
     spd->pkth.ts.tv_sec = p->pkth->ts.tv_sec;
     spd->pkth.ts.tv_usec = p->pkth->ts.tv_usec;
     spd->pkth.caplen = p->pkth->caplen;
-    spd->pkth.pktlen = p->pkth->len;
+    spd->pkth.len = p->pkth->len;
 
     spd->data = spd->pkt + (p->data - p->pkt);
 
@@ -4950,9 +5036,9 @@ void StoreStreamPkt2(Session *ssn, Packet *p, u_int32_t pkt_seq)
 
         if(s4data.ttl_limit)
         {
-            if(ssn->ttl && p->iph->ip_ttl < 10)
+            if(ssn->ttl && GET_IPH_TTL(p) < 10)
             { /* have we already set a client ttl? */
-                if(abs(ssn->ttl - p->iph->ip_ttl) >= s4data.ttl_limit) 
+                if(abs(ssn->ttl - GET_IPH_TTL(p)) >= s4data.ttl_limit) 
                 {
                     SnortEventqAdd(GENERATOR_SPP_STREAM4, /* GID */
                             STREAM4_TTL_EVASION, /* SID */
@@ -4967,7 +5053,7 @@ void StoreStreamPkt2(Session *ssn, Packet *p, u_int32_t pkt_seq)
             } 
             else 
             {
-                ssn->ttl = p->iph->ip_ttl; /* first packet we've seen,
+                ssn->ttl = GET_IPH_TTL(p); /* first packet we've seen,
                                               lets go ahead and set it. */
             }
         }
@@ -5529,7 +5615,6 @@ void FlushStream(Stream *s, Packet *p, int direction)
             if(stream_pkt->dsize > 0)
             {
                 int tmp_do_detect, tmp_do_detect_content;
-SUPPRESS_WARNING(6246)
                 PROFILE_VARS;
                 /* Calc ticks to process the rebuild packet */
                 PREPROC_PROFILE_START(stream4ProcessRebuiltPerfStats);
@@ -5547,7 +5632,7 @@ SUPPRESS_WARNING(6246)
                 PREPROC_PROFILE_END(stream4ProcessRebuiltPerfStats);
 
                 if(s4data.zero_flushed_packets)
-                    bzero(stream_pkt->data, stream_pkt->dsize);
+                    bzero((u_int8_t *)stream_pkt->data, stream_pkt->dsize);
 
                 if ( p->ssnptr )
                 {
@@ -5929,16 +6014,16 @@ void InitStream4Pkt()
      * This is MAX_STREAM_SIZE
      */
 
-    stream_pkt->eh->ether_type = htons(0x0800);
-    SET_IP_VER(stream_pkt->iph, 0x4);
-    SET_IP_HLEN(stream_pkt->iph, 0x5);
-    stream_pkt->iph->ip_proto = IPPROTO_TCP;
-    stream_pkt->iph->ip_ttl   = 0xF0;
-    stream_pkt->iph->ip_len = 0x5;
-    stream_pkt->iph->ip_tos = 0x10;
+    ((EtherHdr *)stream_pkt->eh)->ether_type = htons(0x0800);
+    SET_IP_VER((IPHdr *)stream_pkt->iph, 0x4);
+    SET_IP_HLEN((IPHdr *)stream_pkt->iph, 0x5);
+    ((IPHdr *)stream_pkt->iph)->ip_proto = IPPROTO_TCP;
+    ((IPHdr *)stream_pkt->iph)->ip_ttl   = 0xF0;
+    ((IPHdr *)stream_pkt->iph)->ip_len = 0x5;
+    ((IPHdr *)stream_pkt->iph)->ip_tos = 0x10;
 
-    SET_TCP_OFFSET(stream_pkt->tcph,0x5);
-    stream_pkt->tcph->th_flags = TH_PUSH|TH_ACK;
+    SET_TCP_OFFSET((TCPHdr *)stream_pkt->tcph,0x5);
+    ((TCPHdr *)stream_pkt->tcph)->th_flags = TH_PUSH|TH_ACK;
 
     stream_pkt->preprocessor_bits = (BITOP *)SafeAlloc(sizeof(BITOP), 0, NULL);
     boInitBITOP(stream_pkt->preprocessor_bits, num_preprocs + 1);
@@ -5961,6 +6046,7 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
     Session *ssn;
     u_int32_t ip_len; /* total length of the IP datagram */
     u_int32_t last_seq = 0;
+    struct pcap_pkthdr *pkth;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(stream4BuildPerfStats);
@@ -5983,7 +6069,7 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
         {
             s->base_seq = spd->seq_num;
         }
-        stream_pkt->tcph->th_seq = htonl(s->base_seq);
+        ((TCPHdr *)stream_pkt->tcph)->th_seq = htonl(s->base_seq);
 
         while (spd && !s4data.stop_traverse)
         {
@@ -6155,13 +6241,14 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
      */
     ip_len = stream_size + IP_HEADER_LEN + TCP_HEADER_LEN;
 
-    stream_pkt->pkth->ts.tv_sec = s->seglist->pkth.ts.tv_sec;
-    stream_pkt->pkth->ts.tv_usec = s->seglist->pkth.ts.tv_usec;
+    pkth = (struct pcap_pkthdr *)stream_pkt->pkth;
+    pkth->ts.tv_sec = s->seglist->pkth.ts.tv_sec;
+    pkth->ts.tv_usec = s->seglist->pkth.ts.tv_usec;
 
-    stream_pkt->pkth->caplen = ip_len + ETHERNET_HEADER_LEN;
-    stream_pkt->pkth->len    = stream_pkt->pkth->caplen;
+    pkth->caplen = ip_len + ETHERNET_HEADER_LEN;
+    pkth->len    = stream_pkt->pkth->caplen;
 
-    stream_pkt->iph->ip_len = htons((u_short) ip_len);
+    ((IPHdr *)stream_pkt->iph)->ip_len = htons((u_short) ip_len);
     stream_pkt->dsize = (unsigned short)stream_size;
 
     if(direction == REVERSE)
@@ -6171,25 +6258,25 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
             /* Set reassembled ethernet header since it may have been
              * removed earlier for different stream. */
             stream_pkt->eh = (EtherHdr *)((u_int8_t *)stream_pkt->pkt + SPARC_TWIDDLE);
-            memcpy(stream_pkt->eh->ether_dst, p->eh->ether_src, 6);
-            memcpy(stream_pkt->eh->ether_src, p->eh->ether_dst, 6);
+            memcpy(((EtherHdr *)stream_pkt->eh)->ether_dst, p->eh->ether_src, 6);
+            memcpy(((EtherHdr *)stream_pkt->eh)->ether_src, p->eh->ether_dst, 6);
         }
         else
         {
             /* No ether header in original packets, remove it from the
              * reassembled one. */
             stream_pkt->eh = NULL;
-            stream_pkt->pkth->caplen -= ETHERNET_HEADER_LEN;
-            stream_pkt->pkth->len -= ETHERNET_HEADER_LEN;
+            pkth->caplen -= ETHERNET_HEADER_LEN;
+            pkth->len -= ETHERNET_HEADER_LEN;
         }
 
-        stream_pkt->tcph->th_sport = p->tcph->th_dport;
-        stream_pkt->tcph->th_dport = p->tcph->th_sport;
-        stream_pkt->iph->ip_src.s_addr = p->iph->ip_dst.s_addr;
-        stream_pkt->iph->ip_dst.s_addr = p->iph->ip_src.s_addr;
+        ((TCPHdr *)stream_pkt->tcph)->th_sport = p->tcph->th_dport;
+        ((TCPHdr *)stream_pkt->tcph)->th_dport = p->tcph->th_sport;
+        ((IPHdr *)stream_pkt->iph)->ip_src.s_addr = p->iph->ip_dst.s_addr;
+        ((IPHdr *)stream_pkt->iph)->ip_dst.s_addr = p->iph->ip_src.s_addr;
         stream_pkt->sp = p->dp;
         stream_pkt->dp = p->sp;
-        stream_pkt->tcph->th_ack = p->tcph->th_seq;
+        ((TCPHdr *)stream_pkt->tcph)->th_ack = p->tcph->th_seq;
     }
     else
     {
@@ -6198,27 +6285,27 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
             /* Set reassembled ethernet header since it may have been
              * removed earlier for different stream. */
             stream_pkt->eh = (EtherHdr *)((u_int8_t *)stream_pkt->pkt + SPARC_TWIDDLE);
-            memcpy(stream_pkt->eh->ether_dst, p->eh->ether_dst, 6);
-            memcpy(stream_pkt->eh->ether_src, p->eh->ether_src, 6);
+            memcpy(((EtherHdr *)stream_pkt->eh)->ether_dst, p->eh->ether_dst, 6);
+            memcpy(((EtherHdr *)stream_pkt->eh)->ether_src, p->eh->ether_src, 6);
         }
         else
         {
             /* No ether header in original packets, remove it from the
              * reassembled one. */
             stream_pkt->eh = NULL;
-            stream_pkt->pkth->caplen -= ETHERNET_HEADER_LEN;
-            stream_pkt->pkth->len -= ETHERNET_HEADER_LEN;
+            pkth->caplen -= ETHERNET_HEADER_LEN;
+            pkth->len -= ETHERNET_HEADER_LEN;
         }
 
-        stream_pkt->tcph->th_sport = p->tcph->th_sport;
-        stream_pkt->tcph->th_dport = p->tcph->th_dport;
-        stream_pkt->iph->ip_src.s_addr = p->iph->ip_src.s_addr;
-        stream_pkt->iph->ip_dst.s_addr = p->iph->ip_dst.s_addr;
+        ((TCPHdr *)stream_pkt->tcph)->th_sport = p->tcph->th_sport;
+        ((TCPHdr *)stream_pkt->tcph)->th_dport = p->tcph->th_dport;
+        ((IPHdr *)stream_pkt->iph)->ip_src.s_addr = p->iph->ip_src.s_addr;
+        ((IPHdr *)stream_pkt->iph)->ip_dst.s_addr = p->iph->ip_dst.s_addr;
         stream_pkt->sp = p->sp;
         stream_pkt->dp = p->dp;
-        stream_pkt->tcph->th_ack = p->tcph->th_ack;
+        ((TCPHdr *)stream_pkt->tcph)->th_ack = p->tcph->th_ack;
     }
-    stream_pkt->tcph->th_win = p->tcph->th_win;
+    ((TCPHdr *)stream_pkt->tcph)->th_win = p->tcph->th_win;
 
     /* A few other maintenance items -- set some flags, no TCP options */
     s4data.stop_traverse = 0;
@@ -6241,14 +6328,16 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
         stream_pkt->packet_flags |= PKT_FROM_SERVER;
     }
 
+#ifndef SUP_IP6
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM,
                 "Built packet to %s from %x with %u byte payload, "
                 "Direction: %s\n",
-                inet_ntoa(stream_pkt->iph->ip_src),
+                inet_ntoa(GET_SRC_ADDR(stream_pkt)),
                 stream_pkt->iph->ip_dst,
                 stream_pkt->dsize,
                 (stream_pkt->packet_flags & PKT_FROM_SERVER)
                 ? "from_server" : "from_client"););
+#endif
 
     pc.rebuilt_tcp++;
 
@@ -6290,7 +6379,7 @@ int BuildPacket(Stream *s, u_int32_t stream_size, Packet *p, int direction)
             }
 
             if(zero_size > 0)
-                bzero(stream_pkt->data, zero_size);
+                bzero((u_int8_t *)stream_pkt->data, zero_size);
         }
     }
     PREPROC_PROFILE_END(stream4BuildPerfStats);
@@ -6460,7 +6549,7 @@ static void TcpAction(Session *ssn, Packet *p, int action, int direction,
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "WARNING: Fishy TWH from client "
                             "(0x%X:%d->0x%X:%d) (ack: 0x%X  isn: 0x%X)\n", 
-                            p->iph->ip_src.s_addr, p->sp, p->iph->ip_dst.s_addr, 
+                            GET_SRC_IP(p), p->sp, GET_DST_IP(p), 
                             p->dp, pkt_ack, ssn->server.isn););
 
                 ssn->server.last_ack = pkt_ack;
@@ -6793,7 +6882,7 @@ static void TcpActionAsync(Session *ssn, Packet *p, int action, int direction,
                 DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
                             "WARNING: Fishy TWH from client "
                             "(0x%X:%d->0x%X:%d) (ack: 0x%X  isn: 0x%X)\n", 
-                            p->iph->ip_src.s_addr, p->sp, p->iph->ip_dst.s_addr, 
+                            GET_SRC_IP(p), p->sp, GET_DST_IP(p), 
                             p->dp, pkt_ack, ssn->server.isn););
 
                 ssn->server.last_ack = pkt_ack;
@@ -7019,8 +7108,8 @@ static void TcpActionAsync(Session *ssn, Packet *p, int action, int direction,
     PREPROC_PROFILE_END(stream4ActionAsyncPerfStats);
 }
 
-int Stream4IgnoreChannel(u_int32_t cliIP, u_int16_t cliPort,
-                  u_int32_t srvIP, u_int16_t srvPort,
+int Stream4IgnoreChannel(snort_ip_p cliIP, u_int16_t cliPort,
+                  snort_ip_p srvIP, u_int16_t srvPort,
                   char protocol, char direction, char flags)
 {
     return IgnoreChannel(cliIP, cliPort,
@@ -7546,6 +7635,18 @@ static char Stream4GetReassemblyFlushPolicy(void *ssnptr, char dir)
     return STREAM_FLPOLICY_NONE;
 }
 
+static char Stream4MissingInReassembled(void *ssnptr, char dir)
+{
+    /* Not supported */
+    return 0;
+}
+
+static char Stream4MissingPackets(void *ssnptr, char dir)
+{
+    /* Not supported */
+    return 0;
+}
+
 static char Stream4IsStreamSequenced(void *ssnptr, char dir)
 {
     Session *ssn = (Session *)ssnptr;
@@ -7565,3 +7666,24 @@ static char Stream4IsStreamSequenced(void *ssnptr, char dir)
 
     return 0;
 }
+
+static void Stream4PrintStats(int exiting)
+{
+    LogMessage("Stream4 Reassembly Stats:\n");
+#ifdef WIN32
+    LogMessage("    TCP Packets Used: %-10I64u\n", pc.tcp_stream_pkts);
+    LogMessage("    Stream Trackers: %-10I64u\n", pc.tcp_streams);
+    LogMessage("    Stream flushes: %-10I64u\n", pc.rebuilt_tcp);
+    LogMessage("    Segments used: %-10I64u\n", pc.rebuilt_segs);
+    LogMessage("    Segments Queued: %-10I64u\n", pc.queued_segs);
+    LogMessage("    Stream4 Memory Faults: %-10I64u\n", pc.str_mem_faults);
+#else
+    LogMessage("    TCP Packets Used: %-10llu\n", pc.tcp_stream_pkts);
+    LogMessage("    Stream Trackers: %-10llu\n", pc.tcp_streams);
+    LogMessage("    Stream flushes: %-10llu\n", pc.rebuilt_tcp);
+    LogMessage("    Segments used: %-10llu\n", pc.rebuilt_segs);
+    LogMessage("    Segments Queued: %-10llu\n", pc.queued_segs);
+    LogMessage("    Stream4 Memory Faults: %-10llu\n", pc.str_mem_faults);
+#endif
+}
+

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -218,7 +218,7 @@ void ut_stats(UNIQUE_TRACKER *utp, int dumpall)
     flow_printf("   Memcap: %u  Overhead Bytes: %u\n",
                 ut_memcap(utp), ut_overhead_bytes(utp));
     
-    flow_printf("   Finds: %u (Sucessful: %u(%%%lf) Unsucessful: %u(%%%lf))\n",
+    flow_printf("   Finds: %u (Sucessful: %u(%%%f) Unsucessful: %u(%%%f))\n",
                 total,
                 success, calc_percent(success,total),
                 fail, calc_percent(fail,total));

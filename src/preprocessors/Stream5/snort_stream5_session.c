@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005 Sourcefire, Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -40,6 +40,7 @@
 #include "log.h"
 #include "util.h"
 #include "snort_stream5_session.h"
+#include "sf_types.h"
 
 #ifndef WIN32
 #include <sys/socket.h>
@@ -71,7 +72,7 @@ int GetLWSessionKey(Packet *p, SessionKey *key)
 {
     u_int16_t sport;
     u_int16_t dport;
-
+    int proto;
     /* Because the key is going to be used for hash lookups,
      * the lower of the values of the IP address field is
      * stored in the key->ip_l and the port for that ip is
@@ -81,7 +82,118 @@ int GetLWSessionKey(Packet *p, SessionKey *key)
     if (!key)
         return 0;
 
-    switch (p->iph->ip_proto)
+#ifdef SUP_IP6 
+    if (IS_IP4(p)) 
+    {
+        u_int32_t *src;
+        u_int32_t *dst;
+
+        proto = p->iph->ip_proto;
+
+        switch (proto)
+        {
+            case IPPROTO_TCP:
+            case IPPROTO_UDP:
+                sport = p->sp;
+                dport = p->dp;
+                break;
+            case IPPROTO_ICMP:
+            default:
+                sport = dport = 0;
+                break;
+        }
+
+        src = p->ip4h.ip_src.ip32;
+        dst = p->ip4h.ip_dst.ip32;
+
+        /* These comparisons are done in this fashion for performance reasons */
+        if (*src < *dst)
+        {
+            COPY4(key->ip_l, src);
+            COPY4(key->ip_h, dst);
+            key->port_l = sport;
+            key->port_h = dport;
+        }
+        else if (*src == *dst)
+        {
+            COPY4(key->ip_l, src);
+            COPY4(key->ip_h, dst);
+            if (sport < dport)
+            {
+                key->port_l = sport;
+                key->port_h = dport;
+            }
+            else
+            {
+                key->port_l = dport;
+                key->port_h = sport;
+            }
+        }
+        else
+        {
+            COPY4(key->ip_l, dst);
+            key->port_l = dport;
+            COPY4(key->ip_h, src);
+            key->port_h = sport;
+        }
+    } 
+    else 
+    {
+        sfip_t *src;
+        sfip_t *dst;
+
+        proto = p->ip6h.next;
+
+        switch (proto)
+        {
+            case IPPROTO_TCP:
+            case IPPROTO_UDP:
+                sport = p->sp;
+                dport = p->dp;
+                break;
+            case IPPROTO_ICMP:
+            default:
+                sport = dport = 0;
+                break;
+        }
+
+        src = &p->ip6h.ip_src;
+        dst = &p->ip6h.ip_dst;
+
+        if (sfip_fast_lt6(src, dst))
+        {
+            COPY4(key->ip_l, src->ip32);
+            key->port_l = sport;
+            COPY4(key->ip_h, dst->ip32);
+            key->port_h = dport;
+        }
+        else if (sfip_fast_eq6(src, dst))
+        {
+            COPY4(key->ip_l, src->ip32);
+            COPY4(key->ip_h, dst->ip32);
+            if (sport < dport)
+            {
+                key->port_l = sport;
+                key->port_h = dport;
+            }
+            else
+            {
+                key->port_l = dport;
+                key->port_h = sport;
+            }
+        }
+        else
+        {
+            COPY4(key->ip_l, dst->ip32);
+            key->port_l = dport;
+            COPY4(key->ip_h, src->ip32);
+            key->port_h = sport;
+        }
+    }
+#else
+    proto = p->iph->ip_proto;
+
+    switch (proto)
     {
         case IPPROTO_TCP:
         case IPPROTO_UDP:
@@ -93,18 +205,19 @@ int GetLWSessionKey(Packet *p, SessionKey *key)
             sport = dport = 0;
             break;
     }
-    
-    if (p->iph->ip_src.s_addr < p->iph->ip_dst.s_addr)
+
+    /* These comparisons are done in this fashion for performance reasons */
+    if (IP_LESSER(GET_SRC_IP(p), GET_DST_IP(p)))
     {
-        key->ip_l = p->iph->ip_src.s_addr;
+        IP_COPY_VALUE(key->ip_l, GET_SRC_IP(p));
         key->port_l = sport;
-        key->ip_h = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(key->ip_h, GET_DST_IP(p));
         key->port_h = dport;
     }
-    else if (p->iph->ip_src.s_addr == p->iph->ip_dst.s_addr)
+    else if (IP_EQUALITY(GET_SRC_IP(p), GET_DST_IP(p)))
     {
-        key->ip_l = p->iph->ip_src.s_addr;
-        key->ip_h = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(key->ip_l, GET_SRC_IP(p));
+        IP_COPY_VALUE(key->ip_h, GET_DST_IP(p));
         if (sport < dport)
         {
             key->port_l = sport;
@@ -118,13 +231,14 @@ int GetLWSessionKey(Packet *p, SessionKey *key)
     }
     else
     {
-        key->ip_l = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(key->ip_l, GET_DST_IP(p));
         key->port_l = dport;
-        key->ip_h = p->iph->ip_src.s_addr;
+        IP_COPY_VALUE(key->ip_h, GET_SRC_IP(p));
         key->port_h = sport;
     }
+#endif
 
-    key->protocol = p->iph->ip_proto;
+    key->protocol = proto;
 
     if (p->vh)
         key->vlan_tag = (u_int16_t)VTH_VLAN(p->vh);
@@ -138,6 +252,7 @@ int GetLWSessionKey(Packet *p, SessionKey *key)
 
 void GetLWPacketDirection(Packet *p, Stream5LWSession *ssn)
 {
+#ifndef SUP_IP6
     if (p->iph->ip_src.s_addr == ssn->client_ip)
     {
         if (p->iph->ip_proto == IPPROTO_TCP)
@@ -201,6 +316,130 @@ void GetLWPacketDirection(Packet *p, Stream5LWSession *ssn)
         /* Uh, no match of the packet to the session. */
         /* Probably should log an error */
     }
+#else
+    if(IS_IP4(p))
+    {
+        if (p->iph->ip_src.s_addr == *ssn->client_ip.ip32)
+        {
+            if (p->iph->ip_proto == IPPROTO_TCP)
+            {
+                if (p->tcph->th_sport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+            }
+            else if (p->iph->ip_proto == IPPROTO_UDP)
+            {
+                if (p->udph->uh_sport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+            }
+            else if (p->iph->ip_proto == IPPROTO_ICMP)
+            {
+                p->packet_flags |= PKT_FROM_CLIENT;
+            }
+        }
+        else if (p->iph->ip_dst.s_addr == *ssn->client_ip.ip32)
+        {
+            if  (p->iph->ip_proto == IPPROTO_TCP)
+            {
+                if (p->tcph->th_dport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+            }
+            else if (p->iph->ip_proto == IPPROTO_UDP)
+            {
+                if (p->udph->uh_dport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+            }
+            else if (p->iph->ip_proto == IPPROTO_ICMP)
+            {
+                p->packet_flags |= PKT_FROM_CLIENT;
+            }
+        }
+    }
+    else /* IS_IP6(p) */
+    {
+        if (sfip_fast_eq6(&p->ip6h.ip_src, &ssn->client_ip))
+        {
+            if (p->ip6h.next == IPPROTO_TCP)
+            {
+                if (p->tcph->th_sport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+            }
+            else if (p->ip6h.next == IPPROTO_UDP)
+            {
+                if (p->udph->uh_sport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+            }
+            else if (p->ip6h.next == IPPROTO_ICMP)
+            {
+                p->packet_flags |= PKT_FROM_CLIENT;
+            }
+        }
+        else if (sfip_fast_eq6(&p->ip6h.ip_dst, &ssn->client_ip))
+        {
+            if  (p->ip6h.next == IPPROTO_TCP)
+            {
+                if (p->tcph->th_dport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+            }
+            else if (p->ip6h.next == IPPROTO_UDP)
+            {
+                if (p->udph->uh_dport == ssn->client_port)
+                {
+                    p->packet_flags |= PKT_FROM_SERVER;
+                }
+                else
+                {
+                    p->packet_flags |= PKT_FROM_CLIENT;
+                }
+            }
+            else if (p->ip6h.next == IPPROTO_ICMP)
+            {
+                p->packet_flags |= PKT_FROM_CLIENT;
+            }
+        }
+    }
+#endif /* SUP_IP6 */
 }
 
 Stream5LWSession *GetLWSession(Stream5SessionCache *sessionCache, Packet *p, SessionKey *key)
@@ -208,8 +447,13 @@ Stream5LWSession *GetLWSession(Stream5SessionCache *sessionCache, Packet *p, Ses
     Stream5LWSession *returned = NULL;
     SFXHASH_NODE *hnode;
 
-    if (!GetLWSessionKey(p, key))
+    if (!sessionCache)
         return NULL;
+
+    if (!GetLWSessionKey(p, key)) 
+    {
+        return NULL;
+    }
 
     hnode = sfxhash_find_node(sessionCache->hashTable, key);
 
@@ -231,6 +475,9 @@ Stream5LWSession *GetLWSessionFromKey(Stream5SessionCache *sessionCache, Session
 {
     Stream5LWSession *returned = NULL;
     SFXHASH_NODE *hnode;
+
+    if (!sessionCache)
+        return NULL;
 
     hnode = sfxhash_find_node(sessionCache->hashTable, key);
 
@@ -310,6 +557,19 @@ int PurgeLWSessionCache(Stream5SessionCache *sessionCache)
         hnode = sfxhash_mru_node(sessionCache->hashTable);
         retCount++;
     }
+
+    return retCount;
+}
+
+int DeleteLWSessionCache(Stream5SessionCache *sessionCache)
+{
+    int retCount = 0;
+
+    if (!sessionCache)
+        return 0;
+
+    retCount = PurgeLWSessionCache(sessionCache);
+
     sfxhash_delete(sessionCache->hashTable);
     free(sessionCache);
 
@@ -514,6 +774,89 @@ Stream5LWSession *NewLWSession(Stream5SessionCache *sessionCache, Packet *p, Ses
     return retSsn;
 }
 
+#ifdef SUP_IP6
+
+#define rot(x,k) (((x)<<(k)) | ((x)>>(32-(k))))
+
+#define mix(a,b,c) \
+{ \
+  a -= c;  a ^= rot(c, 4);  c += b; \
+  b -= a;  b ^= rot(a, 6);  a += c; \
+  c -= b;  c ^= rot(b, 8);  b += a; \
+  a -= c;  a ^= rot(c,16);  c += b; \
+  b -= a;  b ^= rot(a,19);  a += c; \
+  c -= b;  c ^= rot(b, 4);  b += a; \
+}
+
+#define final(a,b,c) \
+{ \
+  c ^= b; c -= rot(b,14); \
+  a ^= c; a -= rot(c,11); \
+  b ^= a; b -= rot(a,25); \
+  c ^= b; c -= rot(b,16); \
+  a ^= c; a -= rot(c,4);  \
+  b ^= a; b -= rot(a,14); \
+  c ^= b; c -= rot(b,24); \
+}
+
+u_int32_t HashFunc(SFHASHFCN *p, unsigned char *d, int n) 
+{
+    u_int32_t a,b,c;
+
+    a = *(u_int32_t*)d;
+    b = *(u_int32_t*)(d+4);
+    c = *(u_int32_t*)(d+8);
+
+    mix(a,b,c);
+
+    a += *(u_int32_t*)(d+12);
+    b += *(u_int32_t*)(d+16);
+    c += *(u_int32_t*)(d+20);
+
+    mix(a,b,c);
+
+    a += *(u_int32_t*)(d+24);
+    b += *(u_int32_t*)(d+28);
+    c += *(u_int32_t*)(d+32);
+
+    mix(a,b,c);
+
+    a += *(u_int32_t*)(d+36);
+
+    final(a,b,c);
+
+    return c;
+}
+    
+int HashKeyCmp(const void *s1, const void *s2, size_t n) 
+{
+    UINT64 *a,*b;
+
+    a = (UINT64*)s1;
+    b = (UINT64*)s2;
+    if(*a - *b) return 1;
+
+    a++;
+    b++;
+    if(*a - *b) return 1;
+
+    a++;
+    b++;
+    if(*a - *b) return 1;
+
+    a++;
+    b++;
+    if(*a - *b) return 1;
+
+    a++;
+    b++;
+    if(*a - *b) return 1;
+
+    return 0;
+}
+
+#endif
+
 Stream5SessionCache *InitLWSessionCache(int max_sessions,
                                         u_int32_t session_timeout,
                                         u_int32_t cleanup_sessions,
@@ -524,7 +867,10 @@ Stream5SessionCache *InitLWSessionCache(int max_sessions,
     /* Rule of thumb, size should be 1.4 times max to avoid
      * collisions.
      */
-    int hashTableSize = sfxhash_calcrows((int) (max_sessions * 1.4));
+
+    int hashTableSize = max_sessions;
+//    int hashTableSize = sfxhash_calcrows((int) (max_sessions * 1.4));
+
     /* Memory required for 1 node: LW Session + Session Key +
      * Node + NodePtr.
      */
@@ -564,6 +910,9 @@ Stream5SessionCache *InitLWSessionCache(int max_sessions,
             0, 0, NULL, NULL, 1);
 
         sfxhash_set_max_nodes(sessionCache->hashTable, max_sessions);
+#ifdef SUP_IP6
+        sfxhash_set_keyops(sessionCache->hashTable, HashFunc, HashKeyCmp);
+#endif
     }
 
     return sessionCache;

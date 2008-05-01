@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -34,6 +35,16 @@
 #include "plugin_enum.h"
 #include "util.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats dsizeEQPerfStats;
+PreprocStats dsizeGTPerfStats;
+PreprocStats dsizeLTPerfStats;
+PreprocStats dsizeRangePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 #define EQ                   0
 #define GT                   1
 #define LT                   2
@@ -66,7 +77,13 @@ int CheckDsizeRange(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupDsizeCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("dsize", DsizeCheckInit);
+    RegisterPlugin("dsize", DsizeCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("dsize_eq", &dsizeEQPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("dsize_gt", &dsizeGTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("dsize_lt", &dsizeLTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("dsize_range", &dsizeRangePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: DsizeCheck Initialized\n"););
 }
 
@@ -227,16 +244,21 @@ void ParseDsize(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int CheckDsizeEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(dsizeEQPerfStats);
 
     /* fake packet dsizes are always wrong */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(dsizeEQPerfStats);
         return 0;
     }
     
     if(((DsizeCheckData *)otn->ds_list[PLUGIN_DSIZE_CHECK])->dsize == p->dsize)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(dsizeEQPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -246,6 +268,7 @@ int CheckDsizeEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(dsizeEQPerfStats);
     return 0;
 }
 
@@ -267,15 +290,21 @@ int CheckDsizeEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckDsizeGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(dsizeGTPerfStats);
+
     /* fake packet dsizes are always wrong */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(dsizeGTPerfStats);
         return 0;
     }
 
     if(((DsizeCheckData *)otn->ds_list[PLUGIN_DSIZE_CHECK])->dsize < p->dsize)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(dsizeGTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -285,6 +314,7 @@ int CheckDsizeGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(dsizeGTPerfStats);
     return 0;
 }
 
@@ -307,15 +337,21 @@ int CheckDsizeGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckDsizeLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(dsizeLTPerfStats);
+
     /* fake packet dsizes are always wrong */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(dsizeLTPerfStats);
         return 0;
     }
     
     if(((DsizeCheckData *)otn->ds_list[PLUGIN_DSIZE_CHECK])->dsize > p->dsize)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(dsizeLTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -325,6 +361,7 @@ int CheckDsizeLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(dsizeLTPerfStats);
     return 0;
 }
 
@@ -345,9 +382,14 @@ int CheckDsizeLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckDsizeRange(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(dsizeRangePerfStats);
+
     /* fake packet dsizes are always wrong */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(dsizeRangePerfStats);
         return 0;
     }
 
@@ -355,6 +397,7 @@ int CheckDsizeRange(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
      ((DsizeCheckData *)otn->ds_list[PLUGIN_DSIZE_CHECK])->dsize2 >= p->dsize)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(dsizeRangePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -363,5 +406,6 @@ int CheckDsizeRange(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                                 "CheckDsizeRange(): not in range\n"););
     }
 
+    PREPROC_PROFILE_END(dsizeRangePerfStats);
     return 0;
 }

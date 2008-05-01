@@ -149,11 +149,24 @@ case "$1" in
 	# If we are requested to start a specific interface...
 	test "$2" && interfaces="$2"
 
+        # If the interfaces list is empty stop (no error)
+        if [ -z "$interfaces" ] ; then
+            log_progress_msg "no interfaces configured, will not start"
+            log_end_msg 0
+            exit 0
+        fi
+
 	myret=0
 	got_instance=0
 	for interface in $interfaces; do
 		got_instance=1
 		log_progress_msg "($interface"
+
+                # Check if the interface is available:
+                # - only if iproute is available
+                # - the interface exists 
+                # - the interface is up
+                if ! [ -x /sbin/ip ] || ( ip link show dev "$interface" >/dev/null 2>&1 && [ -n "`ip link show up "$interface" 2>/dev/null`" ] ) ; then
 
 		PIDFILE=/var/run/snort_$interface.pid
                 CONFIGFILE=/etc/snort/snort.$interface.conf
@@ -192,11 +205,22 @@ case "$1" in
                      esac
                      set -e
                 else
-                        log_progress_msg ": already running)"
+                        log_progress_msg "...already running)"
+                fi
+
+                else
+                # What to do if the interface is not available
+                # or is not up
+                        if [ "$ALLOW_UNAVAILABLE" != "no" ] ; then 
+                            log_progress_msg "...interface not available)"
+                        else 
+                            log_progress_msg "...ERROR: interface not available)"
+                            myret=$(expr "$myret" + 1)
+                        fi
                 fi
 	done
 
-	if [ "$got_instance" = 0 ]; then
+	if [ "$got_instance" = 0 ] && [ "$ALLOW_UNAVAILABLE" = "no" ]; then
 		log_failure_msg "No snort instance found to be started!" >&2
 		exit 6
 	fi
@@ -244,10 +268,12 @@ case "$1" in
 
 		set +e
                 if [ ! -e "$PIDFILE" -o -r "$PIDFILE" ] ; then
+# Change ownership of the pidfile
 		    /sbin/start-stop-daemon --stop --retry 5 --quiet --oknodo \
 			--pidfile "$PIDFILE" --exec $DAEMON >/dev/null
                     ret=$?
                     rm -f "$PIDFILE"
+                    rm -f "$PIDFILE.lck"
                 else
                      log_progress_msg "cannot read $PIDFILE"
                      ret=4

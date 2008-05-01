@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -34,6 +35,16 @@
 #include "plugin_enum.h"
 #include "util.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ttlEQPerfStats;
+PreprocStats ttlGTPerfStats;
+PreprocStats ttlLTPerfStats;
+PreprocStats ttlRangePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 typedef struct _TtlCheckData
 {
@@ -65,8 +76,13 @@ int CheckTtlRG(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupTtlCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("ttl", TtlCheckInit);
-
+    RegisterPlugin("ttl", TtlCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("ttl_eq", &ttlEQPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("ttl_gt", &ttlGTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("ttl_lt", &ttlLTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("ttl_range", &ttlRangePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: TTLCheck Initialized\n"););
 }
 
@@ -211,10 +227,15 @@ void ParseTtl(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int CheckTtlEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(p->iph &&
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl == p->iph->ip_ttl)
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(ttlEQPerfStats);
+
+    if(IPH_IS_VALID(p) &&
+        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl == GET_IPH_TTL(p))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ttlEQPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
@@ -227,6 +248,7 @@ int CheckTtlEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 #endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ttlEQPerfStats);
     return 0;
 }
 
@@ -248,10 +270,15 @@ int CheckTtlEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckTtlGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(p->iph &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl < p->iph->ip_ttl)
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(ttlGTPerfStats);
+
+    if(IPH_IS_VALID(p) &&
+         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl < GET_IPH_TTL(p))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ttlGTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
@@ -264,6 +291,7 @@ int CheckTtlGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 #endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ttlGTPerfStats);
     return 0;
 }
 
@@ -286,10 +314,15 @@ int CheckTtlGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckTtlLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(p->iph &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl > p->iph->ip_ttl)
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(ttlLTPerfStats);
+
+    if(IPH_IS_VALID(p) &&
+         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl > GET_IPH_TTL(p))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ttlLTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
@@ -302,6 +335,7 @@ int CheckTtlLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 #endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ttlLTPerfStats);
     return 0;
 }
 
@@ -325,24 +359,30 @@ int CheckTtlLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckTtlRG(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(p->iph &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl <= p->iph->ip_ttl &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl >= p->iph->ip_ttl)
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(ttlRangePerfStats);
+
+    if(IPH_IS_VALID(p) &&
+         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl <= GET_IPH_TTL(p) &&
+         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl >= GET_IPH_TTL(p))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ttlRangePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
-    else if (p->iph != NULL)
+    else if (IPH_IS_VALID(p))
     {
         /* you can put debug comments here or not */
         DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n", 
                      ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl,
                      ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl,
-                     p->iph->ip_ttl);
+                     GET_IPH_TTL(p));
     }
 #endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ttlRangePerfStats);
     return 0;
 }

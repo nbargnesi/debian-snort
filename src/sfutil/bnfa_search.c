@@ -8,7 +8,7 @@
 ** author: marc norton
 ** date:   started 12/21/05
 **
-** Copyright(C) 2005-2007 Sourcefire, Inc.
+** Copyright(C) 2005-2008 Sourcefire, Inc.
 ** 
 ** General Design
 **   Aho-Corasick based NFA state machine. 
@@ -99,7 +99,14 @@
 **             Copyright(C) 1975 Association for Computing Machinery,Inc
 **
 ** 12/4/06 - man - modified summary
-**
+** 6/26/07 - man - Added last_match tracking, and accounted for nocase/case by
+**                 preseting the last match state, and reverting if we fail the 
+**                 case memcmp test for any rule in the states matching rule list.
+**                 The states in the defaul matcher represent either case or nocase
+**                 states, so they are dual mode, that makes this a bit tricky.
+**                 When we sue the pure exact match, or pure don't care matching 
+**                 routines, we just track the last state, and never need to revert.
+**                 This only tracks the single repeated states and repeated data. 
 **
 **
 ** LICENSE (GPL)
@@ -129,8 +136,14 @@
 #include "bnfa_search.h"
 
 #include "util.h"
-#define printf LogMessage
 
+/*
+ * Used to initialize last state, states are limited to 0-16M
+ * so this will not conflict.
+ */
+#define LAST_STATE_INIT  0xffffffff
+
+#define printf LogMessage
 /*
 * Case Translation Table - his guarantees we use 
 * indexed lookups for case conversion
@@ -1376,7 +1389,7 @@ _bnfa_search_full_nfa(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   unsigned char      * Tend;
   unsigned char      * T;
   unsigned char        Tchar;
-  unsigned long        index;
+  unsigned            index;
   bnfa_state_t      ** NextState= bnfa->bnfaNextState;
   bnfa_state_t       * FailState= bnfa->bnfaFailState;
   bnfa_match_node_t ** MatchList= bnfa->bnfaMatchList;
@@ -1384,7 +1397,10 @@ _bnfa_search_full_nfa(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   bnfa_match_node_t  * mlist;
   bnfa_pattern_t     * patrn;
   unsigned             nfound = 0;
-
+  int                  res;
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  
   T    = Tx;
   Tend = T + n;
  
@@ -1408,6 +1424,12 @@ _bnfa_search_full_nfa(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 
 	if( state )
 	{
+        if( state == last_match )
+            continue;
+       
+        last_match_saved=last_match;
+        last_match = state;
+        
     	for(	mlist = MatchList[state];
 				mlist!= NULL;
 				mlist = mlist->next )
@@ -1418,22 +1440,37 @@ _bnfa_search_full_nfa(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
        			if( patrn->nocase )
            		{
                     nfound++;
-					if (Match (patrn, index, data))
+					res = Match (patrn, index, data);
+					if ( res > 0 )
                     {
                         *current_state = state;
 						return nfound;
+                    }
+                    if( res < 0 )
+                    {
+                        last_match=last_match_saved;
+                    }
            		}
            		else
            		{
 					if( memcmp (patrn->casepatrn, T - patrn->n + 1, patrn->n) == 0 )
 					{
                         nfound++;
-  						if (Match (patrn->userdata, index, data))
+					    res = Match (patrn, index, data);
+  						if ( res > 0 )
                         {
                             *current_state = state;
   							return nfound;
                         }
+                        if( res < 0 )
+                        {
+                          last_match=last_match_saved;
+                        }
 					}
+                    else
+                    {
+                          last_match=last_match_saved;
+                    }
            		}
     	}
 	}
@@ -1453,7 +1490,7 @@ _bnfa_search_full_nfa_case(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   unsigned char      * Tend;
   unsigned char      * T;
   unsigned char        Tchar;
-  unsigned long        index;
+  unsigned        index;
   bnfa_state_t      ** NextState= bnfa->bnfaNextState;
   bnfa_state_t       * FailState= bnfa->bnfaFailState;
   bnfa_match_node_t ** MatchList= bnfa->bnfaMatchList;
@@ -1461,7 +1498,10 @@ _bnfa_search_full_nfa_case(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   bnfa_match_node_t  * mlist;
   bnfa_pattern_t     * patrn;
   unsigned             nfound = 0;
-
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  int                  res;
+  
   T    = Tx;
   Tend = T + n;
  
@@ -1485,7 +1525,13 @@ _bnfa_search_full_nfa_case(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 
 	if( state )
 	{
-    	for(	mlist = MatchList[state];
+        if( state == last_match )
+            continue;
+       
+        last_match_saved=last_match;
+        last_match = state;
+    	
+        for(	mlist = MatchList[state];
 				mlist!= NULL;
 				mlist = mlist->next )
     	{
@@ -1493,10 +1539,15 @@ _bnfa_search_full_nfa_case(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 	
            		index = T - Tx - patrn->n + 1; 
                 nfound++;
-			    if (Match (patrn, index, data))
+				res = Match (patrn, index, data);
+			    if ( res > 0 )
                 {
-                    *current_state = state;
-                    return nfound;
+                     *current_state = state;
+				     return nfound;
+                }
+                if( res < 0 )
+                {
+                    last_match=last_match_saved;
                 }
     	}
 	}
@@ -1516,7 +1567,7 @@ _bnfa_search_full_nfa_nocase(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   unsigned char      * Tend;
   unsigned char      * T;
   unsigned char        Tchar;
-  unsigned long        index;
+  unsigned        index;
   bnfa_state_t      ** NextState= bnfa->bnfaNextState;
   bnfa_state_t       * FailState= bnfa->bnfaFailState;
   bnfa_match_node_t ** MatchList= bnfa->bnfaMatchList;
@@ -1524,6 +1575,9 @@ _bnfa_search_full_nfa_nocase(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   bnfa_match_node_t  * mlist;
   bnfa_pattern_t     * patrn;
   unsigned             nfound = 0;
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  int                  res;
 
   T    = Tx;
   Tend = T + n;
@@ -1548,17 +1602,29 @@ _bnfa_search_full_nfa_nocase(	bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 
 	if( state )
 	{
-    	for(	mlist = MatchList[state];
+        if( state == last_match )
+            continue;
+       
+        last_match_saved=last_match;
+        last_match = state;
+    
+        for(	mlist = MatchList[state];
 				mlist!= NULL;
 				mlist = mlist->next )
     	{
 		   		patrn = (bnfa_pattern_t*)mlist->data;
            		index = T - Tx - patrn->n + 1; 
                 nfound++;
-		     	if (Match (patrn, index, data))
+                
+				res = Match (patrn, index, data);
+			    if ( res > 0 )
                 {
-                    *current_state = state;
-					return nfound;
+                     *current_state = state;
+				     return nfound;
+                }
+                if( res < 0 )
+                {
+                    last_match=last_match_saved;
                 }
     	}
 	}
@@ -1685,6 +1751,8 @@ _bnfa_get_next_state_csparse_nfa(bnfa_state_t * pcx, unsigned sindex, unsigned  
 }
 /*
  *  Per Pattern case search, case is on per pattern basis
+ *
+ *  note: index is not used by snort, so it's commented
  */
 static
 inline
@@ -1702,6 +1770,9 @@ _bnfa_search_csparse_nfa(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   bnfa_pattern_t     * patrn;
   bnfa_state_t       * transList = bnfa->bnfaTransList;
   unsigned             nfound = 0;
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  int                  res;
 
   T    = Tx;
   Tend = T + n;
@@ -1716,6 +1787,12 @@ _bnfa_search_csparse_nfa(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
    	/* Log matches in this state - if any */
 	if( sindex && (transList[sindex+1] & BNFA_SPARSE_MATCH_BIT) )
 	{
+        if( sindex == last_match )
+            continue;
+        
+        last_match_saved = last_match;
+        last_match = sindex;
+        
        	for(mlist = MatchList[ transList[sindex] ];
 			mlist!= NULL;
 			mlist = mlist->next )
@@ -1726,10 +1803,15 @@ _bnfa_search_csparse_nfa(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
            	if( patrn->nocase )
            	{
                 nfound++;
-	        	if (Match (patrn->userdata, index, data))
+	        	res = Match (patrn->userdata, index, data);
+	        	if ( res > 0 )
                 {
                   *current_state = sindex;
 				  return nfound;
+                }
+                else if( res < 0 )
+                {
+                    last_match = last_match_saved;
                 }
            	}
            	else
@@ -1737,12 +1819,25 @@ _bnfa_search_csparse_nfa(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 			  	if( memcmp (patrn->casepatrn, T - patrn->n + 1, patrn->n) == 0 )
 			  	{
                   nfound++;
-  				  if (Match (patrn->userdata, index, data))
+	        	  res = Match (patrn->userdata, index, data);
+	        	  if ( res > 0 )
                   {
                     *current_state = sindex;
 				    return nfound;
                   }
+                  else if( res < 0 )
+                  {
+                    /* Revert, must retest this rule */
+                    last_match = last_match_saved;
+                  }
 			  	}
+                else
+                {
+                    /* Revert last_match since we did not test a rule in this set 
+                     * and must revisit this rule list next time we hit this state.
+                     */
+                    last_match = last_match_saved;
+                }
            	}
 		}
 	  }
@@ -1751,6 +1846,8 @@ _bnfa_search_csparse_nfa(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 }
 /*
  * Case specific search, global to all patterns
+ *
+ *  note: index is not used by snort, so it's commented
  */
 static
 inline
@@ -1767,6 +1864,9 @@ _bnfa_search_csparse_nfa_case(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
   bnfa_pattern_t     * patrn;
   bnfa_state_t       * transList = bnfa->bnfaTransList;
   unsigned             nfound = 0;
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  int                  res;
 
   T    = Tx;
   Tend = T + n;
@@ -1779,17 +1879,30 @@ _bnfa_search_csparse_nfa_case(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
    	/* Log matches in this state - if any */
 	if( sindex && (transList[sindex+1] & BNFA_SPARSE_MATCH_BIT) )
 	{
-       	for(mlist = MatchList[ transList[sindex] ];
+        if( sindex == last_match )
+            continue;
+   
+        last_match_saved = last_match;
+        last_match = sindex;
+       	
+        for(mlist = MatchList[ transList[sindex] ];
 			mlist!= NULL;
 			mlist = mlist->next )
 		{
 		   	patrn = (bnfa_pattern_t*)mlist->data;
            	index = T - Tx - patrn->n + 1;
             nfound++;
-	      	if (Match (patrn->userdata, index, data))
+	       
+            res = Match (patrn->userdata, index, data);
+	        if ( res > 0 )
             {
-                *current_state = sindex;
-			    return nfound;
+               *current_state = sindex;
+		       return nfound;
+            }
+            else if( res < 0 )
+            {
+               /* Revert, must retest this rule */
+               last_match = last_match_saved;
             }
 		}
 	}
@@ -1798,6 +1911,8 @@ _bnfa_search_csparse_nfa_case(   bnfa_struct_t * bnfa, unsigned char *Tx, int n,
 }
 /*
  *  NoCase search - global to all patterns
+ *
+ *  note: index is not used by snort, so it's commented
  */
 static
 inline
@@ -1815,7 +1930,10 @@ _bnfa_search_csparse_nfa_nocase(   bnfa_struct_t * bnfa, unsigned char *Tx, int 
   bnfa_pattern_t     * patrn;
   bnfa_state_t       * transList = bnfa->bnfaTransList;
   unsigned             nfound = 0;
-
+  unsigned             last_match=LAST_STATE_INIT;
+  unsigned             last_match_saved=LAST_STATE_INIT;
+  int                  res;
+  
   T    = Tx;
   Tend = T + n;
   
@@ -1829,6 +1947,12 @@ _bnfa_search_csparse_nfa_nocase(   bnfa_struct_t * bnfa, unsigned char *Tx, int 
    	/* Log matches in this state - if any */
 	if( sindex && (transList[sindex+1] & BNFA_SPARSE_MATCH_BIT) )
 	{
+        if( sindex == last_match )
+            continue;
+        
+        last_match_saved = last_match;
+        last_match = sindex;
+        
        	for(mlist = MatchList[ transList[sindex] ];
 			mlist!= NULL;
 			mlist = mlist->next )
@@ -1836,10 +1960,17 @@ _bnfa_search_csparse_nfa_nocase(   bnfa_struct_t * bnfa, unsigned char *Tx, int 
 		   	patrn = (bnfa_pattern_t*)mlist->data;
            	index = T - Tx - patrn->n + 1;
             nfound++;
-	        if (Match (patrn->userdata, index, data))
+	  
+            res = Match (patrn->userdata, index, data);
+	        if ( res > 0 )
             {
-                *current_state = sindex;
-		 	    return nfound;
+               *current_state = sindex;
+		       return nfound;
+            }
+            else if( res < 0 )
+            {
+               /* Revert, must retest this rule */
+               last_match = last_match_saved;
             }
 		}
 	  }

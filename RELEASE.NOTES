@@ -1,23 +1,26 @@
-2007-07-09 - Snort 2.7.0
+2008-03-14 - Snort 2.8.1 RC
 
 [*] New Additions
-    * Stream5 is now the default stream processor and replaces both flow
-      and Stream4.  Refer to the Snort manual and README.stream5 for
-      details on how to configure it for OS target-specific TCP
-      processing.
+    * Target-Based support to allow rules to use an attribute table
+      describing services running on various hosts on the network.
+      Eliminates reliance on port-based rules.
+
+    * Support for GRE encapsulation for both IPv4 & IPv6.
+
+    * Support for IP over IP tunneling for both IPv4 & IPv6.
+
+    * SSL preprocessor to allow ability to not inspect encrypted traffic.
+
+    * Ability to read mulitple PCAPs from the command line.
 
 [*] Improvements
-    * Fixed header files to avoid conflicts with system files on BSD for
-      IPv6 data structures.
 
-    * Reduced memory footprint for smtp preprocessor.
+    * Update to HTTP Inspect to identify overly long HTTP header fields.
 
-    * Ensured Snort frees memory from preprocessors before exit.  Only
-      outstanding memory in use is related to pattern matcher and
-      rules.
+    * Updates to IPv6 support, including changes to avoid namespace
+      conflicts for certain Operating systems.
 
-[*] Security Improvements
-    * Further updates that use safer functions that perform bounds checking
-      when doing string or memory copies and snprintf buffer writes.
-      Ensure null termination on string buffers and perform initialization
-      on memory allocations.
+    * Updates to address issues seen on various Sparc platforms.
+
+    * Stricter enforcement of shared object versions to avoid API
+      conflicts.

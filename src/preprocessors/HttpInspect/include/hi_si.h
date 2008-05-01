@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -42,6 +42,8 @@
 #include "hi_client.h"
 #include "hi_server.h"
 #include "hi_ad.h"
+
+#include "ipv6_port.h"
 
 /*
 **  These are the defines for the different types of
@@ -113,8 +115,8 @@ typedef struct s_HI_SESSION
 */
 typedef struct s_HI_SI_INPUT
 {
-    unsigned long sip;
-    unsigned long dip;
+    snort_ip sip;
+    snort_ip dip;
     unsigned short sport;
     unsigned short dport;
     unsigned char pdir;

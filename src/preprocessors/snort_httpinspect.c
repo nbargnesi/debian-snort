@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -69,6 +69,7 @@
 #include "util.h"
 #include "event_queue.h"
 #include "stream_api.h"
+#include "sfsnprintfappend.h"
 
 #include "hi_return_codes.h"
 #include "hi_ui_config.h"
@@ -142,6 +143,7 @@ HIStats hi_stats;
 #define POST_DEPTH        "post_depth"
 #define IIS_UNICODE_MAP   "iis_unicode_map"
 #define CHUNK_LENGTH      "chunk_length"
+#define MAX_HDR_LENGTH    "max_header_length"
 #define PIPELINE          "no_pipeline_req"
 #define ASCII             "ascii"
 #define DOUBLE_DECODE     "double_decode"
@@ -1062,6 +1064,71 @@ static int ProcessChunkLength(HTTPINSPECT_CONF *ServerConf,
 
 /*
 **  NAME
+**    ProcessMaxHdrLen::
+*/
+/**
+**  Process and verify the maximum allowed header length for the 
+**  server configuration.
+**  
+**  @param ServerConf  pointer to the server configuration
+**  @param ErrorString error string buffer
+**  @param ErrStrLen   the length of the error string buffer
+**
+**  @return an error code integer 
+**          (0 = success, >0 = non-fatal error, <0 = fatal error)
+**
+**  @retval  0 successs
+**  @retval -1 generic fatal error
+**  @retval  1 generic non-fatal error
+*/
+static int ProcessMaxHdrLen(HTTPINSPECT_CONF *ServerConf,
+                              char *ErrorString, int ErrStrLen)
+{
+    char *pcToken;
+    int  length;
+    char *pcEnd;
+
+    pcToken = strtok(NULL, CONF_SEPARATORS);
+    if(pcToken == NULL)
+    {
+        SnortSnprintf(ErrorString, ErrStrLen,
+                      "No argument to '%s' token.", MAX_HDR_LENGTH);
+
+        return -1;
+    }
+
+    length = strtol(pcToken, &pcEnd, 10);
+    if(*pcEnd || pcEnd == pcToken)
+    {
+        SnortSnprintf(ErrorString, ErrStrLen,
+                      "Invalid argument to '%s'.", MAX_HDR_LENGTH);
+
+        return -1;
+    }
+
+    if(length < 0)
+    {
+        SnortSnprintf(ErrorString, ErrStrLen,
+                      "Invalid argument to '%s'. Valid range is 0 to 65535.", MAX_HDR_LENGTH);
+
+        return -1;
+    }
+
+    if(length > 65535)
+    {
+        SnortSnprintf(ErrorString, ErrStrLen,
+                      "Invalid argument to '%s'.  Valid range is 0 to 65535.", MAX_HDR_LENGTH);
+
+        return -1;
+    }
+
+    ServerConf->max_hdr_len = length;
+
+    return 0;
+}
+
+/*
+**  NAME
 **    ProcessConfOpt::
 */
 /**
@@ -1420,14 +1487,24 @@ static int ProcessServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
             {
                 ServerConf->uri_only = 1;
             }
+            else if(!strcmp(MAX_HDR_LENGTH, pcToken))
+            {
+                iRet = ProcessMaxHdrLen(ServerConf, ErrorString, ErrStrLen);
+                if (iRet)
+                {
+                    return iRet;
+                }
+            }
             else
             {
                 SnortSnprintf(ErrorString, ErrStrLen,
                               "Invalid token while configuring the profile token.  "
                               "The only allowed tokens when configuring profiles "
-                              "are: '%s', '%s', '%s', '%s', '%s', '%s', and '%s'.",
+                              "are: '%s', '%s', '%s', '%s', '%s', '%s', '%s', "
+                              "and '%s'.",
                               PORTS,IIS_UNICODE_MAP, ALLOW_PROXY, FLOW_DEPTH,
-                              GLOBAL_ALERT, OVERSIZE_DIR, INSPECT_URI_ONLY);
+                              GLOBAL_ALERT, OVERSIZE_DIR, MAX_HDR_LENGTH, 
+                              INSPECT_URI_ONLY);
 
                 return -1;
             }
@@ -1711,6 +1788,14 @@ static int ProcessServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
                 return iRet;
             }
         }
+        else if(!strcmp(MAX_HDR_LENGTH, pcToken))
+        {
+            iRet = ProcessMaxHdrLen(ServerConf, ErrorString, ErrStrLen);
+            if (iRet)
+            {
+                return iRet;
+            }
+        }
         else
         {
             SnortSnprintf(ErrorString, ErrStrLen,
@@ -1783,6 +1868,7 @@ static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
 
     LogMessage("      Flow Depth: %d\n", ServerConf->flow_depth);
     LogMessage("      Max Chunk Length: %d\n", ServerConf->chunk_length);
+    LogMessage("      Max Header Field Length: %d\n", ServerConf->max_hdr_len);
     LogMessage("      Inspect Pipeline Requests: %s\n",
                ServerConf->no_pipeline ? "NO" : "YES");
     LogMessage("      URI Discovery Strict Mode: %s\n",
@@ -1879,8 +1965,12 @@ static int ProcessUniqueServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
                              char *ErrorString, int ErrStrLen)
 {
     char *pcToken;
+#ifdef SUP_IP6
+    snort_ip_p Ip;
+#else
     unsigned long Ip;
     struct in_addr ip_addr;
+#endif
     HTTPINSPECT_CONF *ServerConf;
     int iRet;
 
@@ -1927,8 +2017,12 @@ static int ProcessUniqueServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
         /*
         **  Convert string to IP address
         */
+#ifdef SUP_IP6
+        if((Ip = sfip_alloc(pcToken, NULL)) == NULL)
+#else
         Ip = inet_addr(pcToken);
         if(Ip == INADDR_NONE)
+#endif
         {
             SnortSnprintf(ErrorString, ErrStrLen,
                           "Invalid IP to '%s' token.", SERVER);
@@ -1976,12 +2070,15 @@ static int ProcessUniqueServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
             }
         }
 
-        ip_addr.s_addr = Ip;
-
         /*
         **  Print out the configuration header
         */
+#ifdef SUP_IP6
+        LogMessage("    SERVER: %s\n", sfip_ntoa(Ip));
+#else
+        ip_addr.s_addr = Ip;
         LogMessage("    SERVER: %s\n", inet_ntoa(ip_addr));
+#endif
     }
 
     /*
@@ -2320,7 +2417,7 @@ static inline int LogEvents(HI_SESSION *hi_ssn, Packet *p, int iInspectMode)
     */
     if(p->ssnptr)
     {
-        httpflags = (u_int32_t)stream_api->get_application_data(p->ssnptr,
+        httpflags = (u_int32_t)(uintptr_t)stream_api->get_application_data(p->ssnptr,
                                                      PP_HTTPINSPECT);
     }
 
@@ -2339,7 +2436,7 @@ static inline int LogEvents(HI_SESSION *hi_ssn, Packet *p, int iInspectMode)
     {
         httpflags |= uiMask;
         stream_api->set_application_data(p->ssnptr, PP_HTTPINSPECT,
-                        (void *)httpflags, NULL);
+                        (void *)(uintptr_t)httpflags, NULL);
     }
 
     /*
@@ -2353,8 +2450,8 @@ static inline int LogEvents(HI_SESSION *hi_ssn, Packet *p, int iInspectMode)
 
 static inline int SetSiInput(HI_SI_INPUT *SiInput, Packet *p)
 {
-    SiInput->sip   = p->iph->ip_src.s_addr;
-    SiInput->dip   = p->iph->ip_dst.s_addr;
+    IP_COPY_VALUE(SiInput->sip, GET_SRC_IP(p));
+    IP_COPY_VALUE(SiInput->dip, GET_DST_IP(p));
     SiInput->sport = p->sp;
     SiInput->dport = p->dp;
 
@@ -2421,7 +2518,7 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
 
     PROFILE_VARS;
     
-    if(!p->iph || !p->tcph)
+    if(!IPH_IS_VALID(p) || !p->tcph)
     {
         return 1;
     }

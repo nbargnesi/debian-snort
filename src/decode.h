@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -46,6 +47,7 @@
 #endif /* !WIN32 */
 //#include "ubi_SplayTree.h"
 #include "bitop.h"
+#include "ipv6_port.h"
 
 
 /*  D E F I N E S  ************************************************************/
@@ -458,7 +460,7 @@ struct enc_header {
 #endif
 
 #ifndef IPOPT_RTRALT
-    #define IPOPT_RTRALT         0x14
+    #define IPOPT_RTRALT         0x94
 #endif
 
 #ifndef IPOPT_TS
@@ -568,16 +570,14 @@ struct enc_header {
 #define PKT_STREAM_TWH       0x00001000
 #define PKT_IGNORE_PORT      0x00002000  /* this packet should be ignored, based on port */
 #define PKT_PASS_RULE        0x00004000  /* this packet has matched a pass rule */
+#define PKT_NO_DETECT        0x00008000  /* this packet should not be preprocessed */
+#define PKT_PREPROC_RPKT     0x00010000  /* set in original packet to indicate a preprocessor
+                                          * has a reassembled packet */
+#define PKT_DCE_RPKT         0x00020000  /* this packet is a DCE/RPC reassembled one */
 #define PKT_STATELESS        0x10000000  /* Packet has matched a stateless rule */
 #define PKT_INLINE_DROP      0x20000000
 #define PKT_OBFUSCATED       0x40000000  /* this packet has been obfuscated */
-#define PKT_NO_DETECT        0x80000000  /* this packet should not be preprocessed */
-
-#ifdef GRE
-#ifndef IPPROTO_GRE
-#define IPPROTO_GRE 47
-#endif
-#endif
+#define PKT_LOGGED           0x80000000  /* this packet has been logged */
 
 
 /*  D A T A  S T R U C T U R E S  *********************************************/
@@ -715,43 +715,80 @@ typedef struct _SLLHdr {
 } SLLHdr;
 
 
+/*
+ * Snort supports 3 versions of the OpenBSD pflog header:
+ *
+ * Pflog1_Hdr:  CVS = 1.3,  DLT_OLD_PFLOG = 17,  Length = 28
+ * Pflog2_Hdr:  CVS = 1.8,  DLT_PFLOG     = 117, Length = 48
+ * Pflog3_Hdr:  CVS = 1.12, DLT_PFLOG     = 117, Length = 64
+ *
+ * Since they have the same DLT, Pflog{2,3}Hdr are distinguished
+ * by their actual length.  The minimum required length excludes
+ * padding.
+ */
 /* Old OpenBSD pf firewall pflog0 header
  * (information from pf source in kernel)
  * the rule, reason, and action codes tell why the firewall dropped it -fleck
  */
 
-typedef struct _OldPflog_hdr
+typedef struct _Pflog1_hdr
 {
-    u_int32_t af;
+    uint32_t af;
     char intf[IFNAMSIZ];
-    short rule;
-    u_short reason;
-    u_short action;
-    u_short dir;
-} OldPflogHdr;
+    int16_t rule;
+    uint16_t reason;
+    uint16_t action;
+    uint16_t dir;
+} Pflog1Hdr;
 
-#define OLDPFLOG_HDRLEN    sizeof(struct _OldPflog_hdr)
+#define PFLOG1_HDRLEN (sizeof(struct _Pflog1_hdr))
 
-/* OpenBSD pf firewall pflog0 header
- * (information from pf source in kernel)
- * the rule, reason, and action codes tell why the firewall dropped it -fleck
+/*
+ * Note that on OpenBSD, af type is sa_family_t. On linux, that's an unsigned
+ * short, but on OpenBSD, that's a uint8_t, so we should explicitly use uint8_t
+ * here.  - ronaldo
  */
 
-typedef struct _Pflog_hdr
-{
-        int8_t          length;
-        sa_family_t     af;
-        u_int8_t        action;
-        u_int8_t        reason;
-        char            ifname[IFNAMSIZ];
-        char            ruleset[16];
-        u_int32_t       rulenr;
-        u_int32_t       subrulenr;
-        u_int8_t        dir;
-        u_int8_t        pad[3];
-} PflogHdr;
+#define PFLOG_RULELEN 16
+#define PFLOG_PADLEN  3
 
-#define PFLOG_HDRLEN    sizeof(struct _Pflog_hdr)
+typedef struct _Pflog2_hdr
+{
+    int8_t   length;
+    uint8_t  af;
+    uint8_t  action;
+    uint8_t  reason;
+    char     ifname[IFNAMSIZ];
+    char     ruleset[PFLOG_RULELEN];
+    uint32_t rulenr;
+    uint32_t subrulenr;
+    uint8_t  dir;
+    uint8_t  pad[PFLOG_PADLEN];
+} Pflog2Hdr;
+
+#define PFLOG2_HDRLEN (sizeof(struct _Pflog2_hdr))
+#define PFLOG2_HDRMIN (PFLOG2_HDRLEN - PFLOG_PADLEN)
+
+typedef struct _Pflog3_hdr
+{
+    int8_t   length;
+    uint8_t  af;
+    uint8_t  action;
+    uint8_t  reason;
+    char     ifname[IFNAMSIZ];
+    char     ruleset[PFLOG_RULELEN];
+    uint32_t rulenr;
+    uint32_t subrulenr;
+    uint32_t uid;
+    uint32_t pid;
+    uint32_t rule_uid;
+    uint32_t rule_pid;
+    uint8_t  dir;
+    uint8_t  pad[PFLOG_PADLEN];
+} Pflog3Hdr;
+
+#define PFLOG3_HDRLEN (sizeof(struct _Pflog3_hdr))
+#define PFLOG3_HDRMIN (PFLOG3_HDRLEN - PFLOG_PADLEN)
 
 /*
  * ssl_pkttype values.
@@ -870,24 +907,50 @@ typedef struct _IPHdr
     u_int16_t ip_csum;      /* checksum */
     struct in_addr ip_src;  /* source IP */
     struct in_addr ip_dst;  /* dest IP */
-}      IPHdr;
+} IPHdr;
 
-#ifdef WIN32
+#ifdef SUP_IP6
+typedef struct _IPv4Hdr
+{
+    u_int8_t ip_verhl;      /* version & header length */
+    u_int8_t ip_tos;        /* type of service */
+    u_int16_t ip_len;       /* datagram length */
+    u_int16_t ip_id;        /* identification  */
+    u_int16_t ip_off;       /* fragment offset */
+    u_int8_t ip_ttl;        /* time to live field */
+    u_int8_t ip_proto;      /* datagram protocol */ 
+    u_int16_t ip_csum;      /* checksum */
+    sfip_t ip_src;          /* source IP */
+    sfip_t ip_dst;          /* dest IP */
+} IP4Hdr;
+
+typedef struct _IPv6Hdr
+{ 
+    u_int32_t vcl;      /* version, class, and label */
+    u_int16_t len;      /* length of the payload */
+    u_int8_t  next;     /* next header
+                         * Uses the same flags as
+                         * the IPv4 protocol field */
+    u_int8_t  hop_lmt;  /* hop limit */ 
+    sfip_t ip_src;
+    sfip_t ip_dst;
+} IP6Hdr; 
+#endif
+
 /* IPv6 address */
 #ifndef s6_addr
 struct in6_addr
 {
     union
-      {
-    uint8_t u6_addr8[16];
-    uint16_t u6_addr16[8];
-    uint32_t u6_addr32[4];
-      } in6_u;
+    {
+        uint8_t u6_addr8[16];
+        uint16_t u6_addr16[8];
+        uint32_t u6_addr32[4];
+    } in6_u;
 #define s6_addr         in6_u.u6_addr8
 #define s6_addr16       in6_u.u6_addr16
 #define s6_addr32       in6_u.u6_addr32
 };
-#endif
 #endif
 
 typedef struct _IP6RawHdr
@@ -916,6 +979,25 @@ typedef struct _IP6RawHdr
 #define ip6hlim  IP6Ctl.IP6HdrCtl.ip6_un1_hlim
 #define ip6hops  IP6Ctl.IP6HdrCtl.ip6_un1_hlim
 
+#define IP6_HDR_LEN 40
+#define IP_PROTO_HOPOPTS    0
+#define IP_PROTO_NONE       59
+#define IP_PROTO_ROUTING    43
+#define IP_PROTO_FRAGMENT   44
+#define IP_PROTO_AH         51
+#define IP_PROTO_DSTOPTS    60
+#define IP_PROTO_ICMPV6     58
+#define IP_PROTO_IPV6       41
+#define IP_PROTO_IPIP       4
+
+#ifdef WORDS_BIGENDIAN
+#define IP6F_OFF_MASK       0xfff8  /* mask out offset from _offlg */
+#define IP6F_MORE_FRAG      0x0001  /* more-fragments flag */
+#else   /* BYTE_ORDER == LITTLE_ENDIAN */
+#define IP6F_OFF_MASK       0xf8ff  /* mask out offset from _offlg */
+#define IP6F_MORE_FRAG      0x0100  /* more-fragments flag */
+#endif
+
 /* Fragment header */
 typedef struct _IP6Frag
 {
@@ -925,10 +1007,104 @@ typedef struct _IP6Frag
     uint32_t  ip6f_ident;   /* identification */
 } IP6Frag;
 
-typedef struct _IP6HdrChain{
-    u_int8_t        next_header;
-    u_int8_t        length;
-} IP6HdrChain;
+typedef struct _ICMP6
+{
+    u_int8_t type;
+    u_int8_t code;
+    u_int16_t csum;
+    u_int8_t *body;
+
+} ICMP6Hdr;
+
+#define ICMP6_UNREACH 1
+#define ICMP6_BIG    2
+#define ICMP6_TIME   3
+#define ICMP6_PARAMS 4
+#define ICMP6_ECHO   128
+#define ICMP6_REPLY  129
+
+/* Minus 1 due to the 'body' field  */
+#define ICMP6_MIN_HEADER_LEN (sizeof(ICMP6Hdr) )
+
+#ifdef SUP_IP6
+struct _Packet;
+
+/* IPHeader access calls */
+sfip_t *    ip4_ret_src(struct _Packet *);
+sfip_t *    ip4_ret_dst(struct _Packet *);
+u_int16_t   ip4_ret_tos(struct _Packet *);
+u_int8_t    ip4_ret_ttl(struct _Packet *);
+u_int16_t   ip4_ret_len(struct _Packet *);
+u_int16_t   ip4_ret_id(struct _Packet *);
+u_int8_t    ip4_ret_proto(struct _Packet *);
+u_int16_t   ip4_ret_off(struct _Packet *);
+u_int8_t    ip4_ret_ver(struct _Packet *);
+u_int8_t    ip4_ret_hlen(struct _Packet *);
+
+sfip_t *    orig_ip4_ret_src(struct _Packet *);
+sfip_t *    orig_ip4_ret_dst(struct _Packet *);
+u_int16_t   orig_ip4_ret_tos(struct _Packet *);
+u_int8_t    orig_ip4_ret_ttl(struct _Packet *);
+u_int16_t   orig_ip4_ret_len(struct _Packet *);
+u_int16_t   orig_ip4_ret_id(struct _Packet *);
+u_int8_t    orig_ip4_ret_proto(struct _Packet *);
+u_int16_t   orig_ip4_ret_off(struct _Packet *);
+u_int8_t    orig_ip4_ret_ver(struct _Packet *);
+u_int8_t    orig_ip4_ret_hlen(struct _Packet *);
+
+sfip_t *    ip6_ret_src(struct _Packet *);
+sfip_t *    ip6_ret_dst(struct _Packet *);
+u_int16_t   ip6_ret_toc(struct _Packet *);
+u_int8_t    ip6_ret_hops(struct _Packet *);
+u_int16_t   ip6_ret_len(struct _Packet *);
+u_int16_t   ip6_ret_id(struct _Packet *);
+u_int8_t    ip6_ret_next(struct _Packet *);
+u_int16_t   ip6_ret_off(struct _Packet *);
+u_int8_t    ip6_ret_ver(struct _Packet *);
+u_int8_t    ip6_ret_hlen(struct _Packet *);
+
+sfip_t *    orig_ip6_ret_src(struct _Packet *);
+sfip_t *    orig_ip6_ret_dst(struct _Packet *);
+u_int16_t   orig_ip6_ret_toc(struct _Packet *);
+u_int8_t    orig_ip6_ret_hops(struct _Packet *);
+u_int16_t   orig_ip6_ret_len(struct _Packet *);
+u_int16_t   orig_ip6_ret_id(struct _Packet *);
+u_int8_t    orig_ip6_ret_next(struct _Packet *);
+u_int16_t   orig_ip6_ret_off(struct _Packet *);
+u_int8_t    orig_ip6_ret_ver(struct _Packet *);
+u_int8_t    orig_ip6_ret_hlen(struct _Packet *);
+
+typedef struct _IPH_API 
+{
+    sfip_t *    (*iph_ret_src)(struct _Packet *);
+    sfip_t *    (*iph_ret_dst)(struct _Packet *);
+    u_int16_t   (*iph_ret_tos)(struct _Packet *);
+    u_int8_t    (*iph_ret_ttl)(struct _Packet *);
+    u_int16_t   (*iph_ret_len)(struct _Packet *);
+    u_int16_t   (*iph_ret_id)(struct _Packet *);
+    u_int8_t    (*iph_ret_proto)(struct _Packet *);
+    u_int16_t   (*iph_ret_off)(struct _Packet *);
+    u_int8_t    (*iph_ret_ver)(struct _Packet *);
+    u_int8_t    (*iph_ret_hlen)(struct _Packet *);
+
+    sfip_t *    (*orig_iph_ret_src)(struct _Packet *);
+    sfip_t *    (*orig_iph_ret_dst)(struct _Packet *);
+    u_int16_t   (*orig_iph_ret_tos)(struct _Packet *);
+    u_int8_t    (*orig_iph_ret_ttl)(struct _Packet *);
+    u_int16_t   (*orig_iph_ret_len)(struct _Packet *);
+    u_int16_t   (*orig_iph_ret_id)(struct _Packet *);
+    u_int8_t    (*orig_iph_ret_proto)(struct _Packet *);
+    u_int16_t   (*orig_iph_ret_off)(struct _Packet *);
+    u_int8_t    (*orig_iph_ret_ver)(struct _Packet *);
+    u_int8_t    (*orig_iph_ret_hlen)(struct _Packet *);
+} IPH_API;
+
+extern IPH_API ip4;
+extern IPH_API ip6;
+
+#define iph_is_valid(p) (p->family != NO_IP)
+#define NO_IP 0
+#endif
 
 #ifdef _MSC_VER
   /* Visual C++ pragma to enable warning messages about nonstandard bit field type */
@@ -945,21 +1121,16 @@ typedef struct _IP6HdrChain{
   #pragma warning( disable : 4214 )  
 #endif
 
+#ifndef IPPROTO_IPIP
+#define IPPROTO_IPIP 4
+#endif
 
+/* GRE related stuff */
 #ifdef GRE
 
-#define GRE_TYPE_TRANS_BRIDGING 0x6558
-#define GRE_HEADER_LEN 4
-#define GRE_CHECKSUM_LEN 2
-#define GRE_OFFSET_LEN 2
-#define GRE_KEY_LEN 4
-#define GRE_SEQNO_LEN 4
-#define GRE_SRE_HEADER_LEN 4
-#define GRE_CHECKSUM_FLAG 0x80
-#define GRE_ROUTING_FLAG  0x40
-#define GRE_KEY_FLAG      0x20
-#define GRE_SEQNO_FLAG    0x10
-#define GRE_SSR_FLAG      0x08   /* strict source route */
+#ifndef IPPROTO_GRE
+#define IPPROTO_GRE 47
+#endif
 
 typedef struct _GREHdr
 {
@@ -969,7 +1140,33 @@ typedef struct _GREHdr
 
 } GREHdr;
 
-#endif
+#define GRE_TYPE_TRANS_BRIDGING 0x6558
+#define GRE_TYPE_PPP            0x880B
+
+#define GRE_HEADER_LEN 4
+#define GRE_CHKSUM_LEN 2
+#define GRE_OFFSET_LEN 2
+#define GRE_KEY_LEN 4
+#define GRE_SEQ_LEN 4
+#define GRE_SRE_HEADER_LEN 4
+
+#define GRE_CHKSUM(x)  (x->flags & 0x80)
+#define GRE_ROUTE(x)   (x->flags & 0x40)
+#define GRE_KEY(x)     (x->flags & 0x20)
+#define GRE_SEQ(x)     (x->flags & 0x10)
+#define GRE_SSR(x)     (x->flags & 0x08)
+#define GRE_RECUR(x)   (x->flags & 0x07)
+#define GRE_VERSION(x)   (x->version & 0x07)
+#define GRE_FLAGS(x)     (x->version & 0xF8)
+#define GRE_PROTO(x)  ntohs(x->ether_type)
+
+/* GRE version 1 used with PPTP */
+#define GRE_V1_HEADER_LEN 8
+#define GRE_V1_ACK_LEN 4
+#define GRE_V1_FLAGS(x)  (x->version & 0x78)
+#define GRE_V1_ACK(x)    (x->version & 0x80)
+
+#endif  /* GRE */
 
 
 /* more macros for TCP offset */
@@ -1145,8 +1342,8 @@ typedef struct _Options
 {
     u_int8_t code;
     u_int8_t len; /* length of the data section */
-    u_int8_t *data;
-}        Options;
+    const u_int8_t *data;
+} Options;
 
 /* PPPoEHdr Header; EtherHdr plus the PPPoE Header */
 typedef struct _PPPoEHdr
@@ -1179,64 +1376,64 @@ typedef struct _PPPoE_Tag
 
 typedef struct _HttpUri
 {
-    u_int8_t *uri;  /* static buffer for uri length */
+    const u_int8_t *uri;  /* static buffer for uri length */
     u_int16_t length;
     u_int32_t decode_flags; 
 } HttpUri;
 
+struct IPH_API;
+
 typedef struct _Packet
 {
-    struct pcap_pkthdr *pkth;   /* BPF data */
-    u_int8_t *pkt;              /* base pointer to the raw packet data */
+    const struct pcap_pkthdr *pkth;   /* BPF data */
+    const u_int8_t *pkt;              /* base pointer to the raw packet data */
 
-    Fddi_hdr *fddihdr;          /* FDDI support headers */
+    const Fddi_hdr *fddihdr;          /* FDDI support headers */
     Fddi_llc_saps *fddisaps;
     Fddi_llc_sna *fddisna;
     Fddi_llc_iparp *fddiiparp;    
     Fddi_llc_other *fddiother;
 
-    Trh_hdr *trh;               /* Token Ring support headers */
+    const Trh_hdr *trh;         /* Token Ring support headers */
     Trh_llc *trhllc;
     Trh_mr *trhmr;
 
-    SLLHdr *sllh;               /* Linux cooked sockets header */
+    const SLLHdr *sllh;         /* Linux cooked sockets header */
 
-    PflogHdr *pfh;              /* OpenBSD pflog interface header */
+    Pflog1Hdr *pf1h;            /* OpenBSD pflog interface header - version 1 */
+    Pflog2Hdr *pf2h;            /* OpenBSD pflog interface header - version 2 */
+    Pflog3Hdr *pf3h;            /* OpenBSD pflog interface header - version 3 */
 
-    OldPflogHdr *opfh;          /* Old OpenBSD pflog interface header */
-
-    EtherHdr *eh;               /* standard TCP/IP/Ethernet/ARP headers */
-    VlanTagHdr *vh;
+    const EtherHdr *eh;         /* standard TCP/IP/Ethernet/ARP headers */
+    const VlanTagHdr *vh;
     EthLlc   *ehllc;
     EthLlcOther *ehllcother;
     
-    WifiHdr *wifih;         /* wireless LAN header */
+    const WifiHdr *wifih;       /* wireless LAN header */
 
     EtherARP *ah;
 
-    EtherEapol *eplh;       /* 802.1x EAPOL header */
-    EAPHdr *eaph;
-    u_int8_t *eaptype;
+    const EtherEapol *eplh;   /* 802.1x EAPOL header */
+    const EAPHdr *eaph;
+    const u_int8_t *eaptype;
     EapolKey *eapolk;
 
-    PPPoEHdr *pppoeh;        /* Encapsulated PPP of Ether header */
+    const PPPoEHdr *pppoeh;   /* Encapsulated PPP of Ether header */
+    const IPHdr *iph, *orig_iph;  /* and orig. headers for ICMP_*_UNREACH family */
+/*    int ip_payload_len; */     /* Replacement for IP_LEN(p->iph->ip_len) << 2 */
+/*    int ip_payload_off; */     /* IP_LEN(p->iph->ip_len) << 2 + p->data */
 
-    IPHdr *iph, *orig_iph;   /* and orig. headers for ICMP_*_UNREACH family */
     u_int32_t ip_options_len;
-    u_int8_t *ip_options_data;
+    const u_int8_t *ip_options_data;
 
-    TCPHdr *tcph, *orig_tcph;
+    const TCPHdr *tcph, *orig_tcph;
     u_int32_t tcp_options_len;
-    u_int8_t *tcp_options_data;
+    const u_int8_t *tcp_options_data;
 
-    UDPHdr *udph, *orig_udph;
-    ICMPHdr *icmph, *orig_icmph;
+    const UDPHdr *udph, *orig_udph;
+    const ICMPHdr *icmph, *orig_icmph;
 
-#ifdef GRE
-    GREHdr *greh;
-#endif
-
-    u_int8_t *data;         /* packet payload pointer */
+    const u_int8_t *data;   /* packet payload pointer */
     u_int16_t dsize;        /* packet payload size */
     u_int16_t alt_dsize;    /* the dsize of a packet before munging (used for log)*/
 
@@ -1275,7 +1472,45 @@ typedef struct _Packet
     int32_t bytes_to_inspect; /* Number of bytes to check against rules */
 
     BITOP *preprocessor_bits;  /* flags for preprocessors to check */
+    BITOP *preproc_reassembly_pkt_bits;
+    
+#ifdef GRE
+    const GREHdr *greh;
+    const IPHdr *outer_iph;      /* if IP-in-IP, this will be the outer IP header */
+    char encapsulated;
+#endif
+    
+#ifdef TARGET_BASED
+    int16_t application_protocol_ordinal;
+#endif
+
+#ifdef SUP_IP6
+    IP4Hdr ip4h, orig_ip4h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IP6Hdr ip6h, orig_ip6h;   /* and orig. headers for ICMP_*_UNREACH family */
+    ICMPHdr *icmp6h, *orig_icmp6h;
+    int family;
+    int orig_family;
+
+    IPH_API iph_api;
+#endif
+
 } Packet;
+
+#ifdef SUP_IP6 
+/* Sets the callbacks to point at the family selected by 
+ *  * "family".  "family" is either AF_INET or AF_INET6 */
+static INLINE void set_callbacks(struct _Packet *p, int family) {
+    if(!p) 
+        return;
+    
+    if(family == AF_INET)
+        p->iph_api = ip4;
+    else
+        p->iph_api = ip6;
+
+    p->family = family;
+}
+#endif
 
 typedef struct s_pseudoheader
 {
@@ -1318,51 +1553,55 @@ typedef struct _DecoderFlags
 
 /*  P R O T O T Y P E S  ******************************************************/
 void InitDecoderFlags(void);
-void DecodeTRPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeFDDIPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeLinuxSLLPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeEthPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeIEEE80211Pkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeVlan(u_int8_t *, const u_int32_t, Packet *);
-void DecodePppPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodePppSerialPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodePppPktEncapsulated(Packet *, const u_int32_t, u_int8_t *);
-void DecodeSlipPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeNullPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeRawPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeI4LRawIPPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeI4LCiscoIPPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeChdlcPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodePflog(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeOldPflog(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeIP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeARP(u_int8_t *, u_int32_t, Packet *);
-void DecodeEapol(u_int8_t *, u_int32_t, Packet *);
-void DecodeEapolKey(u_int8_t *, u_int32_t, Packet *);
-void DecodeIPV6(u_int8_t *, u_int32_t, Packet *);
-void DecodeIPX(u_int8_t *, u_int32_t);
-void DecodeEthLoopback(u_int8_t *, u_int32_t);
-void DecodeTCP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeUDP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeEAP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeICMP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeICMPEmbeddedIP(u_int8_t *, const u_int32_t, Packet *);
-void DecodeIPOptions(u_int8_t *, u_int32_t, Packet *);
-void DecodeTCPOptions(u_int8_t *, u_int32_t, Packet *);
-void DecodeIPOptions(u_int8_t *, u_int32_t, Packet *);
-void DecodePPPoEPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
-void DecodeEncPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+void DecodeTRPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeFDDIPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeLinuxSLLPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeEthPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeIEEE80211Pkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeVlan(const u_int8_t *, const u_int32_t, Packet *);
+void DecodePppPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodePppSerialPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodePppPktEncapsulated(Packet *, const u_int32_t, const u_int8_t *);
+void DecodeSlipPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeNullPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeRawPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeI4LRawIPPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeI4LCiscoIPPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeChdlcPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodePflog(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeOldPflog(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeIP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeARP(const u_int8_t *, u_int32_t, Packet *);
+void DecodeEapol(const u_int8_t *, u_int32_t, Packet *);
+void DecodeEapolKey(const u_int8_t *, u_int32_t, Packet *);
+void DecodeIPV6(const u_int8_t *, u_int32_t, Packet *);
+void DecodeIPX(const u_int8_t *, u_int32_t, Packet *);
+void DecodeEthLoopback(const u_int8_t *, u_int32_t, Packet *);
+void DecodeTCP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeUDP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeEAP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeICMP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeICMPEmbeddedIP(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeIPOptions(const u_int8_t *, u_int32_t, Packet *);
+void DecodeTCPOptions(const u_int8_t *, u_int32_t, Packet *);
+void DecodeIPOptions(const u_int8_t *, u_int32_t, Packet *);
+void DecodePPPoEPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
+void DecodeEncPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
 #ifdef GRE
-void DecodeGRE(u_int8_t *, const u_int32_t, Packet *);
-void DecodeTransBridging(u_int8_t *, const u_int32_t, Packet *);
-#endif
+void DecodeGRE(const u_int8_t *, const u_int32_t, Packet *);
+void DecodeTransBridging(const u_int8_t *, const u_int32_t, Packet *);
+void DecoderAlertGRE(Packet *, int, const char *, const u_int8_t *, u_int32_t);
+#endif  /* GRE */
 #ifdef GIDS
 #ifndef IPFW
-void DecodeIptablesPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+void DecodeIptablesPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
 #else
-void DecodeIpfwPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+void DecodeIpfwPkt(Packet *, const struct pcap_pkthdr *, const u_int8_t *);
 #endif /* IPFW */
 #endif /* GIDS */
+void BsdFragHashInit(int max);
+void BsdFragHashCleanup(void);
+void BsdFragHashReset(void);
 
 #if defined(WORDS_MUSTALIGN) && !defined(__GNUC__)
 u_int32_t EXTRACT_32BITS (u_char *);

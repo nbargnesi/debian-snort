@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -33,6 +33,7 @@
 #include <wchar.h>
 #endif
 #include "sf_dynamic_meta.h"
+#include "ipv6_port.h"
 
 /* specifies that a function does not return 
  * used for quieting Visual Studio warnings
@@ -47,33 +48,6 @@
 #define NORETURN
 #endif
 
-/* For Visual Studio compile warnings
- * SUPPRESS_WARNING - suppresses the next warning
- * only works with /analyze warnings (6000 and up)
- * DISABLE_WARNING - disables the specified warning
- * used for warnings under 6000
- * ENABLE_WARNING - enable the specified warning
- * used to enable warning that was disabled using DISABLE_WARNING
- */
-#ifdef _MSC_VER
-#if _MSC_VER >= 1400
-//#define SUPPRESS_WARNING(x) __pragma(warning( suppress : x ))
-//#define DISABLE_WARNING(x)  __pragma(warning( disable : x ))
-//#define ENABLE_WARNING(x)   __pragma(warning( default : x ))
-#define SUPPRESS_WARNING(x)
-#define DISABLE_WARNING(x)
-#define ENABLE_WARNING(x)
-#else
-#define SUPPRESS_WARNING(x)
-#define DISABLE_WARNING(x)
-#define ENABLE_WARNING(x)
-#endif
-#else
-#define SUPPRESS_WARNING(x)
-#define DISABLE_WARNING(x)
-#define ENABLE_WARNING(x)
-#endif
-
 #ifdef PERF_PROFILING
 #ifndef PROFILE_PREPROCS_NOREDEF /* Don't redefine this from the main area */
 #ifdef PROFILING_PREPROCS
@@ -83,35 +57,42 @@
 #endif
 #endif
 
-#define PREPROCESSOR_DATA_VERSION 3
+#define PREPROCESSOR_DATA_VERSION 4
 
 #define MINIMUM_DYNAMIC_PREPROC_ID 10000
+typedef void (*PreprocessorInitFunc)(char *);
 typedef void * (*AddPreprocFunc)(void (*func)(void *, void *), unsigned short, unsigned int);
 typedef void (*AddPreprocExit)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
 typedef void (*AddPreprocRestart)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
 typedef void *(*AddPreprocConfCheck)(void (*func) (void));
 typedef int (*AlertQueueAdd)(unsigned int, unsigned int, unsigned int,
                              unsigned int, unsigned int, char *, void *);
-typedef void (*PreprocRegisterFunc)(char *, void (*func)(unsigned char *));
-typedef int (*ThresholdCheckFunc)(unsigned int, unsigned int, unsigned int,
-                             unsigned int, long);
+typedef void (*PreprocRegisterFunc)(char *, PreprocessorInitFunc);
+typedef int (*ThresholdCheckFunc)(unsigned int, unsigned int, snort_ip_p, snort_ip_p, long);
 typedef int (*InlineFunc)();
 typedef int (*InlineDropFunc)(void *);
 typedef void (*DisableDetectFunc)(void *);
 typedef int (*SetPreprocBitFunc)(void *, unsigned int);
-typedef void (*DebugMsgFunc)(int, char *, ...);
-#ifdef HAVE_WCHAR_H
-typedef void (*DebugWideMsgFunc)(int, wchar_t *, ...);
-#endif
 typedef int (*DetectFunc)(void *);
 typedef void *(*GetRuleInfoByNameFunc)(char *);
 typedef void *(*GetRuleInfoByIdFunc)(int);
 typedef int (*printfappendfunc)(char *, int, const char *, ...);
-typedef char ** (*TokenSplitFunc)(char *, char *, int, int *, char);
+typedef char ** (*TokenSplitFunc)(char *, const char *, int, int *, char);
 typedef void (*TokenFreeFunc)(char ***, int);
 typedef void (*AddPreprocProfileFunc)(char *, void *, int, void *);
 typedef int (*ProfilingFunc)();
 typedef int (*PreprocessFunc)(void *);
+typedef void (*PreprocStatsRegisterFunc)(char *, void (*func)(int));
+typedef void (*AddPreprocReset)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
+typedef void (*AddPreprocResetStats)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
+typedef void (*AddPreprocGetReassemblyPktFunc)(void * (*func)(void), unsigned int);
+typedef int (*SetPreprocGetReassemblyPktBitFunc)(void *, unsigned int);
+typedef void (*DisablePreprocessorsFunc)(void *);
+
+#ifdef SUP_IP6
+typedef void (*IP6BuildFunc)(void *, const void *, int);
+typedef void (*IP6SetCallbacksFunc)(void *, int);
+#endif
 
 /* Info Data passed to dynamic preprocessor plugin must include:
  * version
@@ -130,7 +111,7 @@ typedef int (*PreprocessFunc)(void *);
 typedef struct _DynamicPreprocessorData
 {
     int version;
-    char *altBuffer;
+    u_int8_t *altBuffer;
     unsigned int altBufferLen;
     UriInfo *uriBuffers[MAX_URIINFOS];
     LogMsgFunc logMsg;
@@ -176,6 +157,22 @@ typedef struct _DynamicPreprocessorData
 #endif
 
     PreprocessFunc preprocess;
+
+    char **debugMsgFile;
+    int *debugMsgLine;
+    
+    PreprocStatsRegisterFunc registerPreprocStats;
+    AddPreprocReset addPreprocReset;
+    AddPreprocResetStats addPreprocResetStats;
+    AddPreprocGetReassemblyPktFunc addPreprocGetReassemblyPkt;
+    SetPreprocGetReassemblyPktBitFunc setPreprocGetReassemblyPktBit;
+
+    DisablePreprocessorsFunc disablePreprocessors;
+
+#ifdef SUP_IP6
+    IP6BuildFunc ip6Build;
+    IP6SetCallbacksFunc ip6SetCallbacks;
+#endif
 
 } DynamicPreprocessorData;
 

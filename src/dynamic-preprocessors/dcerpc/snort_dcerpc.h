@@ -1,7 +1,7 @@
 /*
  * snort_dcerpc.h
  *
- * Copyright (C) 2004-2006 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire,Inc
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -66,7 +66,6 @@ typedef struct _DCERPC
     u_int16_t   dcerpc_req_buf_len;
     u_int16_t   dcerpc_req_buf_size;
 
-
 } DCERPC;
 
 #ifdef WIN32
@@ -83,6 +82,9 @@ typedef struct _DCERPC
     
 int  DCERPCProcessConf(char *pcToken, char *ErrorString, int ErrStrLen);
 int  DCERPCDecode(void *p);
+void DCERPC_InitPacket(void);
+SFSnortPacket * DCERPC_SetPseudoPacket(SFSnortPacket *p, const u_int8_t *data, u_int16_t data_len);
+void * DCERPC_GetReassemblyPkt(void);
 void DCERPC_Exit();
 
 #define GENERATOR_SMB 125

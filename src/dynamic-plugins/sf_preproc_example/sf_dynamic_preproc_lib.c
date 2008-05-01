@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2006 Sourcefire, Inc.
+ ** Copyright (C) 2005-2008 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -27,6 +27,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 /* Forward decl of Function that initializes/registers
  * the preproc config keywords. */
@@ -106,6 +107,22 @@ PREPROC_LINKAGE int InitializePreprocessor(DynamicPreprocessorData *dpd)
     _dpd.getRuleInfoById = dpd->getRuleInfoById;
 
     _dpd.preprocess = dpd->preprocess;
+
+    _dpd.debugMsgFile = dpd->debugMsgFile;
+    _dpd.debugMsgLine = dpd->debugMsgLine;
+
+    _dpd.registerPreprocStats = dpd->registerPreprocStats;
+    _dpd.addPreprocReset = dpd->addPreprocReset;
+    _dpd.addPreprocResetStats = dpd->addPreprocResetStats;
+    _dpd.addPreprocGetReassemblyPkt = dpd->addPreprocGetReassemblyPkt;
+    _dpd.setPreprocGetReassemblyPktBit = dpd->setPreprocGetReassemblyPktBit;
+    _dpd.disablePreprocessors = dpd->disablePreprocessors;
+
+#ifdef SUP_IP6
+    _dpd.ip6Build = dpd->ip6Build;
+    _dpd.ip6SetCallbacks = dpd->ip6SetCallbacks;
+#endif
+
     DYNAMIC_PREPROC_SETUP();
     return 0;
 }

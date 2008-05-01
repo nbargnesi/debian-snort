@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005 Sourcefire, Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 ** Author: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -24,40 +24,9 @@
 #define __PROFILER_H__
 
 #ifdef PERF_PROFILING
-#ifndef UINT64
-#define UINT64 unsigned long long
-#endif
 
-/* Assembly to find clock ticks.  Intel only */
-#ifdef WIN32
-#define get_clockticks(val) \
-    QueryPerformanceCounter((PLARGE_INTEGER)&val)
-#else
-#if (defined(__i386) || defined(__ia64) || defined(__amd64) )
-#define get_clockticks(val) \
-{ \
-    u_int32_t a, d; \
-    __asm__ __volatile__ ("rdtsc" : "=a" (a), "=d" (d));  \
-    val = ((UINT64)a) | (((UINT64)d) << 32);  \
-}
-#else
-#if (defined(__GNUC__) && (defined(__powerpc__) || (defined(__ppc__))))
-#define get_clockticks(val) \
-{ \
-    u_int32_t tbu0, tbu1, tbl; \
-    do \
-    { \
-        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0)); \
-        __asm__ __volatile__ ("mftb %0" : "=r"(tbl)); \
-        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu1)); \
-    } while (tbu0 != tbu1); \
-    val = ((UINT64)tbl) | (((UINT64)tbu0) << 32);  \
-}
-#else
-#define get_clockticks(val)
-#endif /* POWERPC || PPC */
-#endif /* I386 || IA64 || AMD64 */
-#endif /* WIN32 */
+#include "sf_types.h"
+#include "cpuclock.h"
 
 /* Sort preferences for rule profiling */
 #define PROFILE_SORT_CHECKS 1
@@ -152,7 +121,7 @@
     } 
 
 /************** Profiling API ******************/
-void ShowRuleProfiles();
+void ShowRuleProfiles(void);
 
 /* Preprocessor stats info */
 typedef struct _PreprocStats
@@ -172,7 +141,9 @@ typedef struct _PreprocStatsNode
 } PreprocStatsNode;
 
 void RegisterPreprocessorProfile(char *keyword, PreprocStats *stats, int layer, PreprocStats *parent);
-void ShowPreprocProfiles();
+void ShowPreprocProfiles(void);
+void ResetRuleProfiling(void);
+void ResetPreprocProfiling(void);
 extern PreprocStats totalPerfStats;
 #else
 #define PROFILE_VARS

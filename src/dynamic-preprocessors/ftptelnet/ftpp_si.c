@@ -1,7 +1,7 @@
 /*
  * ftpp_si.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -422,15 +422,25 @@ static int FTPInitConf(SFSnortPacket *p, FTPTELNET_GLOBAL_CONF *GlobalConf,
      * is at least one unique client configuration.  If there isn't then we
      * assume the global client configuration.
      */
+#ifdef SUP_IP6
+    ClientConfDip = ftpp_ui_client_lookup_find(GlobalConf->client_lookup, 
+            &SiInput->dip, &iErr);
+#else
     ClientConfDip = ftpp_ui_client_lookup_find(GlobalConf->client_lookup, 
             SiInput->dip, &iErr);
+#endif
     if(!ClientConfDip)
     {
         ClientConfDip = &GlobalConf->global_ftp_client;
     }
 
+#ifdef SUP_IP6
+    ClientConfSip = ftpp_ui_client_lookup_find(GlobalConf->client_lookup,
+            &SiInput->sip, &iErr);
+#else
     ClientConfSip = ftpp_ui_client_lookup_find(GlobalConf->client_lookup,
             SiInput->sip, &iErr);
+#endif
     if(!ClientConfSip)
     {
         ClientConfSip = &GlobalConf->global_ftp_client;
@@ -442,15 +452,25 @@ static int FTPInitConf(SFSnortPacket *p, FTPTELNET_GLOBAL_CONF *GlobalConf,
      * is at least one unique client configuration.  If there isn't then we
      * assume the global client configuration.
      */
+#ifdef SUP_IP6
+    ServerConfDip = ftpp_ui_server_lookup_find(GlobalConf->server_lookup, 
+            &SiInput->dip, &iErr);
+#else
     ServerConfDip = ftpp_ui_server_lookup_find(GlobalConf->server_lookup, 
             SiInput->dip, &iErr);
+#endif
     if(!ServerConfDip)
     {
         ServerConfDip = &GlobalConf->global_ftp_server;
     }
 
+#ifdef SUP_IP6
+    ServerConfSip = ftpp_ui_server_lookup_find(GlobalConf->server_lookup,
+            &SiInput->sip, &iErr);
+#else
     ServerConfSip = ftpp_ui_server_lookup_find(GlobalConf->server_lookup,
             SiInput->sip, &iErr);
+#endif
     if(!ServerConfSip)
     {
         ServerConfSip = &GlobalConf->global_ftp_server;
@@ -623,9 +643,9 @@ static INLINE int FTPResetSession(FTP_SESSION *FtpSession, int first)
     FtpSession->global_conf = NULL;
 
     FtpSession->encr_state = NO_STATE;
-    FtpSession->clientIP = 0;
+    IP_CLEAR(FtpSession->clientIP);
     FtpSession->clientPort = 0;
-    FtpSession->serverIP = 0;
+    IP_CLEAR(FtpSession->serverIP);
     FtpSession->serverPort = 0;
     FtpSession->data_chan_state = NO_STATE;
     FtpSession->data_chan_index = -1;
@@ -677,9 +697,22 @@ static int FTPStatefulSessionInspection(SFSnortPacket *p,
         if (*FtpSession)
         {
             if (SiInput->pdir != FTPP_SI_NO_MODE)
+            {
                 *piInspectMode = SiInput->pdir;
+            }
             else
-                *piInspectMode = FTPGetPacketDir(p);
+            {
+                FTP_SESSION *tmp = *FtpSession;
+                /* check session pointer server conf port */
+
+                if (tmp->server_conf && tmp->server_conf->proto_ports.ports[SiInput->sport])
+                    *piInspectMode = FTPP_SI_SERVER_MODE;
+                else if (tmp->server_conf && tmp->server_conf->proto_ports.ports[SiInput->dport])
+                    *piInspectMode = FTPP_SI_CLIENT_MODE;
+                else
+                    *piInspectMode = FTPGetPacketDir(p);
+            }
+
             return FTPP_SUCCESS;
         }
     }

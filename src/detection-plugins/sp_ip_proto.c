@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,7 +19,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
 
 /* sp_ip_proto 
  * 
@@ -61,6 +60,13 @@
 #include "plugin_enum.h"
 #include "sp_ip_proto.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ipProtoPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 void IpProtoInit(char *, OptTreeNode *, int);
 void IpProtoRuleParseFunction(char *, IpProtoData *);
@@ -84,7 +90,10 @@ int IpProtoDetectorFunction(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIpProto(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("ip_proto", IpProtoInit);
+    RegisterPlugin("ip_proto", IpProtoInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("ip_proto", &ipProtoPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: IpProto Setup\n"););
 }
 
@@ -223,21 +232,25 @@ int IpProtoDetectorFunction(Packet *p, struct _OptTreeNode *otn,
         OptFpList *fp_list)
 {
     IpProtoData *ipd;  /* data struct pointer */
+    PROFILE_VARS;
 
     //ipd = otn->ds_list[PLUGIN_IP_PROTO_CHECK];
     ipd = fp_list->context;
 
-    if(!p->iph)
+    if(!IPH_IS_VALID(p))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Not IP\n"););
         return 0;
     }
 
+    PREPROC_PROFILE_START(ipProtoPerfStats);
+
     switch(ipd->comparison_flag)
     {
         case 0:
-            if((ipd->protocol == p->iph->ip_proto) ^ ipd->not_flag)
+            if((ipd->protocol == GET_IPH_PROTO(p)) ^ ipd->not_flag)
             {
+                PREPROC_PROFILE_END(ipProtoPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
             else
@@ -249,16 +262,18 @@ int IpProtoDetectorFunction(Packet *p, struct _OptTreeNode *otn,
             break;
 
         case GREATER_THAN:
-            if(p->iph->ip_proto > ipd->protocol)
+            if(GET_IPH_PROTO(p) > ipd->protocol)
             {
+                PREPROC_PROFILE_END(ipProtoPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
 
             break;
 
         default:
-            if(p->iph->ip_proto < ipd->protocol)
+            if(GET_IPH_PROTO(p) < ipd->protocol)
             {
+                PREPROC_PROFILE_END(ipProtoPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
 
@@ -266,5 +281,6 @@ int IpProtoDetectorFunction(Packet *p, struct _OptTreeNode *otn,
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(ipProtoPerfStats);
     return 0;
 }

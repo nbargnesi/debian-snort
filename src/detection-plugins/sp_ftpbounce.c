@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2006 Sourcefire, Inc.
+ ** Copyright (C) 2005-2008 Sourcefire, Inc.
  ** Author: Steven Sturges
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -70,7 +70,14 @@
 #include "plugin_enum.h"
 #include "mstring.h"
 
-extern u_int8_t *doe_ptr;
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ftpBouncePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
+extern const u_int8_t *doe_ptr;
 extern u_int8_t DecodeBuffer[DECODE_BLEN];
 
 void FTPBounceInit(char *, OptTreeNode *, int);
@@ -91,7 +98,11 @@ int FTPBounce(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupFTPBounce(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("ftpbounce", FTPBounceInit);
+    RegisterPlugin("ftpbounce", FTPBounceInit, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("ftpbounce", &ftpBouncePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: FTPBounce Setup\n"););
 }
@@ -177,11 +188,12 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     u_int32_t ip = 0;
     int octet=0;
-    char *this_param = doe_ptr;
+    const u_int8_t *this_param = doe_ptr;
 
     int dsize;
     int use_alt_buffer = p->packet_flags & PKT_ALT_DECODE;
-    char *base_ptr, *end_ptr, *start_ptr;
+    const u_int8_t *base_ptr, *end_ptr, *start_ptr;
+    PROFILE_VARS;
 
     if (!doe_ptr)
     {
@@ -190,10 +202,12 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         return 0;
     }
 
+    PREPROC_PROFILE_START(ftpBouncePerfStats);
+
     if(use_alt_buffer)
     {
         dsize = p->alt_dsize;
-        start_ptr = (char *) DecodeBuffer;        
+        start_ptr = DecodeBuffer;        
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                     "Using Alternative Decode buffer!\n"););
 
@@ -220,6 +234,7 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] ftpbounce bounds check failed..\n"););
+            PREPROC_PROFILE_END(ftpBouncePerfStats);
             return 0;
         }
     }
@@ -235,6 +250,7 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "[*] ftpbounce non digit char failed..\n"););
+                PREPROC_PROFILE_END(ftpBouncePerfStats);
                 return 0;
             }
             value = value * 10 + (*this_param - '0');
@@ -246,6 +262,7 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                 "[*] ftpbounce value > 256 ..\n"););
+            PREPROC_PROFILE_END(ftpBouncePerfStats);
             return 0;
         }
         if (octet  < 4)
@@ -262,20 +279,24 @@ int FTPBounce(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
             "[*] ftpbounce insufficient data ..\n"););
+        PREPROC_PROFILE_END(ftpBouncePerfStats);
         return 0;
     }
 
     if (ip != ntohl(p->iph->ip_src.s_addr))
     {
+        PREPROC_PROFILE_END(ftpBouncePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
             "PORT command not being used in bounce\n"););
+        PREPROC_PROFILE_END(ftpBouncePerfStats);
         return 0;
     }
     
     /* Never reached */
+    PREPROC_PROFILE_END(ftpBouncePerfStats);
     return 0;
 }

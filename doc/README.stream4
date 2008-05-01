@@ -150,7 +150,7 @@ Reassembly Configuration
     ports <portlist>        - Provides reassembly for a whitespace-separated list
                               of ports. By default, reassembly is performed for
                               ports 21, 23, 25, 42, 53, 80, 110, 111, 135, 136, 137,
-                              139, 143, 445, 513, 1443, 1521, and 3306. To perform
+                              139, 143, 445, 513, 514, 1443, 1521, 2401, and 3306. To perform
                               reassembly for all ports, use all as the port list.
     emergency_ports <portlist>
                             - Emergency ports are those which we ALWAYS do reassembly
@@ -211,33 +211,32 @@ preprocessor stream4: max_sessions 32768, memcap 36700160
 
 Alerts
 ======
-Stream4 uses generator ID 111.
 
-The list of SIDs is as follows:
-
- 1 STEALTH ACTIVITY (unknown) detection
- 2 Possible EVASIVE RST detection
- 3 Possible RETRANSMISSION detection
- 4 WINDOW VIOLATION detection
- 5 DATA ON SYN detection
- 6 STEALTH ACTIVITY (Full XMAS scan) detection
- 7 STEALTH ACTIVITY (SAPU scan) detection
- 8 STEALTH ACTIVITY (FIN scan) detection
- 9 STEALTH ACTIVITY (NULL scan) detection
-10 STEALTH ACTIVITY (XMAS scan) detection
-11 STEALTH ACTIVITY (Vecna scan) detection
-12 NMAP FINGERPRINT (stateful) detection
-13 STEALTH ACTIVITY (SYN FIN scan) detection
-14 FORWARD OVERLAP detection
-15 TTL LIMIT Exceeded
-16 TCP CHECKSUM CHANGED ON RETRANSMISSION (possible fragroute) detection
-17 TCP TOO FAST RETRANSMISSION WITH DIFFERENT DATA SIZE (possible fragroute) detection
-18 Multiple Acked Packets (possible fragroute)
-19 Shifting to Emergency Session Mode
-20 Shifting to Suspend Mode
-21 TCP Option Timestamp value of 0
-22 TCP stream too many overlapping packets
-23 Packet in Established TCP stream missing ACK
-24 Possible EVASIVE FIN detection
-25 SYN on established session detection, resetting reassembly queue
+GID             SID             MSG
+---             ---             ---
+111             1               Stealth Activity Detected
+111             2               Evasive Reset Packet
+111             3               Retransmission
+111             4               Window Violation
+111             5               Data on SYN Packet
+111             6               Full XMAS Stealth Scan
+111             7               SAPU Stealth Scan
+111             8               FIN Stealth Scan
+111             9               NULL Stealth Scan
+111             10              NMAP XMAS Stealth Scan
+111             11              VECNA Stealth Scan
+111             12              NMAP Fingerprint Stateful Detection
+111             13              SYN FIN Stealth Scan
+111             14              TCP forward overlap detected
+111             15              TTL Evasion attempt
+111             16              Evasive retransmitted data attempt
+111             17              Evasive retransmitted data with the data split attempt
+111             18              Multiple acked
+111             19              Shifting to Emergency Session Mode
+111             20              Shifting to Suspend Mode
+111             21              TCP Timestamp option has value of zero
+111             22              Too many overlapping TCP packets
+111             23              Packet in established TCP stream missing ACK
+111             24              Evasive FIN Packet
+111             25              SYN on established
 

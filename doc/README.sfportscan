@@ -179,14 +179,18 @@ The parameters you can use to configure the portscan module are:
   Ignores the destination of scan alerts.  <ip_list> can be a comma
   seperated list of IP addresses or IP addresses using CIDR notation.
 
+* memcap { positive integer }
+  The maximum number of bytes to allocate for portscan detection.  The
+  higher this number the more nodes that can be tracked.
+
 * logfile { <file> } 
   This option will output portscan events to the file specified. If
   <file> does not contain a leading slash, this file will be placed in
   the Snort config dir.
 
 * include_midstream
-  This option will include sessions picked up in midstream by the stream4
-  module.  This can lead to false alerts, especially under heavy load with
+  This option will include sessions picked up in midstream by Stream4 or
+  Stream5.  This can lead to false alerts, especially under heavy load with
   dropped packets; which is why the option is off by default.
 
 * detect_ack_scans
@@ -372,3 +376,39 @@ for your network(s).  Here are some tuning tips:
      least tuning.  The low sensitivity level does not catch filtered scans,
      since these are more prone to false positives.
      
+
+Alerts
+======
+
+SFPortscan uses generator ID 122 and can generate the following alerts:
+
+SID   Description
+---   -----------
+1     TCP Portscan
+2     TCP Decoy Portscan
+3     TCP Portsweep
+4     TCP Distributed Portscan
+5     TCP Filtered Portscan
+6     TCP Filtered Decoy Portscan
+7     TCP Filtered Portsweep
+8     TCP Filtered Distributed Portscan
+9     IP Protocol Scan
+10    IP Decoy Protocol Scan
+11    IP Protocol Sweep
+12    IP Distributed Protocol Scan
+13    IP Filtered Protocol Scan
+14    IP Filtered Decoy Protocol Scan
+15    IP Filtered Protocol Sweep
+16    IP Filtered Distributed Protocol Scan
+17    UDP Portscan
+18    UDP Decoy Portscan
+19    UDP Portsweep
+20    UDP Distributed Portscan
+21    UDP Filtered Portscan
+22    UDP Filtered Decoy Portscan
+23    UDP Filtered Portsweep
+24    UDP Filtered Distributed Portscan
+25    ICMP Sweep
+26    ICMP Filtered Sweep
+27    Open Port
+

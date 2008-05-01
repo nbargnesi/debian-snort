@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -43,6 +43,9 @@
 #define EXT "*.sl"
 #elif defined(MACOS)
 #define EXT "*.dylib"
+#elif defined(OPENBSD)
+#define EXT "*.so"
+#define EXT2 "*.so.*"
 #else
 #define EXT "*.so"
 #endif
@@ -79,6 +82,14 @@ extern HttpUri UriBufs[URI_COUNT]; /* detect.c */
 #include "sfthreshold.h"
 #include "inline.h"
 #include "mstring.h"
+#include "sfsnprintfappend.h"
+#include "stream_api.h"
+#include "sf_iph.h"
+
+#ifndef DEBUG
+char *no_file = "unknown";
+int no_line = 0;
+#endif
 
 /* Predeclare this */
 void VerifySharedLibUniqueness();
@@ -89,6 +100,7 @@ typedef struct _DynamicEnginePlugin
     PluginHandle handle;
     DynamicPluginMeta metaData;
     InitEngineLibFunc initFunc;
+    CompatibilityFunc versCheck;
     struct _DynamicEnginePlugin *next;
     struct _DynamicEnginePlugin *prev;
 } DynamicEnginePlugin;
@@ -139,9 +151,7 @@ void *getSymbol(PluginHandle handle, char *symbol, DynamicPluginMeta *meta, int 
 #ifndef WIN32
     symbolPtr = dlsym(handle, symbol);
 #else
-DISABLE_WARNING(4152)
     symbolPtr = GetProcAddress(handle, symbol);
-ENABLE_WARNING(4152)
 #endif
 
     if (!symbolPtr)
@@ -175,9 +185,7 @@ void GetPluginVersion(PluginHandle handle, DynamicPluginMeta* meta)
 {
     LibVersionFunc libVersionFunc = NULL;
 
-DISABLE_WARNING(4055)
     libVersionFunc = (LibVersionFunc)getSymbol(handle, "LibVersion", meta, FATAL);
-ENABLE_WARNING(4055)
 
     if (libVersionFunc != NULL)
     {
@@ -227,11 +235,30 @@ void LoadAllLibs(char *path, LoadLibraryFunc loadFunc)
             }
             dirEntry = readdir(directory);
         }
+        closedir(directory);
+#ifdef OPENBSD
+        directory = opendir(path);
+        if (directory)
+        {
+            dirEntry = readdir(directory);
+            while (dirEntry)
+            {
+                if (dirEntry->d_reclen &&
+                    !fnmatch(EXT2, dirEntry->d_name, FNM_PATHNAME | FNM_PERIOD))
+                {
+                    SnortSnprintf(path_buf, PATH_MAX, "%s%s%s", path, "/", dirEntry->d_name);
+                    loadFunc(path_buf, 1);
+                    count++;
+                }
+                dirEntry = readdir(directory);
+            }
+        }
+        closedir(directory);
+#endif
         if ( count == 0 )
         {
             LogMessage("Warning: No dynamic libraries found in directory %s!\n", path);
         }
-        closedir(directory);
     }
     else
     {
@@ -296,6 +323,7 @@ void LoadAllLibs(char *path, LoadLibraryFunc loadFunc)
 
 void AddEnginePlugin(PluginHandle handle,
                      InitEngineLibFunc initFunc,
+                     CompatibilityFunc compatFunc,
                      DynamicPluginMeta *meta)
 {
     DynamicEnginePlugin *newPlugin = NULL;
@@ -316,6 +344,7 @@ void AddEnginePlugin(PluginHandle handle,
     memcpy(&(newPlugin->metaData), meta, sizeof(DynamicPluginMeta));
     newPlugin->metaData.libraryPath = strdup(meta->libraryPath);
     newPlugin->initFunc = initFunc;
+    newPlugin->versCheck = compatFunc;
 }
 
 void RemoveEnginePlugin(DynamicEnginePlugin *plugin)
@@ -339,12 +368,66 @@ void RemoveEnginePlugin(DynamicEnginePlugin *plugin)
     free(plugin);
 }
 
+int ValidateDynamicEngines()
+{
+    int testNum = 0;
+    DynamicEnginePlugin *curPlugin = loadedEngines;
+    CompatibilityFunc versFunc = NULL;
+	
+    while( (void *)curPlugin != NULL)
+    {
+        versFunc = (CompatibilityFunc)curPlugin->versCheck;
+        /* if compatibility checking func is absent, skip validating */
+        if( (void *)versFunc != NULL)
+        {
+            DynamicDetectionPlugin *lib = loadedDetectionPlugins;
+            while( (void *)lib != NULL)
+            {				
+                if (lib->metaData.type == TYPE_DETECTION)					
+                {
+                    RequiredEngineLibFunc engineFunc;
+                    DynamicPluginMeta reqEngineMeta;
+					            
+                    engineFunc = (RequiredEngineLibFunc) getSymbol(lib->handle, "EngineVersion", &(lib->metaData), 1);
+                    if( (void *)engineFunc != NULL)
+                    {
+                        engineFunc(&reqEngineMeta);
+                    }
+                    testNum = versFunc(&curPlugin->metaData, &reqEngineMeta);
+                    if( testNum ) 
+                    {
+                        FatalError("Dynamic detection lib %s %d.%d isn't compatible with the current dynamic engine library "
+                                "%s %d.%d.\n"
+                                "The dynamic detection lib is compiled with an older version of the dynamic engine.\n",
+                                lib->metaData.libraryPath, lib->metaData.major, lib->metaData.minor,
+                                curPlugin->metaData.libraryPath, curPlugin->metaData.major, curPlugin->metaData.minor);
+                    }
+
+                }
+                lib = lib->next;
+            }
+        }
+        if( testNum ) break;
+        curPlugin = curPlugin->next;
+    }
+	
+    return(testNum);	
+}
+
 int LoadDynamicEngineLib(char *library_name, int indent)
 {
     /* Presume here, that library name is full path */
     InitEngineLibFunc engineInit;
+    CompatibilityFunc compatFunc;
     DynamicPluginMeta metaData;
     PluginHandle handle;
+
+#ifdef SUP_IP6
+    LogMessage("%sDynamic engine will not be loaded since dynamic detection "
+                 "libraries are not yet supported with IPv6.\n", 
+                indent?"  ":"");
+    return 0;
+#endif
 
     LogMessage("%sLoading dynamic engine %s... ",
                indent ? "  " : "", library_name);
@@ -355,19 +438,18 @@ int LoadDynamicEngineLib(char *library_name, int indent)
     GetPluginVersion(handle, &metaData);
 
     /* Just to ensure that the function exists */
-DISABLE_WARNING(4055)
     engineInit = (InitEngineLibFunc)getSymbol(handle, "InitializeEngine", &metaData, FATAL);
-ENABLE_WARNING(4055)
+    compatFunc = (CompatibilityFunc)getSymbol(handle, "CheckCompatibility", &metaData, NONFATAL);
 
     if (metaData.type != TYPE_ENGINE)
     {
         CloseDynamicLibrary(handle);
         LogMessage("failed, not an Engine\n");
         return 0;
-    }
-
-    AddEnginePlugin(handle, engineInit, &metaData);
-
+    }   
+    
+    AddEnginePlugin(handle, engineInit, compatFunc, &metaData);
+  
     LogMessage("done\n");
     return 0;
 }
@@ -499,6 +581,12 @@ int LoadDynamicDetectionLib(char *library_name, int indent)
     InitDetectionLibFunc detectionInit;
     PluginHandle handle;
 
+#ifdef SUP_IP6
+    LogMessage("%sDynamic detection library \"%s\" will not be loaded. Not "
+                 "supported with IPv6.\n", indent ? "  " : "", library_name);
+    return 0;
+#endif
+
     LogMessage("%sLoading dynamic detection library %s... ",
                indent ? "  " : "", library_name);
 
@@ -508,9 +596,7 @@ int LoadDynamicDetectionLib(char *library_name, int indent)
     GetPluginVersion(handle, &metaData);
 
     /* Just to ensure that the function exists */
-DISABLE_WARNING(4055)
     detectionInit = (InitDetectionLibFunc)getSymbol(handle, "InitializeDetection", &metaData, FATAL);
-ENABLE_WARNING(4055)
 
     if (!(metaData.type & TYPE_DETECTION))
     {
@@ -522,11 +608,10 @@ ENABLE_WARNING(4055)
     if (metaData.type & TYPE_ENGINE)
     {
         /* Do the engine initialization as well */
-DISABLE_WARNING(4055)
         InitEngineLibFunc engineInit = (InitEngineLibFunc)getSymbol(handle, "InitializeEngine", &metaData, FATAL);
-ENABLE_WARNING(4055)
+        CompatibilityFunc compatFunc = (CompatibilityFunc)getSymbol(handle, "CheckCompatibility", &metaData, NONFATAL);
 
-        AddEnginePlugin(handle, engineInit, &metaData);
+        AddEnginePlugin(handle, engineInit, compatFunc, &metaData);
     }
 
     AddDetectionPlugin(handle, detectionInit, &metaData);
@@ -789,9 +874,7 @@ void VerifyDetectionPluginRequirements()
             DynamicEnginePlugin *plugin = loadedEngines;
             int detectionLibOkay = 0;
 
-DISABLE_WARNING(4055)
             engineFunc = (RequiredEngineLibFunc) getSymbol(lib1->handle, "EngineVersion", &(lib1->metaData), FATAL);
-ENABLE_WARNING(4055)
 
             engineFunc(&reqEngineMeta);
             while (plugin != NULL)
@@ -859,6 +942,25 @@ int InitDynamicEnginePlugins(DynamicEngineData *info)
     return 0;
 }
 
+void DynamicSetRuleData(void *p, void *data)
+{
+    Packet *pkt = (Packet *)p;
+    if (stream_api && pkt)
+    {
+        stream_api->set_application_data(pkt->ssnptr, PP_RULES, data, &free);
+    }
+}
+
+void *DynamicGetRuleData(void *p)
+{
+    Packet *pkt = (Packet *)p;
+    if (stream_api && pkt)
+    {
+        return stream_api->get_application_data(pkt->ssnptr, PP_RULES);
+    }
+    return NULL;
+}
+
 int InitDynamicEngines()
 {
     int i;
@@ -882,6 +984,21 @@ int InitDynamicEngines()
 
     engineData.getPreprocOptFuncs = &GetPreprocessorRuleOptionFuncs;
 
+    engineData.setRuleData = &DynamicSetRuleData;
+    engineData.getRuleData = &DynamicGetRuleData;
+
+    engineData.debugMsg = &DebugMessageFunc;
+#ifdef HAVE_WCHAR_H
+    engineData.debugWideMsg = &DebugWideMessageFunc;
+#endif
+#ifdef DEBUG
+    engineData.debugMsgFile = &DebugMessageFile;
+    engineData.debugMsgLine = &DebugMessageLine;
+#else
+    engineData.debugMsgFile = &no_file;
+    engineData.debugMsgLine = &no_line;
+#endif
+
     return InitDynamicEnginePlugins(&engineData);
 }
 
@@ -895,7 +1012,7 @@ int InitDynamicPreprocessorPlugins(DynamicPreprocessorData *info)
     {
         if (plugin->initFunc(info))
         {
-            FatalError("Failed to initialize dynamic engine: %s version %d.%d.%d\n", 
+            FatalError("Failed to initialize dynamic preprocessor: %s version %d.%d.%d\n", 
                        plugin->metaData.uniqueName, plugin->metaData.major,
                        plugin->metaData.minor, plugin->metaData.build);
             //return -1;
@@ -940,6 +1057,11 @@ int DynamicSetPreprocessorBit(void *p, unsigned int preprocId)
     return SetPreprocBit((Packet *)p, preprocId);
 }
 
+int DynamicSetPreprocessorGetReassemblyPktBit(void *p, unsigned int preprocId)
+{
+    return SetPreprocGetReassemblyPktBit((Packet *)p, preprocId);
+}
+
 int DynamicDropInline(void *p)
 {
     return InlineDrop((Packet *)p);
@@ -975,6 +1097,23 @@ int DynamicPreprocess(void *packet)
 {
     return Preprocess((Packet*)packet);
 }
+
+void DynamicDisablePreprocessors(void *p)
+{
+    DisablePreprocessors((Packet *)p);
+}
+
+#ifdef SUP_IP6
+void DynamicIP6Build(void *p, const void *hdr, int family)
+{
+    sfiph_build((Packet *)p, hdr, family);
+}
+
+static INLINE void DynamicIP6SetCallbacks(void *p, int family)
+{
+    set_callbacks((Packet *)p, family);
+}
+#endif
 
 int InitDynamicPreprocessors()
 {
@@ -1035,6 +1174,26 @@ int InitDynamicPreprocessors()
 
     preprocData.preprocess = &DynamicPreprocess;
 
+#ifdef DEBUG
+    preprocData.debugMsgFile = &DebugMessageFile;
+    preprocData.debugMsgLine = &DebugMessageLine;
+#else
+    preprocData.debugMsgFile = &no_file;
+    preprocData.debugMsgLine = &no_line;
+#endif
+
+    preprocData.registerPreprocStats = &RegisterPreprocStats;
+    preprocData.addPreprocReset = &AddFuncToPreprocResetList;
+    preprocData.addPreprocResetStats = &AddFuncToPreprocResetStatsList;
+    preprocData.addPreprocGetReassemblyPkt = &AddFuncToPreprocGetReassemblyPktList;
+    preprocData.setPreprocGetReassemblyPktBit = &DynamicSetPreprocessorGetReassemblyPktBit;
+    preprocData.disablePreprocessors = &DynamicDisablePreprocessors;
+
+#ifdef SUP_IP6
+    preprocData.ip6Build = &DynamicIP6Build;
+    preprocData.ip6SetCallbacks = &DynamicIP6SetCallbacks;
+#endif
+
     return InitDynamicPreprocessorPlugins(&preprocData);
 }
 
@@ -1070,9 +1229,7 @@ int DumpDetectionLibRules()
     LogMessage("Dumping dynamic rules...\n");
     while (plugin)
     {
-DISABLE_WARNING(4055)
         ruleDumpFunc = (DumpDetectionRules) getSymbol(plugin->handle, "DumpSkeletonRules", &(plugin->metaData), NONFATAL);
-ENABLE_WARNING(4055)
 
         LogMessage("Dumping dynamic rules for Library %s %d.%d.%d\n",
             plugin->metaData.uniqueName,
@@ -1108,9 +1265,7 @@ int LoadDynamicPreprocessor(char *library_name, int indent)
     GetPluginVersion(handle, &metaData);
 
     /* Just to ensure that the function exists */
-DISABLE_WARNING(4055)
     preprocInit = (InitPreprocessorLibFunc) getSymbol(handle, "InitializePreprocessor", &metaData, FATAL);
-ENABLE_WARNING(4055)
 
     if (metaData.type != TYPE_PREPROCESSOR)
     {

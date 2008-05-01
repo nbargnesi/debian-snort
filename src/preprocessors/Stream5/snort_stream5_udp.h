@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -22,13 +22,16 @@
 #ifndef STREAM5_UDP_H_
 #define STREAM5_UDP_H_
 
+#include "ipv6_port.h"
+
 void Stream5CleanUdp(void);
+void Stream5ResetUdp(void);
 void Stream5InitUdp(void);
 int Stream5VerifyIcmpConfig(void);
 void Stream5UdpPolicyInit(char *);
 int Stream5ProcessUdp(Packet *p);
 void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
-                        u_int32_t ip, u_int16_t port);
+                        snort_ip_p ip, u_int16_t port);
 Stream5LWSession *GetLWUdpSession(SessionKey *key);
 
 #endif /* STREAM5_UDP_H_ */

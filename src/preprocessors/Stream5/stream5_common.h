@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -30,9 +30,10 @@
 
 #include "stream_api.h"
 #include "mempool.h"
+#include "sf_types.h"
 
-#ifndef UINT64
-#define UINT64 unsigned long long
+#ifdef TARGET_BASED
+#include "target-based/sftarget_hostentry.h"
 #endif
 
 //#define DEBUG_STREAM5 DEBUG
@@ -87,6 +88,7 @@
 #define STREAM5_CONFIG_PERFORMANCE              0x00000800
 #define STREAM5_CONFIG_STATIC_FLUSHPOINTS       0x00001000
 #define STREAM5_CONFIG_DEFAULT_TCP_POLICY_SET   0x00002000
+#define STREAM5_CONFIG_CHECK_SESSION_HIJACKING  0x00004000
 
 /* traffic direction identification */
 #define FROM_SERVER     0
@@ -116,14 +118,20 @@
 /*  D A T A   S T R U C T U R E S  **********************************/
 typedef struct _SessionKey
 {
-    /* TODO: redo this using non-assuming IP structures */
+/* XXX If this data structure changes size, HashKeyCmp must be updated! */
+#ifdef SUP_IP6
+    u_int32_t   ip_l[4]; /* Low IP */
+    u_int32_t   ip_h[4]; /* High IP */
+#else
     u_int32_t   ip_l; /* Low IP */
     u_int32_t   ip_h; /* High IP */
+#endif
     u_int16_t   port_l; /* Low Port - 0 if ICMP */
     u_int16_t   port_h; /* High Port - 0 if ICMP */
     u_int16_t   vlan_tag;
     char        protocol;
     char        pad;
+/* XXX If this data structure changes size, HashKeyCmp must be updated! */
 } SessionKey;
 
 typedef struct _Stream5AppData
@@ -147,11 +155,15 @@ typedef struct _Stream5LWSession
 {
     SessionKey  key;
 
-    u_int32_t   client_ip;
-    u_int32_t   server_ip;
+    snort_ip        client_ip;
+    snort_ip        server_ip;
     u_int16_t   client_port;
     u_int16_t   server_port;
     char        protocol;
+#ifdef TARGET_BASED
+    int16_t ipprotocol;
+    int16_t application_protocol;
+#endif
 
     long        last_data_seen;
     UINT64      expire_time;
@@ -227,5 +239,10 @@ void Stream5DisableInspection(Stream5LWSession *lwssn, Packet *p);
 int Stream5Expire(Packet *p, Stream5LWSession *ssn);
 void Stream5SetExpire(Packet *p, Stream5LWSession *ssn, u_int32_t timeout);
 void MarkupPacketFlags(Packet *p, Stream5LWSession *ssn);
+#ifdef TARGET_BASED
+void Stream5SetApplicationProtocolIdFromHostEntry(Stream5LWSession *lwssn,
+                                           HostAttributeEntry *host_entry,
+                                           int direction);
+#endif
 
 #endif /* STREAM5_COMMON_H_ */

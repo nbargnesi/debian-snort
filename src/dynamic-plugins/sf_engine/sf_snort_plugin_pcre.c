@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -26,15 +26,14 @@
  *
  * PCRE operations for dynamic rule engine
  */
+#include "debug.h"
 #include "sf_snort_packet.h"
 #include "sf_snort_plugin_api.h"
 #include "sf_dynamic_engine.h"
 
-#define DEBUG_WRAP(x)
-
 /* Need access to the snort-isms that were passed to the engine */
 extern DynamicEngineData _ded; /* sf_detection_engine.c */
-extern int checkCursorInternal(void *p, int flags, int offset, u_int8_t *cursor);
+extern int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor);
 
 
 int PCRESetup(Rule *rule, PCREInfo *pcreInfo)
@@ -150,10 +149,10 @@ static int pcre_test(const PCREInfo *pcre_info,
     return matched;
 }
 
-ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre_info, u_int8_t **cursor)
+ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre_info, const u_int8_t **cursor)
 {
-    char *buffer_start;
-    char *buffer_end;
+    const u_int8_t *buffer_start;
+    const u_int8_t *buffer_end;
     int buffer_len;
     int pcre_offset;
     int pcre_found;
@@ -199,7 +198,7 @@ ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre_info, u_int8_t **cursor)
                 buffer_len = _ded.uriBuffers[i]->uriLength;
                 buffer_end = buffer_start + buffer_len;
             }
-            pcre_found = pcre_test(pcre_info, buffer_start, buffer_len, 0, &pcre_offset);
+            pcre_found = pcre_test(pcre_info, (const char *)buffer_start, buffer_len, 0, &pcre_offset);
 
             if (pcre_found)
             {
@@ -249,7 +248,7 @@ ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre_info, u_int8_t **cursor)
         buffer_end = buffer_start + buffer_len;
     }
 
-    pcre_found = pcre_test(pcre_info, buffer_start, buffer_len, 0, &pcre_offset);
+    pcre_found = pcre_test(pcre_info, (const char *)buffer_start, buffer_len, 0, &pcre_offset);
 
     if (pcre_found)
     {

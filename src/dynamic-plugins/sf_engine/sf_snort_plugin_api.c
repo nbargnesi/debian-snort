@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -40,11 +40,11 @@ extern DynamicEngineData _ded;
  *  return 1 if successful
  *  return < 0 if unsuccessful
  */
-int getBuffer(SFSnortPacket *p, int flags, u_int8_t **start, u_int8_t **end)
+int getBuffer(SFSnortPacket *p, int flags, const u_int8_t **start, const u_int8_t **end)
 {
     if ((flags & CONTENT_BUF_NORMALIZED) && (p->flags & FLAG_ALT_DECODE))
     {
-        *start = (u_int8_t *) _ded.altBuffer;
+        *start = _ded.altBuffer;
         *end = *start + p->normalized_payload_size;
     }
     else if ((flags & CONTENT_BUF_RAW) || (flags & CONTENT_BUF_NORMALIZED))
@@ -73,7 +73,7 @@ int getBuffer(SFSnortPacket *p, int flags, u_int8_t **start, u_int8_t **end)
 }
 
 
-int checkCursorSimple(u_int8_t *cursor, int flags, u_int8_t *start, u_int8_t *end, int offset)
+int checkCursorSimple(const u_int8_t *cursor, int flags, const u_int8_t *start, const u_int8_t *end, int offset)
 {
     if ( cursor == NULL || !(flags & CONTENT_RELATIVE) )
         cursor = start;
@@ -85,10 +85,10 @@ int checkCursorSimple(u_int8_t *cursor, int flags, u_int8_t *start, u_int8_t *en
 }
 
 /* Returns one if cursor is within the buffer */
-int checkCursorInternal(void *p, int flags, int offset, u_int8_t *cursor)
+int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor)
 {
-    u_int8_t *start;
-    u_int8_t *end;
+    const u_int8_t *start;
+    const u_int8_t *end;
     int ret;
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
@@ -102,10 +102,10 @@ int checkCursorInternal(void *p, int flags, int offset, u_int8_t *cursor)
     return checkCursorSimple(cursor, flags, start, end, offset);
 }
 
-int setCursorInternal(void *p, int flags, int offset, u_int8_t **cursor)
+int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor)
 {
-    u_int8_t *start;
-    u_int8_t *end;
+    const u_int8_t *start;
+    const u_int8_t *end;
     int       ret;
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
@@ -186,7 +186,7 @@ int setCursorInternal(void *p, int flags, int offset, u_int8_t **cursor)
  *      uri
  *      
  */
-ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, u_int8_t *cursor)
+ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, const u_int8_t *cursor)
 {
     return checkCursorInternal(p, cursorInfo->flags, cursorInfo->offset, cursor);
 }
@@ -219,17 +219,17 @@ ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, u_int8_t *cursor
  *      uri
  *      
  */
-ENGINE_LINKAGE int setCursor(void *p, CursorInfo* cursorInfo, u_int8_t **cursor)
+ENGINE_LINKAGE int setCursor(void *p, CursorInfo* cursorInfo, const u_int8_t **cursor)
 {
     return setCursorInternal(p, cursorInfo->flags, cursorInfo->offset, cursor);
 }
 
-ENGINE_LINKAGE void setTempCursor(u_int8_t **temp_cursor, u_int8_t **cursor)
+ENGINE_LINKAGE void setTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor)
 {
     *temp_cursor = *cursor;
 }
 
-ENGINE_LINKAGE void revertTempCursor(u_int8_t **temp_cursor, u_int8_t **cursor)
+ENGINE_LINKAGE void revertTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor)
 {
     *cursor = *temp_cursor;
 }
@@ -311,13 +311,42 @@ ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits)
  *    RULE_NOMATCH -  if asn1 specifier is not found within buffer 
  * 
  */
-ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, u_int8_t *cursor)
+ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, const u_int8_t *cursor)
 {
     /* asn1Detect returns non-zero if the options matched. */
     if (_ded.asn1Detect(p, (void *) asn1, cursor))
         return RULE_MATCH;
 
     return RULE_NOMATCH;
+}
+
+/* 
+ *  Store Rule Specific session data
+ *  
+ *          p: packet data structure, same as the one found in snort.
+ *          rule_data: data to store in the session
+ *
+ * Returns: 
+ *    nothing
+ *
+ */
+ENGINE_LINKAGE void storeRuleData(void *p, void *rule_data)
+{
+    _ded.setRuleData(p, rule_data); 
+}
+
+/* 
+ *  Retrieve Rule Specific session data
+ * 
+ *          p: packet data structure, same as the one found in snort.
+ *
+ * Returns: 
+ *    pointer to rule specific session data, NULL if none available
+ *
+ */
+ENGINE_LINKAGE void *getRuleData(void *p)
+{
+    return _ded.getRuleData(p);
 }
 
 /* 
@@ -337,11 +366,9 @@ ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, u_int8_t *cursor)
  *    RULE_NOMATCH -  if preprocessor indicates no match
  * 
  */
-ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, u_int8_t **cursor)
+ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, const u_int8_t **cursor)
 {
-DISABLE_WARNING(4055)
     PreprocOptionEval evalFunc = (PreprocOptionEval)preprocOpt->optionEval;
-ENABLE_WARNING(4055)
 
     return evalFunc(p, cursor, preprocOpt->dataPtr);
 }
@@ -411,10 +438,10 @@ int isRelativeOption(RuleOption *option)
  *    RULE_NOMATCH -  if asn1 specifier is not found within buffer 
  * 
  */
-int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, u_int8_t **cursor)
+int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_int8_t **cursor)
 {
-    u_int8_t *thisCursor = NULL, *startCursor = NULL;
-    u_int8_t *tmpCursor = NULL;
+    const u_int8_t *thisCursor = NULL, *startCursor = NULL;
+    const u_int8_t *tmpCursor = NULL;
     int retVal = RULE_NOMATCH;
     u_int32_t notFlag = 0;
     int thisType;

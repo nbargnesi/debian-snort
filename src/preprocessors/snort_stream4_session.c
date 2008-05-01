@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005 Sourcefire, Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -66,9 +66,9 @@ extern PreprocStats stream4LUSessPerfStats;
 
 int GetSessionCount(Packet *p)
 {
-    if (p->iph)
+    if (IPH_IS_VALID(p))
     {
-        if (p->iph->ip_proto == IPPROTO_TCP)
+        if (GET_IPH_PROTO(p) == IPPROTO_TCP)
         {
             if (sessionHashTable)
                 return sessionHashTable->count;
@@ -88,7 +88,7 @@ int GetSessionCount(Packet *p)
 
 int GetSessionKey(Packet *p, SessionHashKey *key)
 {
-    u_int32_t srcIp, dstIp;
+    snort_ip_p srcIp, dstIp;
     u_int16_t srcPort, dstPort;
 
     if (!key)
@@ -96,8 +96,8 @@ int GetSessionKey(Packet *p, SessionHashKey *key)
 
     memset(key, 0, sizeof(SessionHashKey));
 
-    srcIp = p->iph->ip_src.s_addr;
-    dstIp = p->iph->ip_dst.s_addr;
+    srcIp = GET_SRC_IP(p);
+    dstIp = GET_DST_IP(p);
     if (p->tcph)
     {
         srcPort = p->tcph->th_sport;
@@ -116,17 +116,17 @@ int GetSessionKey(Packet *p, SessionHashKey *key)
         dstPort = 0;
     }
     
-    if (srcIp < dstIp)
+    if (IP_LESSER(srcIp, dstIp))
     {
-        key->lowIP = srcIp;
+        IP_COPY_VALUE(key->lowIP, srcIp);
         key->port = srcPort;
-        key->highIP = dstIp;
+        IP_COPY_VALUE(key->highIP, dstIp);
         key->port2 = dstPort;
     }
-    else if (srcIp == dstIp)
+    else if (IP_EQUALITY(srcIp, dstIp))
     {
-        key->lowIP = srcIp;
-        key->highIP = dstIp;
+        IP_COPY_VALUE(key->lowIP, srcIp);
+        IP_COPY_VALUE(key->highIP, dstIp);
         if (srcPort < dstPort)
         {
             key->port = srcPort;
@@ -140,16 +140,16 @@ int GetSessionKey(Packet *p, SessionHashKey *key)
     }
     else
     {
-        key->lowIP = dstIp;
+        IP_COPY_VALUE(key->lowIP, dstIp);
         key->port = dstPort;
-        key->highIP = srcIp;
+        IP_COPY_VALUE(key->highIP, srcIp);
         key->port2 = srcPort;
     }
 
-    key->proto = p->iph->ip_proto;
+    key->proto = GET_IPH_PROTO(p);
 
 #ifdef _LP64
-    key->pad1 = key->pad2 = 0;
+    key->pad1 = key->pad2 = key->pad3 = 0;
 #endif
 
     return 1;

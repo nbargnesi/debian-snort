@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
-** Copyright (C) 2005 Sourcefire Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -71,7 +71,7 @@ PreprocStats sshPerfStats;
  * Function prototype(s)
  */
 SSHData* GetSSHData( SFSnortPacket* );
-static void SSHInit( u_char* );
+static void SSHInit( char* );
 static void DisplaySSHConfig( void );
 static void FreeSSHData( void* );
 static void  ParseSSHArgs( u_char* );
@@ -133,8 +133,12 @@ void SetupSSH(void)
  * RETURNS:     Nothing. 
  */
 static  void
-SSHInit( u_char* argp )
+SSHInit( char* argp )
 {
+#ifdef SUP_IP6
+    _dpd.fatalMsg("SSH is not currently supported when IPv6 is enabled.");
+#endif
+
     if(!_dpd.streamAPI) 
     {
         DynamicPreprocessorFatalMessage("SetupSSH(): The Stream preprocessor must be enabled.\n");
@@ -142,7 +146,7 @@ SSHInit( u_char* argp )
 
 	_dpd.addPreproc( ProcessSSH, PRIORITY_APPLICATION, PP_SSH );
 
-	ParseSSHArgs( argp );
+	ParseSSHArgs( (u_char *)argp );
 
 #ifdef PERF_PROFILING
     _dpd.addPreprocProfileFunc("ssh", (void *)&sshPerfStats, 0, _dpd.totalPerfStats);

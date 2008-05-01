@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2006 Sourcefire, Inc.
+ ** Copyright (C) 2002-2008 Sourcefire, Inc.
  ** Author: Daniel Roelker
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,14 @@
 
 #define DELIMITERS " ,\t\n"
 
-extern u_int8_t *doe_ptr;
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats asn1PerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
+extern const u_int8_t *doe_ptr;
 
 /*
 **  NAME
@@ -206,6 +213,7 @@ static void Asn1RuleParse(char *data, OptTreeNode *otn, ASN1_CTXT *asn1)
 static int Asn1Detect(Packet *p, OptTreeNode *otn, OptFpList *fp_list)
 {
     ASN1_CTXT *ctxt;
+    PROFILE_VARS;
 
     /*
     **  Failed if there is no data to decode.
@@ -213,11 +221,17 @@ static int Asn1Detect(Packet *p, OptTreeNode *otn, OptFpList *fp_list)
     if(!p->data)
         return 0;
 
+    PREPROC_PROFILE_START(asn1PerfStats);
+
     ctxt = (ASN1_CTXT *)fp_list->context;
 
     if (Asn1DoDetect(p->data, p->dsize, ctxt, doe_ptr))
+    {
+        PREPROC_PROFILE_END(asn1PerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+    }
 
+    PREPROC_PROFILE_END(asn1PerfStats);
     return 0;
 }
 
@@ -247,7 +261,11 @@ static void Asn1Init(char *data, OptTreeNode *otn, int protocol)
 void SetupAsn1()
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("asn1", Asn1Init);
+    RegisterPlugin("asn1", Asn1Init, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("asn1", &asn1PerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: ASN1 Setup\n"););
 }

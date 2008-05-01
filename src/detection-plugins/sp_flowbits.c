@@ -13,7 +13,7 @@
 ** - [Un]set a bitmask stored with the session
 ** - Check the value of the bitmask
 **
-** Copyright (C) 2003 Sourcefire, Inc
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -50,6 +50,13 @@
 #include "sp_flowbits.h"
 
 #include "stream_api.h"
+
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats flowBitsPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 /**
 **  This structure is the context ptr for each detection option
@@ -96,7 +103,11 @@ void SetupFlowBits()
     }
 
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("flowbits", FlowBitsInit);
+    RegisterPlugin("flowbits", FlowBitsInit, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("flowbits", &flowBitsPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: FlowBits Setup\n"););
 }
@@ -171,12 +182,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "flowbits parsing %s\n",data););
     
-    str = strdup(data);
-
-    if(str == NULL)
-    {
-        FatalError("ParseFlowArgs: Can't strdup data\n");
-    }
+    str = SnortStrdup(data);
 
     p = str;
 
@@ -424,6 +430,7 @@ static int FlowBitsCheck(Packet *p,struct _OptTreeNode *otn, OptFpList *fp_list)
     FLOWBITS_OP *flowbits;   /* pointer to the eval struct */
     StreamFlowData *flowdata;
     int result = 0;
+    PROFILE_VARS;
 
     if(!p)
     {
@@ -432,10 +439,13 @@ static int FlowBitsCheck(Packet *p,struct _OptTreeNode *otn, OptFpList *fp_list)
         return 0;
     }
 
+    PREPROC_PROFILE_START(flowBitsPerfStats);
+
     flowdata = GetFlowbitsData(p);
     if(!flowdata)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "No FLOWBITS_DATA"););
+        PREPROC_PROFILE_END(flowBitsPerfStats);
         return 0;
     }
 
@@ -511,12 +521,14 @@ static int FlowBitsCheck(Packet *p,struct _OptTreeNode *otn, OptFpList *fp_list)
             {
                 OTN_PROFILE_NOALERT(otn);
             }
+            PREPROC_PROFILE_END(flowBitsPerfStats);
             return 0;
 
         default:
             /*
             **  Always return failure here.
             */
+            PREPROC_PROFILE_END(flowBitsPerfStats);
             return 0;
     }
     
@@ -525,9 +537,11 @@ static int FlowBitsCheck(Packet *p,struct _OptTreeNode *otn, OptFpList *fp_list)
     */
     if (result == 1)
     {
+        PREPROC_PROFILE_END(flowBitsPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
+    PREPROC_PROFILE_END(flowBitsPerfStats);
     return 0;
 }
 

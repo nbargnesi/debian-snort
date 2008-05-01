@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -261,10 +261,80 @@ static void Stream5PrintUdpConfig(Stream5UdpPolicy *s5UdpPolicy)
     //IpAddrSetPrint("    Bound Addresses:", s5UdpPolicy->bound_addrs);
 }
 
+int Stream5UdpOtnHasFlowOrFlowbit(OptTreeNode *otn)
+{
+    if (otn->ds_list[PLUGIN_CLIENTSERVER] ||
+#ifdef DYNAMIC_PLUGIN
+        DynamicHasFlow(otn) ||
+        DynamicHasFlowbit(otn) ||
+#endif
+        otn->ds_list[PLUGIN_FLOWBIT])
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int Stream5UdpAnyAnyFlow(RuleTreeNode *rtn, int any_any_flow)
+{
+    UdpIgnoredRule *ignored_rule;
+    OptTreeNode *otn;
+    int i;
+    for (otn = rtn->down; otn; otn = otn->next)
+    {
+        /* Look for an OTN with flow or flowbits keyword */
+        if (Stream5UdpOtnHasFlowOrFlowbit(otn))
+        {
+            for (i=1;i<=MAX_PORTS;i++)
+            {
+                /* track sessions for ALL ports becuase
+                 * of any -> any with flow/flowbits */
+                udp_ports[i] |= UDP_SESSION;
+            }
+            any_any_flow = 1;
+            break;
+        }
+        else if (any_any_flow == 0)
+        {
+            if (!(udpPolicyList[0]->flags & STREAM5_CONFIG_IGNORE_ANY))
+            {
+                /* Not ignoring any any rules... */
+                break;
+            }
+
+            /* if not, then ignore the content/pcre/etc */
+            if (otn->ds_list[PLUGIN_PATTERN_MATCH] ||
+                otn->ds_list[PLUGIN_PATTERN_MATCH_OR] ||
+                otn->ds_list[PLUGIN_PATTERN_MATCH_URI] ||
+#ifdef DYNAMIC_PLUGIN
+                DynamicHasContent(otn) ||
+                DynamicHasByteTest(otn) ||
+                DynamicHasPCRE(otn) ||
+#endif
+                otn->ds_list[PLUGIN_BYTE_TEST] ||
+                otn->ds_list[PLUGIN_PCRE])
+            {
+                /* Ignoring this rule.... */
+                ignored_rule = SnortAlloc(sizeof(UdpIgnoredRule));
+                ignored_rule->otn = otn;
+                ignored_rule->next = ignored_udp_rules;
+                ignored_udp_rules = ignored_rule;
+            }
+        }
+    } /* for (otn=...) */
+
+    return any_any_flow;
+}
+
 int Stream5VerifyUdpConfig(void)
 {
-    int16_t sport, dport;
+#ifdef PORTLISTS
+    char *port_array = NULL;
+    int num_ports = 0;
     int i;
+#else
+    int16_t sport, dport;
+#endif
     RuleListNode *rule;
     RuleTreeNode *rtn;
     OptTreeNode *otn;
@@ -296,7 +366,77 @@ int Stream5VerifyUdpConfig(void)
             for(rtn = rule->RuleList->UdpList; rtn != NULL; rtn = rtn->right)
             {
                 inspectSrc = inspectDst = 0;
+#ifdef PORTLISTS
+                if (PortObjectHasAny(rtn->src_portobject))
+                {
+                    inspectSrc = -1;
+                }
+                else
+                {
+                    port_array = PortObjectCharPortArray(port_array, rtn->src_portobject, &num_ports);
+                    if (port_array && num_ports != 0)
+                    {
+                        inspectSrc = 1;
+                        for (i=0;i<SFPO_MAX_PORTS;i++)
+                        {
+                            if (port_array[i])
+                            {
+                                udp_ports[i] |= UDP_INSPECT;
+                                /* port specific rule */
+                                for (otn = rtn->down; otn; otn = otn->next)
+                                {
+                                    /* Look for an OTN with flow or flowbits keyword */
+                                    if (Stream5UdpOtnHasFlowOrFlowbit(otn))
+                                    {
+                                        udp_ports[i] |= UDP_SESSION;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                free(port_array);
+                port_array = NULL;
+                if (PortObjectHasAny(rtn->dst_portobject))
+                {
+                    inspectDst = -1;
+                }
+                else
+                {
+                    port_array = PortObjectCharPortArray(port_array, rtn->dst_portobject, &num_ports);
+                    if (port_array && num_ports != 0)
+                    {
+                        inspectDst = 1;
+                        for (i=0;i<SFPO_MAX_PORTS;i++)
+                        {
+                            if (port_array[i])
+                            {
+                                udp_ports[i] |= UDP_INSPECT;
+                                /* port specific rule */
+                                for (otn = rtn->down; otn; otn = otn->next)
+                                {
+                                    /* Look for an OTN with flow or flowbits keyword */
+                                    if (Stream5UdpOtnHasFlowOrFlowbit(otn))
+                                    {
+                                        udp_ports[i] |= UDP_SESSION;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                free(port_array);
+                port_array = NULL;
 
+                if ((inspectSrc == -1) && (inspectDst == -1))
+                {
+                    /* any -> any rule */
+                    if (any_any_flow == 0)
+                    {
+                        any_any_flow = Stream5UdpAnyAnyFlow(rtn, any_any_flow);
+                    }
+                }
+#else
                 sport = (int16_t)((rtn->hsp == rtn->lsp) ? rtn->hsp : -1);
 
                 if (rtn->flags & ANY_SRC_PORT)
@@ -312,7 +452,6 @@ int Stream5VerifyUdpConfig(void)
                 /* Set the source port to inspect */
                 if (sport != -1)
                 {
-                    inspectSrc = 1;
                     udp_ports[sport] |= UDP_INSPECT;
                 }
 
@@ -341,12 +480,7 @@ int Stream5VerifyUdpConfig(void)
                     for (otn = rtn->down; otn; otn = otn->next)
                     {
                         /* Look for an OTN with flow or flowbits keyword */
-                        if (otn->ds_list[PLUGIN_CLIENTSERVER] ||
-#ifdef DYNAMIC_PLUGIN
-                            DynamicHasFlow(otn) ||
-                            DynamicHasFlowbit(otn) ||
-#endif
-                            otn->ds_list[PLUGIN_FLOWBIT])
+                        if (Stream5UdpOtnHasFlowOrFlowbit(otn))
                         {
                             if (inspectSrc)
                             {
@@ -364,55 +498,10 @@ int Stream5VerifyUdpConfig(void)
                     /* any -> any rule */
                     if (any_any_flow == 0)
                     {
-                        for (otn = rtn->down; otn; otn = otn->next)
-                        {
-                            /* Look for an OTN with flow or flowbits keyword */
-                            if (otn->ds_list[PLUGIN_CLIENTSERVER] ||
-#ifdef DYNAMIC_PLUGIN
-                                DynamicHasFlow(otn) ||
-                                DynamicHasFlowbit(otn) ||
-#endif
-                                otn->ds_list[PLUGIN_FLOWBIT])
-                            {
-                                for (i=1;i<=MAX_PORTS;i++)
-                                {
-                                    /* track sessions for ALL ports becuase
-                                     * of any -> any with flow/flowbits */
-                                    udp_ports[i] |= UDP_SESSION;
-                                }
-                                any_any_flow = 1;
-                                break;
-                            }
-                            else if (any_any_flow == 0)
-                            {
-                                if (!(udpPolicyList[0]->flags & STREAM5_CONFIG_IGNORE_ANY))
-                                {
-                                    /* Not ignoring any any rules... */
-                                    break;
-                                }
-
-                                /* if not, then ignore the content/pcre/etc */
-                                if (otn->ds_list[PLUGIN_PATTERN_MATCH] ||
-                                    otn->ds_list[PLUGIN_PATTERN_MATCH_OR] ||
-                                    otn->ds_list[PLUGIN_PATTERN_MATCH_URI] ||
-#ifdef DYNAMIC_PLUGIN
-                                    DynamicHasContent(otn) ||
-                                    DynamicHasByteTest(otn) ||
-                                    DynamicHasPCRE(otn) ||
-#endif
-                                    otn->ds_list[PLUGIN_BYTE_TEST] ||
-                                    otn->ds_list[PLUGIN_PCRE])
-                                {
-                                    /* Ignoring this rule.... */
-                                    ignored_rule = SnortAlloc(sizeof(UdpIgnoredRule));
-                                    ignored_rule->otn = otn;
-                                    ignored_rule->next = ignored_udp_rules;
-                                    ignored_udp_rules = ignored_rule;
-                                }
-                            }
-                        } /* for (otn=...) */
+                        any_any_flow = Stream5UdpAnyAnyFlow(rtn, any_any_flow);
                     }
                 }
+#endif /* PORTLISTS */
             } /* for (rtn=...) */
         }
     } /* for (rule=...) */
@@ -521,7 +610,8 @@ void UdpSessionCleanup(Stream5LWSession *lwssn)
     /* Cleanup the proto specific data */
     mempool_free(&udp_session_mempool, lwssn->proto_specific_data);
     lwssn->proto_specific_data = NULL;
-    lwssn->session_flags = STREAM5_STATE_NONE;
+    lwssn->session_state = STREAM5_STATE_NONE;
+    lwssn->session_flags = SSNFLAG_NONE;
     lwssn->expire_time = 0;
     lwssn->ignore_direction = 0;
 
@@ -530,10 +620,16 @@ void UdpSessionCleanup(Stream5LWSession *lwssn)
     RemoveUDPSession(&sfPerf.sfBase);
 }
 
+void Stream5ResetUdp(void)
+{
+    PurgeLWSessionCache(udp_lws_cache);
+    mempool_clean(&udp_session_mempool);
+}
+
 void Stream5CleanUdp(void)
 {
     /* Clean up hash table -- delete all sessions */
-    PurgeLWSessionCache(udp_lws_cache);
+    DeleteLWSessionCache(udp_lws_cache);
     udp_lws_cache = NULL;
 
     mempool_destroy(&udp_session_mempool);
@@ -560,7 +656,7 @@ static int NewUdpSession(Packet *p,
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE, 
                 "adding UdpSession to lightweight session\n"););
     lwssn->proto_specific_data = tmpBucket;
-    lwssn->protocol = p->iph->ip_proto;
+    lwssn->protocol = GET_IPH_PROTO(p);
     lwssn->direction = FROM_SENDER;
     tmp->lwSsn = lwssn;
 
@@ -587,6 +683,9 @@ int Stream5ProcessUdp(Packet *p)
     int policyIndex;
     char action;
 
+#ifdef SUP_IP6
+// XXX-IPv6 Stream5ProcessUDP debugging
+#else
     DEBUG_WRAP(
             DebugMessage((DEBUG_STREAM|DEBUG_STREAM_STATE),
                 "Got UDP Packet 0x%X:%d ->  0x%X:%d\n  "
@@ -599,6 +698,7 @@ int Stream5ProcessUdp(Packet *p)
                 p->dsize,
                 sfxhash_count(udp_lws_cache->hashTable));
             );
+#endif
 
     /* Find an Udp policy for this packet */
     for (policyIndex = 0; policyIndex < numUdpPolicies; policyIndex++)
@@ -608,7 +708,7 @@ int Stream5ProcessUdp(Packet *p)
         /*
          * Does this policy handle packets to this IP address?
          */
-        if(IpAddrSetContains(s5UdpPolicy->bound_addrs, p->iph->ip_dst))
+        if(IpAddrSetContains(s5UdpPolicy->bound_addrs, GET_DST_ADDR(p)))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
                         "[Stream5] Found udp policy in IpAddrSet\n"););
@@ -624,7 +724,7 @@ int Stream5ProcessUdp(Packet *p)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
                     "[Stream5] Could not find Udp Policy context "
-                    "for IP %s\n", inet_ntoa(p->iph->ip_dst)););
+                    "for IP %s\n", inet_ntoa(GET_DST_ADDR(p))););
         return 0;
     }
 
@@ -669,9 +769,11 @@ int Stream5ProcessUdp(Packet *p)
      * Should be done before we do something with the packet...
      * ie, Insert a packet, or handle state change SYN, FIN, RST, etc.
      */
-    if ((lwssn->session_flags & STREAM5_STATE_TIMEDOUT) ||
+    if ((lwssn->session_state & STREAM5_STATE_TIMEDOUT) ||
         Stream5Expire(p, lwssn))
     {
+        lwssn->session_flags |= SSNFLAG_TIMEDOUT;
+
         /* Session is timed out */
         DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,
                     "Stream5 UDP session timedout!\n"););
@@ -711,28 +813,28 @@ static int ProcessUdp(Stream5LWSession *lwssn, Packet *p,
         return ACTION_NOTHING;
     }
 
-    if (lwssn->session_flags & (STREAM5_STATE_DROP_CLIENT|STREAM5_STATE_DROP_SERVER))
+    if (lwssn->session_flags & (SSNFLAG_DROP_CLIENT|SSNFLAG_DROP_SERVER))
     {
         /* figure out direction of this packet */
         GetLWPacketDirection(p, lwssn);
         /* Got a packet on a session that was dropped (by a rule). */
 
         /* TODO: Send reset to other side if not already done for inline mode */
-        //if (!(lwssn->session_flags & STREAM5_STATE_SERVER_RESET)
+        //if (!(lwssn->session_flags & SSNFLAG_SERVER_RESET)
         //{
         //    Send Server Reset
-        //    lwssn->session_flags |= STREAM5_STATE_SERVER_RESET;
+        //    lwssn->session_state |= STREAM5_STATE_SERVER_RESET;
         //}
-        //if (!(lwssn->session_flags & STREAM5_STATE_CLIENT_RESET)
+        //if (!(lwssn->session_flags & SSNFLAG_CLIENT_RESET)
         //{
         //    Send Client Reset
-        //    lwssn->session_flags |= STREAM5_STATE_CLIENT_RESET;
+        //    lwssn->session_state |= STREAM5_STATE_CLIENT_RESET;
         //}
         /* Drop this packet */
         if (((p->packet_flags & PKT_FROM_SERVER) &&
-             (lwssn->session_flags & STREAM5_STATE_DROP_SERVER)) ||
+             (lwssn->session_flags & SSNFLAG_DROP_SERVER)) ||
             ((p->packet_flags & PKT_FROM_CLIENT) &&
-             (lwssn->session_flags & STREAM5_STATE_DROP_CLIENT)))
+             (lwssn->session_flags & SSNFLAG_DROP_CLIENT)))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,
                         "Blocking %s packet as session was blocked\n",
@@ -749,9 +851,9 @@ static int ProcessUdp(Stream5LWSession *lwssn, Packet *p,
     if (udpssn == NULL)
     {
         lwssn->direction = FROM_SENDER;
-        lwssn->client_ip = p->iph->ip_src.s_addr;
+        IP_COPY_VALUE(lwssn->client_ip, GET_SRC_IP(p));
         lwssn->client_port = p->udph->uh_sport;
-        lwssn->server_ip = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(lwssn->server_ip, GET_DST_IP(p));
         lwssn->server_port = p->udph->uh_dport;
         lwssn->session_state |= STREAM5_STATE_SENDER_SEEN;
         NewUdpSession(p, lwssn, s5UdpPolicy);
@@ -822,13 +924,14 @@ static int ProcessUdp(Stream5LWSession *lwssn, Packet *p,
 }
 
 void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
-                        u_int32_t ip, u_int16_t port)
+                        snort_ip_p ip, u_int16_t port)
 {
     UdpSession *udpssn = (UdpSession *)ssn->proto_specific_data;
-    u_int32_t tmpIp;
+    snort_ip tmpIp;
     u_int16_t tmpPort;
 
-    if ((udpssn->udp_sender_ip == ip) && (udpssn->udp_sender_port == port))
+#ifdef SUP_IP6
+    if (IP_EQUALITY(&udpssn->udp_sender_ip, ip) && (udpssn->udp_sender_port == port))
     {
         if ((dir == SSN_DIR_SENDER) && (ssn->direction == SSN_DIR_SENDER))
         {
@@ -836,7 +939,7 @@ void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
             return;
         }
     }
-    else if ((udpssn->udp_responder_ip == ip) && (udpssn->udp_responder_port == port))
+    else if (IP_EQUALITY(&udpssn->udp_responder_ip, ip) && (udpssn->udp_responder_port == port))
     {
         if ((dir == SSN_DIR_RESPONDER) && (ssn->direction == SSN_DIR_RESPONDER))
         {
@@ -844,6 +947,24 @@ void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
             return;
         }
     }
+#else
+    if (IP_EQUALITY(udpssn->udp_sender_ip, ip) && (udpssn->udp_sender_port == port))
+    {
+        if ((dir == SSN_DIR_SENDER) && (ssn->direction == SSN_DIR_SENDER))
+        {
+            /* Direction already set as SENDER */
+            return;
+        }
+    }
+    else if (IP_EQUALITY(udpssn->udp_responder_ip, ip) && (udpssn->udp_responder_port == port))
+    {
+        if ((dir == SSN_DIR_RESPONDER) && (ssn->direction == SSN_DIR_RESPONDER))
+        {
+            /* Direction already set as RESPONDER */
+            return;
+        }
+    }
+#endif
 
     /* Swap them -- leave ssn->direction the same */
     tmpIp = udpssn->udp_sender_ip;

@@ -1,6 +1,7 @@
 /* $Id$ */
 
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Maciej Szarpak
 **
@@ -68,6 +69,13 @@
 #include "util.h"
 #include "plugin_enum.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats reactPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 #define TCP_DATA_BUF    1024
 
 #define REACT_BLOCK 0x01
@@ -115,7 +123,10 @@ void SetupReact(void)
 
 /* we need an empty plug otherwise. To avoid #ifdef in plugbase */
 
-    RegisterPlugin("react", ReactInit);
+    RegisterPlugin("react", ReactInit, OPT_TYPE_ACTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("react", &reactPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: React Initialized!\n"););
 }
 
@@ -268,11 +279,11 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
     else
     {
         /* prepare the html response data */
-        buf_size = 0;
+        buf_size = 1;  /* allocate one extra byte for '\0' */
         if(idx->reaction_flag == REACT_BLOCK)
         {
             /* count the respond buf size (max TCP_DATA_BUF) */
-            buf_size = strlen(tmp_buf1) + strlen(tmp_buf2) + strlen(tmp_buf3) + strlen(VERSION) + 1;
+            buf_size += strlen(tmp_buf1) + strlen(tmp_buf2) + strlen(tmp_buf3) + strlen(VERSION);
 
             if(buf_size > TCP_DATA_BUF)
             {
@@ -288,17 +299,17 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
                 }
 
                 /* create html response buffer */
-                idx->html_resp_buf = (char *)SnortAlloc(sizeof(char) * buf_size);
+                idx->html_resp_buf = (u_char *)SnortAlloc(sizeof(char) * buf_size);
 
                 if (idx->html_resp_size == 1)
                 {
-                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                    ret = SnortSnprintf((char *)idx->html_resp_buf, buf_size,
                                         "%s%s%s%s%s",
                                         tmp_buf1, VERSION, tmp_buf2, otn->sigInfo.message, tmp_buf3);
                 }
                 else
                 {
-                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                    ret = SnortSnprintf((char *)idx->html_resp_buf, buf_size,
                                         "%s%s%s%s",
                                         tmp_buf1, VERSION, tmp_buf2, tmp_buf3);
                 }
@@ -312,7 +323,7 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
         else if(idx->reaction_flag == REACT_WARN)
         {
             /* count the respond buf size (max TCP_DATA_BUF) */
-            buf_size = strlen(tmp_buf4) + strlen(tmp_buf5) + strlen(tmp_buf6) + strlen(VERSION) + 1;
+            buf_size += strlen(tmp_buf4) + strlen(tmp_buf5) + strlen(tmp_buf6) + strlen(VERSION);
 
             if(buf_size > TCP_DATA_BUF)
             {
@@ -329,17 +340,17 @@ void ParseReact(char *data, OptTreeNode *otn, ReactData *rd)
                 }
 
                 /* create html response buffer */
-                idx->html_resp_buf = (char *)SnortAlloc(sizeof(char) * buf_size);
+                idx->html_resp_buf = (u_char *)SnortAlloc(sizeof(char) * buf_size);
 
                 if (idx->html_resp_size == 1)
                 {
-                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                    ret = SnortSnprintf((char *)idx->html_resp_buf, buf_size,
                                         "%s%s%s%s%s",
                                         tmp_buf4, VERSION, tmp_buf5, otn->sigInfo.message, tmp_buf6);
                 }
                 else
                 {
-                    ret = SnortSnprintf(idx->html_resp_buf, buf_size,
+                    ret = SnortSnprintf((char *)idx->html_resp_buf, buf_size,
                                         "%s%s%s%s",
                                         tmp_buf4, VERSION, tmp_buf5, tmp_buf6);
                 }
@@ -377,14 +388,24 @@ int React(Packet *p,  RspFpList *fp_list)
 {
     ReactData *idx;
     int i;
+    PROFILE_VARS;
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"In React()\n"););
+
+    if(!p->tcph)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"No TCP header ... leaving"););
+        return 1;
+    }
+
+    PREPROC_PROFILE_START(reactPerfStats);
 
     idx = (ReactData *)fp_list->params;
 
     if(idx == NULL)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Nothing to do ... leaving"););
+        PREPROC_PROFILE_END(reactPerfStats);
         return 1;
     }
 
@@ -467,6 +488,7 @@ int React(Packet *p,  RspFpList *fp_list)
             }
         }
     }
+    PREPROC_PROFILE_END(reactPerfStats);
     return 1;
 }    
 

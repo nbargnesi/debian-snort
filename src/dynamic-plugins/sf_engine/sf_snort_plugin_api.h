@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2006 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -43,6 +43,8 @@
 #include <winsock2.h>
 #include <windows.h>
 #endif
+
+#include "sf_dynamic_define.h"
 
 #define ANY_NET         "any"
 #define HOME_NET        "$HOME_NET"
@@ -117,7 +119,7 @@
 
 typedef struct _ContentInfo
 {
-    u_int8_t *pattern;
+    const u_int8_t *pattern;
     u_int32_t depth;
     int32_t   offset;
     u_int32_t flags;        /* must include a CONTENT_BUF_X */
@@ -190,17 +192,9 @@ typedef struct _ByteExtract
     void *memoryLocation; /* Location to store the data extracted */
 } ByteExtract;
 
-#define FLOW_ESTABLISHED 0x10
-#define FLOW_IGNORE_REASSEMBLED 0x1000
-#define FLOW_ONLY_REASSMBLED    0x2000
-#define FLOW_FR_SERVER   0x40
-#define FLOW_TO_CLIENT   0x40 /* Just for redundancy */
-#define FLOW_TO_SERVER   0x80
-#define FLOW_FR_CLIENT   0x80 /* Just for redundancy */
-
 typedef struct _FlowFlags
 {
-    u_int32_t   flags;
+    u_int32_t   flags;    /* FLOW_* values */
 } FlowFlags;
 
 
@@ -291,20 +285,6 @@ typedef struct _PreprocessorOption
     void *dataPtr;
 } PreprocessorOption;
 
-#define OPTION_TYPE_PREPROCESSOR 0x00
-#define OPTION_TYPE_CONTENT      0x01
-#define OPTION_TYPE_PCRE         0x02
-#define OPTION_TYPE_FLOWBIT      0x03
-#define OPTION_TYPE_FLOWFLAGS    0x04
-#define OPTION_TYPE_ASN1         0x05
-#define OPTION_TYPE_CURSOR       0x06
-#define OPTION_TYPE_HDR_CHECK    0x07
-#define OPTION_TYPE_BYTE_TEST    0x08
-#define OPTION_TYPE_BYTE_JUMP    0x09
-#define OPTION_TYPE_BYTE_EXTRACT 0x10
-#define OPTION_TYPE_SET_CURSOR   0x11
-#define OPTION_TYPE_LOOP         0x12
-
 typedef struct _RuleOption
 {
     int optionType;
@@ -344,6 +324,10 @@ typedef struct _RuleReference
 #define REGISTER_RULE 1
 #define DONT_REGISTER_RULE 0
 
+typedef struct _RuleMetaData {
+    char *data;
+} RuleMetaData;
+
 typedef struct _RuleInformation
 {
     u_int32_t genID;
@@ -353,6 +337,7 @@ typedef struct _RuleInformation
     u_int32_t priority;
     char     *message;
     RuleReference **references; /* NULL terminated array of references */
+    RuleMetaData **meta; /* NULL terminated array of references */
 } RuleInformation;
 
 typedef int (*ruleEvalFunc)(void *);
@@ -377,28 +362,31 @@ typedef struct _Rule
 ENGINE_LINKAGE int RegisterRules(Rule **rules);
 ENGINE_LINKAGE int DumpRules(char *rulesFileName, Rule **rules);
 
-ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, u_int8_t **cursor);
+ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **cursor);
 ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags);
-ENGINE_LINKAGE int extractValue(void *p, ByteExtract *byteExtract, u_int8_t *cursor);
+ENGINE_LINKAGE int extractValue(void *p, ByteExtract *byteExtract, const u_int8_t *cursor);
 ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits);
-ENGINE_LINKAGE int setCursor(void *p, CursorInfo *cursorInfo, u_int8_t **cursor);
-ENGINE_LINKAGE int checkCursor(void *p, CursorInfo *cursorInfo, u_int8_t *cursor);
-ENGINE_LINKAGE int checkValue(void *p, ByteData *byteData, u_int32_t value, u_int8_t *cursor);
+ENGINE_LINKAGE int setCursor(void *p, CursorInfo *cursorInfo, const u_int8_t **cursor);
+ENGINE_LINKAGE int checkCursor(void *p, CursorInfo *cursorInfo, const u_int8_t *cursor);
+ENGINE_LINKAGE int checkValue(void *p, ByteData *byteData, u_int32_t value, const u_int8_t *cursor);
 /* Same as extractValue plus checkValue */
-ENGINE_LINKAGE int byteTest(void *p, ByteData *byteData, u_int8_t *cursor);
+ENGINE_LINKAGE int byteTest(void *p, ByteData *byteData, const u_int8_t *cursor);
 /* Same as extractValue plus setCursor */
-ENGINE_LINKAGE int byteJump(void *p, ByteData *byteData, u_int8_t **cursor);
-ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre, u_int8_t **cursor);
-ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, u_int8_t *cursor);
+ENGINE_LINKAGE int byteJump(void *p, ByteData *byteData, const u_int8_t **cursor);
+ENGINE_LINKAGE int pcreMatch(void *p, PCREInfo* pcre, const u_int8_t **cursor);
+ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, const u_int8_t *cursor);
 ENGINE_LINKAGE int checkHdrOpt(void *p, HdrOptCheck *optData);
-ENGINE_LINKAGE int loopEval(void *p, LoopInfo *loop, u_int8_t **cursor);
-ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, u_int8_t **cursor);
-ENGINE_LINKAGE void setTempCursor(u_int8_t **temp_cursor, u_int8_t **cursor);
-ENGINE_LINKAGE void revertTempCursor(u_int8_t **temp_cursor, u_int8_t **cursor);
+ENGINE_LINKAGE int loopEval(void *p, LoopInfo *loop, const u_int8_t **cursor);
+ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, const u_int8_t **cursor);
+ENGINE_LINKAGE void setTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor);
+ENGINE_LINKAGE void revertTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor);
 ENGINE_LINKAGE int ruleMatch(void *p, Rule *rule);
-ENGINE_LINKAGE int MatchDecryptedRC4(u_int8_t *key, u_int16_t keylen, u_int8_t *encrypted_data, 
-                                                u_int8_t *plain_data, u_int16_t datalen);
-
+ENGINE_LINKAGE int MatchDecryptedRC4(
+    const u_int8_t *key, u_int16_t keylen, const u_int8_t *encrypted_data, 
+    u_int8_t *plain_data, u_int16_t datalen
+);
+ENGINE_LINKAGE void storeRuleData(void *p, void *rule_data);
+ENGINE_LINKAGE void *getRuleData(void *p);
 
 #endif /* SF_SNORT_PLUGIN_API_H_ */
 

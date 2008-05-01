@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -34,6 +35,13 @@
 #include "util.h"
 #include "debug.h"
 #include "plugin_enum.h"
+
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats icmpCodePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 typedef struct _IcmpCodeCheckData
 {
@@ -71,7 +79,11 @@ int IcmpCodeCheck(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIcmpCodeCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("icode", IcmpCodeCheckInit);
+    RegisterPlugin("icode", IcmpCodeCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("icode", &icmpCodePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
+
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: IcmpCodeCheck Initialized\n"););
 }
 
@@ -262,12 +274,15 @@ int IcmpCodeCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     IcmpCodeCheckData *ds_ptr;
     int success = 0;
+    PROFILE_VARS;
 
     ds_ptr = otn->ds_list[PLUGIN_ICMP_CODE];
 
     /* return 0  if we don't have an icmp header */
     if(!p->icmph)
         return 0; 
+
+    PREPROC_PROFILE_START(icmpCodePerfStats);
 
     switch(ds_ptr->operator)
     {
@@ -293,10 +308,12 @@ int IcmpCodeCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if (success) 
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Got icmp code match!\n"););
+        PREPROC_PROFILE_END(icmpCodePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* return 0 on failed test */
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Failed icmp code match!\n"););
+    PREPROC_PROFILE_END(icmpCodePerfStats);
     return 0;
 }

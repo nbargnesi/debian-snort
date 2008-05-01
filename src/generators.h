@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -99,7 +100,6 @@
 #define     DECODE_ICMP_DGRAM_LT_ICMPHDR          105
 #define     DECODE_ICMP_DGRAM_LT_TIMESTAMPHDR     106
 #define     DECODE_ICMP_DGRAM_LT_ADDRHDR          107
-#define     DECODE_IPV4_DGRAM_UNKNOWN             108
 
 #define     DECODE_ARP_TRUNCATED                  109
 #define     DECODE_EAPOL_TRUNCATED                110
@@ -124,7 +124,11 @@
 #ifdef GRE
 #define     DECODE_GRE_DGRAM_LT_GREHDR            160
 #define     DECODE_GRE_MULTIPLE_ENCAPSULATION     161
-#endif
+#define     DECODE_GRE_INVALID_VERSION            162
+#define     DECODE_GRE_INVALID_HEADER             163
+#define     DECODE_GRE_V1_INVALID_HEADER          164
+#define     DECODE_GRE_TRANS_DGRAM_LT_TRANSHDR    165
+#endif  /* GRE */
 
 #define     DECODE_ICMP_ORIG_IP_TRUNCATED         250
 #define     DECODE_ICMP_ORIG_IP_NOT_IPV4          251
@@ -137,13 +141,9 @@
 #define     DECODE_IPV6_IS_NOT                    271
 #define     DECODE_IPV6_TRUNCATED_EXT             272
 #define     DECODE_IPV6_TRUNCATED                 273
+#define     DECODE_IPV6_DGRAM_LT_IPHDR            274
+#define     DECODE_IPV6_DGRAM_GT_IPHDR            275
 
-
-#define GENERATOR_SPP_SCAN2         117
-#define     SCAN_TYPE                             1
-
-#define GENERATOR_SPP_CONV         118
-#define     CONV_BAD_IP_PROTOCOL                            1
 
 /*
 **  HttpInspect Generator IDs
@@ -173,6 +173,7 @@
 #define     HI_CLIENT_LARGE_CHUNK                   16  /* done */
 #define     HI_CLIENT_PROXY_USE                     17  /* done */
 #define     HI_CLIENT_WEBROOT_DIR                   18  /* done */
+#define     HI_CLIENT_LONG_HDR                      19  /* done */
 
 #define GENERATOR_SPP_HTTP_INSPECT_ANOM_SERVER      120
 #define     HI_ANOM_SERVER_ALERT                    1   /* done */
@@ -227,6 +228,7 @@
 #define     FRAG3_ANOMALY_OVLP                      8
 #define     FRAG3_IPV6_BSD_ICMP_FRAG                9
 #define     FRAG3_IPV6_BAD_FRAG_PKT                10
+#define     FRAG3_MIN_TTL_EVASION                  11
 
 #define GENERATOR_SMTP                             124
 #define     SMTP_COMMAND_OVERFLOW                  1
@@ -235,6 +237,7 @@
 #define     SMTP_SPECIFIC_CMD_OVERFLOW             4
 #define     SMTP_UNKNOWN_CMD                       5
 #define     SMTP_ILLEGAL_CMD                       6
+#define     SMTP_HEADER_NAME_OVERFLOW              7
     
 /*
 **  FTPTelnet Generator IDs
@@ -257,6 +260,7 @@
 #define GENERATOR_SPP_FTPP_TELNET                  126
 #define FTPP_TELNET_AYT_OVERFLOW              1
 #define FTPP_TELNET_ENCRYPTED                 2
+#define FTPP_TELNET_SUBNEG_BEGIN_NO_END       3
 
 #define GENERATOR_SPP_ISAKMP                 127
 #define GENERATOR_SPP_SSH                128
@@ -270,11 +274,19 @@
 #define     STREAM5_WINDOW_TOO_LARGE                6
 #define     STREAM5_EXCESSIVE_TCP_OVERLAPS          7
 #define     STREAM5_DATA_AFTER_RESET                8
+#define     STREAM5_SESSION_HIJACKED_CLIENT         9
+#define     STREAM5_SESSION_HIJACKED_SERVER        10
+#define     STREAM5_DATA_WITHOUT_FLAGS             11
 
 #define GENERATOR_DCERPC                          130
 #define     DCERPC_MEMORY_OVERFLOW                  1
 
 #define GENERATOR_DNS                             131
+#define     DNS_EVENT_OBSOLETE_TYPES                1
+#define     DNS_EVENT_EXPERIMENTAL_TYPES            2
+#define     DNS_EVENT_RDATA_OVERFLOW                3
+
+#define GENERATOR_SKYPE                           132
 
 /*  This is where all the alert messages will be archived for each
     internal alerts */
@@ -332,6 +344,7 @@
 #define FRAG3_ANOM_OVLP_STR "(spp_frag3) Fragmentation overlap"
 #define FRAG3_IPV6_BSD_ICMP_FRAG_STR "(spp_frag3) IPv6 BSD mbufs remote kernel buffer overflow"
 #define FRAG3_IPV6_BAD_FRAG_PKT_STR "(spp_frag3) Bogus fragmentation packet. Possible BSD attack"
+#define FRAG3_MIN_TTL_EVASION_STR "(spp_frag3) TTL value less than configured minimum, not using for reassembly"
 
 /*   Stream5 strings */
 #define     STREAM5_SYN_ON_EST_STR "Syn on established session"
@@ -342,6 +355,10 @@
 #define     STREAM5_WINDOW_TOO_LARGE_STR "Window size (after scaling) larger than policy allows"
 #define     STREAM5_EXCESSIVE_TCP_OVERLAPS_STR "Limit on number of overlapping TCP packets reached"
 #define     STREAM5_DATA_AFTER_RESET_STR "Data sent on stream after TCP Reset"
+#define     STREAM5_SESSION_HIJACKED_CLIENT_STR "TCP Client possibly hijacked, different Ethernet Address"
+#define     STREAM5_SESSION_HIJACKED_SERVER_STR "TCP Server possibly hijacked, different Ethernet Address"
+#define     STREAM5_DATA_WITHOUT_FLAGS_STR "TCP Data with no TCP Flags set"
+
 
 /*   Snort decoder strings */
 #define DECODE_NOT_IPV4_DGRAM_STR "(snort_decoder) WARNING: Not IPv4 datagram!"
@@ -350,6 +367,7 @@
 #define DECODE_IPV4OPT_BADLEN_STR      "(snort_decoder): Ipv4 Options found with bad lengths"
 #define DECODE_IPV4OPT_TRUNCATED_STR   "(snort_decoder): Truncated Ipv4 Options"
 #define DECODE_IPV4_DGRAM_GT_IPHDR_STR "(snort_decoder) WARNING: IP dgm len > IP Hdr len!"
+#define DECODE_NOT_IPV6_DGRAM_STR      "(snort_decoder) WARNING: Not an IPv6 datagram"
 
 #define DECODE_TCP_DGRAM_LT_TCPHDR_STR "(snort_decoder) TCP packet len is smaller than 20 bytes!"
 #define DECODE_TCP_INVALID_OFFSET_STR "(snort_decoder) WARNING: TCP Data Offset is less than 5!"
@@ -392,8 +410,12 @@
 
 #ifdef GRE
 #define DECODE_GRE_DGRAM_LT_GREHDR_STR "(snort decoder) WARNING: GRE header length > payload length"
-#define DECODE_GRE_MULTIPLE_ENCAPSULATION_STR "(snort decoder) WARNING: Multiple GRE encapsulations in packet"
-#endif
+#define DECODE_GRE_MULTIPLE_ENCAPSULATION_STR "(snort decoder) WARNING: Multiple encapsulations in packet"
+#define DECODE_GRE_INVALID_VERSION_STR "(snort decoder) WARNING: Invalid GRE version"
+#define DECODE_GRE_INVALID_HEADER_STR "(snort decoder) WARNING: Invalid GRE header"
+#define DECODE_GRE_V1_INVALID_HEADER_STR "(snort decoder) WARNING: Invalid GRE v.1 PPTP header"
+#define DECODE_GRE_TRANS_DGRAM_LT_TRANSHDR_STR "(snort decoder) WARNING: GRE Trans header length > payload length"
+#endif  /* GRE */
 
 #define DECODE_ICMP_ORIG_IP_TRUNCATED_STR "(snort_decoder) WARNING: ICMP Original IP Header Truncated!"
 #define DECODE_ICMP_ORIG_IP_NOT_IPV4_STR "(snort_decoder) WARNING: ICMP Original IP Header Not IPv4!"
@@ -406,13 +428,8 @@
 #define DECODE_IPV6_IS_NOT_STR "(snort decoder) IPv6 header claims to not be IPv6"
 #define DECODE_IPV6_TRUNCATED_EXT_STR "(snort decoder) IPV6 truncated extension header"
 #define DECODE_IPV6_TRUNCATED_STR "(snort decoder) IPV6 truncated header"
-
-
-/*  Portscan2 strings */
-#define SCAN2_PREFIX_STR "(spp_portscan2) Portscan detected from "
-
-/*  spp_conversation strings */
-#define CONV_BAD_IP_PROTOCOL_STR "(spp_conversation) Bad IP protocol!"
+#define DECODE_IPV6_DGRAM_GT_IPHDR_STR "(snort_decoder) WARNING: IP dgm len > IP Hdr len!"
+#define DECODE_IPV6_DGRAM_LT_IPHDR_STR "(snort_decoder) WARNING: IP dgm len < IP Hdr len!"
 
 /*  RPC decode preprocessor strings */
 #define RPC_FRAG_TRAFFIC_STR "(spp_rpc_decode) Fragmented RPC Records"

@@ -3,7 +3,7 @@
 **
 ** fpfuncs.h
 **
-** Copyright (C) 2002 Sourcefire,Inc
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 ** Marc Norton <mnorton@sourcefire.com>
 **
@@ -51,5 +51,8 @@ int fpSetDetectionOptions(FPDETECT *fpDetect);
 int fpEvalPacket(Packet *p);
 
 int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p);
+
+#define TO_SERVER 1
+#define TO_CLIENT 0
 
 #endif

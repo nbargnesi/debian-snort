@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -122,14 +122,26 @@ static int InitServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
     **  assume the global server configuration.
     */
     ServerConfDip = hi_ui_server_lookup_find(GlobalConf->server_lookup, 
-            SiInput->dip, &iErr);
+#ifdef SUP_IP6
+            &SiInput->dip,
+#else
+            SiInput->dip,
+#endif
+            &iErr);
+
     if(!ServerConfDip)
     {
         ServerConfDip = &GlobalConf->global_server;
     }
 
     ServerConfSip = hi_ui_server_lookup_find(GlobalConf->server_lookup,
-            SiInput->sip, &iErr);
+#ifdef SUP_IP6
+            &SiInput->sip,
+#else
+            SiInput->sip,
+#endif
+           &iErr);
+
     if(!ServerConfSip)
     {
         ServerConfSip = &GlobalConf->global_server;
@@ -286,8 +298,8 @@ static int StatelessSessionInspection(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
         HI_SESSION **Session, HI_SI_INPUT *SiInput, int *piInspectMode)
 {
     static HI_SESSION StaticSession;
-    HTTPINSPECT_CONF *ServerConf;
-    HTTPINSPECT_CONF *ClientConf;
+    HTTPINSPECT_CONF *ServerConf = NULL;
+    HTTPINSPECT_CONF *ClientConf = NULL;
     int iRet;
 
     ResetSession(&StaticSession);

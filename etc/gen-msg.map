@@ -48,10 +48,10 @@
 111 || 13 || spp_stream4: SYN FIN Stealth Scan
 111 || 14 || spp_stream4: TCP forward overlap detected
 111 || 15 || spp_stream4: TTL Evasion attempt
-111 || 16 || spp_stream4: Evasive retransmitited data attempt
-111 || 17 || spp_stream4: Evasive retransmitited data with the data split attempt
+111 || 16 || spp_stream4: Evasive retransmitted data attempt
+111 || 17 || spp_stream4: Evasive retransmitted data with the data split attempt
 111 || 18 || spp_stream4: Multiple acked
-111 || 19 || spp_stream4: Shifting to Emegency Session Mode
+111 || 19 || spp_stream4: Shifting to Emergency Session Mode
 111 || 20 || spp_stream4: Shifting to Suspend Mode
 111 || 21 || spp_stream4: TCP Timestamp option has value of zero
 111 || 22 || spp_stream4: Too many overlapping TCP packets
@@ -121,17 +121,17 @@
 116 || 150 || snort_decoder: Bad Traffic Loopback IP!
 116 || 151 || snort_decoder: Bad Traffic Same Src/Dst IP!
 116 || 160 || snort_decoder: WARNING: GRE header length > payload length
-116 || 161 || snort_decoder: WARNING: Multiple GRE encapsulations in packet
+116 || 161 || snort_decoder: WARNING: Multiple encapsulations in packet
+116 || 162 || snort_decoder: WARNING: Invalid GRE version
+116 || 163 || snort_decoder: WARNING: Invalid GRE v.0 header
+116 || 164 || snort_decoder: WARNING: Invalid GRE v.1 PPTP header
+116 || 165 || snort_decoder: WARNING: GRE Trans header length > payload length
 116 || 250 || snort_decoder: WARNING: ICMP Original IP Header Truncated!"
 116 || 251 || snort_decoder: WARNING: ICMP Original IP Header Not IPv4!"
 116 || 252 || snort_decoder: WARNING: ICMP Original Datagram Length < Original IP Header Length!"
 116 || 253 || snort_decoder: WARNING: ICMP Original IP Payload < 64 bits!"
 116 || 254 || snort_decoder: WARNING: ICMP Origianl IP Payload > 576 bytes!"
 116 || 255 || snort_decoder: WARNING: ICMP Original IP Fragmented and Offset Not 0!"
-116 || 270 || snort_decoder: IPV6 packet exceeded TTL limit
-116 || 271 || snort_decoder: IPv6 header claims to not be IPv6
-116 || 272 || snort_decoder: IPV6 truncated extension header
-116 || 273 || snort_decoder: IPV6 truncated header
 117 || 1 || spp_portscan2: Portscan detected!
 118 || 1 || spp_conversation: Bad IP protocol!
 119 || 1 || http_inspect: ASCII ENCODING
@@ -152,6 +152,7 @@
 119 || 16 || http_inspect: OVERSIZE CHUNK ENCODING
 119 || 17 || http_inspect: UNAUTHORIZED PROXY USE DETECTED
 119 || 18 || http_inspect: WEBROOT DIRECTORY TRAVERSAL
+119 || 19 || http_inspect: LONG HEADER
 120 || 1 || http_inspect: ANOMALOUS HTTP SERVER ON UNDEFINED HTTP PORT
 121 || 1 || flow-portscan: Fixed Scale Scanner Limit Exceeded
 121 || 2 || flow-portscan: Sliding Scale Scanner Limit Exceeded
@@ -194,12 +195,14 @@
 123 || 8 || frag3: Fragmentation overlap
 123 || 9 || frag3: IPv6 BSD mbufs remote kernel buffer overflow
 123 || 10 || frag3: Bogus fragmentation packet. Possible BSD attack
+123 || 11 || frag3: TTL value less than configured minimum, not using for reassembly
 124 || 1 || smtp: Attempted command buffer overflow
 124 || 2 || smtp: Attempted data header buffer overflow
 124 || 3 || smtp: Attempted response buffer overflow
 124 || 4 || smtp: Attempted specific command buffer overflow
 124 || 5 || smtp: Unknown command
 124 || 6 || smtp: Illegal command
+124 || 7 || smtp: Attempted header name buffer overflow
 125 || 1 || ftp_pp: Telnet command on FTP command channel
 125 || 2 || ftp_pp: Invalid FTP command
 125 || 3 || ftp_pp: FTP parameter length overflow
@@ -227,6 +230,9 @@
 129 || 6 || stream5: Window size (after scaling) larger than policy allows
 129 || 7 || stream5: Limit on number of overlapping TCP packets reached
 129 || 8 || stream5: Data sent on stream after TCP Reset
+129 || 9 || stream5: TCP Client possibly hijacked, different Ethernet Address
+129 || 10 || stream5: TCP Server possibly hijacked, different Ethernet Address
+129 || 11 || stream5: TCP Data with no TCP Flags set 
 130 || 1 || dcerpc: Maximum memory usage reached
 131 || 1 || dns: Obsolete DNS RData Type
 131 || 2 || dns: Experimental DNS RData Type

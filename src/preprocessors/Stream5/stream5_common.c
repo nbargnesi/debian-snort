@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -24,6 +24,7 @@
 #include "generators.h"
 #include "event_queue.h"
 #include "snort.h"
+#include "sf_types.h"
 
 #include "stream5_common.h"
 
@@ -54,7 +55,8 @@ int Stream5Expire(Packet *p, Stream5LWSession *lwssn)
     if((int)(pkttime - lwssn->expire_time) > 0)
     {
         sfPerf.sfBase.iStreamTimeouts++;
-        lwssn->session_flags |= STREAM5_STATE_TIMEDOUT;
+        lwssn->session_flags |= SSNFLAG_TIMEDOUT;
+        lwssn->session_state |= STREAM5_STATE_TIMEDOUT;
 
         switch (lwssn->protocol)
         {

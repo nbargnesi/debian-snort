@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -18,6 +19,13 @@
 */
 
 /* $Id$ */
+
+/* 
+ * 06/07/2007 - tw
+ * Commented out 'content-list' code since it's considered broken and there
+ * are no plans to fix it
+ */
+
 #include <errno.h>
 
 #ifdef HAVE_CONFIG_H
@@ -44,22 +52,29 @@
 #include "checksum.h"
 #include "inline.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats contentPerfStats;
+PreprocStats uricontentPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 #define MAX_PATTERN_SIZE 2048
 
 static void PayloadSearchInit(char *, OptTreeNode *, int);
-static void PayloadSearchListInit(char *, OptTreeNode *, int);
-static void ParseContentListFile(char *, OptTreeNode *, int);
+//static void PayloadSearchListInit(char *, OptTreeNode *, int);
+//static void ParseContentListFile(char *, OptTreeNode *, int);
 static void PayloadSearchUri(char *, OptTreeNode *, int);
 static void PayloadSearchHttpBody(char *, OptTreeNode *, int);
 static void PayloadSearchHttpUri(char *, OptTreeNode *, int);
 static void ParsePattern(char *, OptTreeNode *, int);
 static int CheckANDPatternMatch(Packet *, struct _OptTreeNode *, OptFpList *);
-static int CheckORPatternMatch(Packet *, struct _OptTreeNode *, OptFpList *);
+//static int CheckORPatternMatch(Packet *, struct _OptTreeNode *, OptFpList *);
 static int CheckUriPatternMatch(Packet *, struct _OptTreeNode *, OptFpList *);
 static void PayloadSearchOffset(char *, OptTreeNode *, int);
 static void PayloadSearchDepth(char *, OptTreeNode *, int);
 static void PayloadSearchNocase(char *, OptTreeNode *, int);
-static void PayloadSearchRegex(char *, OptTreeNode *, int);
 static void PayloadSearchDistance(char *, OptTreeNode *, int);
 static void PayloadSearchWithin(char *, OptTreeNode *, int);
 static void PayloadSearchRawbytes(char *, OptTreeNode *, int);
@@ -67,14 +82,14 @@ static void PayloadReplaceInit(char *, OptTreeNode *, int);
 static PatternMatchData * ParseReplacePattern(char *, OptTreeNode *);
 int PayloadReplace(Packet *, struct _OptTreeNode *, OptFpList *, int
                          depth);
-static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase);
+static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int nocase);
 
 static PatternMatchData * NewNode(OptTreeNode *, int);
 void PayloadSearchCompile();
 
 int list_file_line;     /* current line being processed in the list file */
 int lastType = PLUGIN_PATTERN_MATCH;
-u_int8_t *doe_ptr;
+const u_int8_t *doe_ptr;
 
 int detect_depth;       /* depth to the first char of the match */
 
@@ -88,20 +103,23 @@ extern int file_line;
 
 void SetupPatternMatch()
 {
-    RegisterPlugin("content", PayloadSearchInit);
-    RegisterPlugin("content-list", PayloadSearchListInit);
-    RegisterPlugin("offset", PayloadSearchOffset);
-    RegisterPlugin("depth", PayloadSearchDepth);
-    RegisterPlugin("nocase", PayloadSearchNocase);
-    RegisterPlugin("rawbytes", PayloadSearchRawbytes);
-    RegisterPlugin("regex", PayloadSearchRegex);
-    RegisterPlugin("uricontent", PayloadSearchUri);
-    RegisterPlugin("http_client_body", PayloadSearchHttpBody);
-    RegisterPlugin("http_uri", PayloadSearchHttpUri);
-    RegisterPlugin("distance", PayloadSearchDistance);
-    RegisterPlugin("within", PayloadSearchWithin);
-    RegisterPlugin("replace", PayloadReplaceInit);
+    RegisterPlugin("content", PayloadSearchInit, OPT_TYPE_DETECTION);
+    //RegisterPlugin("content-list", PayloadSearchListInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("offset", PayloadSearchOffset, OPT_TYPE_DETECTION);
+    RegisterPlugin("depth", PayloadSearchDepth, OPT_TYPE_DETECTION);
+    RegisterPlugin("nocase", PayloadSearchNocase, OPT_TYPE_DETECTION);
+    RegisterPlugin("rawbytes", PayloadSearchRawbytes, OPT_TYPE_DETECTION);
+    RegisterPlugin("uricontent", PayloadSearchUri, OPT_TYPE_DETECTION);
+    RegisterPlugin("http_client_body", PayloadSearchHttpBody, OPT_TYPE_DETECTION);
+    RegisterPlugin("http_uri", PayloadSearchHttpUri, OPT_TYPE_DETECTION);
+    RegisterPlugin("distance", PayloadSearchDistance, OPT_TYPE_DETECTION);
+    RegisterPlugin("within", PayloadSearchWithin, OPT_TYPE_DETECTION);
+    RegisterPlugin("replace", PayloadReplaceInit, OPT_TYPE_DETECTION);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("content", &contentPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("uricontent", &uricontentPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                 "Plugin: PatternMatch Initialized!\n"););
 }
@@ -125,7 +143,7 @@ void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
 
     test_idx = ParseReplacePattern(data, otn);
 #ifdef DEBUG
-    printf("idx (%p) pattern_size (%d) replace_size (%d)\n", test_idx, 
+    printf("idx (%p) pattern_size (%d) replace_size (%d)\n", (void*)test_idx, 
             test_idx->pattern_size, test_idx->replace_size);
 #endif
     if (test_idx && test_idx->pattern_size != test_idx->replace_size)
@@ -148,14 +166,14 @@ void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
 
 PatternMatchData * ParseReplacePattern(char *rule, OptTreeNode * otn)
 {
-    unsigned char tmp_buf[MAX_PATTERN_SIZE];
+    char tmp_buf[MAX_PATTERN_SIZE];
 
     /* got enough ptrs for you? */
     char *start_ptr;
     char *end_ptr;
     char *idx;
-    char *dummy_idx;
-    char *dummy_end;
+    const char *dummy_idx;
+    const char *dummy_end;
     char hex_buf[3];
     u_int dummy_size = 0;
     int size;
@@ -463,7 +481,7 @@ int PayloadReplace(Packet *p, struct _OptTreeNode *otn,
     if (depth >= 0)
     {
         //memcpy(p->data+depth, idx->replace_buf, strlen(idx->replace_buf));
-        ret = SafeMemcpy( (p->data + depth), idx->replace_buf, strlen(idx->replace_buf), 
+        ret = SafeMemcpy( (void *)(p->data + depth), idx->replace_buf, strlen(idx->replace_buf), 
                           p->data, (p->data + p->dsize) );
 
         if (ret == SAFEMEM_ERROR)
@@ -477,45 +495,103 @@ int PayloadReplace(Packet *p, struct _OptTreeNode *otn,
         InlineReplace();
 #endif
 
-        /* calculate new checksum */
-        p->iph->ip_csum=0;
-        hlen = IP_HLEN(p->iph) << 2;
-        ip_len=ntohs(p->iph->ip_len);
-        ip_len -= hlen;
-        p->iph->ip_csum = in_chksum_ip((u_short *)p->iph, hlen);
+        if(IS_IP4(p)) 
+        {
+#ifdef SUP_IP6
+            sfip_t *tmp;
 
-        if (p->tcph)
-        {
-            p->tcph->th_sum = 0;
+            p->ip4h.ip_csum=0;
+            hlen = GET_IPH_HLEN(p) << 2;
+            ip_len=ntohs(p->ip4h.ip_len);
+            ip_len -= hlen;
+            p->ip4h.ip_csum = in_chksum_ip((u_short *)p->iph, hlen);
+
+            tmp = GET_SRC_IP(p);
+            ph.sip = tmp->ip32[0];
+            tmp = GET_DST_IP(p);
+            ph.dip = tmp->ip32[0];
+#else
+            /* calculate new checksum */
+            ((IPHdr *)p->iph)->ip_csum=0;
+            hlen = IP_HLEN(p->iph) << 2;
+            ip_len=ntohs(p->iph->ip_len);
+            ip_len -= hlen;
+            ((IPHdr *)p->iph)->ip_csum = in_chksum_ip((u_short *)p->iph, hlen);
             ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
             ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
-            ph.zero = 0;
-            ph.protocol = p->iph->ip_proto;
-            ph.len = htons((u_short)ip_len);
-            p->tcph->th_sum = in_chksum_tcp((u_short *)&ph,
-                                            (u_short *)(p->tcph), ip_len);
+#endif
+
+            if (p->tcph)
+            {
+                ((TCPHdr *)p->tcph)->th_sum = 0;
+                ph.zero = 0;
+                ph.protocol = GET_IPH_PROTO(p);
+                ph.len = htons((u_short)ip_len);
+                ((TCPHdr *)p->tcph)->th_sum = in_chksum_tcp((u_short *)&ph,
+                                                (u_short *)(p->tcph), ip_len);
+            }
+            else if (p->udph)
+            {
+                ((UDPHdr *)p->udph)->uh_chk = 0;
+                ph.zero = 0;
+                ph.protocol = GET_IPH_PROTO(p);
+                ph.len = htons((u_short)ip_len);
+                ((UDPHdr *)p->udph)->uh_chk = in_chksum_udp((u_short *)&ph,
+                                                (u_short *)(p->udph), ip_len);
+            }
+            else if (p->icmph)
+            {
+                ((ICMPHdr *)p->icmph)->csum = 0;
+                ph.zero = 0;
+                ph.protocol = GET_IPH_PROTO(p);
+                ph.len = htons((u_short)ip_len);
+                ((ICMPHdr *)p->icmph)->csum = in_chksum_icmp((u_int16_t *)(p->icmph), ip_len);
+            }
         }
-        else if (p->udph)
+#ifdef SUP_IP6
+        else
         {
-            p->udph->uh_chk = 0;
-            ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
-            ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
+            struct pseudoheader6
+            {
+                struct in6_addr sip, dip;
+                u_int8_t zero;
+                u_int8_t protocol;
+                u_int16_t len;
+            };
+            struct pseudoheader6 ph6;
+            sfip_t *tmp;
+
+            hlen = GET_IPH_HLEN(p) << 2;
+            ip_len=ntohs(p->ip6h.len);
+            ip_len -= hlen;
+    
+            tmp = GET_SRC_IP(p);
+            memcpy(&ph.sip, tmp->ip8, sizeof(struct in6_addr));
+            tmp = GET_DST_IP(p);
+            memcpy(&ph.dip, tmp->ip8, sizeof(struct in6_addr));
             ph.zero = 0;
-            ph.protocol = p->iph->ip_proto;
+            ph.protocol = GET_IPH_PROTO(p);
             ph.len = htons((u_short)ip_len);
-            p->udph->uh_chk = in_chksum_udp((u_short *)&ph,
-                                            (u_short *)(p->udph), ip_len);
+
+            if (p->tcph)
+            {
+                ((TCPHdr *)p->tcph)->th_sum = 0;
+                ((TCPHdr *)p->tcph)->th_sum = in_chksum_tcp6((u_short *)&ph6,
+                                                (u_short *)(p->tcph), ip_len);
+            }
+            else if (p->udph)
+            {
+                ((UDPHdr *)p->udph)->uh_chk = 0;
+                ((UDPHdr *)p->udph)->uh_chk = in_chksum_udp6((u_short *)&ph6,
+                                                (u_short *)(p->udph), ip_len);
+            }
+            else if (p->icmph)
+            {
+                ((ICMPHdr *)p->icmph)->csum = 0;
+                ((ICMPHdr *)p->icmph)->csum = in_chksum_icmp6((u_int16_t *)(p->icmph), ip_len);
+            }
         }
-        else if (p->icmph)
-        {
-            p->icmph->csum = 0;
-            ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
-            ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
-            ph.zero = 0;
-            ph.protocol = p->iph->ip_proto;
-            ph.len = htons((u_short)ip_len);
-            p->icmph->csum = in_chksum_icmp((u_int16_t *)(p->icmph), ip_len);
-        }
+#endif
     }
 
     return 1;
@@ -592,7 +668,8 @@ static inline int computeWithin(int dlen, PatternMatchData *pmd)
     return pmd->within;
 }
 
-
+#if 0
+/* not in use - delete? */
 static int uniSearchREG(char * data, int dlen, PatternMatchData * pmd)
 {
     int depth = computeDepth(dlen, pmd);
@@ -612,8 +689,7 @@ static int uniSearchREG(char * data, int dlen, PatternMatchData * pmd)
 
     return success;
 }
-
-
+#endif
 
 /* 
  * case sensitive search
@@ -624,7 +700,7 @@ static int uniSearchREG(char * data, int dlen, PatternMatchData * pmd)
  * pmd = pointer to pattern match data struct
  */
 
-static int uniSearch(char *data, int dlen, PatternMatchData *pmd)
+static int uniSearch(const char *data, int dlen, PatternMatchData *pmd)
 {
     return uniSearchReal(data, dlen, pmd, 0);
 }
@@ -637,7 +713,7 @@ static int uniSearch(char *data, int dlen, PatternMatchData *pmd)
  *        against offset + depth before function entry (not distance/within)
  * pmd = pointer to pattern match data struct
  */
-static int uniSearchCI(char *data, int dlen, PatternMatchData *pmd)
+static int uniSearchCI(const char *data, int dlen, PatternMatchData *pmd)
 {
     return uniSearchReal(data, dlen, pmd, 1);
 }
@@ -656,7 +732,7 @@ static int uniSearchCI(char *data, int dlen, PatternMatchData *pmd)
  * return  0 for not found
  * return -1 for error (search out of bounds)
  */       
-static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase)
+static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int nocase)
 {
     /* 
      * in theory computeDepth doesn't need to be called because the 
@@ -665,9 +741,9 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
     int depth = dlen;
     int old_depth = dlen;
     int success = 0;
-    char *start_ptr = data;
-    char *end_ptr = data + dlen;
-    char *base_ptr = start_ptr;
+    const char *start_ptr = data;
+    const char *end_ptr = data + dlen;
+    const char *base_ptr = start_ptr;
     
     DEBUG_WRAP(char *hexbuf;);
 
@@ -685,7 +761,7 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "Using Doe Ptr\n"););
 
-        base_ptr = doe_ptr;
+        base_ptr = (const char *)doe_ptr;
         depth = dlen - ((char *) doe_ptr - data);
     }
     else
@@ -724,7 +800,7 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
     }
 
     /* make sure we and in range */
-    if(!inBounds(start_ptr, end_ptr, base_ptr))
+    if(!inBounds((const u_int8_t *)start_ptr, (const u_int8_t *)end_ptr, (const u_int8_t *)base_ptr))
     {
         
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
@@ -760,7 +836,7 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
     }
     
     /* make sure we end in range */
-    if(!inBounds(start_ptr, end_ptr, base_ptr + depth - 1))
+    if(!inBounds((const u_int8_t *)start_ptr, (const u_int8_t *)end_ptr, (const u_int8_t *)(base_ptr + depth - 1)))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "returning because base_ptr + depth - 1"
@@ -774,7 +850,7 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
 
     DebugMessage(DEBUG_PATTERN_MATCH, "uniSearchReal:\n ");
 
-    hexbuf = hex(pmd->pattern_buf, pmd->pattern_size);
+    hexbuf = hex((u_char *)pmd->pattern_buf, pmd->pattern_size);
     DebugMessage(DEBUG_PATTERN_MATCH, "   p->data: %p\n   doe_ptr: %p\n   "
                  "base_ptr: %p\n   depth: %d\n   searching for: %s\n", 
                  data, doe_ptr, base_ptr, depth, hexbuf);
@@ -823,6 +899,7 @@ static void make_precomp(PatternMatchData * idx)
     idx->shift_stride = make_shift(idx->pattern_buf, idx->pattern_size);
 }
 
+#if 0
 void PayloadSearchListInit(char *data, OptTreeNode * otn, int protocol)
 {
     char *sptr;
@@ -861,6 +938,7 @@ void PayloadSearchListInit(char *data, OptTreeNode * otn, int protocol)
 
     return;
 }
+#endif
 
 
 void PayloadSearchInit(char *data, OptTreeNode * otn, int protocol)
@@ -1322,41 +1400,6 @@ void PayloadSearchWithin(char *data, OptTreeNode *otn, int protocol)
 }
 
 
-
-void PayloadSearchRegex(char *data, OptTreeNode * otn, int protocol)
-{
-
-    FatalError("%s(%d) => Sorry, regex isn't supported at this time. "
-               "This isn't new.", file_name,file_line);
-
-#if 0
-    PatternMatchData *idx;
-    int i;
-
-    idx = (PatternMatchData *) otn->ds_list[lastType];
-
-    if(idx == NULL)
-    {
-        FatalError("%s(%d) => Please place \"content\" rules "
-                   "before regex modifiers.\n", file_name, file_line);
-    }
-
-    while(idx->next != NULL)
-        idx = idx->next;
-
-    idx->search = uniSearchREG;
-
-    i = idx->pattern_size;
-
-    make_precomp(idx);
-
-    return;
-#endif
-}
-
-
-
-
 static PatternMatchData * NewNode(OptTreeNode * otn, int type)
 {
     PatternMatchData *idx;
@@ -1471,7 +1514,7 @@ static unsigned int GetMaxJumpSize(char *data, int data_len)
  ***************************************************************************/
 static void ParsePattern(char *rule, OptTreeNode * otn, int type)
 {
-    unsigned char tmp_buf[MAX_PATTERN_SIZE];
+    char tmp_buf[MAX_PATTERN_SIZE];
 
     /* got enough ptrs for you? */
     char *start_ptr;
@@ -1785,6 +1828,7 @@ static void ParsePattern(char *rule, OptTreeNode * otn, int type)
     return;
 }
 
+#if 0
 static int CheckORPatternMatch(Packet * p, struct _OptTreeNode * otn_idx, 
                    OptFpList * fp_list)
 {
@@ -1866,6 +1910,7 @@ static int CheckORPatternMatch(Packet * p, struct _OptTreeNode * otn_idx,
 
     return 0;
 }
+#endif
 
 static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx, 
                 OptFpList *fp_list)
@@ -1877,8 +1922,10 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
     int origUseDoe;
     char *tmp_doe, *orig_doe, *start_doe;
     int ret;
-
     PatternMatchData *idx;
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(contentPerfStats);
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "CheckPatternANDMatch: "););
 
@@ -1900,7 +1947,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
 
     /* this now takes care of all the special cases where we'd run
      * over the buffer */
-    orig_doe = doe_ptr;
+    orig_doe = (char *)doe_ptr;
 #ifndef NO_FOUND_ERROR
     found = idx->search(dp, dsize, idx);
     if ( found == -1 )
@@ -1927,22 +1974,30 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
 
         ret = PayloadReplace(p, otn_idx, fp_list, detect_depth);
         if (ret == 0)
+        {
+            PREPROC_PROFILE_END(contentPerfStats);
             return 0;
+        }
     }
 
     while (found)
     {
         /* save where we last did the pattern match */
-        tmp_doe = doe_ptr;
+        tmp_doe = (char *)doe_ptr;
 
         /* save start doe as beginning of this pattern + non-repeating length*/
-        start_doe = doe_ptr - idx->pattern_size + idx->pattern_max_jump_size;
+        start_doe = (char *)doe_ptr - idx->pattern_size + idx->pattern_max_jump_size;
 
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Pattern Match successful!\n"););      
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Check next functions!\n"););
+        /* PROFILING Don't count rest of options towards content */
+        PREPROC_PROFILE_TMPEND(contentPerfStats);
 
         /* Try evaluating the rest of the rules chain */
         next_found= fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
+
+        /* PROFILING Don't count rest of options towards content */
+        PREPROC_PROFILE_TMPSTART(contentPerfStats);
 
         if(next_found != 0) 
         {
@@ -1950,6 +2005,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                     "Next functions matched!\n"););
 
             /* We found a successful match, return that this rule has fired off */
+            PREPROC_PROFILE_END(contentPerfStats);
             return next_found;
         }
         else if(tmp_doe != NULL)
@@ -1958,7 +2014,10 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
 
             /* if the next option isn't relative and it failed, we're done */
             if (fp_list->next->isRelative == 0)
+            {
+                PREPROC_PROFILE_END(contentPerfStats);
                 return 0;
+            }
 
             if(new_dsize <= 0 || new_dsize > dsize)
             {
@@ -1967,6 +2026,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                         "the the original dsize;returning "
                                         "false\n"););
                 idx->use_doe = origUseDoe;
+                PREPROC_PROFILE_END(contentPerfStats);
                 return 0;
             }
 
@@ -1981,6 +2041,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                             "from is beyond the original "
                                             "distance;returning false\n"););
                     idx->use_doe = origUseDoe;
+                    PREPROC_PROFILE_END(contentPerfStats);
                     return 0;
                 }
 
@@ -1994,6 +2055,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                             "from is beyond the original "
                                             "within;returning false\n"););
                     idx->use_doe = origUseDoe;
+                    PREPROC_PROFILE_END(contentPerfStats);
                     return 0;
                 }
             }
@@ -2008,6 +2070,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                             "from is beyond the original "
                                             "distance;returning false\n"););
                     idx->use_doe = origUseDoe;
+                    PREPROC_PROFILE_END(contentPerfStats);
                     return 0;
                 }
 
@@ -2021,6 +2084,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                             "from is beyond the original "
                                             "within;returning false\n"););
                     idx->use_doe = origUseDoe;
+                    PREPROC_PROFILE_END(contentPerfStats);
                     return 0;
                 }
             }
@@ -2031,7 +2095,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                     "Start search again from a next point!\n"););
 
             /* Start the search again from the last set of contents, with a new depth and dsize */
-            doe_ptr = start_doe;
+            doe_ptr = (u_int8_t *)start_doe;
             idx->use_doe = 1;
             found = (idx->search(start_doe, new_dsize,idx) ^ idx->exception_flag);
             
@@ -2044,6 +2108,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
             if(start_doe == (char *)doe_ptr)
             {
                 idx->use_doe = origUseDoe;
+                PREPROC_PROFILE_END(contentPerfStats);
                 return 0;
             }
         }
@@ -2053,6 +2118,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                                     "Returning 0 because tmp_doe is NULL\n"););
             
             idx->use_doe = origUseDoe;
+            PREPROC_PROFILE_END(contentPerfStats);
             return 0;
         }
         
@@ -2060,6 +2126,7 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
     
     idx->use_doe = origUseDoe;
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Pattern match failed\n"););
+    PREPROC_PROFILE_END(contentPerfStats);
     return 0;
 }
 
@@ -2073,6 +2140,7 @@ static int CheckUriPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
     int found = 0;
     int i;
     PatternMatchData *idx;
+    PROFILE_VARS;
 
     if(p->uri_count <= 0)
     {
@@ -2081,6 +2149,8 @@ static int CheckUriPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
                     p->uri_count););
         return 0;
     }
+
+    PREPROC_PROFILE_START(uricontentPerfStats);
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "CheckUriPatternMatch: "););
 
@@ -2122,23 +2192,25 @@ static int CheckUriPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
 
         /* this now takes care of all the special cases where we'd run
          * over the buffer */
-        found = (idx->search(UriBufs[i].uri, UriBufs[i].length, idx) ^ idx->exception_flag);
+        found = (idx->search((const char *)UriBufs[i].uri, UriBufs[i].length, idx) ^ idx->exception_flag);
         
         if(found)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Pattern Match successful!\n"););
             /* call the next function in the OTN */
+            PREPROC_PROFILE_END(uricontentPerfStats);
             return fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);        
         }
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Pattern match failed\n"););
+    PREPROC_PROFILE_END(uricontentPerfStats);
 
     return 0;
 }
 
 
-
+#if 0
 /****************************************************************************
  *
  * Function: ParseContentListFile(char *, OptTreeNode *, int protocol)
@@ -2227,3 +2299,5 @@ static void ParseContentListFile(char *file, OptTreeNode * otn, int protocol)
 
     return;
 }
+#endif
+

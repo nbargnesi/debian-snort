@@ -2,7 +2,7 @@
 /*
 ** Copyright (C) 2003 Brian Caswell <bmc@snort.org>
 ** Copyright (C) 2003 Michael J. Pomraning <mjp@securepipe.com>
-** Copyright (C) 2003 Sourcefire, Inc
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -41,6 +41,14 @@
 
 #include <pcre.h>
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats pcrePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
+
 extern int g_nopcre;
 
 typedef struct _PcreData
@@ -56,6 +64,7 @@ typedef struct _PcreData
 #define SNORT_PCRE_URI      4  /* check URI buffers */
 #define SNORT_PCRE_RAWBYTES 8  /* Don't use decoded buffer (if available) */
 #define SNORT_PCRE_BODY     16 /* Check HTTP body buffer */
+#define SNORT_OVERRIDE_MATCH_LIMIT     32 /* Override default limits on match & match recursion */
 
 /* 
  * we need to specify the vector length for our pcre_exec call.  we only care 
@@ -66,7 +75,7 @@ typedef struct _PcreData
 #define SNORT_PCRE_OVECTOR_SIZE 3
 
 extern u_int8_t DecodeBuffer[DECODE_BLEN];
-extern u_int8_t *doe_ptr;
+extern const u_int8_t *doe_ptr;
 
 void SnortPcreInit(char *, OptTreeNode *, int);
 void SnortPcreParse(char *, PcreData *, OptTreeNode *);
@@ -75,7 +84,10 @@ int SnortPcre(Packet *, struct _OptTreeNode *, OptFpList *);
 
 void SetupPcre(void)
 {
-    RegisterPlugin("pcre", SnortPcreInit);
+    RegisterPlugin("pcre", SnortPcreInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("pcre", &pcrePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 }
 
 void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
@@ -89,6 +101,8 @@ void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
     pcre_data = (PcreData *) SnortAlloc(sizeof(PcreData));
 
     SnortPcreParse(data, pcre_data, otn);
+
+    otn->pcre_flag = 1;
 
     fpl = AddOptFuncToList(SnortPcre, otn);
 
@@ -195,6 +209,8 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
         case 'U':  pcre_data->options |= SNORT_PCRE_URI;      break;
         case 'B':  pcre_data->options |= SNORT_PCRE_RAWBYTES; break;
         case 'P':  pcre_data->options |= SNORT_PCRE_BODY;     break;
+        case 'O':  pcre_data->options |= SNORT_OVERRIDE_MATCH_LIMIT; break;
+
         default:
             FatalError("%s (%d): unknown/extra pcre option encountered\n", file_name, file_line);
         }
@@ -219,6 +235,60 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
 
     /* now study it... */
     pcre_data->pe = pcre_study(pcre_data->re, 0, &error);
+
+#define SNORT_PCRE_MATCH_LIMIT pv.pcre_match_limit
+#define SNORT_PCRE_MATCH_LIMIT_RECURSION pv.pcre_match_limit_recursion
+    if (pcre_data->pe)
+    {
+        if ((pv.pcre_match_limit != -1) && !(pcre_data->options & SNORT_OVERRIDE_MATCH_LIMIT))
+        {
+            if (pcre_data->pe->flags & PCRE_EXTRA_MATCH_LIMIT)
+            {
+                pcre_data->pe->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+            else
+            {
+                pcre_data->pe->flags |= PCRE_EXTRA_MATCH_LIMIT;
+                pcre_data->pe->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+        }
+
+#ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+        if ((pv.pcre_match_limit_recursion != -1) && !(pcre_data->options & SNORT_OVERRIDE_MATCH_LIMIT))
+        {
+            if (pcre_data->pe->flags & PCRE_EXTRA_MATCH_LIMIT_RECURSION)
+            {
+                pcre_data->pe->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+            else
+            {
+                pcre_data->pe->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+                pcre_data->pe->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+        }
+#endif
+    }
+    else
+    {
+        if (!(pcre_data->options & SNORT_OVERRIDE_MATCH_LIMIT) && 
+             ((pv.pcre_match_limit != -1) || (pv.pcre_match_limit_recursion != -1)))
+        {
+            pcre_data->pe = (pcre_extra *)SnortAlloc(sizeof(pcre_extra));
+            if (pv.pcre_match_limit != -1)
+            {
+                pcre_data->pe->flags |= PCRE_EXTRA_MATCH_LIMIT;
+                pcre_data->pe->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+            
+#ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+            if (pv.pcre_match_limit_recursion != -1)
+            {
+                pcre_data->pe->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+                pcre_data->pe->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+#endif
+        }
+    }
 
     if(error != NULL) 
     {
@@ -274,7 +344,7 @@ static int pcre_search(const PcreData *pcre_data,
     }
 
     *found_offset = -1;
-    
+
     result = pcre_exec(pcre_data->re,            /* result of pcre_compile() */
                        pcre_data->pe,            /* result of pcre_study()   */
                        buf,                      /* the subject string */
@@ -287,6 +357,10 @@ static int pcre_search(const PcreData *pcre_data,
     if(result >= 0)
     {
         matched = 1;
+        *found_offset = ovector[1];        
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                                "Setting Doe_ptr and found_offset: %p %d\n",
+                                doe_ptr, found_offset););
     }
     else if(result == PCRE_ERROR_NOMATCH)
     {
@@ -303,14 +377,6 @@ static int pcre_search(const PcreData *pcre_data,
     {
         matched = !matched;
     }
-    else
-    {
-        
-        *found_offset = ovector[1];        
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Setting Doe_ptr and found_offset: %p %d\n",
-                                doe_ptr, found_offset););
-    }
 
     return matched;
 }
@@ -318,19 +384,24 @@ static int pcre_search(const PcreData *pcre_data,
 int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     PcreData *pcre_data;   /* pointer to the eval string for each test */
-    int found_offset;  /* where is the ending location of the pattern */
-    char *base_ptr, *end_ptr, *start_ptr;
+    int found_offset = -1;  /* where is the ending location of the pattern */
+    const u_int8_t *base_ptr, *end_ptr, *start_ptr;
     int dsize;
     int length; /* length of the buffer pointed to by base_ptr  */
     int matched = 0;
     extern HttpUri UriBufs[URI_COUNT];
-    int i;
+    PROFILE_VARS;
 
     DEBUG_WRAP(char *hexbuf;);
 
+    PREPROC_PROFILE_START(pcrePerfStats);
+
     //short circuit this for testing pcre performance impact
     if( g_nopcre )
+    {
+        PREPROC_PROFILE_END(pcrePerfStats);
         return 0;
+    }
     
     /* get my data */
     pcre_data =(PcreData *) fp_list->context;
@@ -338,16 +409,20 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     /* This is the HTTP case */
     if(pcre_data->options & SNORT_PCRE_URI) 
     {
-        matched = pcre_search(pcre_data,
-                              UriBufs[HTTP_BUFFER_URI].uri,
+        if(p->uri_count && UriBufs[HTTP_BUFFER_URI].length > 0)
+        {
+            matched = pcre_search(pcre_data,
+                              (const char *)UriBufs[HTTP_BUFFER_URI].uri,
                               UriBufs[HTTP_BUFFER_URI].length,
                               0,
                               &found_offset);
             
-        if(matched)
-        {
-            /* don't touch doe_ptr on URI contents */
-            return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+            PREPROC_PROFILE_END(pcrePerfStats);
+            if(matched)
+            {
+                /* don't touch doe_ptr on URI contents */
+                return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+            }
         }
 
         return 0;
@@ -355,16 +430,20 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
     if(pcre_data->options & SNORT_PCRE_BODY) 
     {
-        matched = pcre_search(pcre_data,
-                              UriBufs[HTTP_BUFFER_CLIENT_BODY].uri,
+        if(p->uri_count && UriBufs[HTTP_BUFFER_CLIENT_BODY].length > 0)
+        {
+            matched = pcre_search(pcre_data,
+                              (const char *)UriBufs[HTTP_BUFFER_CLIENT_BODY].uri,
                               UriBufs[HTTP_BUFFER_CLIENT_BODY].length,
                               0,
                               &found_offset);
             
-        if(matched)
-        {
-            /* don't touch doe_ptr on URI contents */
-            return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+            PREPROC_PROFILE_END(pcrePerfStats);
+            if(matched)
+            {
+                /* don't touch doe_ptr on body contents */
+                return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+            }
         }
         return 0;
     }
@@ -373,14 +452,14 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(p->packet_flags & PKT_ALT_DECODE && !(pcre_data->options & SNORT_PCRE_RAWBYTES))
     {
         dsize = p->alt_dsize;
-        start_ptr = (char *) DecodeBuffer;
+        start_ptr = DecodeBuffer;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "using alternative decode buffer in pcre!\n"););
     }
     else
     {
         dsize = p->dsize;
-        start_ptr = (char *) p->data;
+        start_ptr = p->data;
     }
 
     base_ptr = start_ptr;
@@ -393,6 +472,7 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                                     "pcre bounds check failed on a relative content match\n"););
+            PREPROC_PROFILE_END(pcrePerfStats);
             return 0;
         }
         
@@ -419,18 +499,22 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                );
 
 
-    matched = pcre_search(pcre_data, base_ptr, length, 0, &found_offset);
+    matched = pcre_search(pcre_data, (const char *)base_ptr, length, 0, &found_offset);
 
     /* set the doe_ptr if we have a valid offset */
     if(found_offset > 0)
     {
         doe_ptr = (u_int8_t *) base_ptr + found_offset;
     }
-    
+
     while(matched)
     {
         int search_offset = found_offset;
-        int next_found = fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        int next_found;
+
+        PREPROC_PROFILE_TMPEND(pcrePerfStats);
+        next_found = fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        PREPROC_PROFILE_TMPSTART(pcrePerfStats);
 
         if(next_found)
         {
@@ -439,22 +523,27 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             /* set the doe_ptr for stateful pattern matching later */
 
             doe_ptr = (u_int8_t *) base_ptr + found_offset;
+            PREPROC_PROFILE_END(pcrePerfStats);
 
             return 1;
         }
 
         /* if the next option isn't relative and it failed, we're done */
         if (fp_list->next->isRelative == 0)
+        {
+            PREPROC_PROFILE_END(pcrePerfStats);
             return 0;
+        }
 
         /* the other OTNs search's were not successful so we need to keep searching */
         if(search_offset <= 0 || length < search_offset)
         {
             /* make sure that the search offset is reasonable */
+            PREPROC_PROFILE_END(pcrePerfStats);
             return 0;
         }
 
-        matched = pcre_search(pcre_data, base_ptr, length,
+        matched = pcre_search(pcre_data, (const char *)base_ptr, length,
                               search_offset, &found_offset);
 
         /* set the doe_ptr if we have a valid offset */
@@ -462,21 +551,10 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             doe_ptr = (u_int8_t *) base_ptr + found_offset;
         }
-        
-        if(matched)
-        {
-            if(fp_list->next->OptTestFunc(p, otn, fp_list->next))
-            {
-                /* if the OTN checks are successful, return 1, else
-                   return the next iteration */
-
-                return 1;
-            }
-            
-        }            
     }
 
     /* finally return 0 */
+    PREPROC_PROFILE_END(pcrePerfStats);
     return 0;
 }
 

@@ -1,7 +1,7 @@
 /*
  * ftpp_ui_client_lookup.h
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -37,11 +37,11 @@
 
 int ftpp_ui_client_lookup_init(CLIENT_LOOKUP **ClientLookup);
 int ftpp_ui_client_lookup_cleanup(CLIENT_LOOKUP **ClientLookup);
-int ftpp_ui_client_lookup_add(CLIENT_LOOKUP *ClientLookup, unsigned long IP,
+int ftpp_ui_client_lookup_add(CLIENT_LOOKUP *ClientLookup, snort_ip_p IP,
                             FTP_CLIENT_PROTO_CONF *ClientConf);
 
 FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_find(CLIENT_LOOKUP *ClientLookup, 
-                                            unsigned long Ip, int *iError);
+                                            snort_ip_p Ip, int *iError);
 FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_first(CLIENT_LOOKUP *ClientLookup,
                                             int *iError);
 FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_next(CLIENT_LOOKUP *ClientLookup,

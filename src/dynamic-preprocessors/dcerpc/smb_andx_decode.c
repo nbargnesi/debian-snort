@@ -1,7 +1,7 @@
 /*
  * smb_andx_decode.c
  *
- * Copyright (C) 2004-2006 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire,Inc
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -59,6 +59,9 @@ extern DCERPC         *_dcerpc;
 extern SFSnortPacket  *_dcerpc_pkt;
 extern u_int8_t        _disable_smb_fragmentation;
 extern u_int16_t       _max_frag_size;
+extern u_int8_t *dce_reassembly_buf;
+extern u_int16_t dce_reassembly_buf_size;
+extern SFSnortPacket *real_dce_mock_pkt;
 
 static void ReassembleSMBWriteX(SMB_WRITEX_REQ *writeX, u_int8_t *smb_data);
 static int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX,
@@ -76,27 +79,49 @@ static void ReassembleSMBWriteX(SMB_WRITEX_REQ *writeX, u_int8_t *smb_data)
     SMB_WRITEX_REQ temp_writeX;
     u_int16_t      smb_hdr_len = sizeof(SMB_HDR) + sizeof(NBT_HDR);
     u_int16_t      writeX_len = (u_int16_t)(smb_data - (u_int8_t *)writeX);
-    u_int32_t      check_len;
-    int            ret;
+    int            pkt_len;
+    int            status;
     int            padding = writeX_len - sizeof(SMB_WRITEX_REQ);
+    u_int16_t data_len = 0;
 
-    check_len = (u_int32_t)smb_hdr_len + (u_int32_t)writeX_len + (u_int32_t)_dcerpc->write_andx_buf_len;
-
-    /* Make sure we have room to fit into alternate buffer */
-    if ( check_len > _dpd.altBufferLen )
+    /* Do DCE/RPC processing first to see if we get a full DCE/RPC request
+     * If we do we will already have created a packet with all of the 
+     * fragments, so no reason to do anything with the SMB fragments */
+    if (_dcerpc->write_andx_buf_len > 0)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "Reassembled SMB packet greater than %d bytes, skipping.",
-															_dpd.altBufferLen));
-        goto dcerpc_fragfree;
+        int result = ProcessDCERPCMessage(_dcerpc_pkt->payload + sizeof(NBT_HDR),
+                                          (u_int16_t)(sizeof(SMB_HDR) + writeX_len),
+                                          _dcerpc->write_andx_buf,
+                                          _dcerpc->write_andx_buf_len);
+        if (result == 2)
+            goto dcerpc_fragfree;
+    }
+
+    /* If we didn't get the full DCE/RPC message yet (and therefore didn't call
+     * detect), send what we have to detect */
+    pkt_len = smb_hdr_len + sizeof(SMB_WRITEX_REQ) + padding + _dcerpc->write_andx_buf_len;
+
+    /* Make sure we have room to fit into reassembly buffer */
+    if (pkt_len > dce_reassembly_buf_size)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "Reassembled SMB packet greater "
+                                "than %d bytes, skipping.", dce_reassembly_buf_size););
+
+        /* just shorten it - don't want to lose all of
+         * this information */
+        _dcerpc->write_andx_buf_len = 
+            dce_reassembly_buf_size - (pkt_len - _dcerpc->write_andx_buf_len);
     }
 
     /* Mock up header */
-    ret = SafeMemcpy(&temp_writeX, writeX, sizeof(SMB_WRITEX_REQ), &temp_writeX, (u_int8_t *)&temp_writeX + sizeof(SMB_WRITEX_REQ));
+    status = SafeMemcpy(&temp_writeX, writeX, sizeof(SMB_WRITEX_REQ),
+                        &temp_writeX,
+                        (u_int8_t *)&temp_writeX + sizeof(SMB_WRITEX_REQ));
 
-    if (ret == 0)
+    if (status != SAFEMEM_SUCCESS)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "WriteAndX header too big: %u, skipping SMB reassembly.",
-                                 _dpd.altBufferLen));
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "WriteAndX header too big: %u, "
+                                "skipping SMB reassembly.", dce_reassembly_buf_size););
         goto dcerpc_fragfree;
     }
 
@@ -108,48 +133,53 @@ static void ReassembleSMBWriteX(SMB_WRITEX_REQ *writeX, u_int8_t *smb_data)
 
     /* Copy headers into buffer */
     /* SMB Header */
-    ret = SafeMemcpy(_dpd.altBuffer, _dcerpc_pkt->payload, smb_hdr_len,
-                            _dpd.altBuffer, _dpd.altBuffer + _dpd.altBufferLen);
-    if ( ret == 0 )
+    status = SafeMemcpy(dce_reassembly_buf, _dcerpc_pkt->payload, smb_hdr_len,
+                        dce_reassembly_buf, dce_reassembly_buf + dce_reassembly_buf_size);
+
+    if (status != SAFEMEM_SUCCESS)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "WriteAndX header too big: %u, skipping SMB reassembly.",
-															_dpd.altBufferLen));
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "SMB header too big: %u, "
+                                "skipping SMB reassembly.", dce_reassembly_buf_size););
         goto dcerpc_fragfree;
     }
 
-    _dcerpc_pkt->normalized_payload_size = smb_hdr_len;
+    data_len = smb_hdr_len;
     
     /* Write AndX header */
-    ret = SafeMemcpy(_dpd.altBuffer + _dcerpc_pkt->normalized_payload_size, &temp_writeX,
-                     sizeof(SMB_WRITEX_REQ), _dpd.altBuffer, _dpd.altBuffer + _dpd.altBufferLen);
-    if ( ret == 0 )
+    status = SafeMemcpy(dce_reassembly_buf + data_len,
+                        &temp_writeX, sizeof(SMB_WRITEX_REQ),
+                        dce_reassembly_buf, dce_reassembly_buf + dce_reassembly_buf_size);
+
+    if (status != SAFEMEM_SUCCESS)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "WriteAndX header too big: %u, skipping SMB reassembly.",
-															_dpd.altBufferLen));
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "WriteAndX header too big: %u, "
+                                "skipping SMB reassembly.", dce_reassembly_buf_size););
         goto dcerpc_fragfree;
     }
-    _dcerpc_pkt->normalized_payload_size += sizeof(SMB_WRITEX_REQ);
+
+    data_len += sizeof(SMB_WRITEX_REQ);
 
     /* Account for optional padding byte in WriteAndX header.  It is never used so we don't write it. */
-    _dcerpc_pkt->normalized_payload_size += padding;
+    data_len += padding;
     
     /* Copy data into buffer */
-    ret = SafeMemcpy(_dpd.altBuffer + _dcerpc_pkt->normalized_payload_size, _dcerpc->write_andx_buf,
-                    _dcerpc->write_andx_buf_len, _dpd.altBuffer, _dpd.altBuffer + _dpd.altBufferLen);
-    if ( ret == 0 )
+    status = SafeMemcpy(dce_reassembly_buf + data_len,
+                        _dcerpc->write_andx_buf, _dcerpc->write_andx_buf_len,
+                        dce_reassembly_buf, dce_reassembly_buf + dce_reassembly_buf_size);
+
+    if (status != SAFEMEM_SUCCESS)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "WriteAndX header too big: %u, skipping SMB reassembly.",
-															_dpd.altBufferLen));
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "SMB fragments too big: %u, "
+                                "skipping SMB reassembly.", dce_reassembly_buf_size););
         goto dcerpc_fragfree;
     }
-    _dcerpc_pkt->normalized_payload_size += _dcerpc->write_andx_buf_len;
 
-    _dcerpc_pkt->flags |= FLAG_ALT_DECODE;
+    data_len += _dcerpc->write_andx_buf_len;
 
-    if (_dcerpc->write_andx_buf_len > 0)
-        ProcessDCERPCMessage(_dcerpc_pkt->payload + sizeof(NBT_HDR),
-                             sizeof(SMB_HDR) + writeX_len,
-                             _dcerpc->write_andx_buf, _dcerpc->write_andx_buf_len);
+    /* create pseudo packet */
+    real_dce_mock_pkt = DCERPC_SetPseudoPacket(_dcerpc_pkt, dce_reassembly_buf, data_len);
+    if (real_dce_mock_pkt == NULL)
+        goto dcerpc_fragfree;
 
 dcerpc_fragfree:
     /* Get ready for next write */
@@ -174,11 +204,12 @@ int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX, u_int8_t *smb_d
     /* If not yet reassembling, attempt to parse as full DCE/RPC packet */
     if ( !(_dcerpc->fragmentation & SMB_FRAGMENTATION) )
     {
-        success = ProcessDCERPCMessage(smb_hdr, smb_data - smb_hdr, smb_data, data_size);
+        success = ProcessDCERPCMessage(smb_hdr, (u_int16_t)(smb_data - smb_hdr), smb_data, data_size);
 
         if ( success )
             return 0;
     }
+
 
     /* Set up writeX buffer to save SMB data.  Ignore dataLengthHigh, since we won't
         handle fragments that big.  */
@@ -198,7 +229,7 @@ int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX, u_int8_t *smb_d
 
         if ( writeX_length == 0 )
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "Memcap reached, ignoring SMB fragmentation reassembly.\n"););
+            DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "Memcap reached, ignoring SMB fragmentation reassembly.\n"););
 
             DCERPC_FragFree(_dcerpc->write_andx_buf, 0);
             _dcerpc->write_andx_buf = NULL;
@@ -221,7 +252,7 @@ int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX, u_int8_t *smb_d
 
         if ( _dcerpc->write_andx_buf_size >= (0xFFFF - writeX_length) )
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "SMB fragmentation overflow.\n"););
+            DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "SMB fragmentation overflow.\n"););
 
             _dcerpc->fragmentation |= SUSPEND_FRAGMENTATION;
             
@@ -238,7 +269,7 @@ int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX, u_int8_t *smb_d
             
         if ( new_size == _dcerpc->write_andx_buf_size )
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "Memcap reached, suspending SMB fragmentation reassembly.\n"););
+            DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "Memcap reached, suspending SMB fragmentation reassembly.\n"););
 
             _dcerpc->fragmentation |= SUSPEND_FRAGMENTATION;
             
@@ -273,7 +304,7 @@ int SMB_Fragmentation(u_int8_t *smb_hdr, SMB_WRITEX_REQ *writeX, u_int8_t *smb_d
     ret = SafeMemcpy(_dcerpc->write_andx_buf + _dcerpc->write_andx_buf_len, smb_data, writeX_length,
                      _dcerpc->write_andx_buf, _dcerpc->write_andx_buf + _dcerpc->write_andx_buf_size);
 
-    if (ret == 0)
+    if (ret != SAFEMEM_SUCCESS)
     {
         DCERPC_FragFree(_dcerpc->write_andx_buf, _dcerpc->write_andx_buf_size);
         _dcerpc->write_andx_buf = NULL;
@@ -763,7 +794,9 @@ int ProcessSMBTransaction(SMB_HDR *smbHdr, u_int8_t *data, u_int16_t size, u_int
         return 0;
 
     if (dcerpc_data_len > 0)
-        ProcessDCERPCMessage((u_int8_t *)smbHdr, dcerpc_data - (u_int8_t *)smbHdr, dcerpc_data, dcerpc_data_len);
+        ProcessDCERPCMessage((u_int8_t *)smbHdr,
+		                     (u_int16_t)(dcerpc_data - (u_int8_t *)smbHdr), 
+		                     dcerpc_data, dcerpc_data_len);
 
 #ifdef DEBUG_DCERPC_PRINT
     printf("Trans data: %02.*X\n", dcerpc_data_len, dcerpc_data);

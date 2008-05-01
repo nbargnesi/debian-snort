@@ -1,7 +1,7 @@
 /*
  * snort_dcerpc.c
  *
- * Copyright (C) 2004-2006 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire,Inc
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -33,7 +33,9 @@
  *
  */
 
+#include <stdlib.h>
 #include <string.h>
+#include <pcap.h>
 
 #include "debug.h"
 #include "snort_dcerpc.h"
@@ -42,20 +44,20 @@
 #include "smb_file_decode.h"
 #include "dcerpc.h"
 #include "dcerpc_util.h"
+#include "bounds.h"
 
 #include "profiler.h"
 #ifdef PERF_PROFILING
 extern PreprocStats dcerpcPerfStats;
 extern PreprocStats dcerpcDetectPerfStats;
 extern PreprocStats dcerpcIgnorePerfStats;
-extern int dcerpcDetectCalled;
 #endif
 
 extern char SMBPorts[MAX_PORT_INDEX];
 extern char DCERPCPorts[MAX_PORT_INDEX];
 
 extern u_int8_t _autodetect;
-    
+
 static int DCERPC_Setup(void *pkt);
 
 /* Session structure */
@@ -63,9 +65,227 @@ DCERPC    *_dcerpc;
 /* Save packet so we don't have to pass it around */
 SFSnortPacket *_dcerpc_pkt;
 
+u_int8_t *dce_reassembly_buf = NULL;
+const u_int16_t dce_reassembly_buf_size = IP_MAXPKT - (IP_HDR_LEN + TCP_HDR_LEN);
+
+/* this is used to store one of the below */
+SFSnortPacket *real_dce_mock_pkt = NULL;
+
+SFSnortPacket *dce_mock_pkt = NULL;
+const u_int16_t dce_mock_pkt_payload_len = IP_MAXPKT - (IP_HDR_LEN + TCP_HDR_LEN);
+#ifdef SUP_IP6
+SFSnortPacket *dce_mock_pkt_6 = NULL;
+const u_int16_t dce_mock_pkt_6_payload_len = IP_MAXPKT - (IP6_HDR_LEN + TCP_HDR_LEN);
+#endif
+
+void * DCERPC_GetReassemblyPkt(void)
+{
+    if (real_dce_mock_pkt != NULL)
+        return (void *)real_dce_mock_pkt;
+
+    return NULL;
+}
+ 
+SFSnortPacket * DCERPC_SetPseudoPacket(SFSnortPacket *p, const u_int8_t *data, u_int16_t data_len)
+{
+    SFSnortPacket *ret_pkt = dce_mock_pkt;
+    u_int16_t payload_len = dce_mock_pkt_payload_len;
+    u_int16_t ip_len;
+    int result;
+
+#ifdef SUP_IP6
+    if (p->family == AF_INET)
+    {
+        IP_COPY_VALUE(ret_pkt->ip4h.ip_src, (&p->ip4h.ip_src));
+        IP_COPY_VALUE(ret_pkt->ip4h.ip_dst, (&p->ip4h.ip_dst));
+
+        ((IPV4Header *)ret_pkt->ip4_header)->source.s_addr = p->ip4h.ip_src.ip32[0];
+        ((IPV4Header *)ret_pkt->ip4_header)->destination.s_addr = p->ip4h.ip_dst.ip32[0];
+    }
+    else
+    {
+        ret_pkt = dce_mock_pkt_6;
+
+        IP_COPY_VALUE(ret_pkt->ip6h.ip_src, (&p->ip6h.ip_src));
+        IP_COPY_VALUE(ret_pkt->ip6h.ip_dst, (&p->ip6h.ip_dst));
+
+        payload_len = dce_mock_pkt_6_payload_len;
+    }
+
+    ret_pkt->family = p->family;
+
+#else
+    ((IPV4Header *)ret_pkt->ip4_header)->source.s_addr = p->ip4_header->source.s_addr;
+    ((IPV4Header *)ret_pkt->ip4_header)->destination.s_addr = p->ip4_header->destination.s_addr;
+#endif
+
+    ((TCPHeader *)ret_pkt->tcp_header)->source_port = p->tcp_header->source_port;
+    ((TCPHeader *)ret_pkt->tcp_header)->destination_port = p->tcp_header->destination_port;
+    ret_pkt->src_port = p->src_port;
+    ret_pkt->dst_port = p->dst_port;
+
+    if(p->ether_header != NULL)
+    {
+        result = SafeMemcpy((void *)((EtherHeader *)ret_pkt->ether_header)->ether_source,
+                            (void *)p->ether_header->ether_source,
+                            (size_t)6,
+                            (void *)ret_pkt->ether_header->ether_source,
+                            (void *)((u_int8_t *)ret_pkt->ether_header->ether_source + 6));
+
+        if (result != SAFEMEM_SUCCESS)
+            return NULL;
+
+        result = SafeMemcpy((void *)((EtherHeader *)ret_pkt->ether_header)->ether_destination,
+                            (void *)p->ether_header->ether_destination,
+                            (size_t)6,
+                            (void *)ret_pkt->ether_header->ether_destination,
+                            (void *)((u_int8_t *)ret_pkt->ether_header->ether_destination + 6));
+
+        if (result != SAFEMEM_SUCCESS)
+            return NULL;
+    }
+
+    if (data_len > payload_len)
+        data_len = payload_len;
+
+    result = SafeMemcpy((void *)ret_pkt->payload, (void *)data, (size_t)data_len,
+                        (void *)ret_pkt->payload,
+                        (void *)((u_int8_t *)ret_pkt->payload + payload_len));
+
+    if (result != SAFEMEM_SUCCESS)
+        return NULL;
+
+    ret_pkt->payload_size = data_len;
+
+    ((struct pcap_pkthdr *)ret_pkt->pcap_header)->caplen =
+        ret_pkt->payload_size + IP_HDR_LEN + TCP_HDR_LEN + ETHER_HDR_LEN;
+    ((struct pcap_pkthdr *)ret_pkt->pcap_header)->len = ret_pkt->pcap_header->caplen;
+    ((struct pcap_pkthdr *)ret_pkt->pcap_header)->ts.tv_sec = p->pcap_header->ts.tv_sec;
+    ((struct pcap_pkthdr *)ret_pkt->pcap_header)->ts.tv_usec = p->pcap_header->ts.tv_usec;
+
+    ip_len = (u_int16_t)(ret_pkt->payload_size + IP_HDR_LEN + TCP_HDR_LEN);
+#ifdef SUP_IP6
+    if (p->family == AF_INET)
+    {
+        ret_pkt->ip4h.ip_len = ((IPV4Header *)ret_pkt->ip4_header)->data_length = htons(ip_len);
+    }
+    else
+    {
+        ip_len = (u_int16_t)(ret_pkt->payload_size + IP6_HDR_LEN + TCP_HDR_LEN);
+        ret_pkt->ip6h.len = htons(ip_len);
+    }
+#else
+    ((IPV4Header *)ret_pkt->ip4_header)->data_length = htons(ip_len);
+#endif
+
+    ret_pkt->flags = FLAG_STREAM_EST;
+    ret_pkt->flags |= FLAG_FROM_CLIENT;
+    ret_pkt->flags |= FLAG_DCE_RPKT;
+    ret_pkt->stream_session_ptr = p->stream_session_ptr;
+
+    /* Set bit in wire packet to indicate a reassembled packet needs to
+     * be detected upon */
+    _dpd.setPreprocGetReassemblyPktBit(_dcerpc_pkt, PP_DCERPC);
+
+    return ret_pkt;
+}
+
+void DCERPC_InitPacket(void)
+{
+    /* Alloc for global reassembly buffers */
+    dce_reassembly_buf = (u_int8_t *)calloc(1, dce_reassembly_buf_size);
+    if (dce_reassembly_buf == NULL)
+    {
+        DynamicPreprocessorFatalMessage("Failed to allocate memory for "
+                                        "reassembly packet\n");
+    }
+
+    /* Alloc for mock packets */
+    dce_mock_pkt = (SFSnortPacket *)calloc(1, sizeof(SFSnortPacket));
+    if (dce_mock_pkt == NULL)
+    {
+        DynamicPreprocessorFatalMessage("Failed to allocate memory for "
+                                        "mock packet\n");
+    }
+
+    dce_mock_pkt->pcap_header = calloc(1, sizeof(struct pcap_pkthdr) +
+                                             ETHER_HDR_LEN +
+                                             SUN_SPARC_TWIDDLE + IP_MAXPKT);
+    if (dce_mock_pkt->pcap_header == NULL)
+    {
+        DynamicPreprocessorFatalMessage("Failed to allocate memory "
+                                        "for mock pcap header\n");
+    }
+
+    dce_mock_pkt->pkt_data =
+        ((u_int8_t *)dce_mock_pkt->pcap_header) + sizeof(struct pcap_pkthdr);
+    dce_mock_pkt->ether_header = 
+        (void *)((u_int8_t *)dce_mock_pkt->pkt_data + SUN_SPARC_TWIDDLE);
+    dce_mock_pkt->ip4_header =
+        (IPV4Header *)((u_int8_t *)dce_mock_pkt->ether_header + ETHER_HDR_LEN);
+    dce_mock_pkt->tcp_header =
+        (TCPHeader *)((u_int8_t *)dce_mock_pkt->ip4_header + IP_HDR_LEN);
+
+    dce_mock_pkt->payload = (u_int8_t *)dce_mock_pkt->tcp_header + TCP_HDR_LEN;
+
+    ((EtherHeader *)dce_mock_pkt->ether_header)->ethernet_type = htons(0x0800);
+    SET_IP4_VER((IPV4Header *)dce_mock_pkt->ip4_header, 0x4);
+    SET_IP4_HLEN((IPV4Header *)dce_mock_pkt->ip4_header, 0x5);
+    ((IPV4Header *)dce_mock_pkt->ip4_header)->proto = IPPROTO_TCP;
+    ((IPV4Header *)dce_mock_pkt->ip4_header)->time_to_live = 0xF0;
+    ((IPV4Header *)dce_mock_pkt->ip4_header)->type_service = 0x10;
+
+    SET_TCP_HDR_OFFSET((TCPHeader *)dce_mock_pkt->tcp_header, 0x5);
+    ((TCPHeader *)dce_mock_pkt->tcp_header)->flags = TCPHEADER_PUSH | TCPHEADER_ACK;
+
+#ifdef SUP_IP6    
+    _dpd.ip6Build((void *)dce_mock_pkt, dce_mock_pkt->ip4_header, AF_INET);
+
+    /* Same thing as above, but for the IPv6-enabled packet */
+    dce_mock_pkt_6 = (SFSnortPacket *)calloc(1, sizeof(SFSnortPacket));
+    if (dce_mock_pkt_6 == NULL)
+    {
+        DynamicPreprocessorFatalMessage("Failed to allocate memory for "
+                                        "mock IPv6 packet\n");
+    }
+
+    dce_mock_pkt_6->pcap_header = calloc(1, sizeof(struct pcap_pkthdr) +
+                                               ETHER_HDR_LEN +
+                                               SUN_SPARC_TWIDDLE + IP_MAXPKT);
+    if (dce_mock_pkt_6 == NULL)
+    {
+        DynamicPreprocessorFatalMessage("Failed to allocate memory for "
+                                        "mock IPv6 pcap header\n");
+    }
+
+    dce_mock_pkt_6->pkt_data =
+        ((u_int8_t *)dce_mock_pkt_6->pcap_header) + sizeof(struct pcap_pkthdr);
+    dce_mock_pkt_6->ether_header =
+        (void *)((u_int8_t *)dce_mock_pkt_6->pkt_data + SUN_SPARC_TWIDDLE);
+    dce_mock_pkt_6->ip4_header =
+        (IPV4Header *)((u_int8_t *)dce_mock_pkt_6->ether_header + ETHER_HDR_LEN);
+    dce_mock_pkt_6->tcp_header =
+        (TCPHeader *)((u_int8_t *)dce_mock_pkt_6->ip4_header + IP6_HEADER_LEN);
+
+    dce_mock_pkt_6->payload = (u_int8_t *)dce_mock_pkt_6->tcp_header + TCP_HDR_LEN;
+
+    ((EtherHeader *)dce_mock_pkt_6->ether_header)->ethernet_type = htons(0x0800);
+    SET_IP4_VER((IPV4Header *)dce_mock_pkt_6->ip4_header, 0x4);
+    SET_IP4_HLEN((IPV4Header *)dce_mock_pkt_6->ip4_header, 0x5);
+    ((IPV4Header *)dce_mock_pkt_6->ip4_header)->type_service = 0x10;
+    dce_mock_pkt_6->ip6h.next = ((IPV4Header *)dce_mock_pkt_6->ip4_header)->proto = IPPROTO_TCP;
+    dce_mock_pkt_6->ip6h.hop_lmt = ((IPV4Header *)dce_mock_pkt_6->ip4_header)->time_to_live = 0xF0;
+    dce_mock_pkt_6->ip6h.len = IP6_HEADER_LEN >> 2;
+ 
+    _dpd.ip6SetCallbacks((void *)dce_mock_pkt_6, AF_INET6);
+
+    SET_TCP_HDR_OFFSET((TCPHeader *)dce_mock_pkt_6->tcp_header, 0x5);
+    ((TCPHeader *)dce_mock_pkt_6->tcp_header)->flags = TCPHEADER_PUSH | TCPHEADER_ACK;
+#endif
+}
 
 
-int ProcessRawSMB(SFSnortPacket *p, u_int8_t *data, u_int16_t size)
+int ProcessRawSMB(SFSnortPacket *p, const u_int8_t *data, u_int16_t size)
 {
     /* Must remember to convert stuff to host order before using it... */
     SMB_HDR *smbHdr;
@@ -101,7 +321,7 @@ int ProcessRawSMB(SFSnortPacket *p, u_int8_t *data, u_int16_t size)
 }
 
 
-inline int ProcessRawDCERPC(SFSnortPacket *p, u_int8_t *data, u_int16_t size)
+inline int ProcessRawDCERPC(SFSnortPacket *p, const u_int8_t *data, u_int16_t size)
 {
     if ( DCERPC_Setup(p) == 0 )
     {
@@ -174,7 +394,7 @@ static int DCERPC_Setup(void *pkt)
 	return 1;
 }
 
-int DCERPC_AutoDetect(SFSnortPacket *p, u_int8_t *data, u_int16_t size)
+int DCERPC_AutoDetect(SFSnortPacket *p, const u_int8_t *data, u_int16_t size)
 {
     NBT_HDR *nbtHdr;
     SMB_HDR *smbHdr;
@@ -230,6 +450,8 @@ int DCERPCDecode(void *pkt)
     if ( p->flags & FLAG_REBUILT_STREAM )
         return 0;
 
+    real_dce_mock_pkt = NULL;
+
     if ( _autodetect )
         return DCERPC_AutoDetect(p, p->payload, p->payload_size);
     
@@ -252,6 +474,26 @@ int DCERPCDecode(void *pkt)
 
 void DCERPC_Exit(void)
 {
+    if (dce_reassembly_buf != NULL)
+        free((void *)dce_reassembly_buf);
+
+    if (dce_mock_pkt != NULL)
+    {
+        if (dce_mock_pkt->pcap_header != NULL)
+            free((void *)dce_mock_pkt->pcap_header);
+
+        free((void *)dce_mock_pkt);
+    }
+#ifdef SUP_IP6
+    if (dce_mock_pkt_6 != NULL)
+    {
+        if (dce_mock_pkt_6->pcap_header != NULL)
+            free((void *)dce_mock_pkt_6->pcap_header);
+
+        free((void *)dce_mock_pkt_6);
+    }
+#endif
+
 #ifdef PERF_PROFILING
 #ifdef DEBUG_DCERPC_PRINT
     printf("SMB Debug\n");

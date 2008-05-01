@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -220,14 +221,13 @@ int sf_sdlist_remove(sfSDList *list, SDListItem *item)
     return 0;
 }
 
-
 void print_sdlist(sfSDList *a)
 {
     SDListItem *li;
     printf("***");
     printf(" size: %d\n", a->size);
     for(li = a->head; li != NULL; li = li->next) {
-        printf(" `- %p\n", li);
+        printf(" `- %p\n", (void*)li);
     }
 }
 

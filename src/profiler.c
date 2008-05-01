@@ -3,7 +3,7 @@
 ** 
 **  profiler.c
 **
-**  Copyright (C) 2005 Sourcefire,Inc
+**  Copyright (C) 2005-2008 Sourcefire, Inc.
 **  Steven Sturges <ssturges@sourcefire.com>
 **
 **  This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "snort.h"
 #include "rules.h"
@@ -34,28 +35,9 @@
 #include "util.h"
 #include "rules.h"
 #include "profiler.h"
-#include <unistd.h>
+#include "sf_types.h"
 
 #ifdef PERF_PROFILING
-double ticks_per_microsec = 0.0;
-
-void getTicksPerMicrosec()
-{
-    if (ticks_per_microsec == 0.0)
-    {
-        PROFILE_VARS;
-
-        PROFILE_START;
-#ifndef WIN32
-        sleep(1);
-#else
-        Sleep(1000);
-#endif
-        PROFILE_END;
-        ticks_per_microsec = (double) ticks_delta/1000000;
-    }
-}
-
 typedef struct _OTN_WorstPerformer
 {
     OptTreeNode *otn;
@@ -66,7 +48,71 @@ typedef struct _OTN_WorstPerformer
     double ticks_per_nomatch;
 } OTN_WorstPerformer;
 
+double ticks_per_microsec = 0.0;
 OTN_WorstPerformer *worstPerformers = NULL;
+
+extern RuleListNode *RuleLists;
+extern PreprocStats mpsePerfStats, rulePerfStats;
+
+static void ResetRuleList(RuleTreeNode *list);
+
+
+void getTicksPerMicrosec(void)
+{
+    if (ticks_per_microsec == 0.0)
+    {
+        ticks_per_microsec = get_ticks_per_usec();
+    }
+}
+
+
+static void ResetRuleList(RuleTreeNode *list)
+{
+    RuleTreeNode *rtn = NULL;
+    OptTreeNode *otn = NULL;
+
+    for (rtn = list; rtn != NULL; rtn = rtn->right)
+    {
+        for (otn = rtn->down; otn != NULL; otn = otn->next)
+        {
+            otn->ticks = 0;
+            otn->ticks_match = 0;
+            otn->ticks_no_match = 0;
+            otn->checks = 0;
+            otn->matches = 0;
+            otn->alerts = 0;
+            otn->noalerts = 0; 
+        }
+    }
+}
+
+void ResetRuleProfiling(void)
+{
+    /* Cycle through all Rules, print ticks & check count for each */
+    RuleListNode *rule;
+
+    if (!pv.profile_rules_flag)
+        return;
+
+    for (rule = RuleLists; rule != NULL; rule = rule->next)
+    {
+        if (!rule->RuleList)
+            continue;
+
+        /* TCP list */
+        ResetRuleList(rule->RuleList->TcpList);
+
+        /* UDP list */
+        ResetRuleList(rule->RuleList->UdpList);
+
+        /* ICMP list */
+        ResetRuleList(rule->RuleList->IcmpList);
+
+        /* IP list */
+        ResetRuleList(rule->RuleList->IpList);
+    }
+}
+
 void PrintWorstRules(int numToPrint)
 {
     OptTreeNode *otn;
@@ -119,19 +165,16 @@ void PrintWorstRules(int numToPrint)
         //if (!node)
         //    break;
         otn = node->otn;
-#ifdef WIN32
-        LogMessage("%*d%*d%*d%*I64i%*I64i%*I64i%*I64i%*.1f%*.1f%*.1f\n",
-#else
-        LogMessage("%*d%*d%*d%*llu%*llu%*llu%*llu%*.1f%*.1f%*.1f\n",
-#endif
-            6, num, 9, otn->sigInfo.id, 4, otn->sigInfo.generator,
-            11, otn->checks, 
-            10, otn->matches,
-            10, otn->alerts,
-            20, (UINT64)(otn->ticks/ticks_per_microsec),
-            11, node->ticks_per_check/ticks_per_microsec,
-            11, node->ticks_per_match/ticks_per_microsec,
-            13, node->ticks_per_nomatch/ticks_per_microsec);
+
+        LogMessage("%*d%*d%*d" FMTu64("*") FMTu64("*") FMTu64("*") FMTu64("*") "%*.1f%*.1f%*.1f\n",
+                   6, num, 9, otn->sigInfo.id, 4, otn->sigInfo.generator,
+                   11, otn->checks, 
+                   10, otn->matches,
+                   10, otn->alerts,
+                   20, (UINT64)(otn->ticks/ticks_per_microsec),
+                   11, node->ticks_per_check/ticks_per_microsec,
+                   11, node->ticks_per_match/ticks_per_microsec,
+                   13, node->ticks_per_nomatch/ticks_per_microsec);
     }
 
     /* Do some cleanup */
@@ -141,6 +184,8 @@ void PrintWorstRules(int numToPrint)
         free(node);
         node = tmp;
     }
+
+    worstPerformers = NULL;
 }
 
 void CollectRTNProfile(RuleTreeNode *list)
@@ -176,7 +221,7 @@ void CollectRTNProfile(RuleTreeNode *list)
                  * Cycle through the list and add
                  * this where it goes
                  */
-                new = (OTN_WorstPerformer *)calloc(1, sizeof(OTN_WorstPerformer));
+                new = (OTN_WorstPerformer *)SnortAlloc(sizeof(OTN_WorstPerformer));
                 new->otn = otn;
                 new->ticks_per_check = ticks_per_check;
                 new->ticks_per_match = ticks_per_match;
@@ -266,9 +311,8 @@ void CollectRTNProfile(RuleTreeNode *list)
     }
 }
 
-extern RuleListNode *RuleLists;
 
-void ShowRuleProfiles()
+void ShowRuleProfiles(void)
 {
     /* Cycle through all Rules, print ticks & check count for each */
     RuleListNode *rule;
@@ -368,6 +412,7 @@ typedef struct _Preproc_WorstPerformer
     struct _Preproc_WorstPerformer *children;
     double ticks_per_check;
     double pct_of_parent;
+    double pct_of_total;
 } Preproc_WorstPerformer;
 
 Preproc_WorstPerformer *worstPreprocPerformers = NULL;
@@ -394,35 +439,31 @@ void PrintPreprocPerformance(int num, Preproc_WorstPerformer *idx)
     if (num != 0)
     {
         indent += 2;
-#ifdef WIN32
-        LogMessage("%*d%*s%*d%*I64i%*I64i%*I64i%*.1f%*.1f\n",
-#else
-        LogMessage("%*d%*s%*d%*llu%*llu%*llu%*.1f%*.1f\n",
-#endif
-            indent, num,
-            28 - indent, idx->node->name, 6, idx->node->layer,
-            11, idx->node->stats->checks, 
-            11, idx->node->stats->exits, 
-            20, (UINT64)(idx->node->stats->ticks/ticks_per_microsec),
-            11, idx->ticks_per_check/ticks_per_microsec,
-            14, idx->pct_of_parent);
+
+        LogMessage("%*d%*s%*d" FMTu64("*") FMTu64("*") FMTu64("*") "%*.2f%*.2f%*.2f\n",
+                   indent, num,
+                   28 - indent, idx->node->name, 6, idx->node->layer,
+                   11, idx->node->stats->checks, 
+                   11, idx->node->stats->exits, 
+                   20, (UINT64)(idx->node->stats->ticks/ticks_per_microsec),
+                   11, idx->ticks_per_check/ticks_per_microsec,
+                   14, idx->pct_of_parent,
+                   13, idx->pct_of_total);
     }
     else
     {
         /* The totals */
         indent += strlen(idx->node->name);
-#ifdef WIN32
-        LogMessage("%*s%*s%*d%*I64i%*I64i%*I64i%*.1f%*.1f\n",
-#else
-        LogMessage("%*s%*s%*d%*llu%*llu%*llu%*.1f%*.1f\n",
-#endif
-            indent, idx->node->name,
-            28 - indent, idx->node->name, 6, idx->node->layer,
-            11, idx->node->stats->checks, 
-            11, idx->node->stats->exits, 
-            20, (UINT64)(idx->node->stats->ticks/ticks_per_microsec),
-            11, idx->ticks_per_check/ticks_per_microsec,
-            14, idx->pct_of_parent);
+
+        LogMessage("%*s%*s%*d" FMTu64("*") FMTu64("*") FMTu64("*") "%*.2f%*.2f%*.2f\n",
+                   indent, idx->node->name,
+                   28 - indent, idx->node->name, 6, idx->node->layer,
+                   11, idx->node->stats->checks, 
+                   11, idx->node->stats->exits, 
+                   20, (UINT64)(idx->node->stats->ticks/ticks_per_microsec),
+                   11, idx->ticks_per_check/ticks_per_microsec,
+                   14, idx->pct_of_parent,
+                   13, idx->pct_of_parent);
     }
 
     child = idx->children;
@@ -458,7 +499,7 @@ void PrintWorstPreprocs(int numToPrint)
         return;
     }
 
-    LogMessage("%*s%*s%*s%*s%*s%*s%*s%*s\n",
+    LogMessage("%*s%*s%*s%*s%*s%*s%*s%*s%*s\n",
             4, "Num",
             24, "Preprocessor",
             6, "Layer",
@@ -466,16 +507,18 @@ void PrintWorstPreprocs(int numToPrint)
             11, "Exits",
             20, "Microsecs",
             11, "Avg/Check",
-            14, "Pct of Caller");
-    LogMessage("%*s%*s%*s%*s%*s%*s%*s%*s\n",
+            14, "Pct of Caller",
+            13, "Pct of Total");
+    LogMessage("%*s%*s%*s%*s%*s%*s%*s%*s%*s\n",
             4, "===",
             24, "============",
             6, "=====",
             11, "======",
             11, "=====",
-            20, "=====",
+            20, "=========",
             11, "=========",
-            14, "=============");
+            14, "=============",
+            13, "============");
 
     for (idx = worstPreprocPerformers, num=1;
          idx && ((numToPrint < 0) ? 1 : (num <= numToPrint));
@@ -491,13 +534,14 @@ void PrintWorstPreprocs(int numToPrint)
         //if (!idx)
         //    break;
         PrintPreprocPerformance(num, idx);
-        //LogMessage("%*d%*s%*d%*d%*llu%*.1f%*.1f\n",
+        //LogMessage("%*d%*s%*d%*d" FMTu64("*") "%*.1f%*.1f\n",
         //    6, num, 20, idx->node->name, 6, idx->node->layer,
         //    11, idx->node->stats->checks, 
         //    11, idx->node->stats->exits, 
         //    20, idx->node->stats->ticks,
         //    11, idx->ticks_per_check,
-        //    14, idx->pct_of_parent);
+        //    14, idx->pct_of_parent,
+        //    14, idx->pct_of_total);
     }
     if (total)
         PrintPreprocPerformance(0, total);
@@ -509,6 +553,8 @@ void PrintWorstPreprocs(int numToPrint)
         free(idx);
         idx = tmp;
     }
+
+    worstPreprocPerformers = NULL;
 }
 
 Preproc_WorstPerformer *findPerfParent(PreprocStatsNode *node,
@@ -542,8 +588,23 @@ Preproc_WorstPerformer *findPerfParent(PreprocStatsNode *node,
     return NULL;
 }
 
-extern PreprocStats mpsePerfStats, rulePerfStats;
-void ShowPreprocProfiles()
+void ResetPreprocProfiling(void)
+{
+    PreprocStatsNode *idx = NULL;
+
+    if (!pv.profile_preprocs_flag)
+        return;
+
+    for (idx = PreprocStatsNodeList; idx != NULL; idx = idx->next)
+    {
+        idx->stats->ticks = 0;
+        idx->stats->ticks_start = 0;
+        idx->stats->checks = 0;
+        idx->stats->exits = 0;
+    }
+}
+
+void ShowPreprocProfiles(void)
 {
     /* Cycle through all Rules, print ticks & check count for each */
     PreprocStatsNode *idx;
@@ -592,11 +653,13 @@ void ShowPreprocProfiles()
                     parent = NULL;
                 }
                 new->pct_of_parent = (double)idx->stats->ticks/idx->parent->ticks*100.0;
+                new->pct_of_total = (double)idx->stats->ticks/totalPerfStats.ticks*100.0;
             }
             else
             {
                 parent = NULL;
                 new->pct_of_parent = 0.0;
+                new->pct_of_total = 100.0;
                 listhead = worstPreprocPerformers;
             }
 

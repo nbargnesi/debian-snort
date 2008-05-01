@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -24,4 +25,9 @@
 #define __SP_CLIENTSERVER_H__
 
 void SetupClientServer(void);
+int OtnFlowFromServer( OptTreeNode * otn );
+int OtnFlowFromClient( OptTreeNode * otn );
+int OtnFlowIgnoreReassembled( OptTreeNode * otn );
+int OtnFlowOnlyReassembled( OptTreeNode * otn );
+
 #endif  /* __SP_CLIENTSERVER_H__ */

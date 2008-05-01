@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -41,6 +42,13 @@
 #define M_ANY     2
 #define M_NOT     3
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats tcpFlagsPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 typedef struct _TCPFlagCheckData
 {
     u_char mode;
@@ -57,7 +65,10 @@ int CheckTcpFlags(Packet *, struct _OptTreeNode *, OptFpList *);
 
 void SetupTCPFlagCheck(void)
 {
-    RegisterPlugin("flags", TCPFlagCheckInit);
+    RegisterPlugin("flags", TCPFlagCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("flags", &tcpFlagsPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: TCPFlagCheck Initialized!\n"););
 }
 
@@ -266,7 +277,9 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
 {
     TCPFlagCheckData *flagptr;
     u_char tcp_flags;
+    PROFILE_VARS;
 
+    PREPROC_PROFILE_START(tcpFlagsPerfStats);
     
     flagptr = otn_idx->ds_list[PLUGIN_TCP_FLAG_CHECK];
 
@@ -274,6 +287,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
     {
         /* if error appeared when tcp header was processed,
          * test fails automagically */
+        PREPROC_PROFILE_END(tcpFlagsPerfStats);
         return 0; 
     }
 
@@ -290,6 +304,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
             if(flagptr->tcp_flags == tcp_flags) /* only these set */
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got TCP [default] flag match!\n"););
+                PREPROC_PROFILE_END(tcpFlagsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
             }
             else
@@ -303,6 +318,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
             if((flagptr->tcp_flags & tcp_flags) == flagptr->tcp_flags)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Got TCP [ALL] flag match!\n"););
+                PREPROC_PROFILE_END(tcpFlagsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
             }
             else
@@ -315,6 +331,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
             if((flagptr->tcp_flags & tcp_flags) == 0)  /* none set */
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got TCP [NOT] flag match!\n"););
+                PREPROC_PROFILE_END(tcpFlagsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
             }
             else
@@ -327,6 +344,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
             if((flagptr->tcp_flags & tcp_flags) != 0)  /* something set */
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got TCP [ANY] flag match!\n"););
+                PREPROC_PROFILE_END(tcpFlagsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
             }
             else
@@ -341,6 +359,7 @@ int CheckTcpFlags(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
             break;
     }
 
+    PREPROC_PROFILE_END(tcpFlagsPerfStats);
     return 0;
 }
 

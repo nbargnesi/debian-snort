@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2006 Sourcefire, Inc.
+ ** Copyright (C) 2002-2008 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -63,8 +63,19 @@
 #include "util.h"
 #include "plugin_enum.h"
 #include "snort.h"
+//#include "signature.h"
 
 #include "stream_api.h"
+
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats flowFromClientPerfStats;
+PreprocStats flowFromServerPerfStats;
+PreprocStats flowReassembledPerfStats;
+PreprocStats flowNonReassembledPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 typedef struct _ClientServerData
 {
@@ -82,6 +93,50 @@ int CheckFromServer(Packet *, struct _OptTreeNode *, OptFpList *);
 int CheckForReassembled(Packet *, struct _OptTreeNode *, OptFpList *);
 int CheckForNonReassembled(Packet *p, struct _OptTreeNode *, OptFpList *);
 
+int OtnFlowFromServer( OptTreeNode * otn )
+{
+    ClientServerData *csd;
+
+    csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
+    if(csd )
+    {
+        if( csd->from_server ) return 1;
+    }
+    return 0; 
+}
+int OtnFlowFromClient( OptTreeNode * otn )
+{
+    ClientServerData *csd;
+
+    csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
+    if(csd )
+    {
+        if( csd->from_client ) return 1;
+    }
+    return 0; 
+}
+int OtnFlowIgnoreReassembled( OptTreeNode * otn )
+{
+    ClientServerData *csd;
+
+    csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
+    if( csd )
+    {
+        if( csd->ignore_reassembled ) return 1;
+    }
+    return 0; 
+}
+int OtnFlowOnlyReassembled( OptTreeNode * otn )
+{
+    ClientServerData *csd;
+
+    csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
+    if( csd )
+    {
+        if( csd->only_reassembled ) return 1;
+    }
+    return 0; 
+}
 
 /****************************************************************************
  * 
@@ -99,7 +154,14 @@ int CheckForNonReassembled(Packet *p, struct _OptTreeNode *, OptFpList *);
 void SetupClientServer(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("flow", FlowInit);
+    RegisterPlugin("flow", FlowInit, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("flow_from_client", &flowFromClientPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("flow_from_server", &flowFromServerPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("flow_reassembled", &flowReassembledPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("flow_non_reassembled", &flowNonReassembledPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, 
                             "Plugin: ClientServerName(Flow) Setup\n"););
@@ -170,12 +232,7 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
 
     csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
 
-    str = strdup(data);
-
-    if(str == NULL)
-    {
-        FatalError("ParseFlowArgs: Can't strdup data\n");
-    }
+    str = SnortStrdup(data);
 
     p = str;
 
@@ -339,6 +396,10 @@ void InitFlowData(OptTreeNode * otn)
  ****************************************************************************/
 int CheckFromClient(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(flowFromClientPerfStats);
+
 #ifdef DEBUG_CS
     DebugMessage(DEBUG_STREAM, "CheckFromClient: entering\n");
     if(p->packet_flags & PKT_REBUILT_STREAM)
@@ -350,17 +411,20 @@ int CheckFromClient(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(!pv.stateful)
     {
         /* if we're not in stateful mode we ignore this plugin */
+        PREPROC_PROFILE_END(flowFromClientPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     if(p->packet_flags & PKT_FROM_CLIENT || 
             !(p->packet_flags & PKT_FROM_SERVER))
     {
+        PREPROC_PROFILE_END(flowFromClientPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, this function *must* return 0 */
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "CheckFromClient: returning 0\n"););
+    PREPROC_PROFILE_END(flowFromClientPerfStats);
     return 0;
 }
 
@@ -380,19 +444,26 @@ int CheckFromClient(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckFromServer(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(flowFromServerPerfStats);
+
     if(!pv.stateful)
     {
         /* if we're not in stateful mode we ignore this plugin */
+        PREPROC_PROFILE_END(flowFromServerPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     
     if(p->packet_flags & PKT_FROM_SERVER || 
             !(p->packet_flags & PKT_FROM_CLIENT))
     {
+        PREPROC_PROFILE_END(flowFromServerPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(flowFromServerPerfStats);
     return 0;
 }
 
@@ -413,13 +484,19 @@ int CheckFromServer(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckForReassembled(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(flowReassembledPerfStats);
+
     /* is this a reassembled stream? */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(flowReassembledPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(flowReassembledPerfStats);
     return 0;
 }
 
@@ -439,12 +516,18 @@ int CheckForReassembled(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  ****************************************************************************/
 int CheckForNonReassembled(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(flowNonReassembledPerfStats);
+
     /* is this a reassembled stream? */
     if(p->packet_flags & PKT_REBUILT_STREAM)
     {
+        PREPROC_PROFILE_END(flowNonReassembledPerfStats);
         return 0;
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(flowNonReassembledPerfStats);
     return fp_list->next->OptTestFunc(p, otn, fp_list->next);
 }

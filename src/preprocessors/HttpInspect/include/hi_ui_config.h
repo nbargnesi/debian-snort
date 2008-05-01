@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -37,6 +37,7 @@
 
 #include "hi_include.h"
 #include "hi_util_kmap.h"
+#include "ipv6_port.h"
 
 /*
 **  Defines
@@ -44,6 +45,8 @@
 #define HI_UI_CONFIG_STATELESS 0
 #define HI_UI_CONFIG_STATEFUL  1
 #define HI_UI_CONFIG_MAX_PIPE  20
+
+#define HI_UI_CONFIG_MAX_HDR_DEFAULT 0
 
 /*
 **  Special characters treated as whitespace before or after URI
@@ -158,6 +161,7 @@ typedef struct s_HTTPINSPECT_CONF
     HTTPINSPECT_CONF_OPT webroot;
     HTTPINSPECT_CONF_OPT apache_whitespace;
     HTTPINSPECT_CONF_OPT iis_delimiter;
+    int max_hdr_len;
 
     PROFILES profile;
     
@@ -198,7 +202,7 @@ int hi_ui_config_reset_global(HTTPINSPECT_GLOBAL_CONF *GlobalConf);
 int hi_ui_config_reset_server(HTTPINSPECT_CONF *ServerConf);
 
 int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
-                            unsigned long ServerIP, 
+                            snort_ip_p ServerIP, 
                             HTTPINSPECT_CONF *ServerConf);
 
 int hi_ui_config_set_profile_apache(HTTPINSPECT_CONF *GlobalConf);

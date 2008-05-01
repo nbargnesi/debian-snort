@@ -1,6 +1,7 @@
 /* $Id$ */
 
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -74,6 +75,13 @@
 #include "plugin_enum.h"
 #include "snort.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats sessionPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 #define SESSION_PRINTABLE  1
 #define SESSION_ALL        2
@@ -105,7 +113,10 @@ FILE *OpenSessionFile(Packet *);
 void SetupSession(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("session", SessionInit);
+    RegisterPlugin("session", SessionInit, OPT_TYPE_LOGGING);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("session", &sessionPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: Session Setup\n"););
 }
 
@@ -228,6 +239,9 @@ void ParseSession(char *data, OptTreeNode *otn)
 int LogSessionData(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     FILE *session;         /* session file ptr */
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(sessionPerfStats);
 
     /* if there's data in this packet */
     if(p != NULL) 
@@ -238,6 +252,7 @@ int LogSessionData(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
              if(session == NULL)
              {
+                 PREPROC_PROFILE_END(sessionPerfStats);
                  return fp_list->next->OptTestFunc(p, otn, fp_list->next);
              }
 
@@ -247,6 +262,7 @@ int LogSessionData(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         }
     }
 
+    PREPROC_PROFILE_END(sessionPerfStats);
     return fp_list->next->OptTestFunc(p, otn, fp_list->next);
 }
 
@@ -254,8 +270,8 @@ int LogSessionData(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
 void DumpSessionData(FILE *fp, Packet *p, struct _OptTreeNode *otn)
 {
-    u_char *idx;
-    u_char *end;
+    const u_char *idx;
+    const u_char *end;
     char conv[] = "0123456789ABCDEF"; /* xlation lookup table */
 
     if(p->dsize == 0 || p->data == NULL || p->frag_flag)
@@ -309,6 +325,10 @@ FILE *OpenSessionFile(Packet *p)
     char filename[STD_BUF];
     char log_path[STD_BUF];
     char session_file[STD_BUF]; /* name of session file */
+#ifdef SUP_IP6
+    sfip_t *dst, *src;
+#endif        
+
     FILE *ret;
 
     if(p->frag_flag)  
@@ -320,39 +340,50 @@ FILE *OpenSessionFile(Packet *p)
     bzero((char *)log_path, STD_BUF);
 
     /* figure out which way this packet is headed in relation to the homenet */
+#ifdef SUP_IP6
+    dst = GET_DST_IP(p);
+    src = GET_SRC_IP(p);
+    if(sfip_contains(&pv.homenet, dst) == SFIP_CONTAINS) {
+        if(sfip_contains(&pv.homenet, src) == SFIP_NOT_CONTAINS)
+#else
     if((p->iph->ip_dst.s_addr & pv.netmask) == pv.homenet)
     {
         if((p->iph->ip_src.s_addr & pv.netmask) != pv.homenet)
+#endif
         {
-            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_SRC_ADDR(p)));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_SRC_ADDR(p)));
             }
             else
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_DST_ADDR(p)));
             }
         }
     }
     else
     {
+#ifdef SUP_IP6
+        if(sfip_contains(&pv.homenet, src) == SFIP_CONTAINS)
+#else
         if((p->iph->ip_src.s_addr & pv.netmask) == pv.homenet)
+#endif
         {
-            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_DST_ADDR(p)));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_src));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_SRC_ADDR(p)));
             }
             else
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(p->iph->ip_dst));
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", pv.log_dir, inet_ntoa(GET_DST_ADDR(p)));
             }
         }
     }

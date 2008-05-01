@@ -25,8 +25,7 @@ spp_sfportscan.c spp_sfportscan.h \
 spp_frag3.c spp_frag3.h \
 str_search.c str_search.h \
 spp_stream5.c spp_stream5.h \
-stream_api.c stream_api.h
-
+stream_api.c stream_api.h 
 
 
 INCLUDES = @INCLUDES@

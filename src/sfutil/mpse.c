@@ -6,7 +6,7 @@
 *   An abstracted interface to the Multi-Pattern Matching routines,
 *   thats why we're passing 'void *' objects around.
 *
-*   Copyright (C) 2002 SourceFire, Inc
+*   Copyright (C) 2002-2008 Sourcefire, Inc.
 *   Marc A Norton <mnorton@sourcefire.com>
 *
 *   Updates:
@@ -39,6 +39,8 @@
 #include "sfksearch.h"
 #include "mpse.h"  
 #include "debug.h"  
+#include "sf_types.h"
+#include "util.h"
 
 
 #include "profiler.h"
@@ -47,8 +49,6 @@
 PreprocStats mpsePerfStats;
 #endif
 
-int LogMessage(char *,...);
-
 static UINT64 s_bcnt=0;
 
 typedef struct _mpse_struct {
@@ -56,20 +56,23 @@ typedef struct _mpse_struct {
     int    method;
     void * obj;
     int    verbose;
+    UINT64 bcnt;
+    char   inc_global_counter;
 
 } MPSE;
 
-void * mpseNew( int method )
+void * mpseNew( int method, int use_global_counter_flag )
 {
     MPSE * p;
 
     p = (MPSE*)calloc( 1,sizeof(MPSE) );
     if( !p ) return NULL;
 
-    p->method=method;
-    p->verbose=0;
-    p->obj   =NULL;
-    s_bcnt  =0;
+    p->method = method;
+    p->verbose = 0;
+    p->obj = NULL;
+    p->bcnt = 0;
+    p->inc_global_counter = use_global_counter_flag;
 
     switch( method )
     {
@@ -292,7 +295,7 @@ int mpsePrintSummary(void )
    return 0;
 }
 
-int mpseSearch( void *pvoid, unsigned char * T, int n, 
+int mpseSearch( void *pvoid, const unsigned char * T, int n, 
     int ( *action )(void*id, int index, void *data), 
     void * data, int* current_state ) 
 {
@@ -301,18 +304,22 @@ int mpseSearch( void *pvoid, unsigned char * T, int n,
   PROFILE_VARS;
 
   PREPROC_PROFILE_START(mpsePerfStats);
-  s_bcnt += n;
+
+  p->bcnt += n;
+
+  if(p->inc_global_counter)
+    s_bcnt += n;
   
   switch( p->method )
    {
      case MPSE_AC_BNFA:
       /* return is actually the state */
-      ret = bnfaSearch( (bnfa_struct_t*) p->obj, T, n, action, data, 0 /* start-state */, current_state );
+      ret = bnfaSearch( (bnfa_struct_t*) p->obj, (unsigned char *)T, n, action, data, 0 /* start-state */, current_state );
       PREPROC_PROFILE_END(mpsePerfStats);
       return ret;
 
      case MPSE_AC:
-      ret = acsmSearch( (ACSM_STRUCT*) p->obj, T, n, action, data,
+      ret = acsmSearch( (ACSM_STRUCT*) p->obj, (unsigned char *)T, n, action, data,
                    current_state );
       PREPROC_PROFILE_END(mpsePerfStats);
       return ret;
@@ -321,13 +328,13 @@ int mpseSearch( void *pvoid, unsigned char * T, int n,
      case MPSE_ACS:
      case MPSE_ACB:
      case MPSE_ACSB:
-      ret = acsmSearch2( (ACSM_STRUCT2*) p->obj, T, n, action, data,
+      ret = acsmSearch2( (ACSM_STRUCT2*) p->obj, (unsigned char *)T, n, action, data,
                    current_state );
       PREPROC_PROFILE_END(mpsePerfStats);
       return ret;
 
      case MPSE_LOWMEM:
-        ret = KTrieSearch( (KTRIE_STRUCT *)p->obj, T, n, action, data);
+        ret = KTrieSearch( (KTRIE_STRUCT *)p->obj, (unsigned char *)T, n, action, data);
         *current_state = 0;
         PREPROC_PROFILE_END(mpsePerfStats);
         return ret;
@@ -342,7 +349,7 @@ int mpseSearch( void *pvoid, unsigned char * T, int n,
 
 UINT64 mpseGetPatByteCount( )
 {
-  return s_bcnt; 
+    return s_bcnt; 
 }
 
 void mpseResetByteCount( )

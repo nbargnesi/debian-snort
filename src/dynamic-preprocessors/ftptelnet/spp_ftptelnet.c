@@ -1,7 +1,7 @@
 /*
  * spp_ftptelnet.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -99,6 +99,10 @@ PreprocStats telnetPerfStats;
  */
 FTPTELNET_GLOBAL_CONF FTPTelnetGlobalConf;
 
+/* static function prototypes */
+static void FTPTelnetReset(int, void *);
+static void FTPTelnetResetStats(int, void *);
+
 /*
  * Function: FTPTelnetChecks(Packet *p)
  *
@@ -142,7 +146,7 @@ static void FTPTelnetChecks(void *pkt, void *context)
 }
 
 /*
- * Function: FTPTelnetInit(u_char *args)
+ * Function: FTPTelnetInit(char *args)
  *
  * Purpose: This function cleans up FTPTelnet memory from the configuration
  *          data.
@@ -159,7 +163,7 @@ void FTPTelnetCleanExit(int sig, void *args)
 }
 
 /*
- * Function: FTPTelnetInit(u_char *args)
+ * Function: FTPTelnetInit(char *args)
  *
  * Purpose: This function initializes FTPTelnetInit with a user configuration.
  *          The function is called when FTPTelnet is configured in snort.conf.
@@ -179,12 +183,18 @@ void FTPTelnetCleanExit(int sig, void *args)
  * Returns: None
  *
  */
-static void FTPTelnetInit(u_char *args)
+static void FTPTelnetInit(char *args)
 {
     char ErrorString[ERRSTRLEN];
     int  iErrStrLen = ERRSTRLEN;
     int  iRet;
     static int siFirstConfig = 1;
+
+#ifdef SUP_IP6
+    DynamicPreprocessorFatalMessage(
+        "FTPTelnet is not currently supported when IPv6 is enabled.\n"
+    );
+#endif
 
     if(siFirstConfig)
     {
@@ -289,6 +299,8 @@ static void FTPTelnetInit(u_char *args)
          */
         _dpd.addPreproc(FTPTelnetChecks, PRIORITY_APPLICATION, PP_FTPTELNET);
         _dpd.addPreprocExit(FTPTelnetCleanExit, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
+        _dpd.addPreprocReset(FTPTelnetReset, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
+        _dpd.addPreprocResetStats(FTPTelnetResetStats, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
 
         /*
          * Remember to add any cleanup functions into the appropriate
@@ -334,6 +346,16 @@ void SetupFTPTelnet()
     _dpd.preprocOptRegister("ftp.bounce", &FTPPBounceInit, &FTPPBounceEval, NULL);
 #endif
 
-    DEBUG_WRAP(_dpd.debugMsg(DEBUG_FTPTELNET, "Preprocessor: FTPTelnet is "
+    DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET, "Preprocessor: FTPTelnet is "
                 "setup . . .\n"););
+}
+
+static void FTPTelnetReset(int signal, void *data)
+{
+    return;
+}
+
+static void FTPTelnetResetStats(int signal, void *data)
+{
+    return;
 }

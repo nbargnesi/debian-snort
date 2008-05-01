@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2001 Phil Wood <cpw@lanl.gov>
 **
@@ -36,6 +37,13 @@
 #include "util.h"
 #include "plugin_enum.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ipSamePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 
 typedef struct _IpSameData
@@ -63,7 +71,10 @@ int IpSameCheck(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIpSameCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("sameip", IpSameCheckInit);
+    RegisterPlugin("sameip", IpSameCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("sameip", &ipSamePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: IpSameCheck Initialized\n"););
 }
 
@@ -158,16 +169,37 @@ void ParseIpSame(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int IpSameCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(!p->iph)
-        return 0; /* if error occured while ip header
-                   * was processed, return 0 automagically.
-               */
-    if (p->iph->ip_src.s_addr == p->iph->ip_dst.s_addr) 
-    {
+    PROFILE_VARS;
 
+    if(!IPH_IS_VALID(p))
+        return 0; /* if error occured while ip header
+                   * was processed, return 0 automagically.  */
+
+    PREPROC_PROFILE_START(ipSamePerfStats);
+
+    if (IP_EQUALITY( GET_SRC_IP(p), GET_DST_IP(p)))
+    {
+#ifdef SUP_IP6
+	DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Match!  %x ->",
+                    sfip_ntoa(GET_SRC_IP(p)));
+               DebugMessage(DEBUG_PLUGIN, " %x\n",
+                    sfip_ntoa(GET_DST_IP(p))));
+        /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ipSamePerfStats);
+        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+    }
+    else
+    {
+    	DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"No match!  %x ->",
+                    sfip_ntoa(GET_SRC_IP(p)));
+               DebugMessage(DEBUG_PLUGIN, " %x\n",
+                    sfip_ntoa(GET_DST_IP(p))));
+    }
+#else
 	DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Match!  %x -> %x\n",
 				p->iph->ip_src.s_addr,  p->iph->ip_dst.s_addr););
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ipSamePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -176,7 +208,9 @@ int IpSameCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"No match %x -> %x\n",
 				p->iph->ip_src.s_addr,  p->iph->ip_dst.s_addr););
     }
+#endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ipSamePerfStats);
     return 0;
 }

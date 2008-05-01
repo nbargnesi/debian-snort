@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire Inc.
  *
  * Author: Steven Sturges
  *
@@ -69,6 +69,14 @@
 #include "sf_dynamic_engine.h"
 #include "detection-plugins/sp_flowbits.h"
 #include "detection-plugins/sp_asn1_detect.h"
+#include "dynamic-plugins/sf_engine/sf_snort_plugin_api.h"
+
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats dynamicRuleEvalPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 void DynamicInit(char *, OptTreeNode *, int);
 void DynamicParse(char *, OptTreeNode *);
@@ -88,8 +96,11 @@ int DynamicCheck(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupDynamic(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("dynamic", DynamicInit);
+    RegisterPlugin("dynamic", DynamicInit, OPT_TYPE_DETECTION);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("dynamic_rule", &dynamicRuleEvalPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: Dynamic Setup\n"););
 }
 
@@ -144,21 +155,27 @@ int DynamicCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     DynamicData *dynData;
     int result = 0;
-    
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_END(dynamicRuleEvalPerfStats);
+
     dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
     if (!dynData)
     {
         LogMessage("Dynamic Rule with no context data available");
+        PREPROC_PROFILE_END(dynamicRuleEvalPerfStats);
         return 0;
     }
 
     result = dynData->checkFunction((void *)p, dynData->contextData);
     if (result)
     {
+        PREPROC_PROFILE_END(dynamicRuleEvalPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* Detection failed */
+    PREPROC_PROFILE_END(dynamicRuleEvalPerfStats);
     return 0;
 }
 
@@ -177,6 +194,7 @@ int DynamicCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  *            gid => Generator ID  
  *            info => context specific data
  *            chkFunc => Function to call to check if the rule matches
+ *            has*Funcs => Functions used to categorize this rule
  *            fpContentFlags => Flags indicating which Fast Pattern Contents
  *                              are available
  *            fpFunc => Function to call to get list of fast pattern contents
@@ -184,14 +202,11 @@ int DynamicCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
  * Returns: 0 on success
  *
  ****************************************************************************/
-int RegisterDynamicRule(u_int32_t sid, u_int32_t gid, void *info, OTNCheckFunction chkFunc, 
-                        OTNHasFunction hasFlowFunc,
-                        OTNHasFunction hasFlowbitFunc,
-                        OTNHasFunction hasContentFunc,
-                        OTNHasFunction hasByteTestFunc,
-                        OTNHasFunction hasPCREFunc,
-                        int fpContentFlags, GetFPContentFunction fpFunc)
-{
+int RegisterDynamicRule(
+    u_int32_t sid, u_int32_t gid, void *info,
+    OTNCheckFunction chkFunc, OTNHasFunction hasFunc,
+    int fpContentFlags, GetFPContentFunction fpFunc
+) {
     DynamicData *dynData;
     struct _OptTreeNode *otn = NULL;
     OptFpList *idx;     /* index pointer */
@@ -202,7 +217,9 @@ int RegisterDynamicRule(u_int32_t sid, u_int32_t gid, void *info, OTNCheckFuncti
     otn = soid_sg_otn_lookup(gid, sid);
     if (!otn)
     {
+#ifndef SOURCEFIRE 
         LogMessage("DynamicPlugin: Rule [%u:%u] not enabled in configuration, rule will not be used.\n", gid, sid);
+#endif
         //LogMessage("DynamicPlugin: Unable to find record of Rule Node for %d:%d\n", sid, gid);
         return -1;
     }
@@ -219,11 +236,7 @@ int RegisterDynamicRule(u_int32_t sid, u_int32_t gid, void *info, OTNCheckFuncti
 
     dynData->contextData = info;
     dynData->checkFunction = chkFunc;
-    dynData->hasFlowFunction = hasFlowFunc;
-    dynData->hasFlowbitFunction = hasFlowbitFunc;
-    dynData->hasContentFunction = hasContentFunc;
-    dynData->hasByteTestFunction = hasByteTestFunc;
-    dynData->hasPCREFunction = hasPCREFunc;
+    dynData->hasOptionFunction = hasFunc;
     dynData->fastPatternContents = fpFunc;
     dynData->fpContentFlags = fpContentFlags;
 
@@ -380,7 +393,7 @@ int DynamicFlowbitCheck(void *pkt, int op, u_int32_t id)
 }
 
 
-int DynamicAsn1Detect(void *pkt, void *ctxt, u_int8_t *cursor)
+int DynamicAsn1Detect(void *pkt, void *ctxt, const u_int8_t *cursor)
 {
     Packet *p    = (Packet *) pkt;
     ASN1_CTXT *c = (ASN1_CTXT *) ctxt;   
@@ -389,8 +402,9 @@ int DynamicAsn1Detect(void *pkt, void *ctxt, u_int8_t *cursor)
     return Asn1DoDetect(p->data, p->dsize, c, cursor);
 }
 
-int DynamicHasFlow(OptTreeNode *otn)
-{
+static inline int DynamicHasOption(
+    OptTreeNode *otn, enum DynamicOptionType optionType, int flowFlag
+) {
     DynamicData *dynData;
     
     dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
@@ -399,59 +413,32 @@ int DynamicHasFlow(OptTreeNode *otn)
         return 0;
     }
 
-    return dynData->hasFlowFunction(dynData->contextData);
+    return dynData->hasOptionFunction(dynData->contextData, optionType, flowFlag);
+}
+
+int DynamicHasFlow(OptTreeNode *otn)
+{
+    return DynamicHasOption(otn, OPTION_TYPE_FLOWFLAGS, 0);
 }
 
 int DynamicHasFlowbit(OptTreeNode *otn)
 {
-    DynamicData *dynData;
-    
-    dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
-    if (!dynData)
-    {
-        return 0;
-    }
-
-    return dynData->hasFlowbitFunction(dynData->contextData);
+    return DynamicHasOption(otn, OPTION_TYPE_FLOWBIT, 0);
 }
 
 int DynamicHasContent(OptTreeNode *otn)
 {
-    DynamicData *dynData;
-    
-    dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
-    if (!dynData)
-    {
-        return 0;
-    }
-
-    return dynData->hasContentFunction(dynData->contextData);
+    return DynamicHasOption(otn, OPTION_TYPE_CONTENT, 0);
 }
 
 int DynamicHasByteTest(OptTreeNode *otn)
 {
-    DynamicData *dynData;
-    
-    dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
-    if (!dynData)
-    {
-        return 0;
-    }
-
-    return dynData->hasByteTestFunction(dynData->contextData);
+    return DynamicHasOption(otn, OPTION_TYPE_BYTE_TEST, 0);
 }
 
 int DynamicHasPCRE(OptTreeNode *otn)
 {
-    DynamicData *dynData;
-    
-    dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
-    if (!dynData)
-    {
-        return 0;
-    }
-
-    return dynData->hasPCREFunction(dynData->contextData);
+    return DynamicHasOption(otn, OPTION_TYPE_PCRE, 0);
 }
 
 #endif /* DYNAMIC_PLUGIN */

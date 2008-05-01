@@ -1,7 +1,7 @@
 /*
  * ftp_cmd_lookup.h
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -41,7 +41,7 @@ int ftp_cmd_lookup_add(CMD_LOOKUP *CmdLookup, char cmd[], int len,
                             FTP_CMD_CONF *FTPCmd);
 
 FTP_CMD_CONF *ftp_cmd_lookup_find(CMD_LOOKUP *CmdLookup, 
-                                            char cmd[], int len, int *iError);
+                                            const char cmd[], int len, int *iError);
 FTP_CMD_CONF *ftp_cmd_lookup_first(CMD_LOOKUP *CmdLookup,
                                             int *iError);
 FTP_CMD_CONF *ftp_cmd_lookup_next(CMD_LOOKUP *CmdLookup,

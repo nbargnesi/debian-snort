@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -37,6 +38,13 @@
 #include "debug.h"
 #include "util.h"
 #include "plugin_enum.h"
+
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats rpcCheckPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 /*
  * This is driven by 64-bit Solaris which doesn't
@@ -81,7 +89,11 @@ int CheckRpc(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupRpcCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("rpc", RpcCheckInit);
+    RegisterPlugin("rpc", RpcCheckInit, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("rpc", &rpcCheckPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: RPCCheck Initialized\n"););
 }
@@ -212,11 +224,14 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 #ifdef DEBUG
     int i;
 #endif
+    PROFILE_VARS;
+
     if(!p->iph || (p->iph->ip_proto == IPPROTO_TCP && !p->tcph)
        || (p->iph->ip_proto == IPPROTO_UDP && !p->udph))
         return 0; /* if error occured while ip header
-                   * was processed, return 0 automagically.
-               */
+                   * was processed, return 0 automagically.  */
+
+    PREPROC_PROFILE_START(rpcCheckPerfStats);
 
     if(p->iph->ip_proto == IPPROTO_TCP)
     {
@@ -226,6 +241,7 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         if(p->dsize<28)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "RPC packet too small"););
+            PREPROC_PROFILE_END(rpcCheckPerfStats);
             return 0;
         }
     }
@@ -235,13 +251,14 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         if(p->dsize<24)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "RPC packet too small"););
+            PREPROC_PROFILE_END(rpcCheckPerfStats);
             return 0;
         }
     }
 
 #ifdef DEBUG
     DebugMessage(DEBUG_PLUGIN,"<---xid---> <---dir---> <---rpc--->"
-		 " <---prog--> <---vers--> <---proc-->\n");
+                              " <---prog--> <---vers--> <---proc-->\n");
     for(i=0; i<24; i++)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "%02X ",c[i]););
@@ -259,6 +276,7 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(direction != CALL)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "RPC packet not a call"););
+        PREPROC_PROFILE_END(rpcCheckPerfStats);
         return 0;
     }
 
@@ -269,6 +287,7 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(rpcvers != RPC_MSG_VERSION)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"RPC msg version invalid"););
+        PREPROC_PROFILE_END(rpcCheckPerfStats);
         return 0;
     }
 
@@ -278,14 +297,14 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     proc = IXDR_GET_LONG (c);
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"RPC decoded to: %lu %lu %lu\n",
-			    prog,vers,proc););
+                            prog,vers,proc););
 
     ds_ptr=(RpcCheckData *)otn->ds_list[PLUGIN_RPC_CHECK];
 
     DEBUG_WRAP(
-	       DebugMessage(DEBUG_PLUGIN, "RPC matching on: %d %d %d\n",
-			    ds_ptr->flags & RPC_CHECK_PROG,ds_ptr->flags & RPC_CHECK_VERS,
-			    ds_ptr->flags & RPC_CHECK_PROC););
+           DebugMessage(DEBUG_PLUGIN, "RPC matching on: %d %d %d\n",
+                ds_ptr->flags & RPC_CHECK_PROG,ds_ptr->flags & RPC_CHECK_VERS,
+                ds_ptr->flags & RPC_CHECK_PROC););
     if(!(ds_ptr->flags & RPC_CHECK_PROG) ||
        ds_ptr->program == prog)
     {
@@ -298,8 +317,9 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                ds_ptr->proc == proc)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"RPC proc matches"););
-		DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Yippee! Found one!"););
+                DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Yippee! Found one!"););
                 /* call the next function in the function list recursively */
+                PREPROC_PROFILE_END(rpcCheckPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
         }
@@ -311,5 +331,6 @@ int CheckRpc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(rpcCheckPerfStats);
     return 0;
 }

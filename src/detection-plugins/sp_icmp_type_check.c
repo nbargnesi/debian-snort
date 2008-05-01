@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -36,7 +37,12 @@
 #include "plugin_enum.h"
 #include "sp_icmp_type_check.h"
 
-
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats icmpTypePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
  
 void IcmpTypeCheckInit(char *, OptTreeNode *, int);
 void ParseIcmpType(char *, OptTreeNode *);
@@ -58,7 +64,10 @@ int IcmpTypeCheck(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIcmpTypeCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("itype", IcmpTypeCheckInit);
+    RegisterPlugin("itype", IcmpTypeCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("itype", &icmpTypePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: IcmpTypeCheck Initialized\n"););
 }
 
@@ -245,12 +254,15 @@ int IcmpTypeCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     IcmpTypeCheckData *ds_ptr;
     int success = 0;
+    PROFILE_VARS;
 
     ds_ptr = otn->ds_list[PLUGIN_ICMP_TYPE];
 
     /* return 0  if we don't have an icmp header */
     if(!p->icmph)
         return 0;
+
+    PREPROC_PROFILE_START(icmpTypePerfStats);
 
     switch(ds_ptr->operator)
     {
@@ -276,10 +288,12 @@ int IcmpTypeCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if (success)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Got icmp type match!\n"););
+        PREPROC_PROFILE_END(icmpTypePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* return 0 on failed test */
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Failed icmp code match!\n"););
+    PREPROC_PROFILE_END(icmpTypePerfStats);
     return 0;
 }

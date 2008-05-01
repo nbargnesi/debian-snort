@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
-** Copyright (C) 2006 Sourcefire Inc.
+** Copyright (C) 2006-2008 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -67,13 +67,15 @@ PreprocStats dnsPerfStats;
  * Function prototype(s)
  */
 DNSSessionData* GetDNSSessionData( SFSnortPacket* );
-static void DNSInit( u_char* );
+static void DNSInit( char* );
 static void PrintDNSConfig();
 static void FreeDNSSessionData( void* );
 static void  ParseDNSArgs( u_char* );
 static void ProcessDNS( void*, void* );
 static void DNSConfigCheck( void );
 static inline int CheckDNSPort( u_int16_t );
+static void DNSReset(int, void *);
+static void DNSResetStats(int, void *);
 
 /* Ultimately calls SnortEventqAdd */
 /* Arguments are: gid, sid, rev, classification, priority, message, rule_info */
@@ -127,12 +129,18 @@ void SetupDNS()
  *
  * RETURNS:     Nothing. 
  */
-static void DNSInit( u_char* argp )
+static void DNSInit( char* argp )
 {
+#ifdef SUP_IP6
+    DynamicPreprocessorFatalMessage("DNS is not currently supported when IPv6 support is enabled.\n");
+#endif
+
     _dpd.addPreproc( ProcessDNS, PRIORITY_APPLICATION, PP_DNS );
     _dpd.addPreprocConfCheck( DNSConfigCheck );
-    
-    ParseDNSArgs( argp );
+    _dpd.addPreprocReset(DNSReset, NULL, PRIORITY_LAST, PP_DNS);
+	_dpd.addPreprocResetStats(DNSResetStats, NULL, PRIORITY_LAST, PP_DNS);
+
+    ParseDNSArgs( (u_char *)argp );
     
 #ifdef PERF_PROFILING
     _dpd.addPreprocProfileFunc("dns", (void *)&dnsPerfStats, 0, _dpd.totalPerfStats);
@@ -427,7 +435,7 @@ static inline int CheckDNSPort( u_int16_t port )
     return 0;
 }
 
-static u_int16_t ParseDNSHeader(unsigned char *data,
+static u_int16_t ParseDNSHeader(const unsigned char *data,
                                 u_int16_t bytes_unused,
                                 DNSSessionData *dnsSessionData)
 {
@@ -588,7 +596,7 @@ static u_int16_t ParseDNSHeader(unsigned char *data,
 }
 
 
-u_int16_t ParseDNSName(unsigned char *data,
+u_int16_t ParseDNSName(const unsigned char *data,
                        u_int16_t bytes_unused,
                        DNSSessionData *dnsSessionData)
 {
@@ -679,7 +687,7 @@ u_int16_t ParseDNSName(unsigned char *data,
     return bytes_unused;
 }
 
-static u_int16_t ParseDNSQuestion(unsigned char *data,
+static u_int16_t ParseDNSQuestion(const unsigned char *data,
                                   u_int16_t data_size,
                                   u_int16_t bytes_unused,
                                   DNSSessionData *dnsSessionData)
@@ -767,7 +775,7 @@ static u_int16_t ParseDNSQuestion(unsigned char *data,
     return bytes_unused;
 }
 
-u_int16_t ParseDNSAnswer(unsigned char *data,
+u_int16_t ParseDNSAnswer(const unsigned char *data,
                          u_int16_t data_size,
                          u_int16_t bytes_unused,
                          DNSSessionData *dnsSessionData)
@@ -909,7 +917,7 @@ u_int16_t ParseDNSAnswer(unsigned char *data,
  * Vulnerability Research by Lurene Grenier, Judy Novak,
  * and Brian Caswell.
  */
-u_int16_t CheckRRTypeTXTVuln(unsigned char *data,
+u_int16_t CheckRRTypeTXTVuln(const unsigned char *data,
                        u_int16_t bytes_unused,
                        DNSSessionData *dnsSessionData)
 {
@@ -1001,7 +1009,7 @@ u_int16_t CheckRRTypeTXTVuln(unsigned char *data,
     return bytes_unused;
 }
 
-u_int16_t SkipDNSRData(unsigned char *data,
+u_int16_t SkipDNSRData(const unsigned char *data,
                        u_int16_t bytes_unused,
                        DNSSessionData *dnsSessionData)
 {
@@ -1025,7 +1033,7 @@ u_int16_t SkipDNSRData(unsigned char *data,
 }
 
 u_int16_t ParseDNSRData(SFSnortPacket *p,
-                        unsigned char *data,
+                        const unsigned char *data,
                         u_int16_t bytes_unused,
                         DNSSessionData *dnsSessionData)
 {
@@ -1087,7 +1095,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
 {
     u_int16_t bytes_unused = p->payload_size;
     int i;
-    unsigned char *data = p->payload;
+    const unsigned char *data = p->payload;
 
     while (bytes_unused)
     {
@@ -1123,7 +1131,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
         if ((dnsSessionData->curr_rec_state == DNS_RESP_STATE_Q_NAME) &&
             (dnsSessionData->curr_rec == 0))
         {
-            _dpd.debugMsg(DEBUG_DNS,
+            DebugMessage(DEBUG_DNS,
                             "DNS Header: length %d, id 0x%x, flags 0x%x, "
                             "questions %d, answers %d, authorities %d, additionals %d\n",
                             dnsSessionData->length, dnsSessionData->hdr.id,
@@ -1151,7 +1159,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
                 if (dnsSessionData->curr_rec_state == DNS_RESP_STATE_Q_COMPLETE)
                 {
                     DEBUG_WRAP(
-                        _dpd.debugMsg(DEBUG_DNS,
+                        DebugMessage(DEBUG_DNS,
                             "DNS Question %d: type %d, class %d\n",
                             i, dnsSessionData->curr_q.type,
                             dnsSessionData->curr_q.dns_class);
@@ -1193,7 +1201,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
                 {
                 case DNS_RESP_STATE_RR_RDATA_START:
                     DEBUG_WRAP(
-                        _dpd.debugMsg(DEBUG_DNS, 
+                        DebugMessage(DEBUG_DNS, 
                                     "DNS ANSWER RR %d: type %d, class %d, "
                                     "ttl %d rdlength %d\n", i,
                                     dnsSessionData->curr_rr.type,
@@ -1249,7 +1257,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
                 {
                 case DNS_RESP_STATE_RR_RDATA_START:
                     DEBUG_WRAP(
-                        _dpd.debugMsg(DEBUG_DNS, 
+                        DebugMessage(DEBUG_DNS, 
                                     "DNS AUTH RR %d: type %d, class %d, "
                                     "ttl %d rdlength %d\n", i,
                                     dnsSessionData->curr_rr.type,
@@ -1305,7 +1313,7 @@ void ParseDNSResponseMessage(SFSnortPacket *p, DNSSessionData *dnsSessionData)
                 {
                 case DNS_RESP_STATE_RR_RDATA_START:
                     DEBUG_WRAP(
-                        _dpd.debugMsg(DEBUG_DNS, 
+                        DebugMessage(DEBUG_DNS, 
                                     "DNS ADDITONAL RR %d: type %d, class %d, "
                                     "ttl %d rdlength %d\n", i,
                                     dnsSessionData->curr_rr.type,
@@ -1494,3 +1502,12 @@ static void ProcessDNS( void* packetPtr, void* context )
     PREPROC_PROFILE_END(dnsPerfStats);
 }
 
+static void DNSReset(int signal, void *data)
+{
+    return;
+}
+
+static void DNSResetStats(int signal, void *data)
+{
+    return;
+}

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -97,6 +97,17 @@ int hiDetectCalled = 0;
 #endif
 
 /*
+** Prototypes
+*/
+static void HttpInspectDropStats(int);
+static void HttpInspect(Packet *, void *);
+static void HttpInspectCleanExit(int, void *);
+static void HttpInspectReset(int, void *);
+static void HttpInspectResetStats(int, void *);
+static void HttpInspectInit(char *);
+
+
+/*
 **  NAME
 **    HttpInspect::
 */
@@ -132,7 +143,7 @@ static void HttpInspect(Packet *p, void *context)
     **  Check for valid packet
     **  if neither header or data is good, then we just abort.
     */
-    if(!p->iph || !p->tcph || !p->data || !p->dsize)
+    if(!IPH_IS_VALID(p) || !p->tcph || !p->data || !p->dsize)
     {
         return;
     }
@@ -169,28 +180,26 @@ static void HttpInspect(Packet *p, void *context)
     return;
 }
 
-void HttpInspectDropStats(void) 
+static void HttpInspectDropStats(int exiting) 
 {
     if(!hi_stats.total)
         return;
 
-    LogMessage("================================================"
-                "===============================\n");
-    LogMessage("HTTP Inspect - encodings (Note: stream-reassembled"
-                " packets included):\n");
+    LogMessage("HTTP Inspect - encodings (Note: stream-reassembled "
+               "packets included):\n");
 
 #ifdef WIN32
-    LogMessage("    POST methods:                   %-10I64i\n", hi_stats.post);
-    LogMessage("    GET methods:                    %-10I64i\n", hi_stats.get);
-    LogMessage("    Post parameters extracted:      %-10I64i\n", hi_stats.post_params);
-    LogMessage("    Unicode:                        %-10I64i\n", hi_stats.unicode);
-    LogMessage("    Double unicode:                 %-10I64i\n", hi_stats.double_unicode);
-    LogMessage("    Non-ASCII representable:        %-10I64i\n", hi_stats.non_ascii);
-    LogMessage("    Base 36:                        %-10I64i\n", hi_stats.base36);
-    LogMessage("    Directory traversals:           %-10I64i\n", hi_stats.dir_trav);
-    LogMessage("    Extra slashes (\"//\"):           %-10I64i\n", hi_stats.slashes);
-    LogMessage("    Self-referencing paths (\"./\"):  %-10I64i\n", hi_stats.self_ref);
-    LogMessage("    Total packets processed:        %-10I64i\n", hi_stats.total);
+    LogMessage("    POST methods:                   %-10I64u\n", hi_stats.post);
+    LogMessage("    GET methods:                    %-10I64u\n", hi_stats.get);
+    LogMessage("    Post parameters extracted:      %-10I64u\n", hi_stats.post_params);
+    LogMessage("    Unicode:                        %-10I64u\n", hi_stats.unicode);
+    LogMessage("    Double unicode:                 %-10I64u\n", hi_stats.double_unicode);
+    LogMessage("    Non-ASCII representable:        %-10I64u\n", hi_stats.non_ascii);
+    LogMessage("    Base 36:                        %-10I64u\n", hi_stats.base36);
+    LogMessage("    Directory traversals:           %-10I64u\n", hi_stats.dir_trav);
+    LogMessage("    Extra slashes (\"//\"):           %-10I64u\n", hi_stats.slashes);
+    LogMessage("    Self-referencing paths (\"./\"):  %-10I64u\n", hi_stats.self_ref);
+    LogMessage("    Total packets processed:        %-10I64u\n", hi_stats.total);
 #else
     LogMessage("    POST methods:                   %-10llu\n", hi_stats.post);
     LogMessage("    GET methods:                    %-10llu\n", hi_stats.get);
@@ -212,6 +221,16 @@ static void HttpInspectCleanExit(int signal, void *data)
     KMapDelete(GlobalConf.server_lookup);
 
     xfree(GlobalConf.iis_unicode_map);
+}
+
+static void HttpInspectReset(int signal, void *data)
+{
+    return;
+}
+
+static void HttpInspectResetStats(int signal, void *data)
+{
+    memset(&hi_stats, 0, sizeof(hi_stats));
 }
 
 /*
@@ -237,7 +256,7 @@ static void HttpInspectCleanExit(int signal, void *data)
 **
 **  @return void
 */
-static void HttpInspectInit(u_char *args)
+static void HttpInspectInit(char *args)
 {
     char ErrorString[ERRSTRLEN];
     int  iErrStrLen = ERRSTRLEN;
@@ -247,8 +266,7 @@ static void HttpInspectInit(u_char *args)
 
     if(siFirstConfig)
     {
-        memset(&hi_stats, 0, sizeof(HIStats));
-
+        memset(&hi_stats, 0, sizeof(HIStats)); 
         iRet = hi_ui_config_init_global_conf(&GlobalConf);
         if (iRet)
         {
@@ -347,6 +365,7 @@ static void HttpInspectInit(u_char *args)
         **  Add HttpInspect into the preprocessor list
         */
         AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT);
+        RegisterPreprocStats("http_inspect", HttpInspectDropStats);
 
         /*
         **  Remember to add any cleanup functions into the appropriate
@@ -354,6 +373,8 @@ static void HttpInspectInit(u_char *args)
         */
         AddFuncToPreprocCleanExitList(HttpInspectCleanExit, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
         AddFuncToPreprocRestartList(HttpInspectCleanExit, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
+        AddFuncToPreprocResetList(HttpInspectReset, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
+        AddFuncToPreprocResetStatsList(HttpInspectResetStats, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
         siFirstConfig = 0;
 
 #ifdef PERF_PROFILING
@@ -382,7 +403,7 @@ static void HttpInspectInit(u_char *args)
 **
 **  @return void
 */
-void SetupHttpInspect(void)
+void SetupHttpInspect()
 {
     RegisterPreprocessor(GLOBAL_KEYWORD, HttpInspectInit);
     RegisterPreprocessor(SERVER_KEYWORD, HttpInspectInit);

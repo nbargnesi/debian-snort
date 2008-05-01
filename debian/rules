@@ -31,30 +31,32 @@ clean-sources:
 	# Clean the sources
 	[ ! -f Makefile ] ||  $(MAKE) distclean
 	cd src &&  [ ! -f Makefile ] || $(MAKE) distclean
-	# Remove the flag that indicated that the sources were configured
+# Remove the flag that indicated that the sources were configured
 	-rm -f configure-stamp
 
 clean: clean-sources
 	dh_testdir
 	dh_testroot
-	# Clean all the stamps
+# Clean all the stamps
 	rm -f build*stamp install-stamp configure-stamp
-	# Clean binaries we create when building the packages
+# Clean binaries we create when building the packages
 	rm -f src/snort-mysql
 	rm -f src/snort-pgsql
 	rm -f src/snort-inline
 	rm -f src/snort-basic
 	rm -f src/snort
-	# Clean documents
+# Clean documents
 	cd doc && [ ! -f Makefile ] || $(MAKE) distclean
-	rm -f doc/snort_manual.{pdf,ps,aux,log,toc}
-	rm -f doc/faq.{idx,out,log,toc,aux,pdf,ps}
+	rm -f doc/snort_manual.pdf doc/snort_manual.ps doc/snort_manual.aux \
+	    doc/snort_manual.log doc/snort_manual.toc
+	rm -f doc/faq.idx doc/faq.out doc/faq.log doc/faq.toc doc/faq.aux \
+	    doc/faq.pdf doc/faq.ps
 	dh_clean
 
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-	# Standard package support
+# Standard package support
 	./configure $(CONFFLAGS) \
 		--without-mysql \
 		--without-postgresql 
@@ -117,13 +119,20 @@ build-indep: configure build-indep-stamp
 build-indep-stamp: 
 	dh_testdir
 	# Build the documentation
-	[ ! -x /usr/bin/ps2pdf ] || [ ! -x /usr/bin/pslatex ] || \
-	[ ! -x /usr/bin/dvips ] || $(MAKE) -C doc snort_manual.pdf faq.pdf 
+# Only do this if we have the required binaries and files
+# Note: I hate hardcoding paths here, but the buildds are stupid
+	@if [ -x /usr/bin/ps2pdf -a -x /usr/bin/pslatex -a \
+	     -x /usr/bin/dvips -a \
+	     -e /usr/share/texmf-texlive/tex/latex/pslatex/pslatex.sty -a \
+	     -e /usr/share/texmf-texlive/tex/latex/oberdiek/kvoptions.sty ] ; \
+	then \
+	    $(MAKE) -C doc snort_manual.pdf faq.pdf ; \
+	else \
+	    echo >&2 'WARNING: Not building documentation, environment not available!'; \
+	fi
 	touch $@
 
-build: build-arch build-indep build-stamp
-build-stamp:
-	touch $@
+build: 
 	
 install: install-indep install-arch
 
@@ -133,32 +142,33 @@ install-arch:
 	dh_clean -k -s
 	dh_installdirs -s
 
-	# Install the common binaries
+# Install the common binaries
 	$(MAKE) install prefix=$(TMP)/snort-common/usr/
 	rm -f  $(TMP)/snort-common/usr/sbin/snort 
 
-	# Snort binaries
+# Snort binaries
 	install -m 755 -o root -g root src/snort-basic $(TMP)/snort/usr/sbin/snort
 	install -m 755 -o root -g root src/snort-mysql $(TMP)/snort-mysql/usr/sbin/snort
 	install -m 755 -o root -g root src/snort-pgsql $(TMP)/snort-pgsql/usr/sbin/snort
 #	install -m 755 -o root -g root src/snort-inline   $(TMP)/snort/usr/sbin/snort
 
-	# Install Debian specific, scripts and files of the snort-common
-	# package
-	install -m 755 -o root -g root `pwd`/debian/snort.cron.daily $(TMP)/snort-common/etc/cron.daily/5snort
-	install -m 755 -o root -g root `pwd`/debian/my/snort-stat $(TMP)/snort-common/usr/sbin/
-	install -m 644 -o root -g root `pwd`/etc/snort.conf $(TMP)/snort-common/etc/snort/
-	install -m 644 -o root -g root `pwd`/etc/unicode.map $(TMP)/snort-common/etc/snort/
-	install -m 644 -o root -g root `pwd`/etc/threshold.conf $(TMP)/snort-common/etc/snort/
+# Default config
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-mysql/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-pgsql/etc/default/snort
+#	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-inline/etc/default/snort
 
 
-	#  Install init.d initscripts
+#  Install init.d initscripts
 	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort/etc/init.d/snort
 	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-mysql/etc/init.d/snort
 	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-pgsql/etc/init.d/snort
 #	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-inline/etc/init.d/snort
 
-	#  Install PPP initscripts
+#  Install PPP initscripts
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort/etc/ppp/ip-up.d/snort
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort/etc/ppp/ip-down.d/snort
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort-mysql/etc/ppp/ip-up.d/snort
@@ -168,16 +178,7 @@ install-arch:
 #	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort-inline/etc/ppp/ip-up.d/snort
 #	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort-inline/etc/ppp/ip-down.d/snort
 
-	# Default config
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-mysql/etc/default/snort
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-pgsql/etc/default/snort
-#	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-inline/etc/default/snort
-
-	# Logrotate files
+# Logrotate files
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort/etc/logrotate.d/snort
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-mysql/etc/logrotate.d/snort
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-pgsql/etc/logrotate.d/snort
@@ -185,9 +186,11 @@ install-arch:
 
 # Move libraries to the snort-common-libraries package
 	mv $(TMP)/snort-common/usr/lib/ $(TMP)/snort-common-libraries/usr/
-	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
+# Remove headers, as this is not a -dev package
+#	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
+	rm -rf $(TMP)/sort-common/usr/src/
 
-	# Remove useless (empty) directories
+# Remove useless (empty) directories
 	rmdir $(TMP)/snort-pgsql/usr/share/doc/snort
 	rmdir $(TMP)/snort-mysql/usr/share/doc/snort
 
@@ -199,7 +202,16 @@ install-indep:
 	dh_clean -k -i
 	dh_installdirs -i
 
-	#  Install files of the arch-independent packages
+# Install Debian specific, scripts and files of the snort-common
+# package
+	install -m 755 -o root -g root `pwd`/debian/snort.cron.daily $(TMP)/snort-common/etc/cron.daily/5snort
+	install -m 755 -o root -g root `pwd`/debian/my/snort-stat $(TMP)/snort-common/usr/sbin/
+	install -m 644 -o root -g root `pwd`/etc/snort.conf $(TMP)/snort-common/etc/snort/
+	install -m 644 -o root -g root `pwd`/etc/unicode.map $(TMP)/snort-common/etc/snort/
+	install -m 644 -o root -g root `pwd`/etc/threshold.conf $(TMP)/snort-common/etc/snort/
+
+
+#  Install files of the arch-independent packages
 	cp rules/*.rules $(TMP)/snort-rules-default/etc/snort/rules/
 #	mkdir -p $(TMP)/snort-rules-default/usr/share/snort/
 #	install -m 644 -o root -g root `pwd`/debian/oldrules.md5 $(TMP)/snort-rules-default/usr/share/snort/oldrules.md5
@@ -210,14 +222,14 @@ install-indep:
 	cp etc/classification.config $(TMP)/snort-rules-default/etc/snort/
 	cp etc/reference.config $(TMP)/snort-rules-default/etc/snort/
 
-	# Remove useless directories
+# Remove useless directories
 	rm -rf $(TMP)/snort-common/etc/ppp
 	rm -rf $(TMP)/snort-doc/usr/share/doc
 
 	dh_install -i
 
 # Build architecture-independent files here.
-binary-indep: build-indep install
+binary-indep: build-indep install-indep
 	dh_testdir -i
 	dh_testroot -i
 
@@ -225,7 +237,7 @@ binary-indep: build-indep install
 	dh_installexamples -i
 	dh_installdebconf -i
 	dh_installman -i 
-	# Other adjustments
+# Other adjustments
 	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
 	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/contrib/CVS
 	chmod +x $(TMP)/snort-common/usr/share/doc/snort-common/examples/snort*
@@ -248,7 +260,7 @@ binary-indep: build-indep install
 	dh_builddeb -i
 
 # Build architecture-dependent files here.
-binary-arch: build-arch install
+binary-arch: build-arch install-arch
 	dh_testdir -a
 	dh_testroot -a
 	dh_installdocs -a 

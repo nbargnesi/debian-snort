@@ -7,7 +7,7 @@ libdir = ${exec_prefix}/lib/snort_dynamicpreprocessor
 
 lib_LTLIBRARIES = libsf_dns_preproc.la
 
-libsf_dns_preproc_la_LDFLAGS = -module
+libsf_dns_preproc_la_LDFLAGS = -export-dynamic
 
 BUILT_SOURCES = \
 sf_dynamic_preproc_lib.c 

@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -31,6 +32,14 @@
 #include "signature.h"
 #include "parser/IpAddrSet.h"
 #include "spo_plugbase.h"
+#include "sf_vartable.h"
+#include "sf_types.h"
+#include "plugin_enum.h"
+
+//defined PORTLISTS in signature.h
+#ifdef PORTLISTS
+#include "sfutil/sfportobject.h"
+#endif
 
 #ifdef SUNOS
     #define INADDR_NONE -1
@@ -62,6 +71,15 @@
 #define RULE_DYNAMICENGINE 18
 #define RULE_DYNAMICDETECTION 19
 #define RULE_DYNAMICPREPROCESSOR 20
+#endif
+#ifdef TARGET_BASED
+#define RULE_ATTRIBUTE_TABLE 21
+#endif
+#ifdef PORTLISTS
+#define RULE_PORTVAR     23 
+#endif
+#ifdef SUP_IP6
+#define RULE_IPVAR       24 
 #endif
 
 #define EXCEPT_SRC_IP  0x01
@@ -110,10 +128,6 @@
 
 #ifndef PARSERULE_SIZE
 #define PARSERULE_SIZE	     65535
-#endif
-
-#ifndef UINT64
-#define UINT64 unsigned long long
 #endif
 
 /*  D A T A  S T R U C T U R E S  *********************************************/
@@ -182,7 +196,7 @@ typedef struct _OptTreeNode
        it allows the plugin authors to associate "dynamic" data structures
        with the rule system, letting them link anything they can come up 
        with to the rules list */
-    void *ds_list[64];   /* list of plugin data struct pointers */
+    void *ds_list[PLUGIN_MAX];   /* list of plugin data struct pointers */
 
     int chain_node_number;
 
@@ -240,6 +254,12 @@ typedef struct _OptTreeNode
     u_int8_t noalerts; 
 #endif
 
+
+    int pcre_flag; /* PPM */
+    UINT64 ppm_suspend_time; /* PPM */
+    unsigned ppm_disable_cnt; /*PPM */
+
+
 } OptTreeNode;
 
 
@@ -272,6 +292,14 @@ typedef struct _RuleTreeNode
 
     IpAddrSet *sip;
     IpAddrSet *dip;
+    
+    //PORTLISTS used for debugging.
+    int proto;
+
+#ifdef PORTLISTS
+    PortObject * src_portobject;
+    PortObject * dst_portobject;
+#endif 
 
     int not_sp_flag;     /* not source port flag */
 

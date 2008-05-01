@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2004-2007 Sourcefire, Inc.
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -25,7 +25,7 @@
 #ifndef __STREAM_H__
 #define __STREAM_H__
 
-#include "snort_packet_header.h"
+#include "ipv6_port.h"
 
 /* Only track a certain number of alerts per session */
 #define MAX_SESSION_ALERTS  8
@@ -38,13 +38,13 @@ typedef struct _StreamPacketData
     u_int8_t *data;
     u_int8_t *pktOrig;
     u_int8_t *pkt;
-    SnortPktHeader pkth;
-    u_int16_t pkt_size;
+    struct pcap_pkthdr pkth;
     /* Pointer to trimmed payload */
     u_int8_t *payload;
-    u_int16_t payload_size;
     u_int32_t seq_num;
     u_int32_t cksum;
+    u_int16_t pkt_size;
+    u_int16_t payload_size;
     u_int8_t  chuck;   /* mark the spd for chucking if it's 
                         * been reassembled 
                         */
@@ -65,52 +65,54 @@ typedef struct _StreamAlertInfo
 
 typedef struct _Stream
 {
-    u_int32_t ip;          /* IP addr */
-    u_int16_t port;        /* port number */
-    u_int8_t  state;       /* stream state */
+    snort_ip      ip;          /* IP addr */
     u_int32_t isn;         /* initial sequence number */
     u_int32_t base_seq;    /* base seq num for this packet set */
     u_int32_t last_ack;    /* last segment ack'd */
+    u_int16_t port;        /* port number */
     u_int16_t win_size;    /* window size */
     u_int32_t next_seq;    /* next sequence we expect to see -- used on reassemble */
     u_int32_t pkts_sent;   /* track the number of packets in this stream */
     u_int32_t bytes_sent;  /* track the number of bytes in this stream */
     u_int32_t bytes_tracked; /* track the total number of bytes on this side */
+    u_int8_t  state;       /* stream state */
     u_int8_t  state_queue;    /* queued state transition */
     u_int8_t  expected_flags; /* tcp flag needed to accept transition */
-    u_int32_t trans_seq;      /* sequence number of transition packet */
     u_int8_t  stq_chk_seq;    /* flag to see if we need to check the seq 
                                  num of the state transition packet */
+    u_int32_t trans_seq;      /* sequence number of transition packet */
     u_int32_t overlap_pkts;  /* track the number of packets with duplicate seq #s */
     u_int32_t bytes_inspected; /* track the number of bytes seen since last
                                 * data from other side */
 
+    u_int32_t pkt_count;
     StreamPacketData *seglist;
     StreamPacketData *seglist_tail;
-    u_int32_t pkt_count;
-    char flags;
 
     StreamAlertInfo alerts[MAX_SESSION_ALERTS];
     u_int8_t  alert_count;   /* count alerts seen in a stream */
 
     u_int8_t  outoforder;    /* flag indicating stream is no longer in order */
+    char flags;
+#if defined(_LP64)
+    char pad;
+#endif
 } Stream;
 
 typedef struct _SessionHashKey
 {
-    u_int32_t lowIP;
-    u_int32_t highIP;
+    snort_ip      lowIP;
+    snort_ip      highIP;
     u_int16_t port; /* If IPs are the same, this will be the lower of
                      * the two ports.  Otherwise, it will be the port
                      * corresponding to lowIP. */
-#if defined(_LP64)
-    u_int16_t pad1;
-#endif
     u_int16_t port2;
-#if defined(_LP64)
-    u_int16_t pad2;
-#endif
     u_int8_t  proto;
+#if defined(_LP64)
+    u_int8_t pad1;
+    u_int8_t pad2;
+    u_int8_t pad3;
+#endif
 } SessionHashKey;
 
 typedef struct _StreamApplicationData

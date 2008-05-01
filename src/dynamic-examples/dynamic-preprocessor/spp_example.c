@@ -1,7 +1,7 @@
 /*
  * spp_example.c
  *
- * Copyright (C) 2006-2007 Sourcefire,Inc
+ * Copyright (C) 2006-2008 Sourcefire,Inc
  * Steven A. Sturges <ssturges@sourcefire.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,7 @@
 
 extern DynamicPreprocessorData _dpd;
 
-void ExampleInit(unsigned char *);
+void ExampleInit(char *);
 void ExampleProcess(void *, void *);
 
 void ExampleSetup()
@@ -56,7 +56,7 @@ void ExampleSetup()
 
 u_int16_t portToCheck;
 
-void ExampleInit(unsigned char *args)
+void ExampleInit(char *args)
 {
     char *arg;
     char *argEnd;

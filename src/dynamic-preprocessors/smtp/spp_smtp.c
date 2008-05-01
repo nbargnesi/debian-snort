@@ -1,6 +1,6 @@
-
-/*
- * spp_smtp.c
+/****************************************************************************
+ *
+ * Copyright (C) 2005-2008 Sourcefire Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -17,9 +17,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ ****************************************************************************/
+ 
+/**************************************************************************
  *
- * Author: Andy  Mullican
+ * spp_smtp.c
+ *
+ * Author: Andy Mullican
  *
  * Description:
  *
@@ -32,19 +36,22 @@
  * by interfacing with the Snort preprocessor functions.  The rest
  * of SMTP should be separate from the preprocessor hooks.
  *
- */
+ **************************************************************************/
 
 #include <sys/types.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#include "preprocids.h"
-#include "sf_snort_packet.h"
+#include <string.h>
 
 #include "spp_smtp.h"
 #include "snort_smtp.h"
 #include "smtp_config.h"
 #include "smtp_log.h"
+
+#include "preprocids.h"
+#include "sf_snort_packet.h"
+#include "sf_dynamic_preprocessor.h"
+#include "debug.h"
 
 #include "profiler.h"
 #ifdef PERF_PROFILING
@@ -54,11 +61,17 @@ int smtpDetectCalled = 0;
 #endif
 
 
-static void SMTPInit(u_char *);
-static void SMTP_XLINK_Init(u_char *);
+extern DynamicPreprocessorData _dpd;
+extern SMTP _smtp_no_session;
+extern int _smtp_check_gaps;
+
+static void SMTPInit(char *);
+static void SMTP_XLINK_Init(char *);
 static void SMTPDetect(void *, void *context);
 static void SMTPCleanExitFunction(int, void *);
 static void SMTPRestartFunction(int, void *);
+static void SMTPResetFunction(int, void *);
+static void SMTPResetStatsFunction(int, void *);
 
 
 /*
@@ -73,19 +86,16 @@ static void SMTPRestartFunction(int, void *);
  * Returns: void function
  *
  */
-void SetupSMTP()
+void SetupSMTP(void)
 {
-    /* 
-     * link the preprocessor keyword to the init function in
-     * the preproc list
-     */
+    /* link the preprocessor keyword to the init function in the preproc list */
     _dpd.registerPreproc("smtp", SMTPInit);
     _dpd.registerPreproc("xlink2state", SMTP_XLINK_Init);
 }
 
 
 /*
- * Function: SMTPInit(u_char *)
+ * Function: SMTPInit(char *)
  *
  * Purpose: Calls the argument parsing function, performs final setup on data
  *          structs, links the preproc function into the function list.
@@ -95,39 +105,54 @@ void SetupSMTP()
  * Returns: void function
  *
  */
-static void SMTPInit(u_char *args)
+static void SMTPInit(char *args)
 {
-    static int bFirstConfig = 1;
+    static int config_done = 0;
 
-    /* 
-     * Parse the argument list from the rules file 
-     */
+    if (config_done)
+    {
+        DynamicPreprocessorFatalMessage("Can only configure SMTP preprocessor once.\n");
+    }
+
+    if (!_dpd.streamAPI)
+    {
+        DynamicPreprocessorFatalMessage("Streaming & reassembly must be enabled "
+                                        "for SMTP preprocessor\n");
+    }
+
+    if (_dpd.streamAPI->version >= STREAM_API_VERSION5)
+        _smtp_check_gaps = 1;
+    else
+        _smtp_check_gaps = 0;
+
+    SMTP_InitCmds();
+
     SMTP_ParseArgs(args);
 
-    /* 
-     * Perform any other initialization functions that are required here
-     */
-    SMTP_Init();
+    /* initialize the searches - command, headers, data, etc. */
+    SMTP_SearchInit();
 
-    /* 
-     * Put the preprocessor function into the function list 
-     */
-    if ( bFirstConfig )
-    {
-        _dpd.addPreproc(SMTPDetect, PRIORITY_APPLICATION, PP_SMTP);
-        _dpd.addPreprocExit(SMTPCleanExitFunction, NULL, PRIORITY_LAST, PP_SMTP);
-        _dpd.addPreprocRestart(SMTPRestartFunction, NULL, PRIORITY_LAST, PP_SMTP);
-        bFirstConfig = 0;
+    /* zero out static SMTP global used for stateless SMTP or if there
+     * is no session pointer */
+    memset(&_smtp_no_session, 0, sizeof(SMTP));
+
+    /* Put the preprocessor function into the function list */
+    _dpd.addPreproc(SMTPDetect, PRIORITY_APPLICATION, PP_SMTP);
+    _dpd.addPreprocExit(SMTPCleanExitFunction, NULL, PRIORITY_LAST, PP_SMTP);
+    _dpd.addPreprocRestart(SMTPRestartFunction, NULL, PRIORITY_LAST, PP_SMTP);
+    _dpd.addPreprocReset(SMTPResetFunction, NULL, PRIORITY_LAST, PP_SMTP);
+    _dpd.addPreprocResetStats(SMTPResetStatsFunction, NULL, PRIORITY_LAST, PP_SMTP);
 
 #ifdef PERF_PROFILING
-        _dpd.addPreprocProfileFunc("smtp", (void*)&smtpPerfStats, 0, _dpd.totalPerfStats);        
+    _dpd.addPreprocProfileFunc("smtp", (void*)&smtpPerfStats, 0, _dpd.totalPerfStats);        
 #endif
-    }
+
+    config_done = 1;
 }
 
 
 /*
- * Function: SMTP_XLINK_Init(u_char *)
+ * Function: SMTP_XLINK_Init(char *)
  *
  * Purpose: Dummy function to make upgrade easier.  If preprocessor
  *           xlink2state is configured in snort.conf, just ignore it.
@@ -137,14 +162,14 @@ static void SMTPInit(u_char *args)
  * Returns: void function
  *
  */
-static void SMTP_XLINK_Init(u_char *args)
+static void SMTP_XLINK_Init(char *args)
 {
     return;
 }
 
 
 /*
- * Function: SMTPFunction(Packet *)
+ * Function: SMTPDetect(void *, void *)
  *
  * Purpose: Perform the preprocessor's intended function.  This can be
  *          simple (statistics collection) or complex (IP defragmentation)
@@ -161,14 +186,24 @@ static void SMTPDetect(void *pkt, void *context)
     SFSnortPacket *p = (SFSnortPacket *)pkt;
     PROFILE_VARS;
 
-    if(!IsTCP(p))
+    if (!IsTCP(p))
+    {
+        return;
+    }
+
+    /* Make sure it's traffic we're interested in */
+    if (!SMTP_IsServer(p->src_port) && !SMTP_IsServer(p->dst_port))
     {
         return;
     }
 
     PREPROC_PROFILE_START(smtpPerfStats);
 
+    DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP Start (((((((((((((((((((((((((((((((((((((((\n"););
+
     SnortSMTP(p);
+
+    DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP End )))))))))))))))))))))))))))))))))))))))))\n\n"););
 
     PREPROC_PROFILE_END(smtpPerfStats);
 #ifdef PERF_PROFILING
@@ -181,10 +216,6 @@ static void SMTPDetect(void *pkt, void *context)
     }
 #endif
 
-    /* 
-     * if you need to issue an alert from your preprocessor, check out 
-     * event_wrapper.h, there are some useful helper functions there
-     */
 }
 
 
@@ -204,7 +235,6 @@ static void SMTPDetect(void *pkt, void *context)
  */                   
 static void SMTPCleanExitFunction(int signal, void *data)
 {    
-    SMTP_ConfigFree();
     SMTP_Free();
 }
 
@@ -225,5 +255,16 @@ static void SMTPCleanExitFunction(int signal, void *data)
  */                   
 static void SMTPRestartFunction(int signal, void *foo)
 {
-       /* restart code goes here */
+    return;
 }
+
+static void SMTPResetFunction(int signal, void *data)
+{
+    return;
+}
+
+static void SMTPResetStatsFunction(int signal, void *data)
+{
+    return;
+}
+

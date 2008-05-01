@@ -80,7 +80,7 @@
 **
 ** Copyright(C) 2002,2003,2004 Marc Norton
 ** Copyright(C) 2003,2004 Daniel Roelker 
-** Copyright(C) 2002,2003,2004 Sourcefire,Inc.
+** Copyright(C) 2002-2008 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -116,7 +116,7 @@
 /*
 *
 */ 
-#define MEMASSERT(p,s) if(!p){printf("ACSM-No Memory: %s!\n",s);exit(0);}
+#define MEMASSERT(p,s) if(!p){FatalError("ACSM-No Memory: %s!\n",s);}
 
 /*
 *
@@ -298,6 +298,7 @@ queue_add (QUEUE * s, int state)
   else
   {
       q = (QNODE *) AC_MALLOC (sizeof (QNODE));
+      MEMASSERT (q, "queue_add");
       q->state = state;
       q->next = 0;
       s->tail->next = q;
@@ -1486,9 +1487,11 @@ int acsmAddKey2(ACSM_STRUCT2 * p, unsigned char *key, int klen, int nocase, void
   MEMASSERT (plist, "acsmAddPattern");
  
   plist->patrn = (unsigned char *) AC_MALLOC (klen);
+  MEMASSERT (plist->patrn, "acsmAddPattern");
   memcpy (plist->patrn, key, klen);
 
   plist->casepatrn = (unsigned char *) AC_MALLOC (klen);
+  MEMASSERT (plist->casepatrn, "acsmAddPattern");
   memcpy (plist->casepatrn, key, klen);
 
   plist->n      = klen;
@@ -1954,7 +1957,7 @@ acsmSearchSparseDFA(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
              if( mlist->nocase )
              {
                 nfound++;
-                if (Match (mlist->id, index, data))
+                if (Match (mlist->id, index, data) > 0)
                 {
                     *current_state = state;
                     return nfound;
@@ -1965,7 +1968,7 @@ acsmSearchSparseDFA(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
                 if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
                 {
                     nfound++;
-                    if (Match (mlist->id, index, data))
+                    if (Match (mlist->id, index, data)> 0)
                     {
                         *current_state = state;
                         return nfound;
@@ -2036,7 +2039,7 @@ acsmSearchSparseDFA_Full(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
              if( mlist->nocase )
              {
                 nfound++;
-                if (Match (mlist->id, index, data))
+                if (Match (mlist->id, index, data)>0)
                 {
                     *current_state = state;
                     return nfound;
@@ -2047,7 +2050,7 @@ acsmSearchSparseDFA_Full(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
                 if( memcmp (mlist->casepatrn, Tx + index, mlist->n ) == 0 )
                 {
                     nfound++;
-                    if (Match (mlist->id, index, data))
+                    if (Match (mlist->id, index, data)>0)
                     {
                         *current_state = state;
                         return nfound;
@@ -2070,7 +2073,7 @@ acsmSearchSparseDFA_Full(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
       if( mlist->nocase )
       {
         nfound++;
-        if (Match (mlist->id, index, data))
+        if (Match (mlist->id, index, data)>0)
         {
             *current_state = state;
             return nfound;
@@ -2081,7 +2084,7 @@ acsmSearchSparseDFA_Full(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
         if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
         {
             nfound++;
-            if (Match (mlist->id, index, data))
+            if (Match (mlist->id, index, data)>0)
             {
                 *current_state = state;
                 return nfound;
@@ -2149,7 +2152,7 @@ acsmSearchSparseDFA_Banded(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
              if( mlist->nocase )
              {
                 nfound++;
-                if (Match (mlist->id, index, data))
+                if (Match (mlist->id, index, data)>0)
                 {
                     *current_state = state;
                     return nfound;
@@ -2160,7 +2163,7 @@ acsmSearchSparseDFA_Banded(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
                 if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
                 {
                     nfound++;
-                    if (Match (mlist->id, index, data))
+                    if (Match (mlist->id, index, data)>0)
                     {
                         *current_state = state;
                         return nfound;
@@ -2185,7 +2188,7 @@ acsmSearchSparseDFA_Banded(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
       if( mlist->nocase )
       {
         nfound++;
-        if (Match (mlist->id, index, data))
+        if (Match (mlist->id, index, data)>0)
         {
             *current_state = state;
             return nfound;
@@ -2196,7 +2199,7 @@ acsmSearchSparseDFA_Banded(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
         if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
         {
           nfound++;
-          if (Match (mlist->id, index, data))
+          if (Match (mlist->id, index, data)>0)
           {
             *current_state = state;
             return nfound;
@@ -2262,7 +2265,7 @@ acsmSearchSparseNFA(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
            if( mlist->nocase )
            {
               nfound++;
-              if (Match (mlist->id, index, data))
+              if (Match (mlist->id, index, data)>0)
               {
                   *current_state = state;
                   return nfound;
@@ -2273,7 +2276,7 @@ acsmSearchSparseNFA(ACSM_STRUCT2 * acsm, unsigned char *Tx, int n,
               if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
               {
                 nfound++;
-                if (Match (mlist->id, index, data))
+                if (Match (mlist->id, index, data)>0)
                 {
                     *current_state = state;
                     return nfound;

@@ -18,7 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * Author: Marc A Norton
  *
@@ -28,19 +28,6 @@
 #define KTRIE_H
 
 #define ALPHABET_SIZE 256
-
-
-#ifdef WIN32
-
-#ifndef inline 
-#define inline __inline
-#endif
-
-#else
-
-#define inline
-
-#endif
 
 /*
 *
@@ -72,6 +59,7 @@ typedef struct _kmapnode {
 /*
 *
 */
+typedef void (*KMapUserFreeFunc)(void *p);
 typedef struct _kmap {
 
   KMAPNODE * root[256];  /* KTrie nodes */
@@ -79,7 +67,7 @@ typedef struct _kmap {
   KEYNODE  * keylist; // list of key+data pairs
   KEYNODE  * keynext; // findfirst/findnext node
 
-  void      (*userfree)(void*p);  // fcn to free user data
+  KMapUserFreeFunc userfree;  // fcn to free user data
  
   int        nchars; // # character nodes
 
@@ -90,7 +78,7 @@ typedef struct _kmap {
 /*
 *  PROTOTYPES
 */
-KMAP * KMapNew ( void (*userfree)(void*p) );
+KMAP * KMapNew ( KMapUserFreeFunc userfree );
 void   KMapSetNoCase( KMAP * km, int flag );
 int    KMapAdd ( KMAP * km, void * key, int ksize, void * userdata );
 void * KMapFind( KMAP * km, void * key, int ksize );

@@ -1,7 +1,7 @@
 /*
  * ftpp_ui_client_lookup.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -59,7 +59,7 @@
  */
 int ftpp_ui_client_lookup_init(CLIENT_LOOKUP **ClientLookup)
 {
-    *ClientLookup = KMapNew(FTPTelnetCleanupFTPClientConf); 
+    *ClientLookup = KMapNew((KMapUserFreeFunc)FTPTelnetCleanupFTPClientConf); 
     if(*ClientLookup == NULL)
     {
         return FTPP_MEM_ALLOC_FAIL;
@@ -168,7 +168,7 @@ int ftpp_ui_client_lookup_add(CLIENT_LOOKUP *ClientLookup, unsigned long Ip,
  *
  */
 FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_find(CLIENT_LOOKUP *ClientLookup, 
-                                            unsigned long Ip, int *iError)
+                                            snort_ip_p Ip, int *iError)
 {
     FTP_CLIENT_PROTO_CONF *ClientConf = NULL;
 
@@ -186,7 +186,11 @@ FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_find(CLIENT_LOOKUP *ClientLookup,
     *iError = FTPP_SUCCESS;
 
     /* TODO: change this to use a quick find of IP/mask */
+#ifdef SUP_IP6
+    ClientConf = (FTP_CLIENT_PROTO_CONF *)KMapFind(ClientLookup,(void *)Ip,4);
+#else
     ClientConf = (FTP_CLIENT_PROTO_CONF *)KMapFind(ClientLookup,(void *)&Ip,4);
+#endif
     if (!ClientConf)
     {
         *iError = FTPP_NOT_FOUND;

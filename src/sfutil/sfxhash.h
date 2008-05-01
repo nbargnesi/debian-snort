@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -111,6 +111,7 @@ SFXHASH       * sfxhash_new( int nrows, int keysize, int datasize, int memcap,
 void            sfxhash_set_max_nodes( SFXHASH *h, int max_nodes );
 
 void            sfxhash_delete( SFXHASH * h );
+int             sfxhash_make_empty(SFXHASH *);
 
 int             sfxhash_add ( SFXHASH * h, void * key, void * data );
 SFXHASH_NODE * sfxhash_get_node( SFXHASH * t, void * key );

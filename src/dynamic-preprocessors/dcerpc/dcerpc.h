@@ -1,7 +1,7 @@
 /*
  * dcerpc.h
  *
- * Copyright (C) 2006 Sourcefire,Inc
+ * Copyright (C) 2006-2008 Sourcefire, Inc.
  * Andrew Mullican
  *
  * This program is free software; you can redistribute it and/or modify
@@ -27,6 +27,10 @@
  */
 #ifndef _DCERPC_H_
 #define _DCERPC_H_
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #ifdef WIN32
 #pragma pack(push,dce_hdrs,1)
@@ -75,19 +79,38 @@ typedef struct dcerpc_req
 #define DCERPC_BYTE_ORDER(byte_order_flag) ((u_int8_t)byte_order_flag & 0xF0) >> 4
 
 #ifdef WORDS_BIGENDIAN
+
 #define dcerpc_ntohs(byte_order_flag, value) \
-(DCERPC_BYTE_ORDER(byte_order_flag) == 0 ? (u_int16_t)value : (((u_int16_t)value & 0xff00) >> 8) | (((u_int16_t)value & 0x00ff) << 8))
+(DCERPC_BYTE_ORDER(byte_order_flag) == 0 ? (u_int16_t)(value) : \
+ (((u_int16_t)(value) & 0xff00) >> 8) | (((u_int16_t)(value) & 0x00ff) << 8))
+
+#define dcerpc_ntohl(byte_order_flag, value) \
+(DCERPC_BYTE_ORDER(byte_order_flag) == 0 ? (u_int32_t)(value) : \
+ (((u_int32_t)(value) & 0xff000000) >> 24) | (((u_int32_t)(value) & 0x00ff0000) >> 8) | \
+ (((u_int32_t)(value) & 0x0000ff00) << 8) | (((u_int32_t)(value) & 0x000000ff) << 24))
+
 #else
+
 #define dcerpc_ntohs(byte_order_flag, value) \
-(DCERPC_BYTE_ORDER(byte_order_flag) == 1 ? (u_int16_t)value : (((u_int16_t)value & 0xff00) >> 8) | (((u_int16_t)value & 0x00ff) << 8))
-#endif
+(DCERPC_BYTE_ORDER(byte_order_flag) == 1 ? (u_int16_t)(value) : \
+ (((u_int16_t)(value) & 0xff00) >> 8) | (((u_int16_t)(value) & 0x00ff) << 8))
+
+#define dcerpc_ntohl(byte_order_flag, value) \
+(DCERPC_BYTE_ORDER(byte_order_flag) == 1 ? (u_int32_t)(value) : \
+ (((u_int32_t)(value) & 0xff000000) >> 24) | (((u_int32_t)(value) & 0x00ff0000) >> 8) | \
+ (((u_int32_t)(value) & 0x0000ff00) << 8) | (((u_int32_t)(value) & 0x000000ff) << 24))
+
+#endif  /* WORDS_BIGENDIAN */
+
+#define dcerpc_htons dcerpc_ntohs
+#define dcerpc_htonl dcerpc_ntohl
 
 
-int IsCompleteDCERPCMessage(u_int8_t *, u_int16_t);
-int ProcessDCERPCMessage(u_int8_t *, u_int16_t, u_int8_t *, u_int16_t);
+int IsCompleteDCERPCMessage(const u_int8_t *, u_int16_t);
+int ProcessDCERPCMessage(const u_int8_t *, u_int16_t, const u_int8_t *, u_int16_t);
 
-void ReassembleDCERPCRequest(u_int8_t *, u_int16_t, u_int8_t *);
-int DCERPC_Fragmentation(u_int8_t *, u_int16_t, u_int16_t);
+void ReassembleDCERPCRequest(const u_int8_t *, u_int16_t, const u_int8_t *);
+int DCERPC_Fragmentation(const u_int8_t *, u_int16_t, u_int16_t);
 
 
 #ifdef WIN32
