@@ -227,6 +227,7 @@
 #define     FRAG3_ANOMALY_OVLP                      8
 #define     FRAG3_IPV6_BSD_ICMP_FRAG                9
 #define     FRAG3_IPV6_BAD_FRAG_PKT                10
+#define     FRAG3_MIN_TTL_EVASION                  11
 
 #define GENERATOR_SMTP                             124
 #define     SMTP_COMMAND_OVERFLOW                  1
@@ -332,6 +333,7 @@
 #define FRAG3_ANOM_OVLP_STR "(spp_frag3) Fragmentation overlap"
 #define FRAG3_IPV6_BSD_ICMP_FRAG_STR "(spp_frag3) IPv6 BSD mbufs remote kernel buffer overflow"
 #define FRAG3_IPV6_BAD_FRAG_PKT_STR "(spp_frag3) Bogus fragmentation packet. Possible BSD attack"
+#define FRAG3_MIN_TTL_EVASION_STR "(spp_frag3) TTL value less than configured minimum, not using for reassembly"
 
 /*   Stream5 strings */
 #define     STREAM5_SYN_ON_EST_STR "Syn on established session"
