@@ -1,3 +1,14 @@
+snort (2.7.0-19+lenny1) testing-security; urgency=high
+
+  * Non-maintainer upload by the security team.
+  * Fix error in preprocessors/spp_frag3.c that prevented Snort from properly
+    identifying packet fragments that had dissimilar TTL values, which allowed
+    remote attackers to bypass detection rules by using a different TTL for
+    each fragment. Also update src/generators.h to include the new FRAG3_MIN_TTL
+    defines (CVE-2008-1804; Closes: #483160)
+
+ -- Nico Golde <nion@debian.org>  Sun, 02 Nov 2008 14:02:02 +0100
+
 snort (2.7.0-19) unstable; urgency=low
 
   * Make the snort_rules_update example script use bash instead of sh.
