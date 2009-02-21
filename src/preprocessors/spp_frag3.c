@@ -1258,7 +1258,7 @@ static void Frag3ParseArgs(char *args, Frag3Context *context)
 
                 context->ttl_limit = FRAG3_TTL_LIMIT;
             }
-            LogMessage("%s(%d) ==> The ttl_limit option will be ignored, and Use of the ttl_limit option will be deprecated in a future release\n");
+            LogMessage("%s(%d) ==> The ttl_limit option will be ignored, and Use of the ttl_limit option will be deprecated in a future release\n", file_name, file_line);
         }
         else if(!strcasecmp(index, "min_ttl"))
         {
