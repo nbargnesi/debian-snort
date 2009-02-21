@@ -1556,7 +1556,7 @@ void Frag3Defrag(Packet *p, void *context)
                  */
                 p->fragtracker = NULL;
             }
-            LogMessage("%s(%d) ==> The ttl_limit option will be ignored, and Use of the ttl_limit option will be deprecated in a future release\n");
+            LogMessage("%s(%d) ==> The ttl_limit option will be ignored, and Use of the ttl_limit option will be deprecated in a future release\n", file_name, file_line);
         }
 
         Frag3RemoveTracker(&fkey, ft);

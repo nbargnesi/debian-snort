@@ -1,3 +1,10 @@
+snort (2.7.0-23) unstable; urgency=high
+
+  * Fix error in call to LogMessage (missing parameters) which caused a segfault
+    when fragmented packages were received and ttl_limit was set (Closes: 503992)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 21 Feb 2009 12:11:33 +0100
+
 snort (2.7.0-22) unstable; urgency=low
 
   * Include patch from dato to make the package binNMU-safe
