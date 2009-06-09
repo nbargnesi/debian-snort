@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -105,6 +105,10 @@ int            _smtp_check_gaps = 0;
 int            _smtp_reassembling = 0;
 #ifdef DEBUG
 UINT64 _smtp_session_counter = 0;
+#endif
+
+#ifdef TARGET_BASED
+int16_t _smtp_proto_id;
 #endif
 
 
@@ -218,24 +222,27 @@ SMTPSearch *_smtp_current_search;
 
 /* Private functions ******************************************************/
 
-static void             SMTP_Setup(SFSnortPacket *);
-static void             SMTP_ResetState(void);
-static void             SMTP_SessionFree(void *);
-static void             SMTP_NoSessionFree(void);
-static int              SMTP_GetPacketDirection(SFSnortPacket *, int);
-static void             SMTP_ProcessClientPacket(SFSnortPacket *);
-static int              SMTP_ProcessServerPacket(SFSnortPacket *);
-static void             SMTP_DisableDetect(SFSnortPacket *);
+static void SMTP_Setup(SFSnortPacket *);
+static void SMTP_ResetState(void);
+static void SMTP_SessionFree(void *);
+static void SMTP_NoSessionFree(void);
+static int SMTP_GetPacketDirection(SFSnortPacket *, int);
+static void SMTP_ProcessClientPacket(SFSnortPacket *);
+static int SMTP_ProcessServerPacket(SFSnortPacket *);
+static void SMTP_DisableDetect(SFSnortPacket *);
 static const u_int8_t * SMTP_HandleCommand(SFSnortPacket *, const u_int8_t *, const u_int8_t *);
 static const u_int8_t * SMTP_HandleData(SFSnortPacket *, const u_int8_t *, const u_int8_t *);
 static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *, const u_int8_t *, const u_int8_t *);
 static const u_int8_t * SMTP_HandleDataBody(SFSnortPacket *, const u_int8_t *, const u_int8_t *);
-static int              SMTP_SearchStrFound(void *, int, void *);
-static int              SMTP_BoundaryStrFound(void *, int, void *);
-static int              SMTP_GetBoundary(const char *, int);
-static int              SMTP_IsTlsClientHello(const u_int8_t *, const u_int8_t *);
-static int              SMTP_IsTlsServerHello(const u_int8_t *, const u_int8_t *);
-static int              SMTP_IsSSL(const u_int8_t *, int, int);
+static int SMTP_SearchStrFound(void *, void *, int, void *, void *);
+
+static int SMTP_BoundaryStrFound(void *, void *, int , void *, void *);
+static int SMTP_GetBoundary(const char *, int);
+static int SMTP_IsTlsClientHello(const u_int8_t *, const u_int8_t *);
+static int SMTP_IsTlsServerHello(const u_int8_t *, const u_int8_t *);
+static int SMTP_IsSSL(const u_int8_t *, int, int);
+
+static int SMTP_Inspect(SFSnortPacket *);
 
 /**************************************************************************/
 
@@ -377,6 +384,9 @@ void SMTP_SearchInit(void)
  */
 static int SMTP_BoundarySearchInit(void)
 {
+    if (_smtp->mime_boundary.boundary_search != NULL)
+        _dpd.searchAPI->search_instance_free(_smtp->mime_boundary.boundary_search);
+
     _smtp->mime_boundary.boundary_search = _dpd.searchAPI->search_instance_new();
 
     if (_smtp->mime_boundary.boundary_search == NULL)
@@ -448,11 +458,6 @@ static void SMTP_Setup(SFSnortPacket *p)
     int flags = 0;
     static char checked_reassembling = 0;
 
-    /* reset normalization stuff */
-    _smtp_normalizing = 0;
-    p->normalized_payload_size = 0;
-    p->flags &= ~FLAG_ALT_DECODE;
-
     if (p->stream_session_ptr != NULL)
     {
         /* check to see if we're doing client reassembly in stream */
@@ -467,6 +472,11 @@ static void SMTP_Setup(SFSnortPacket *p)
         /* set flags to session flags */
         flags = _dpd.streamAPI->get_session_flags(p->stream_session_ptr);
     }
+
+    /* reset normalization stuff */
+    _smtp_normalizing = 0;
+    p->normalized_payload_size = 0;
+    p->flags &= ~FLAG_ALT_DECODE;
 
     /* Figure out direction of packet */
     _smtp_pkt_direction = SMTP_GetPacketDirection(p, flags);
@@ -531,7 +541,7 @@ static void SMTP_Setup(SFSnortPacket *p)
         (_smtp_pkt_direction != SMTP_PKT_FROM_SERVER) &&
         (p->flags & FLAG_REBUILT_STREAM))
     {
-        char missing_in_rebuilt =
+        int missing_in_rebuilt =
             _dpd.streamAPI->missing_in_reassembled(p->stream_session_ptr, SSN_DIR_CLIENT);
 
         if (_smtp->session_flags & SMTP_FLAG_NEXT_STATE_UNKNOWN)
@@ -542,7 +552,7 @@ static void SMTP_Setup(SFSnortPacket *p)
             _smtp->session_flags &= ~SMTP_FLAG_NEXT_STATE_UNKNOWN;
         }
 
-        if (missing_in_rebuilt == 3)
+        if (missing_in_rebuilt == SSN_MISSING_BOTH)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Found missing packets before and after "
                                     "in reassembly buffer - set state to unknown and "
@@ -550,13 +560,13 @@ static void SMTP_Setup(SFSnortPacket *p)
             _smtp->state = STATE_UNKNOWN;
             _smtp->session_flags |= SMTP_FLAG_NEXT_STATE_UNKNOWN;
         }
-        else if (missing_in_rebuilt == 2)
+        else if (missing_in_rebuilt == SSN_MISSING_BEFORE)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Found missing packets before "
                                     "in reassembly buffer - set state to unknown\n"););
             _smtp->state = STATE_UNKNOWN;
         }
-        else if (missing_in_rebuilt == 1)
+        else if (missing_in_rebuilt == SSN_MISSING_AFTER)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Found missing packets after "
                                     "in reassembly buffer - set next state to unknown\n"););
@@ -624,6 +634,7 @@ static int SMTP_GetPacketDirection(SFSnortPacket *p, int flags)
  * Free SMTP-specific related to this session
  *
  * @param   v   pointer to SMTP session structure
+ *
  *
  * @return  none
  */
@@ -697,7 +708,7 @@ void SMTP_Free(void)
  * @return response
  * @retval 1        commands caller to stop searching
  */
-static int SMTP_SearchStrFound(void *id, int index, void *data)
+static int SMTP_SearchStrFound(void *id, void *unused, int index, void *data, void *unused2)
 {
     int search_id = (int)(uintptr_t)id;
 
@@ -720,7 +731,7 @@ static int SMTP_SearchStrFound(void *id, int index, void *data)
  * @return response
  * @retval 1        commands caller to stop searching
  */
-static int SMTP_BoundaryStrFound(void *id, int index, void *data)
+static int SMTP_BoundaryStrFound(void *id, void *unused, int index, void *data, void *unused2)
 {
     int boundary_id = (int)(uintptr_t)id;
 
@@ -1298,12 +1309,13 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
     while (ptr < data_end_marker)
     {
         SMTP_GetEOL(ptr, data_end_marker, &eol, &eolm);
-        
+
         /* got a line with only end of line marker should signify end of header */
         if (eolm == ptr)
         {
             /* reset global header state values */
-            _smtp->state_flags &= ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE);
+            _smtp->state_flags &=
+                ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT);
 
             _smtp->data_state = STATE_DATA_BODY;
 
@@ -1316,7 +1328,7 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
 
         /* if we're not folding, see if we should interpret line as a data line 
          * instead of a header line */
-        if (!(_smtp->state_flags & SMTP_FLAG_FOLDING))
+        if (!(_smtp->state_flags & (SMTP_FLAG_FOLDING | SMTP_FLAG_DATA_HEADER_CONT)))
         {
             char got_non_printable_in_header_name = 0;
 
@@ -1349,14 +1361,20 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
                                    SMTP_HEADER_NAME_OVERFLOW_STR, header_name_len);
             }
 
-            if ((colon == eolm) || got_non_printable_in_header_name)
+            /* If the end on line marker and end of line are the same, assume
+             * header was truncated, so stay in data header state */
+            if ((eolm != eol) &&
+                ((colon == eolm) || got_non_printable_in_header_name))
             {
-                /* no colon or spaces in header name (won't be interpreted as a header)
+                /* no colon or got spaces in header name (won't be interpreted as a header)
                  * assume we're in the body */
+                _smtp->state_flags &=
+                    ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT);
+
                 _smtp->data_state = STATE_DATA_BODY;
+
                 return ptr;
             }
-
 
             _smtp_current_search = &_smtp_hdr_search[0];
             header_found = _dpd.searchAPI->search_find(SEARCH_HDR, (const char *)ptr,
@@ -1383,7 +1401,11 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
                 }
             }
         }
-
+        else
+        {
+            _smtp->state_flags &= ~SMTP_FLAG_DATA_HEADER_CONT;
+        }
+        
         /* get length of header line */
         header_line_len = eol - ptr;
 
@@ -1399,7 +1421,8 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
             {
                 /* assume we guessed wrong and are in the body */
                 _smtp->data_state = STATE_DATA_BODY;
-                _smtp->state_flags &= ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE);
+                _smtp->state_flags &=
+                    ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT);
                 return ptr;
             }
         }
@@ -1426,7 +1449,7 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
                 _smtp->state_flags &= ~SMTP_FLAG_FOLDING;
             }
         }
-        else
+        else if (eol != eolm)
         {
             _smtp->state_flags &= ~SMTP_FLAG_FOLDING;
         }
@@ -1462,6 +1485,9 @@ static const u_int8_t * SMTP_HandleHeader(SFSnortPacket *p, const u_int8_t *ptr,
             _smtp->data_state = STATE_DATA_HEADER;
 
         ptr = eol;
+
+        if (ptr == data_end_marker)
+            _smtp->state_flags |= SMTP_FLAG_DATA_HEADER_CONT;
     }
 
     return ptr;
@@ -1784,6 +1810,74 @@ static int SMTP_IsSSL(const u_int8_t *ptr, int len, int pkt_flags)
     return 0;
 }
 
+/* For Target based
+ * If a protocol for the session is already identified and not one SMTP is
+ * interested in, SMTP should leave it alone and return without processing.
+ * If a protocol for the session is already identified and is one that SMTP is
+ * interested in, decode it.
+ * If the protocol for the session is not already identified and the preprocessor
+ * is configured to detect on one of the packet ports, detect.
+ * Returns 0 if we should not inspect
+ *         1 if we should continue to inspect
+ */
+static int SMTP_Inspect(SFSnortPacket *p)
+{
+#ifdef TARGET_BASED
+    /* SMTP could be configured to be stateless.  If stream isn't configured, assume app id
+     * will never be set and just base inspection on configuration */
+    if (p->stream_session_ptr == NULL)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: No stream session.\n"););
+
+        if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+            (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: Configured for this "
+                                    "traffic, so let's inspect.\n"););
+            return 1;
+        }
+    }
+    else
+    {
+        int16_t app_id = _dpd.streamAPI->get_application_protocol_id(p->stream_session_ptr);
+
+        if (app_id != 0)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: App id: %u.\n", app_id););
+
+            if (app_id == _smtp_proto_id)
+            {
+                DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: App id is "
+                                        "set to \"%s\".\n", SMTP_PROTO_REF_STR););
+                return 1;
+            }
+        }
+        else
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: Unknown protocol for "
+                                    "this session.  See if we're configured.\n"););
+
+            if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+                (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
+            {
+                DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: SMTP port is configured."););
+                return 1;
+            }
+        }
+    }
+
+    DEBUG_WRAP(DebugMessage(DEBUG_SMTP,"SMTP: Target-based: Not inspecting ...\n"););
+
+#else
+    /* Make sure it's traffic we're interested in */
+    if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+        (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
+        return 1;
+
+#endif  /* TARGET_BASED */
+
+    return 0;
+}
 
 /*
  * Entry point to snort preprocessor for each packet
@@ -1798,25 +1892,9 @@ void SnortSMTP(SFSnortPacket *p)
 
     PROFILE_VARS;
 
-    /* Ignore if no data */
-    if (p->payload_size == 0)
-    {
-#ifdef DEBUG
-        int pkt_dir;
-        int flags = 0;
-
-        if (p->stream_session_ptr != NULL)
-            flags = _dpd.streamAPI->get_session_flags(p->stream_session_ptr);
-
-        pkt_dir = SMTP_GetPacketDirection(p, flags);
-        DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP %s packet\n",
-                                pkt_dir == SMTP_PKT_FROM_SERVER ? "server" :
-                                (pkt_dir == SMTP_PKT_FROM_CLIENT ? "client" : "unknown")););
-        DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "No payload to inspect\n"););
-#endif
+    if (!SMTP_Inspect(p))
         return;
-    }
-    
+
     SMTP_Setup(p);
 
     if (_smtp_pkt_direction == SMTP_PKT_FROM_SERVER)
@@ -1902,7 +1980,8 @@ void SnortSMTP(SFSnortPacket *p)
                  * so set state to unknown. It's likely this was the
                  * beginning of the conversation so reset state */
                 DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Got non-rebuilt packets before "
-                                        "this rebuilt packet\n"));
+                                        "this rebuilt packet\n"););
+
                 _smtp->state = STATE_UNKNOWN;
                 _smtp->session_flags &= ~SMTP_FLAG_GOT_NON_REBUILT;
             }
@@ -1944,7 +2023,6 @@ static void SMTP_DisableDetect(SFSnortPacket *p)
 
     _dpd.setPreprocBit(p, PP_SFPORTSCAN);
     _dpd.setPreprocBit(p, PP_PERFMONITOR);
-    _dpd.setPreprocBit(p, PP_STREAM4);
     _dpd.setPreprocBit(p, PP_STREAM5);
 }
 

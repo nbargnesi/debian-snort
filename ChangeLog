@@ -1,3 +1,1364 @@
+2009-04-20 Ryan Jordan <ryan.jordan@sourcefire.com>
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+      Changed DCE2 configuration such that events are disabled by default.
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+      Fixed false positive when an additional /r/n followed the QUIT command.
+    * src/dynamic-preprocessors/ssh/spp_ssh.c:
+      Fixed infinite loop when parsing SSH configuration.
+    * src/output-plugins/spo_database.c:
+      Fixed an issue that prevented Snort from inserting records into the
+      sensor table of a MySQL database. Thanks to David Cecchino for pointing
+	  out this issue.
+    * src/parser.c:
+    * src/sfutil/ipobj.c:
+      Fixed handling of IP lists that begin with variables, when IPv6 was
+      enabled.
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+      Handle case where require_3whs is configured, no session has been
+      created and an ACK is received with a RST flag. Thanks to Jeff Johnson
+	  for reporting the problem.
+    * src/sfthreshold.c:
+    * src/sfutil/sf_ipvar.c:
+    * src/sfutil/sfportobject.c:
+    * src/sfutil/sfthd.c:
+    * src/sfutil/sf_vartable.c:
+    * src/util.c:
+      Fixed issues with use of IPv6 address variables.
+    * rpm/snort.spec:
+      Added DCE2 preprocessor to RPM spec file. Thanks to Scott Fabbri, c0uch,
+	  and Andrew Pendray for reporting this.
+    * doc/snort_manual.tex:
+      Updated to add Bhagyasree Bantwal, newest member of Snort Team.
+
+2009-03-11 Steven Sturges <ssturges@sourcefire.com>
+    * src/util.c:
+      Fix for IPv6 on Win32 to define interface variables.
+    * src/win32/WIN32-Prj/snort_installer_options.ini:
+      Update for IPv6 intalls.
+
+2009-03-10 Steven Sturges <ssturges@sourcefire.com>
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+      Correctly pass operation to allow flowbits checked-but-not-set and 
+      set-but-not-checked validation to work between text and shared rules.
+    * src/dynamic-plugins/sf_dynamic_define.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c:
+      Handle relative PCREs the same as text rules.  Fix misnamed macro.
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_event.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+      Address False positives seen in testing.
+    * src/dynamic-preprocessors/ftptelnet/ftpp_si.c:
+      Add missing attribute check when FTP traffic is picked up mid-TCP stream.
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+      Fix handling of EPRT command for IPv6.
+    * src/output-plugins/spo_unified2.c:
+      unlink output file in test mode.
+    * src/fpcreate.c: 
+    * src/fpdetect.c:
+    * src/parser.c:
+      Fix logging to syslog for rule counts at startup.
+    * src/generators.h:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/preprocessors/Stream5/stream5_common.h:
+    * etc/gen-msg.map:
+      Add stream5 option to restrict the number of consecutive
+      small TCP segments inserted for reassembly without seeing an ACK.
+      Generate alert (gid:129,sid:12) when that limit is exceeded. 
+      Allow overriding of this configuration on a port basis via an
+      ignore_ports option.
+    * src/sfutil/sf_ip.c:
+    * src/sfutil/sf_ip.h:
+      Fixed issues w/ IPv6 comparisons and /32 used with IPv6.  Added 
+      and updated unit test code.  Thanks to mamcmil on snort.org
+      forums for pointing out the problem. 
+    * src/win32/WIN32-Prj/snort_installer.nsi:
+    * src/win32/WIN32-Prj/snort_installer_options.ini:
+    * src/win32/WIN32-Prj/sf_engine.dsp:
+    * src/dynamic-preprocessors/dcerpc/sf_dcerpc.dsp:
+    * src/dynamic-preprocessors/dcerpc2/sf_dce2.dsp:
+    * src/dynamic-preprocessors/dns/sf_dns.dsp:
+    * src/dynamic-preprocessors/ftptelnet/sf_ftptelnet.dsp:
+    * src/dynamic-preprocessors/smtp/sf_smtp.dsp:
+    * src/dynamic-preprocessors/ssh/sf_ssh.dsp:
+    * src/dynamic-preprocessors/ssl/sf_ssl.dsp:
+    * configure.in:
+    * rpm/snort.spec:
+    * src/win32/WIN32-Includes/config.h:
+      2.8.4 Final build changes.  Allow IPv6 to be installed via windows
+      installer.
+
+2009-02-06 Todd Wease <twease@sourcefire.com>
+    * snort.8:
+    * src/parser.c:
+    * src/snort.c:
+    * src/snort.h:
+      Added command line option "--require-rule-sid" to require every rule have
+      an sid.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+      Fix compilation issue with --disable-dynamicplugin.  Thanks to
+      Jason Wallace for bringing this to our attention.
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+      Push dynamic engine minor version to 10 and build version to 16.
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+      Fix preprocessor rule option processing for dynamic detection rules.
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+      Add checks for header and method buffers when fast pattern is not
+      specified in dynamic detection rules.
+    * src/dynamic-preprocessors/dcerpc/dcerpc_util.c:
+    * src/dynamic-preprocessors/dcerpc/smb_andx_decode.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.c:
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+    * src/dynamic-preprocessors/smtp/smtp_util.c:
+    * src/preprocessors/HttpInspect/client/hi_client_norm.c:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/bnfa_search.c:
+      Update uses of isprint() to check for isascii() as well where only
+      printable ascii characters are relevant.
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+      Update smtp preprocessor to use stream5 direction data when determining
+      if preprocessor is configured to process traffic.
+    * doc/README.stream5:
+    * doc/snort_manual.tex:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+      Add range checking in stream5 preprocessor for prune_log_max and update
+      error messages to indicate 0 is a valid value for prune_log_max,
+      max_queued_segs and max_queued_bytes.
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+      Update to stream5 preprocessor to handle ECN and CWR bits in the SYN
+      packet.  Thanks to Lothar Braun for bringing this to our attention.
+    * src/sfutil/sf_ip.c:
+    * src/sfutil/sf_ip.h:
+      Fix configuration parsing of IPv6 addresses to allow /32 cidr.
+    * src/decode.c:
+    * src/decode.h:
+    * src/detect.c:
+    * src/detect.h:
+    * src/detection-plugins/sp_ip_proto.c:
+    * src/detection-plugins/sp_ip_proto.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+    * src/dynamic-preprocessors/dns/spp_dns.c:
+    * src/dynamic-preprocessors/ftptelnet/spp_ftptelnet.c:
+    * src/dynamic-preprocessors/smtp/spp_smtp.c:
+    * src/dynamic-preprocessors/ssh/spp_ssh.c:
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    * src/fpcreate.c:
+    * src/fpcreate.h:
+    * src/fpdetect.h:
+    * src/parser.c:
+    * src/plugbase.c:
+    * src/plugbase.h:
+    * src/preprocessors/spp_arpspoof.c:
+    * src/preprocessors/spp_bo.c:
+    * src/preprocessors/spp_frag3.c:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/preprocessors/spp_perfmonitor.c:
+    * src/preprocessors/spp_rpc_decode.c:
+    * src/preprocessors/spp_sfportscan.c:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/rules.h:
+    * src/snort.c:
+      Added rule and preprocessor filtering by protocol so that traffic will
+      not be evaluated for which there are no rules or preprocessors interested
+      in that traffic.
+    * src/decode.c:
+      Fixed IPv6 decoder for Sparc memory alignment in IPv6 enabled binary.
+    * src/decode.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/log_text.c:
+    * src/sfutil/sf_iph.c:
+      Fixed issue in IPv6 enabled binary, where ICMP (not ICMP6) over IPv6
+      would cause a segfault.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+    * src/profiler.c:
+    * src/profiler.h:
+      Fixed inconsistent results in rule profiling.  Thanks to Geoff
+      Whittington for bringing this to our attention.
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_byte.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.c:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+      Added new "post_offset" argument to byte jump rule option to move some
+      designated amount after the byte jump.
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_dynamic_preprocessor.h:
+    * src/dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c:
+    * src/plugbase.c:
+    * src/target-based/sftarget_reader.c:
+    * src/target-based/sftarget_reader.h:
+      Added functionality to the dynamic-plugin API to check whether adaptive
+      profiles is configured and to check whether or not a preprocessor is
+      configured.
+    * src/dynamic-preprocessors/dcerpc/spp_dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+      Fatal error if both dcerpc and dcerpc2 preprocessors are configured.
+    * src/dynamic-preprocessors/dcerpc/spp_dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.c:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+    * src/dynamic-preprocessors/dns/spp_dns.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+    * src/dynamic-preprocessors/smtp/spp_smtp.c:
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/preprocessors/spp_rpc_decode.c:
+      Updates to stream5 filtering so that stream5 does not track sessions for
+      which there are no rules that could fire on that traffic or preprocessors
+      that are interested in that traffic.
+    * doc/README.dcerpc2:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+    * etc/gen-msg.map:
+    * etc/snort.conf:
+      Added dcerpc2 preprocessor documentation.
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+      Added performance profiling statistics to the dcerpc2 preprocessor.
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.h:
+    * src/dynamic-preprocessors/dcerpc2/includes/dcerpc.h:
+    * src/dynamic-preprocessors/dcerpc2/includes/smb.h:
+      Fix for architectures requiring strict memory alignment such as Sparc in
+      the dcerpc2 preprocessor.
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.h:
+      Updated configuration error reporting in the dcerpc2 preprocessor.
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_tcp.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_udp.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_session.h:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.h:
+      Updated dcerpc2 preprocessor autodetection and handling of missed
+      packets to limit false positives.
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_debug.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_list.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_memory.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_stats.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.h:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+      Updated dcerpc2 preprocessor logging.
+    * preproc_rules/preprocessor.rules:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_event.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_event.h:
+    * src/generators.h:
+      Added new preprocessor event to the dcerpc2 preprocessor to alert on
+      Bind or Alter Context PDUs that don't have any context items.
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+      Updated ftp_telnet preprocessor to consider the AUTH command as the
+      beginning of a possibly encrypted session.
+    * src/dynamic-preprocessors/ftptelnet/sf_preproc_info.h:
+      Pushed the ftp_telnet preprocessor minor version to 2 and build
+      version to 11.
+    * src/decode.c:
+    * src/snort.h:
+    * src/util.c:
+      Added additional ethertypes to Vlan decoder.
+    * configure.in
+    * src/output-plugins/spo_database.c:
+      Added reconnect capability to MySQL database output plugin.  Thanks to
+      Ian Mitchell and other users on the lists for bringing this to our
+      attention.
+    * src/output-plugins/spo_unified2.c:
+    * src/output-plugins/spo_unified2.h:
+      Added code to better handle logging to an NFS mounted share.
+    * src/parser.c:
+      Command line BPF filter now overrides configuration in snort.conf.
+    * src/parser.c:
+      Command line log directory now overrides configuration in snort.conf.
+    * src/parser.c:
+    * src/snort.c:
+      Fixed read back mode to reallow reading from stdin.  Thanks to John
+      Gerber for bringing this to our attention.
+    * src/plugbase.c:
+    * src/util.c:
+      Fixed compilation on HPUX 11.11.  Thanks to Lars Ebeling for bringing
+      this to our attention.
+    * src/preprocessors/spp_rpc_decode.c:
+      Continue defragmentation even when alerting on fragmentation in the
+      rpc_decode preprocessor.
+    * src/preprocessors/spp_stream5.c:
+      Stream5 will now fatal error if there isn't at least one of track tcp,
+      track udp or track icmp.
+    * src/sfthreshold.c:
+    * src/sfutil/sfthd.c:
+    * src/sfutil/sfthd.h:
+      Allow a count of -1 to threshold configuration option to disable all
+      thresholding for that object.
+    * src/snort.c:
+      Fixed issue with SIGHUP and handling of daemonize flag.
+    * preproc_rules/decoder.rules:
+    * preproc_rules/preprocessor.rules:
+      Added decoder/preprocessor rules for MPLS and DCE/RPC.
+    * snort.8:
+      Update manpage for "-x", "--conf-error-out" and "--exit-check" command
+      line options.
+
+2008-12-30 Steven Sturges <ssturges@sourcefire.com>
+    * src/output-plugins/spo_database.c:
+      Update to check for a missing host name when connecting to a
+      MySQL database and fail gracefully.  Thanks to Chris Benedict
+      for the report.
+    * doc/README.stream5:
+    * doc/snort_manual.pdf:
+    * doc/snort_manual.tex:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/stream_api.h:
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+    * src/preprocessors/Stream5/snort_stream5_session.h:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/preprocessors/Stream5/stream5_common.h:
+      Update Stream5 to better handle out-of-sequence server responses
+      when not doing server-side reassembly.  Add limits on number of
+      bytes and segments queued to prevent one session from consuming
+      all memory.
+    * src/target-based/sf_attribute_table.y:
+      Force bison to use malloc/free instead of alloca for older versions
+      of bison.
+    * src/target-based/sf_attribute_table_parser.l:
+    * src/target-based/sftarget_reader.c:
+      Don't fatal error when reloading an attribute table beyond the
+      configured limit.  Only display warning to syslog/console.
+
+2008-10-03 Todd Wease <twease@sourcefire.com>
+    * configure.in:
+    * src/decode.c:
+    * src/decode.h:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_dynamic_preprocessor.h:
+    * src/dynamic-plugins/sf_engine/Makefile.am:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_hdropts.c:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.c:
+    * src/dynamic-preprocessors/dns/spp_dns.c:
+    * src/dynamic-preprocessors/ftptelnet/ftp_bounce_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/ftp_bounce_lookup.h:
+    * src/dynamic-preprocessors/ftptelnet/ftp_cmd_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/ftp_cmd_lookup.h:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_config.h:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_config.h:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_server_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_si.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_server_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+    * src/dynamic-preprocessors/libs/sfdynamic_preproc_libs.dsp:
+    * src/dynamic-preprocessors/sf_dynamic_initialize/sf_dynamic_initialize.dsp:
+    * src/fpdetect.c:
+    * src/generators.h:
+    * src/ipv6_port.h:
+    * src/log.c:
+    * src/log_text.c:
+    * src/output-plugins/spo_alert_test.c:
+    * src/output-plugins/spo_csv.c:
+    * src/preprocessors/HttpInspect/session_inspection/hi_si.c:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/spp_frag3.c:
+    * src/preprocessors/spp_sfportscan.c:
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+    * src/preprocessors/stream_ignore.c:
+    * src/sfutil/ipobj.c:
+    * src/sfutil/ipobj.h:
+    * src/sfutil/sf_ip.c:
+    * src/sfutil/sf_ip.h:
+    * src/sfutil/sf_iph.c:
+    * src/sfutil/sf_ipvar.c:
+    * src/sfutil/sfrt.c:
+    * src/sfutil/sfrt.h:
+    * src/sfutil/sfrt_dir.c:
+    * src/sfutil/sfrt_dir.h:
+    * src/snort.c:
+    * src/target-based/sf_attribute_table.y:
+    * src/target-based/sftarget_reader.c:
+    * src/target-based/sftarget_reader.h:
+    * src/win32/WIN32-Prj/sf_engine.dsp:
+      IPv6 updates and support for sfportscan, ftp_telnet, frag3 and dns
+      preprocessors and adaptive IPS.
+    * etc/gen-msg.map:
+    * src/decode.h:
+    * src/detect.c:
+    * src/detection-plugins/sp_byte_check.c:
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_cl.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_co.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_config.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_debug.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_debug.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_event.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_event.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_http.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_http.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_list.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_list.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_memory.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_memory.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_roptions.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_session.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_smb.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_stats.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_stats.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_tcp.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_tcp.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_udp.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_udp.h:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.c:
+    * src/dynamic-preprocessors/dcerpc2/dce2_utils.h:
+    * src/dynamic-preprocessors/dcerpc2/includes/dcerpc.h:
+    * src/dynamic-preprocessors/dcerpc2/includes/smb.h:
+    * src/dynamic-preprocessors/dcerpc2/Makefile.am:
+    * src/dynamic-preprocessors/dcerpc2/sf_dce2.dsp:
+    * src/dynamic-preprocessors/dcerpc2/sf_preproc_info.h:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.c:
+    * src/dynamic-preprocessors/dcerpc2/snort_dce2.h:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.h:
+    * src/dynamic-preprocessors/Makefile.am:
+    * src/generators.h:
+    * src/output-plugins/spo_alert_fast.c:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/sf_types.h:
+    * src/sfutil/sfrt.c:
+    * src/sfutil/sfrt.h:
+    * src/util.c:
+    * src/win32/WIN32-Prj/snort.dsp:
+    * src/win32/WIN32-Prj/snort.dsw:
+      Addition of dcerpc2 preprocessor.  Addition of new rule options
+      supported by preprocessor.
+    * src/detect.c:
+    * src/detect.h:
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_dynamic_preprocessor.h:
+    * src/dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c:
+    * src/dynamic-preprocessors/dcerpc/dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc/dcerpc_config.c:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.h:
+    * src/dynamic-preprocessors/dcerpc/spp_dcerpc.c:
+    * src/dynamic-preprocessors/dns/spp_dns.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_si.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_config.h:
+    * src/dynamic-preprocessors/ftptelnet/spp_ftptelnet.c:
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+    * src/dynamic-preprocessors/smtp/snort_smtp.h:
+    * src/dynamic-preprocessors/smtp/spp_smtp.c:
+    * src/dynamic-preprocessors/ssh/spp_ssh.c:
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    * src/fpdetect.c:
+    * src/parser.c:
+    * src/preprocessors/HttpInspect/include/hi_si.h:
+    * src/preprocessors/HttpInspect/include/hi_ui_config.h:
+    * src/preprocessors/HttpInspect/session_inspection/hi_si.c:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/preprocessors/spp_rpc_decode.c:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_session.h:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/target-based/sftarget_protocol_reference.c:
+    * src/target-based/sftarget_protocol_reference.h:
+      Add adaptive support for http_inspect, rpc, smtp, dcerpc, dcerpc2, dns,
+      ftp_telnet, ssh and ssl preprocessors.
+    * configure.in:
+    * src/detect.c:
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/sp_asn1.c:
+    * src/detection-plugins/sp_asn1.h:
+    * src/detection-plugins/sp_byte_check.c:
+    * src/detection-plugins/sp_byte_check.h:
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/detection-plugins/sp_byte_jump.h:
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_clientserver.h:
+    * src/detection-plugins/sp_cvs.c:
+    * src/detection-plugins/sp_cvs.h:
+    * src/detection-plugins/sp_dsize_check.c:
+    * src/detection-plugins/sp_dsize_check.h:
+    * src/detection-plugins/sp_flowbits.c:
+    * src/detection-plugins/sp_flowbits.h:
+    * src/detection-plugins/sp_ftpbounce.c:
+    * src/detection-plugins/sp_ftpbounce.h:
+    * src/detection-plugins/sp_icmp_code_check.c:
+    * src/detection-plugins/sp_icmp_code_check.h:
+    * src/detection-plugins/sp_icmp_id_check.c:
+    * src/detection-plugins/sp_icmp_id_check.h:
+    * src/detection-plugins/sp_icmp_seq_check.c:
+    * src/detection-plugins/sp_icmp_seq_check.h:
+    * src/detection-plugins/sp_icmp_type_check.c:
+    * src/detection-plugins/sp_icmp_type_check.h:
+    * src/detection-plugins/sp_ip_fragbits.c:
+    * src/detection-plugins/sp_ip_fragbits.h:
+    * src/detection-plugins/sp_ip_id_check.c:
+    * src/detection-plugins/sp_ip_id_check.h:
+    * src/detection-plugins/sp_ipoption_check.c:
+    * src/detection-plugins/sp_ipoption_check.h:
+    * src/detection-plugins/sp_ip_proto.c:
+    * src/detection-plugins/sp_ip_proto.h:
+    * src/detection-plugins/sp_ip_same_check.c:
+    * src/detection-plugins/sp_ip_same_check.h:
+    * src/detection-plugins/sp_ip_tos_check.c:
+    * src/detection-plugins/sp_ip_tos_check.h:
+    * src/detection-plugins/sp_isdataat.c:
+    * src/detection-plugins/sp_isdataat.h:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pattern_match.h:
+    * src/detection-plugins/sp_pcre.c:
+    * src/detection-plugins/sp_pcre.h:
+    * src/detection-plugins/sp_react.c:
+    * src/detection-plugins/sp_react.h:
+    * src/detection-plugins/sp_respond2.c:
+    * src/detection-plugins/sp_respond2.h:
+    * src/detection-plugins/sp_respond.c:
+    * src/detection-plugins/sp_respond.h:
+    * src/detection-plugins/sp_rpc_check.c:
+    * src/detection-plugins/sp_rpc_check.h:
+    * src/detection-plugins/sp_session.c:
+    * src/detection-plugins/sp_session.h:
+    * src/detection-plugins/sp_tcp_ack_check.c:
+    * src/detection-plugins/sp_tcp_ack_check.h:
+    * src/detection-plugins/sp_tcp_flag_check.c:
+    * src/detection-plugins/sp_tcp_flag_check.h:
+    * src/detection-plugins/sp_tcp_seq_check.c:
+    * src/detection-plugins/sp_tcp_seq_check.h:
+    * src/detection-plugins/sp_tcp_win_check.c:
+    * src/detection-plugins/sp_tcp_win_check.h:
+    * src/detection-plugins/sp_ttl_check.c:
+    * src/detection-plugins/sp_ttl_check.h:
+    * src/detection-plugins/sp_urilen_check.c:
+    * src/detection-plugins/sp_urilen_check.h:
+    * src/dynamic-plugins/sp_dynamic.c:
+    * src/dynamic-plugins/sp_preprocopt.c:
+    * src/dynamic-plugins/sp_preprocopt.h:
+    * src/dynamic-preprocessors/dcerpc/sf_dcerpc.dsp:
+    * src/dynamic-preprocessors/dns/sf_dns.dsp:
+    * src/dynamic-preprocessors/ftptelnet/sf_ftptelnet.dsp:
+    * src/dynamic-preprocessors/libs/sfdynamic_preproc_libs.dsp:
+    * src/dynamic-preprocessors/smtp/sf_smtp.dsp:
+    * src/dynamic-preprocessors/ssh/sf_ssh.dsp:
+    * src/dynamic-preprocessors/ssl/sf_ssl.dsp:
+    * src/fpcreate.c:
+    * src/fpcreate.h:
+    * src/fpdetect.c:
+    * src/fpdetect.h:
+    * src/parser.c:
+    * src/pcrm.c:
+    * src/pcrm.h:
+    * src/plugbase.c:
+    * src/ppm.c:
+    * src/ppm.h:
+    * src/preprocessors/spp_frag3.c:
+    * src/preprocessors/spp_frag3.h:
+    * src/preprocessors/str_search.c:
+    * src/profiler.c:
+    * src/profiler.h:
+    * src/rules.h:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/acsmx2.h:
+    * src/sfutil/acsmx.c:
+    * src/sfutil/acsmx.h:
+    * src/sfutil/bnfa_search.c:
+    * src/sfutil/bnfa_search.h:
+    * src/sfutil/mpse.c:
+    * src/sfutil/mpse.h:
+    * src/sfutil/sfksearch.c:
+    * src/sfutil/sfksearch.h:
+    * src/snort.c:
+    * src/win32/WIN32-Prj/sf_engine.dsp:
+    * src/win32/WIN32-Prj/snort.dsp:
+      Harden rule option tree code.
+    * configure.in:
+    * doc/Makefile.am:
+    * doc/snort_manual.tex:
+    * doc/README.sfportscan:
+    * src/detect.c:
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_flowbits.c:
+    * src/fatal.h:
+    * src/generators.h:
+    * src/Makefile.am:
+    * src/parser.c:
+    * src/plugbase.c:
+    * src/preprocessors/flow/common_defs.h (removed):
+    * src/preprocessors/flow/flow.c (removed):
+    * src/preprocessors/flow/flow_cache.c (removed):
+    * src/preprocessors/flow/flow_cache.h (removed):
+    * src/preprocessors/flow/flow_callback.c (removed):
+    * src/preprocessors/flow/flow_callback.h (removed):
+    * src/preprocessors/flow/flow_class.c (removed):
+    * src/preprocessors/flow/flow_class.h (removed):
+    * src/preprocessors/flow/flow_config.h (removed):
+    * src/preprocessors/flow/flow_error.h (removed):
+    * src/preprocessors/flow/flow.h (removed):
+    * src/preprocessors/flow/flow_hash.c (removed):
+    * src/preprocessors/flow/flow_hash.h (removed):
+    * src/preprocessors/flow/flow_print.c (removed):
+    * src/preprocessors/flow/flow_print.h (removed):
+    * src/preprocessors/flow/flow_stat.c (removed):
+    * src/preprocessors/flow/flow_stat.h (removed):
+    * src/preprocessors/flow/int-snort (removed):
+    * src/preprocessors/flow/Makefile.am (removed):
+    * src/preprocessors/flow/portscan (removed):
+    * src/preprocessors/Makefile.am:
+    * src/preprocessors/portscan.c (removed):
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/snort_stream4_session.c (removed):
+    * src/preprocessors/snort_stream4_session.h (removed):
+    * src/preprocessors/snort_stream4_udp.c (removed):
+    * src/preprocessors/snort_stream4_udp.h (removed):
+    * src/preprocessors/spp_flow.c (removed):
+    * src/preprocessors/spp_flow.h (removed):
+    * src/preprocessors/spp_stream4.c (removed):
+    * src/preprocessors/spp_stream4.h (removed):
+    * src/preprocessors/stream.h (removed):
+    * src/preprocids.h:
+    * src/snort.c:
+    * src/win32/WIN32-Prj/snort.dsp:
+      Removal of stream4 and flow preprocessors from code base.
+    * src/tag.c:
+    * src/tag.h:
+    * src/ubi_BinTree.c (removed):
+    * src/ubi_BinTree.h (removed):
+    * src/ubi_SplayTree.c (removed):
+    * src/ubi_SplayTree.h (removed):
+      Tagging now uses a hash table instead of a splay tree for data
+      storage.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pattern_match.h:
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+    * src/fpcreate.c:
+    * src/fpcreate.h:
+    * src/fpdetect.c:
+    * src/fpdetect.h:
+    * src/plugbase.c:
+    * src/preprocessors/str_search.c:
+    * src/preprocessors/str_search.h:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/acsmx2.h:
+    * src/sfutil/acsmx.c:
+    * src/sfutil/acsmx.h:
+    * src/sfutil/bnfa_search.c:
+    * src/sfutil/bnfa_search.h:
+    * src/sfutil/mpse.c:
+    * src/sfutil/mpse.h:
+    * src/sfutil/sfksearch.c:
+    * src/sfutil/sfksearch.h:
+      Support rules with content rule options that are only not contents.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/sp_asn1.c:
+    * src/detection-plugins/sp_byte_check.c:
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_cvs.c:
+    * src/detection-plugins/sp_dsize_check.c:
+    * src/detection-plugins/sp_flowbits.c:
+    * src/detection-plugins/sp_ftpbounce.c:
+    * src/detection-plugins/sp_icmp_code_check.c:
+    * src/detection-plugins/sp_icmp_id_check.c:
+    * src/detection-plugins/sp_icmp_seq_check.c:
+    * src/detection-plugins/sp_icmp_type_check.c:
+    * src/detection-plugins/sp_ip_fragbits.c:
+    * src/detection-plugins/sp_ip_id_check.c:
+    * src/detection-plugins/sp_ipoption_check.c:
+    * src/detection-plugins/sp_ip_proto.c:
+    * src/detection-plugins/sp_ip_same_check.c:
+    * src/detection-plugins/sp_ip_tos_check.c:
+    * src/detection-plugins/sp_isdataat.c:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pcre.c:
+    * src/detection-plugins/sp_react.c:
+    * src/detection-plugins/sp_respond2.c:
+    * src/detection-plugins/sp_respond.c:
+    * src/detection-plugins/sp_rpc_check.c:
+    * src/detection-plugins/sp_session.c:
+    * src/detection-plugins/sp_tcp_ack_check.c:
+    * src/detection-plugins/sp_tcp_flag_check.c:
+    * src/detection-plugins/sp_tcp_seq_check.c:
+    * src/detection-plugins/sp_tcp_win_check.c:
+    * src/detection-plugins/sp_ttl_check.c:
+    * src/detection-plugins/sp_urilen_check.c:
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_dynamic_preprocessor.h:
+    * src/dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c:
+    * src/dynamic-plugins/sp_dynamic.c:
+    * src/dynamic-plugins/sp_dynamic.h:
+    * src/dynamic-plugins/sp_preprocopt.c:
+    * src/dynamic-plugins/sp_preprocopt.h:
+    * src/plugbase.c:
+    * src/plugbase.h:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+      Add override keyword support.  Argument to a rule option can be
+      overriden and processed elsewhere.  Added for support of new byte_test
+      and byte_jump rule option argument "dce".
+    * src/detection-plugins/detection_options.c:
+    * src/dynamic-plugins/sf_dynamic_engine.h:
+    * src/dynamic-plugins/sf_dynamic_common.h:
+    * src/dynamic-plugins/sp_preprocopt.c:
+    * src/dynamic-plugins/sp_preprocopt.h:
+      Add hash and compare functions for preprocessors to rule option tree.
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/spp_httpinspect.h:
+      Make sure Stream5 is enabled when parsing most arguments to flow rule
+      option.  Make sure http_inspect is enabled when parsing uricontent or http
+      content modifiers.
+    * src/detection-plugins/sp_clientserver.c:
+      Added no_frag and only_frag arguments to flow rule option.
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_dynamic_preprocessor.h:
+    * src/dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c:
+      Added dynamic callbacks for logging and resetting event queue.
+    * doc/README.stream5:
+    * doc/snort_manual.tex:
+    * src/dynamic-preprocessors/dcerpc/spp_dcerpc.c:
+    * src/dynamic-preprocessors/dns/spp_dns.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+    * src/dynamic-preprocessors/smtp/spp_smtp.c:
+    * src/dynamic-preprocessors/ssh/spp_ssh.c:
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    * src/preprocessors/perf-base.c:
+    * src/preprocessors/perf-base.h:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/snort_httpinspect.h:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/preprocessors/spp_rpc_decode.c:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_session.h:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.h:
+    * src/preprocessors/Stream5/snort_stream5_udp.c:
+    * src/preprocessors/Stream5/snort_stream5_udp.h:
+    * src/preprocessors/Stream5/stream5_common.c:
+    * src/preprocessors/Stream5/stream5_common.h:
+    * src/preprocessors/stream_api.h:
+      Port and service based filtering to improve performance.  Stream5 will
+      ignore traffic (if it is configured to do so) for which there are no
+	  rules or preprocessors configured to look at this traffic.
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_client_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_client_lookup.h:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_config.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_config.h:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_server_lookup.c:
+    * src/dynamic-preprocessors/ftptelnet/ftpp_ui_server_lookup.h:
+    * src/dynamic-preprocessors/ftptelnet/hi_util_kmap.h:
+    * src/dynamic-preprocessors/ftptelnet/Makefile.am:
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+      ftp_telnet_protocol server configurations now support multiple IP
+      addresses and netmasks.
+    * src/preprocessors/HttpInspect/include/hi_ui_config.h:
+    * src/preprocessors/HttpInspect/include/hi_ui_server_lookup.h:
+    * src/preprocessors/HttpInspect/user_interface/hi_ui_server_lookup.c:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/spp_httpinspect.c:
+      http_inspect preprocessor server configurations now support multiple IP
+      addresses and netmasks.
+    * doc/README.http_inspect:
+    * doc/snort_manual.tex:
+    * src/generators.h:
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+    * src/preprocessors/HttpInspect/event_output/hi_eo_log.c:
+    * src/preprocessors/HttpInspect/include/hi_eo_events.h:
+    * src/preprocessors/HttpInspect/user_interface/hi_ui_config.c:
+    * src/preprocessors/snort_httpinspect.c:
+      Add a "max_headers" and "max_header_length" options to http_inspect
+      server configuration.
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+      Fix to correctly identify end of http client body request.
+    * src/profiler.c:
+    * src/profiler.h:
+    * src/ppm.c:
+    * src/ppm.h:
+      Update to handle rule latency threhsolding with rule option tree.
+    * doc/README.ftptelnet:
+    * doc/snort_manual.tex:
+    * src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+      Added "ignore_data_chan" option to ftp_telnet preprocessor to deprecate
+      confusing "data_chan" option.
+    * src/preprocessors/spp_stream5.c:
+      Fix to alert on dropped packet in midstream session.
+    * doc/CREDITS:
+    * doc/snort_manual.tex:
+      Update for new members of Snort team - Dilbagh Chahal and Ryan Jordan.
+    * etc/snort.conf:
+      Add "trustservers" do default ssl preprocessor configuration.
+    * src/win32/WIN32-Includes/config.h:
+    * src/win32/WIN32-Includes/WinPCAP/pcap-stdinc.h:
+      Updates to compile in Visual Studio 2008.
+
+2008-09-15 Todd Wease <twease@sourcefire.com>
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+    * src/fpcreate.c:
+    * src/generators.h:
+    * src/ppm.c:
+    * src/ppm.h:
+    * src/profiler.c:
+    * src/rules.h:
+    * etc/gen-msg.map:
+      Update rule latency thresholding.
+    * src/preprocessors/spp_flow.c:
+    * src/preprocessors/spp_stream4.c:
+    * doc/README.flow:
+    * doc/README.flow-portscan:
+    * doc/README.stream4:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+      The flow and stream4 preprocessors will be deprecated in a
+      future release.
+
+2008-08-12 Todd Wease <twease@sourcefire.com>
+    * src/bounds.h:
+    * src/dynamic-preprocessors/dcerpc/dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc/dcerpc.h:
+    * src/dynamic-preprocessors/dcerpc/dcerpc_config.c:
+    * src/dynamic-preprocessors/dcerpc/dcerpc_util.c:
+    * src/dynamic-preprocessors/dcerpc/dcerpc_util.h:
+    * src/dynamic-preprocessors/dcerpc/smb_andx_decode.c:
+    * src/dynamic-preprocessors/dcerpc/smb_andx_decode.h:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.c:
+    * src/dynamic-preprocessors/dcerpc/snort_dcerpc.h:
+    * src/dynamic-preprocessors/dcerpc/spp_dcerpc.c:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * doc/README.dcerpc:
+    * doc/snort_manual.tex:
+      DCE/RPC preprocessor changes to handle abnormal TCP segmentation.
+      Added option to reassemble fragmentation buffers early.  Updated
+      documentation.
+    * src/decode.c:
+    * src/decode.h:
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+      Fixed handling of MPLS label in checking Stream session uniqueness
+      when IPv4 packets are received and build is IPv6.
+    * src/preprocessors/perf-base.c:
+    * src/preprocessors/perf-base.h:
+      MPLS stats are now printed, whether compiled for MPLS or not.
+    * src/detection-plugins/sp_pattern_match.c:
+      Fixed checksum calculation for IPv6 case for 'replace' rule option.
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+      Added check to not register so rule if it has already been registered.
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+    * src/dynamic-preprocessors/smtp/snort_smtp.h:
+      Added better handling of SMTP data header options to avoid false
+      positives occuring with data header buffer overlflow smtp preprocessor
+      event.  Thanks to rmkml for bringing this to our attention.
+    * src/event_queue.c:
+    * src/signature.c:
+      Added checks to only allow one rule without an SID defined.  Thanks to
+      Christian Mock for bringing this to our attention.
+    * src/parser.c:
+    * doc/README.PerfProfiling:
+      Updated performance profiling README to document new 'filename' option.
+      Fixed handling of 'filename' option in the rule profiling configuration.
+    * src/plugbase.c:
+      Changed plugins startup output to use log function instead of printf().
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+      Fixes to avoid false positives on http_inspect preprocessor events for
+      bare byte encoding and oversize request-uri directory.
+    * doc/CREDITS:
+      Credits updates.
+    * doc/README.decode:
+    * doc/snort_manual.tex:
+      Fixed some spelling errors and confusing syntax.  Thanks to Hari Sekhon
+      for pointing many of these out.
+
+2008-07-18 Todd Wease <twease@sourcefire.com>
+    * src/detection-plugins/sp_dsize_check.c:
+      Fix issue with rule option "dsize" range check.
+      Thanks to Bhadresh Patel for bringing this to our attention.
+    * src/detection-plugins/sp_pcre.c:
+      Fix issue with evaluating PCRE rule options with /U modifier that
+      are followed by a relative content rule option.
+      Many thanks to Bamm Visscher for doing the research, finding the
+      offending rule and producing the test case necessary to track
+      down and fix the issue.  Also thanks to others on the snort users
+      list - craig for starting a thread and JJ Cummings for confirming
+      it was not a logging issue.
+
+2008-07-11 Todd Wease <twease@sourcefire.com>
+    * src/byte_extract.c:
+      Added byte test for 3 bytes.
+    * src/debug.c:
+    * src/debug.h:
+    * src/dynamic-preprocessors/libs/ssl.c:
+    * src/dynamic-preprocessors/libs/ssl.h:
+    * src/dynamic-preprocessors/ssl/sf_preproc_info.h: 
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    * src/dynamic-preprocessors/ssl/spp_ssl.h:
+      Updates to SSL preprocessor to make it work with stream
+      reassembly, multiple handshake records and disabling detection.
+    * src/decode.c:
+    * src/preprocessors/spp_frag3.c:
+    * src/parser.c:
+    * src/snort.c:
+    * src/snort.h:
+      Fix MPLS fragmentation reassembly issue.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+    * src/detection-plugins/sp_asn1.c:
+    * src/detection-plugins/sp_byte_check.c:
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_cvs.c:
+    * src/detection-plugins/sp_dsize_check.c:
+    * src/detection-plugins/sp_flowbits.c:
+    * src/detection-plugins/sp_ftpbounce.c:
+    * src/detection-plugins/sp_icmp_code_check.c:
+    * src/detection-plugins/sp_icmp_id_check.c:
+    * src/detection-plugins/sp_icmp_seq_check.c:
+    * src/detection-plugins/sp_icmp_type_check.c:
+    * src/detection-plugins/sp_ip_fragbits.c:
+    * src/detection-plugins/sp_ip_id_check.c:
+    * src/detection-plugins/sp_ipoption_check.c:
+    * src/detection-plugins/sp_ip_proto.c:
+    * src/detection-plugins/sp_ip_tos_check.c:
+    * src/detection-plugins/sp_isdataat.c:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pcre.c:
+    * src/detection-plugins/sp_react.c:
+    * src/detection-plugins/sp_respond2.c:
+    * src/detection-plugins/sp_respond.c:
+    * src/detection-plugins/sp_rpc_check.c:
+    * src/detection-plugins/sp_session.c:
+    * src/detection-plugins/sp_tcp_ack_check.c:
+    * src/detection-plugins/sp_tcp_flag_check.c:
+    * src/detection-plugins/sp_tcp_seq_check.c:
+    * src/detection-plugins/sp_tcp_win_check.c:
+    * src/detection-plugins/sp_ttl_check.c:
+    * src/detection-plugins/sp_urilen_check.c:
+    * src/dynamic-plugins/sp_dynamic.c:
+    * src/dynamic-plugins/sp_preprocopt.c:
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+    * src/sfutil/sfhashfcn.h:
+      Move hash rot macros.
+    * src/dynamic-preprocessors/dcerpc/sf_dcerpc.dsp:
+    * src/dynamic-preprocessors/dns/sf_dns.dsp:
+    * src/dynamic-preprocessors/ftptelnet/sf_ftptelnet.dsp:
+    * src/dynamic-preprocessors/libs/sfdynamic_preproc_libs.dsp:
+    * src/dynamic-preprocessors/smtp/sf_smtp.dsp:
+    * src/dynamic-preprocessors/ssh/sf_ssh.dsp:
+    * src/dynamic-preprocessors/ssl/sf_ssl.dsp:
+    * src/win32/WIN32-Prj/sf_engine.dsp:
+    * src/win32/WIN32-Prj/snort.dsp:
+      Update Win32 project files to include MPLS.
+    * src/util.c:
+      For read mode, reset errno after gathering pcaps from
+      a directory.
+    * etc/sid-msg.map:
+      Updates.
+
+2008-06-16 Todd Wease <twease@sourcefire.com>
+    * src/cpuclock.h:
+      Fixed compilation issue on HPUX machines related to performance
+      profiling and the assembly instructions used for getting cpu
+      clock ticks.  Thanks to Pavan Raj and Jaipal Reddy for pointing
+      this out.
+    * src/decode.c:
+    * src/decode.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/generators.h:
+    * src/log.c:
+    * src/log.h:
+    * src/output-plugins/spo_unified2.c:
+    * src/parser.c:
+    * src/preprocessors/perf-base.c:
+    * src/preprocessors/perf-base.h:
+    * src/preprocessors/spp_frag3.c:
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+    * src/preprocessors/Stream5/stream5_common.h:
+    * src/snort.c:
+    * src/snort.h:
+    * src/util.c:
+    * configure.in:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+    * doc/README.mpls:
+      Added MPLS decoding support.
+    * src/decode.c:
+    * src/generators.h:
+    * etc/gen-msg.map:
+      Fixed alert message for IP datagram being greater than captured
+      length.
+    * src/decode.h:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pattern_match.h:
+    * src/detection-plugins/sp_pcre.c:
+    * src/dynamic-plugins/sf_dynamic_common.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_byte.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_content.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_loop.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c:
+    * src/fpcreate.c:
+    * src/fpdetect.c:
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+    * src/preprocessors/HttpInspect/client/hi_client_norm.c:
+    * src/preprocessors/HttpInspect/include/hi_client.h:
+    * src/preprocessors/HttpInspect/include/hi_include.h:
+    * src/preprocessors/HttpInspect/include/hi_ui_config.h:
+    * src/preprocessors/HttpInspect/server/hi_server.c:
+    * src/preprocessors/HttpInspect/session_inspection/hi_si.c:
+    * src/preprocessors/HttpInspect/user_interface/hi_ui_config.c:
+    * src/preprocessors/snort_httpinspect.c:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/acsmx2.h:
+    * src/sfutil/acsmx.c:
+    * src/sfutil/acsmx.h:
+    * src/sfutil/bnfa_search.c:
+    * src/sfutil/bnfa_search.h:
+    * src/sfutil/mpse.c:
+    * src/sfutil/mpse.h:
+    * src/sfutil/sfksearch.c:
+    * src/sfutil/sfksearch.h:
+    * src/util.c:
+    * src/util.h:
+    * doc/README.http_inspect:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+      New Feature for HTTP Inspect to split requests into 5 components -
+      Method, URI, Header (non-cookie), Cookies, Body.  Added HTTP server
+      specific configurations to normalize HTTP header and/or cookie buffers.
+      Provided content and PCRE modifiers to allow searches within one or
+      more of those individual buffers.  Added content modifier to allow rule
+      writer to specify content to be used for fast pattern matcher.
+      Updated dynamic rule API to allow searches within the new buffers.
+    * src/detection-plugins/sp_flowbits.c:
+    * src/dynamic-plugins/sp_dynamic.c:
+    * src/parser.c:
+    * src/snort.c:
+    * src/snort.h:
+      Provided command line switch to bail on rule parsing failure.
+    * src/dynamic-preprocessors/ftptelnet/spp_ftptelnet.c:
+    * src/preprocessors/spp_httpinspect.c:
+      Fixed some configuration error checking.
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+      Fixed false negative when using 'trustservers' option.
+    * src/output-plugins/spo_database.c:
+      Fixed issue where when using the 'ruletype' keyword with database
+      output, events were getting logged using both the default log method
+      and the ruletype log method.  Thanks to Agent Smith for pointing this
+      out.
+    * src/output-plugins/spo_unified2.c:
+      Fixed issue in unified2 code where the timestamp of an event on
+      a stream reassembled packet was using the last stream segment 
+      instead of the first.
+    * src/parser.c:
+    * src/profiler.c:
+    * src/snort.h:
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+      Provided option to rule and preprocessor profiling configurations to
+      log to file instead of syslog.
+    * src/preprocessors/perf-flow.c:
+      Packet size distribution reported by snort flow stats do not count
+      reassmbled packets anymore.
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+      Update Stream5 to flush bytes up to ACK if ACK falls in the middle
+      of a segment instead of including entire segment in reassembled
+      packet.
+    * src/snort.c:
+      Reset packet processor when reading multiple pcaps and pcap reset
+      option is used.
+    * doc/README.decode:
+      Update GRE decoder alerts.
+
+2008-06-04 Todd Wease <twease@sourcefire.com>
+    * src/fpdetect.c:
+    * src/detection-plugins/detection_options.c:
+      Fix issue where pass rules weren't getting precedence
+      over alert rules.  Thanks to Jason Haar for pointing
+      this out.
+    * src/snort.c:
+      Reset data link for new pcap when reading multiple pcaps.
+    * etc/gen-msg.map:
+      Add IPv6 decoder events.
+
+2008-05-07 Todd Wease <twease@sourcefire.com>
+    * src/decode.c:
+    * src/decode.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+      Fix issue in ICMP6 code that made an incorrect calculation
+      when the ICMP6 type was an echo or an echo reply.
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+    * src/profiler.c:
+    * src/profiler.h:
+      Pattern Matcher Caching & Rule Processing Performance Improvements. 
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+      Fix memory leak caused by missed or dropped traffic.
+    * src/preprocessors/HttpInspect/include/hi_eo_events.h:
+      Remove redundant macro.
+    * doc/snort_manual.tex:
+    * doc/snort_manual.pdf:
+    * doc/README.decoder_preproc_rules:
+      Add documentation on the use of decoder and preprocessor rules.
+
+2008-04-30 Todd Wease <twease@sourcefire.com>
+    * src/decode.c:
+    * src/decode.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+    * src/fpcreate.c:
+    * src/fpdetect.c:
+    * src/profiler.c:
+      Process IP rules by fast pattern searching payload of outer IP,
+      then evaluating matching rules against IP header & payload of
+      inner & outer IP.  This is to address false positives and 
+      false negatives in IP rules.
+    * src/detection-plugins/sp_cvs.c:
+    * src/detection-plugins/sp_cvs.h:
+    * src/preprocessors/spp_frag3.c:
+      Fix typos.  Thanks to rmkml for pointing this out.
+    * src/ipv6_port.h:
+    * src/log.c:
+    * src/log_text.c:
+      Update log to correct datagram length macro for IPv6.
+    * src/detection-plugins/sp_pcre.c:
+    * src/dynamic-plugins/sf_dynamic_define.h:
+    * src/dynamic-plugins/sf_dynamic_engine.h:
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c:
+      Expose a pcre wrapper function to detection library rules via plugin api.
+
+2008-04-14 Todd Wease <twease@sourcefire.com>
+    * configure.in:
+    * src/detect.c:
+    * src/detect.h:
+    * src/detection-plugins/Makefile.am:
+    * src/detection-plugins/detection_options.c:
+    * src/detection-plugins/detection_options.h:
+    * src/detection-plugins/sp_asn1.c:
+    * src/detection-plugins/sp_asn1.h:
+    * src/detection-plugins/sp_byte_check.c:
+    * src/detection-plugins/sp_byte_check.h:
+    * src/detection-plugins/sp_byte_jump.c:
+    * src/detection-plugins/sp_byte_jump.h:
+    * src/detection-plugins/sp_clientserver.c:
+    * src/detection-plugins/sp_clientserver.h:
+    * src/detection-plugins/sp_cvs.c:
+    * src/detection-plugins/sp_cvs.h:
+    * src/detection-plugins/sp_dsize_check.c:
+    * src/detection-plugins/sp_dsize_check.h:
+    * src/detection-plugins/sp_flowbits.c:
+    * src/detection-plugins/sp_flowbits.h:
+    * src/detection-plugins/sp_ftpbounce.c:
+    * src/detection-plugins/sp_ftpbounce.h:
+    * src/detection-plugins/sp_icmp_code_check.c:
+    * src/detection-plugins/sp_icmp_code_check.h:
+    * src/detection-plugins/sp_icmp_id_check.c:
+    * src/detection-plugins/sp_icmp_id_check.h:
+    * src/detection-plugins/sp_icmp_seq_check.c:
+    * src/detection-plugins/sp_icmp_seq_check.h:
+    * src/detection-plugins/sp_icmp_type_check.c:
+    * src/detection-plugins/sp_icmp_type_check.h:
+    * src/detection-plugins/sp_ip_fragbits.c:
+    * src/detection-plugins/sp_ip_fragbits.h:
+    * src/detection-plugins/sp_ip_id_check.c:
+    * src/detection-plugins/sp_ip_id_check.h:
+    * src/detection-plugins/sp_ipoption_check.c:
+    * src/detection-plugins/sp_ipoption_check.h:
+    * src/detection-plugins/sp_ip_proto.c:
+    * src/detection-plugins/sp_ip_proto.h:
+    * src/detection-plugins/sp_ip_same_check.c:
+    * src/detection-plugins/sp_ip_same_check.h:
+    * src/detection-plugins/sp_ip_tos_check.c:
+    * src/detection-plugins/sp_ip_tos_check.h:
+    * src/detection-plugins/sp_isdataat.c:
+    * src/detection-plugins/sp_isdataat.h:
+    * src/detection-plugins/sp_pattern_match.c:
+    * src/detection-plugins/sp_pattern_match.h:
+    * src/detection-plugins/sp_pcre.c:
+    * src/detection-plugins/sp_pcre.h:
+    * src/detection-plugins/sp_react.c:
+    * src/detection-plugins/sp_react.h:
+    * src/detection-plugins/sp_respond2.c:
+    * src/detection-plugins/sp_respond2.h:
+    * src/detection-plugins/sp_respond.c:
+    * src/detection-plugins/sp_respond.h:
+    * src/detection-plugins/sp_rpc_check.c:
+    * src/detection-plugins/sp_rpc_check.h:
+    * src/detection-plugins/sp_session.c:
+    * src/detection-plugins/sp_session.h:
+    * src/detection-plugins/sp_tcp_ack_check.c:
+    * src/detection-plugins/sp_tcp_ack_check.h:
+    * src/detection-plugins/sp_tcp_flag_check.c:
+    * src/detection-plugins/sp_tcp_flag_check.h:
+    * src/detection-plugins/sp_tcp_seq_check.c:
+    * src/detection-plugins/sp_tcp_seq_check.h:
+    * src/detection-plugins/sp_tcp_win_check.c:
+    * src/detection-plugins/sp_tcp_win_check.h:
+    * src/detection-plugins/sp_ttl_check.c:
+    * src/detection-plugins/sp_ttl_check.h:
+    * src/detection-plugins/sp_urilen_check.c:
+    * src/detection-plugins/sp_urilen_check.h:
+    * src/dynamic-plugins/sp_dynamic.c:
+    * src/dynamic-plugins/sp_dynamic.h:
+    * src/dynamic-plugins/sp_preprocopt.c:
+    * src/dynamic-plugins/sp_preprocopt.h:
+    * src/dynamic-preprocessors/smtp/snort_smtp.c:
+    * src/event_queue.c:
+    * src/fpcreate.c:
+    * src/fpcreate.h:
+    * src/fpdetect.c:
+    * src/fpdetect.h:
+    * src/parser.c:
+    * src/pcrm.h:
+    * src/plugbase.c:
+    * src/plugbase.h:
+    * src/ppm.c:
+    * src/ppm.h:
+    * src/preprocessors/spp_frag3.c:
+    * src/preprocessors/spp_frag3.h:
+    * src/preprocessors/str_search.c:
+    * src/preprocessors/str_search.h:
+    * src/rules.h:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/acsmx2.h:
+    * src/sfutil/acsmx.c:
+    * src/sfutil/acsmx.h:
+    * src/sfutil/bnfa_search.c:
+    * src/sfutil/bnfa_search.h:
+    * src/sfutil/mpse.c:
+    * src/sfutil/mpse.h:
+    * src/sfutil/sfksearch.c:
+    * src/sfutil/sfksearch.h:
+      Pattern Matcher Caching & Rule Processing Performance Improvements.
+    * configure.in:
+    * src/dynamic-plugins/sf_dynamic_plugins.c:
+    * src/event_wrapper.c:
+    * src/fpcreate.c:
+    * src/fpcreate.h:
+    * src/fpdetect.c:
+    * src/fpdetect.h:
+    * src/parser/IpAddrSet.c:
+    * src/parser.c:
+    * src/parser.h:
+    * src/pcrm.c:
+    * src/plugbase.c:
+    * src/plugbase.h:
+    * src/preprocessors/spp_httpinspect.c:
+    * src/preprocessors/spp_stream4.c:
+    * src/preprocessors/spp_stream5.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+    * src/preprocessors/stream_ignore.c:
+    * src/preprocessors/stream_ignore.h:
+    * src/profiler.c:
+    * src/sfthreshold.c:
+    * src/sfthreshold.h:
+    * src/sfutil/acsmx2.c:
+    * src/sfutil/acsmx2.h:
+    * src/sfutil/bnfa_search.c:
+    * src/sfutil/bnfa_search.h:
+    * src/sfutil/mpse.c:
+    * src/sfutil/mpse.h:
+    * src/sfutil/sfksearch.c:
+    * src/sfutil/sfksearch.h:
+    * src/sfutil/sfportobject.c:
+    * src/sfutil/sfportobject.h:
+    * src/sfutil/sfthd.c:
+    * src/sfutil/sfthd.h:
+    * src/sfutil/sf_vartable.c:
+    * src/sfutil/sf_vartable.h:
+    * src/signature.c:
+    * src/signature.h:
+    * src/snort.c:
+    * src/spo_plugbase.h:
+    * src/target-based/sftarget_protocol_reference.c:
+    * src/target-based/sftarget_protocol_reference.h:
+    * src/target-based/sftarget_reader.c:
+    * src/win32/WIN32-Prj/sf_engine.dsp:
+    * src/win32/WIN32-Prj/snort.dsp:
+      Added configuration option to clean up all initialization
+      memory at shutdown.
+    * src/decode.h:
+    * src/preprocessors/snort_httpinspect.c:
+      Add counter for HTTP pipeline requests.
+    * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+      Fixed issue where some FTP traffic was being labeled as
+      encrypted when it was not.
+    * src/output-plugins/spo_database.c:
+      Free SQL statement.  Thanks to Carter Browne for pointing this out.
+    * snort.8:
+    * doc/snort_manual.tex:
+    * src/snort.c:
+    * src/util.c:
+      Update to indicate --pid-path specifies the directory for the
+      PID file.  Thanks to Lee Clemens for pointing out the ambiguity.
+    * src/snort.c:
+      For --pcap-show option, print to stdout instead of stderr.
+    * doc/snort_manual.tex:
+    * src/snort.h:
+      Set minimum max attribute hosts to 32 instead of 8192.
+    * src/target-based/sf_attribute_table_parser.l:
+      Allow ! character in attribute table grammar for string values.
+    * src/snort.c:
+    * src/util.c:
+      Print log message with BPF filter passed to Snort.
+    * src/sfutil/mpse.c:
+      Fix issue with default case (which isn't ever hit) of pattern
+      matcher performance stats not being calculated correctly.
+      Thanks to Wang Zhen for pointing this out.
+    * src/parser.c:
+      Fixed string comparison for "portvar" and "ipvar" to use
+      correct string length.  Thanks to Eric Duda for pointing 
+      this out.
+    * doc/INSTALL:
+      Update MAC OSX install notes.
+    * doc/README.arpspoof:
+      Update arpspoof documentation.
+    * etc/snort.conf:
+      Update frag3_global configuration example.
+
+2008-04-03 Steven Sturges <ssturges@sourcefire.com>
+    * rpm/snort.spec:
+      Add ssl preprocessor.  Thanks fo Andrew Pendray for noticing.
+
 2008-03-12 Todd Wease <twease@sourcefire.com>
     * src/decode.c:
     * doc/README.gre:
@@ -27,7 +1388,7 @@
       Fixed some typos.  Thanks to rmkml for pointing this out.
 
 2008-03-06 Steven Sturges <ssturges@sourcefire.com>
-    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+	* src/dynamic-preprocessors/ssl/spp_ssl.c:
     * doc/README.ssl:
     * doc/snort_manual.tex:
     * doc/snort_manual.pdf:
@@ -73,12 +1434,11 @@
     * src/sfutil/sfportobject.c:
     * src/target-based/sftarget_reader.c:
     * src/win32/WIN32-Includes/rpc/types.h:
-      Win32 complier warning cleanup.
+      Win32 compiler warning cleanup.
     * src/decode.h:
     * src/dynamic-plugins/sf_engine/sf_snort_packet.h:
     * src/win32/WIN32-Prj/sf_engine.dsp:
-      Reorganize packet structure to provide better compatibility with
-      shared libraries.
+      Reorganize to provide better compatibility with shared libraries.
     * src/detect.c:
     * src/detect.h:
     * src/plugbase.c:
@@ -4431,7 +5791,7 @@
       
     * src/output-plugins/spo_unified.c:
       Provide additional reliabilty for NT_SPECIAL_OUTPUT.  Thanks
-      Eriz Lauzon for the fix.
+      Eric Lauzon for the fix.
 
 2005-06-10 Jeremy Hewlett <jh@snort.org>
 

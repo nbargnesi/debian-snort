@@ -208,6 +208,8 @@
 #define YY_ACCEPT return 1;
 #define YY_ABORT return 0;
 
+#define YYSTACK_USE_ALLOCA 0
+
 extern ServiceClient sfat_client_or_service;
 extern char *sfat_grammar_error;
 
@@ -235,7 +237,7 @@ extern void sfat_error(char*);
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 53 "sf_attribute_table.y"
+#line 55 "sf_attribute_table.y"
 {
   char stringValue[STD_BUF];
   u_int32_t numericValue;
@@ -243,7 +245,7 @@ typedef union YYSTYPE
   MapData mapEntry;
 }
 /* Line 187 of yacc.c.  */
-#line 247 "sf_attribute_table.c"
+#line 249 "sf_attribute_table.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -256,7 +258,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 260 "sf_attribute_table.c"
+#line 262 "sf_attribute_table.c"
 
 #ifdef short
 # undef short
@@ -576,15 +578,15 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   138,   138,   144,   149,   156,   162,   165,   168,   176,
-     179,   182,   189,   196,   204,   210,   213,   216,   226,   233,
-     236,   241,   246,   251,   258,   269,   271,   271,   273,   273,
-     273,   273,   273,   276,   284,   292,   300,   308,   316,   322,
-     328,   334,   340,   360,   382,   388,   394,   401,   408,   414,
-     421,   427,   430,   436,   444,   451,   457,   461,   467,   472,
-     477,   482,   487,   492,   499,   507,   515,   523,   530,   539,
-     547,   553,   560,   566,   569,   575,   583,   590,   596,   600,
-     606,   611,   616
+       0,   140,   140,   146,   151,   158,   164,   167,   170,   178,
+     181,   184,   191,   198,   206,   212,   215,   218,   228,   235,
+     238,   243,   248,   253,   260,   275,   277,   277,   279,   279,
+     279,   279,   279,   282,   290,   298,   306,   314,   322,   328,
+     334,   340,   346,   366,   388,   394,   400,   407,   414,   420,
+     427,   433,   436,   442,   450,   457,   463,   467,   473,   478,
+     483,   488,   493,   498,   505,   513,   521,   529,   536,   545,
+     553,   559,   566,   572,   575,   581,   589,   596,   602,   606,
+     612,   617,   622
 };
 #endif
 
@@ -1615,42 +1617,42 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 139 "sf_attribute_table.y"
+#line 141 "sf_attribute_table.y"
     {
     YY_ACCEPT;
   }
     break;
 
   case 3:
-#line 145 "sf_attribute_table.y"
+#line 147 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "SnortAttributes: Got Attribute Map & Table\n"););
   }
     break;
 
   case 4:
-#line 150 "sf_attribute_table.y"
+#line 152 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "SnortAttributes: Got Attribute Table\n"););
   }
     break;
 
   case 5:
-#line 157 "sf_attribute_table.y"
+#line 159 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Got Attribute Map\n"););
   }
     break;
 
   case 6:
-#line 162 "sf_attribute_table.y"
+#line 164 "sf_attribute_table.y"
     {
      DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Empty Mapping Table\n"););
    }
     break;
 
   case 8:
-#line 169 "sf_attribute_table.y"
+#line 171 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "MapEntry: Name: %s, Id %d\n",
         (yyvsp[(2) - (3)].mapEntry).s_mapvalue, (yyvsp[(2) - (3)].mapEntry).l_mapid););
@@ -1659,7 +1661,7 @@ yyreduce:
     break;
 
   case 11:
-#line 183 "sf_attribute_table.y"
+#line 185 "sf_attribute_table.y"
     {
     (yyval.mapEntry).l_mapid = (yyvsp[(1) - (2)].numericValue);
     SnortStrncpy((yyval.mapEntry).s_mapvalue, (yyvsp[(2) - (2)].stringValue), STD_BUF);
@@ -1667,7 +1669,7 @@ yyreduce:
     break;
 
   case 12:
-#line 190 "sf_attribute_table.y"
+#line 192 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "MapValue: %s\n", (yyvsp[(2) - (3)].stringValue));)
     SnortStrncpy((yyval.stringValue), (yyvsp[(2) - (3)].stringValue), STD_BUF);
@@ -1675,7 +1677,7 @@ yyreduce:
     break;
 
   case 13:
-#line 197 "sf_attribute_table.y"
+#line 199 "sf_attribute_table.y"
     {
     (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "MapId: %d\n", (yyvsp[(2) - (3)].numericValue)););
@@ -1683,21 +1685,21 @@ yyreduce:
     break;
 
   case 14:
-#line 205 "sf_attribute_table.y"
+#line 207 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Got Attribute Table\n"););
   }
     break;
 
   case 15:
-#line 210 "sf_attribute_table.y"
+#line 212 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyHostEntry\n"););
   }
     break;
 
   case 17:
-#line 217 "sf_attribute_table.y"
+#line 219 "sf_attribute_table.y"
     {
     if (SFAT_AddHostEntryToMap() != SFAT_OK)
     {
@@ -1708,7 +1710,7 @@ yyreduce:
     break;
 
   case 18:
-#line 227 "sf_attribute_table.y"
+#line 229 "sf_attribute_table.y"
     {
     /* Callback to create a host entry object */
     SFAT_CreateHostEntry();
@@ -1716,39 +1718,43 @@ yyreduce:
     break;
 
   case 20:
-#line 237 "sf_attribute_table.y"
+#line 239 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData\n"););
   }
     break;
 
   case 21:
-#line 242 "sf_attribute_table.y"
+#line 244 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Services\n"););
   }
     break;
 
   case 22:
-#line 247 "sf_attribute_table.y"
+#line 249 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Clients\n"););
   }
     break;
 
   case 23:
-#line 252 "sf_attribute_table.y"
+#line 254 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Services or Clients\n"););
   }
     break;
 
   case 24:
-#line 259 "sf_attribute_table.y"
+#line 261 "sf_attribute_table.y"
     {
     /* Convert IP/CIDR to Snort IPCidr Object */
     /* determine the number of bits (done in SetHostIp4) */
+#ifdef SUP_IP6
+    if (SFAT_SetHostIp((yyvsp[(2) - (3)].stringValue)) != SFAT_OK)
+#else
     if (SFAT_SetHostIp4((yyvsp[(2) - (3)].stringValue)) != SFAT_OK)
+#endif
     {
         YY_ABORT;
     }
@@ -1756,7 +1762,7 @@ yyreduce:
     break;
 
   case 33:
-#line 277 "sf_attribute_table.y"
+#line 283 "sf_attribute_table.y"
     {
     /* Copy OSName */
     DEBUG_WRAP(PrintAttributeData("OS:Name", &(yyvsp[(2) - (3)].data)););
@@ -1765,7 +1771,7 @@ yyreduce:
     break;
 
   case 34:
-#line 285 "sf_attribute_table.y"
+#line 291 "sf_attribute_table.y"
     {
     /* Copy OSVendor */
     DEBUG_WRAP(PrintAttributeData("OS:Vendor", &(yyvsp[(2) - (3)].data)););
@@ -1774,7 +1780,7 @@ yyreduce:
     break;
 
   case 35:
-#line 293 "sf_attribute_table.y"
+#line 299 "sf_attribute_table.y"
     {
     /* Copy OSVersion */
     DEBUG_WRAP(PrintAttributeData("OS:Version", &(yyvsp[(2) - (3)].data)););
@@ -1783,7 +1789,7 @@ yyreduce:
     break;
 
   case 36:
-#line 301 "sf_attribute_table.y"
+#line 307 "sf_attribute_table.y"
     {
     /* Copy OSFragPolicy */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "OS:FragPolicy: %s\n", (yyvsp[(2) - (3)].stringValue)););
@@ -1792,7 +1798,7 @@ yyreduce:
     break;
 
   case 37:
-#line 309 "sf_attribute_table.y"
+#line 315 "sf_attribute_table.y"
     {
     /* Copy OSStreamPolicy */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "OS:StreamPolicy: %s\n", (yyvsp[(2) - (3)].stringValue)););
@@ -1801,7 +1807,7 @@ yyreduce:
     break;
 
   case 38:
-#line 317 "sf_attribute_table.y"
+#line 323 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
         (yyval.data).confidence = 100;
@@ -1810,7 +1816,7 @@ yyreduce:
     break;
 
   case 39:
-#line 323 "sf_attribute_table.y"
+#line 329 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
         (yyval.data).confidence = (yyvsp[(2) - (2)].numericValue);
@@ -1819,7 +1825,7 @@ yyreduce:
     break;
 
   case 40:
-#line 329 "sf_attribute_table.y"
+#line 335 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
         (yyval.data).confidence = (yyvsp[(2) - (2)].numericValue);
@@ -1828,7 +1834,7 @@ yyreduce:
     break;
 
   case 41:
-#line 335 "sf_attribute_table.y"
+#line 341 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
         (yyval.data).confidence = 100;
@@ -1837,7 +1843,7 @@ yyreduce:
     break;
 
   case 42:
-#line 341 "sf_attribute_table.y"
+#line 347 "sf_attribute_table.y"
     {
         char *mapped_name;
         (yyval.data).confidence = (yyvsp[(2) - (2)].numericValue);
@@ -1860,7 +1866,7 @@ yyreduce:
     break;
 
   case 43:
-#line 361 "sf_attribute_table.y"
+#line 367 "sf_attribute_table.y"
     {
         char *mapped_name;
         (yyval.data).confidence = 100;
@@ -1883,21 +1889,21 @@ yyreduce:
     break;
 
   case 44:
-#line 383 "sf_attribute_table.y"
+#line 389 "sf_attribute_table.y"
     {
         SnortStrncpy((yyval.stringValue), (yyvsp[(2) - (3)].stringValue), STD_BUF);
   }
     break;
 
   case 45:
-#line 389 "sf_attribute_table.y"
+#line 395 "sf_attribute_table.y"
     {
         (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
   }
     break;
 
   case 46:
-#line 395 "sf_attribute_table.y"
+#line 401 "sf_attribute_table.y"
     {
         /* Copy numeric */
         (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
@@ -1905,7 +1911,7 @@ yyreduce:
     break;
 
   case 47:
-#line 402 "sf_attribute_table.y"
+#line 408 "sf_attribute_table.y"
     {
     /* Copy numeric */
     (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
@@ -1913,14 +1919,14 @@ yyreduce:
     break;
 
   case 48:
-#line 409 "sf_attribute_table.y"
+#line 415 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ServiceList (complete)\n"););
   }
     break;
 
   case 49:
-#line 415 "sf_attribute_table.y"
+#line 421 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ServiceList\n"););
     sfat_client_or_service = ATTRIBUTE_SERVICE;
@@ -1928,28 +1934,28 @@ yyreduce:
     break;
 
   case 50:
-#line 422 "sf_attribute_table.y"
+#line 428 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ServiceList\n"););
   }
     break;
 
   case 51:
-#line 427 "sf_attribute_table.y"
+#line 433 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyService\n"););
   }
     break;
 
   case 52:
-#line 431 "sf_attribute_table.y"
+#line 437 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service ServiceListData\n"););
   }
     break;
 
   case 53:
-#line 437 "sf_attribute_table.y"
+#line 443 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Adding Complete\n"););
     SFAT_AddApplicationData();
@@ -1958,7 +1964,7 @@ yyreduce:
     break;
 
   case 54:
-#line 445 "sf_attribute_table.y"
+#line 451 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Start\n"););
     SFAT_CreateApplicationEntry();
@@ -1966,28 +1972,28 @@ yyreduce:
     break;
 
   case 55:
-#line 452 "sf_attribute_table.y"
+#line 458 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service End\n"););
   }
     break;
 
   case 56:
-#line 458 "sf_attribute_table.y"
+#line 464 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (no application)\n"););
   }
     break;
 
   case 57:
-#line 462 "sf_attribute_table.y"
+#line 468 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (application)\n"););
   }
     break;
 
   case 58:
-#line 468 "sf_attribute_table.y"
+#line 474 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Proto Port)\n"););
@@ -1995,7 +2001,7 @@ yyreduce:
     break;
 
   case 59:
-#line 473 "sf_attribute_table.y"
+#line 479 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Port Proto)\n"););
@@ -2003,7 +2009,7 @@ yyreduce:
     break;
 
   case 60:
-#line 478 "sf_attribute_table.y"
+#line 484 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto IPProto Port)\n"););
@@ -2011,7 +2017,7 @@ yyreduce:
     break;
 
   case 61:
-#line 483 "sf_attribute_table.y"
+#line 489 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto Port IPProto)\n"););
@@ -2019,7 +2025,7 @@ yyreduce:
     break;
 
   case 62:
-#line 488 "sf_attribute_table.y"
+#line 494 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port Proto IPProto)\n"););
@@ -2027,7 +2033,7 @@ yyreduce:
     break;
 
   case 63:
-#line 493 "sf_attribute_table.y"
+#line 499 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port IPProto Proto)\n"););
@@ -2035,7 +2041,7 @@ yyreduce:
     break;
 
   case 64:
-#line 500 "sf_attribute_table.y"
+#line 506 "sf_attribute_table.y"
     {
     /* Store IPProto Info */
     DEBUG_WRAP(PrintAttributeData("IPProto", &(yyvsp[(2) - (3)].data)););
@@ -2044,7 +2050,7 @@ yyreduce:
     break;
 
   case 65:
-#line 508 "sf_attribute_table.y"
+#line 514 "sf_attribute_table.y"
     {
     /* Store Protocol Info */
     DEBUG_WRAP(PrintAttributeData("Protocol", &(yyvsp[(2) - (3)].data)););
@@ -2053,7 +2059,7 @@ yyreduce:
     break;
 
   case 66:
-#line 516 "sf_attribute_table.y"
+#line 522 "sf_attribute_table.y"
     {
     /* Store Port Info */
     DEBUG_WRAP(PrintAttributeData("Port", &(yyvsp[(2) - (3)].data)););
@@ -2062,7 +2068,7 @@ yyreduce:
     break;
 
   case 67:
-#line 524 "sf_attribute_table.y"
+#line 530 "sf_attribute_table.y"
     {
     /* Store Application Info */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Application\n"));
@@ -2072,7 +2078,7 @@ yyreduce:
     break;
 
   case 68:
-#line 531 "sf_attribute_table.y"
+#line 537 "sf_attribute_table.y"
     {
     /* Store Application Info */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Application with Version\n"));
@@ -2082,7 +2088,7 @@ yyreduce:
     break;
 
   case 69:
-#line 540 "sf_attribute_table.y"
+#line 546 "sf_attribute_table.y"
     {
     /* Store Version Info */
     DEBUG_WRAP(PrintAttributeData("Version", &(yyvsp[(2) - (3)].data)););
@@ -2091,14 +2097,14 @@ yyreduce:
     break;
 
   case 70:
-#line 548 "sf_attribute_table.y"
+#line 554 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ClientList (complete)\n"););
   }
     break;
 
   case 71:
-#line 554 "sf_attribute_table.y"
+#line 560 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ClientList\n"););
     sfat_client_or_service = ATTRIBUTE_CLIENT;
@@ -2106,28 +2112,28 @@ yyreduce:
     break;
 
   case 72:
-#line 561 "sf_attribute_table.y"
+#line 567 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ClientList\n"););
   }
     break;
 
   case 73:
-#line 566 "sf_attribute_table.y"
+#line 572 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyClient\n"););
   }
     break;
 
   case 74:
-#line 570 "sf_attribute_table.y"
+#line 576 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client ClientListData\n"););
   }
     break;
 
   case 75:
-#line 576 "sf_attribute_table.y"
+#line 582 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Adding Complete\n"););
     SFAT_AddApplicationData();
@@ -2136,7 +2142,7 @@ yyreduce:
     break;
 
   case 76:
-#line 584 "sf_attribute_table.y"
+#line 590 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Start\n"););
     SFAT_CreateApplicationEntry();
@@ -2144,28 +2150,28 @@ yyreduce:
     break;
 
   case 77:
-#line 591 "sf_attribute_table.y"
+#line 597 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client End\n"););
   }
     break;
 
   case 78:
-#line 597 "sf_attribute_table.y"
+#line 603 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (no application)\n"););
   }
     break;
 
   case 79:
-#line 601 "sf_attribute_table.y"
+#line 607 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (application)\n"););
   }
     break;
 
   case 80:
-#line 607 "sf_attribute_table.y"
+#line 613 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (Proto)\n"););
@@ -2173,7 +2179,7 @@ yyreduce:
     break;
 
   case 81:
-#line 612 "sf_attribute_table.y"
+#line 618 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (IPProto Proto)\n"););
@@ -2181,7 +2187,7 @@ yyreduce:
     break;
 
   case 82:
-#line 617 "sf_attribute_table.y"
+#line 623 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (Proto IPProto)\n"););
@@ -2190,7 +2196,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 2194 "sf_attribute_table.c"
+#line 2200 "sf_attribute_table.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2404,7 +2410,7 @@ yyreturn:
 }
 
 
-#line 622 "sf_attribute_table.y"
+#line 628 "sf_attribute_table.y"
 
 /*
 int yywrap(void)
@@ -2413,3 +2419,4 @@ int yywrap(void)
 }
 */
 #endif /* TARGET_BASED */
+

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -41,6 +41,7 @@ typedef struct _SSLPP_config
 {
     ports_tbl_t ports;
     u_int16_t flags;
+
 } SSLPP_config_t;
 
 typedef struct _SSLPP_counters
@@ -49,12 +50,20 @@ typedef struct _SSLPP_counters
     UINT64 disabled;
     UINT64 decoded;
     UINT64 alerts;
-    UINT64 applications;
     UINT64 cipher_change;
     UINT64 unrecognized;
-    UINT64 handshakes;
     UINT64 completed_hs;
     UINT64 bad_handshakes;
+    UINT64 hs_chello;
+    UINT64 hs_shello;
+    UINT64 hs_cert;
+    UINT64 hs_skey;
+    UINT64 hs_ckey;
+    UINT64 hs_finished;
+    UINT64 hs_sdone;
+    UINT64 capp;
+    UINT64 sapp;
+
 } SSLPP_counters_t;
 
 #define SSLPP_TRUE 1
@@ -62,5 +71,7 @@ typedef struct _SSLPP_counters
 
 #define SSLPP_ENCRYPTED_FLAGS (SSL_HS_SDONE_FLAG | SSL_CLIENT_KEYX_FLAG | \
                                SSL_CAPP_FLAG | SSL_SAPP_FLAG)
+#define SSLPP_ENCRYPTED_FLAGS2 (SSL_HS_SDONE_FLAG | SSL_CHANGE_CIPHER_FLAG | \
+                                SSL_CAPP_FLAG | SSL_SAPP_FLAG)
     
 #endif /* SPP_SSLPP_H */

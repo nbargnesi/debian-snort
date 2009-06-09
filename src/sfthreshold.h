@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -31,6 +31,7 @@ void ParseSFThreshold( char * rule );
 void ParseSFSuppress( char * rule );
 
 int  sfthreshold_init( void );
+void sfthreshold_free( void );
 void sfthreshold_reset(void);
 
 int  sfthreshold_create( THDX_STRUCT * thdx  );

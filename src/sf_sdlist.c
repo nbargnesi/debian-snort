@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -151,7 +151,6 @@ int sf_sdlist_remove_next(sfSDList *list, SDListItem *item) {
         li->next->prev = item;
     }
 
-    
     if(list->destroy != NULL)
         list->destroy(data);
     
@@ -202,10 +201,8 @@ int sf_sdlist_remove(sfSDList *list, SDListItem *item)
         /* HEAD */
         list->head = next_item;
     }
-        
-        
-        
-    
+
+
     if(list->destroy != NULL)
         list->destroy(item->data);
 

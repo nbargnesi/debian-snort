@@ -8,7 +8,7 @@ EXTRA_DIST = ChangeLog snort.8 LICENSE verstuff.pl RELEASE.NOTES
 
 man_MANS = snort.8
 
-DISTCLEANFILES=stamp-h.in
+DISTCLEANFILES=stamp-h.in cflags.out
 
 
 dist-hook:

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -24,7 +24,7 @@
 #define __STR_SEARCH_H__
 
 /* Function prototypes  */
-typedef int (*MatchFunction)(void *, int, void *);
+typedef int (*MatchFunction)(void *, void *, int, void *, void *);
 
 int  SearchInit(unsigned int num);
 int  SearchGetHandle(void);
@@ -34,14 +34,14 @@ void SearchFree();
 void SearchFreeId(unsigned id);
 void SearchAdd(unsigned int mpse_id, const char *pat, unsigned int pat_len, int id);
 void SearchPrepPatterns(unsigned int mpse_id);
-int  SearchFindString(unsigned int mpse_id, const char *str, unsigned int str_len, int confine, int (*Match) (void *, int, void *));
+int  SearchFindString(unsigned int mpse_id, const char *str, unsigned int str_len, int confine, MatchFunction);
 
 
 void * SearchInstanceNew( void );
 void   SearchInstanceFree( void * insance );
 void   SearchInstanceAdd( void * instance, const char *pat, unsigned int pat_len, int id);
 void   SearchInstancePrepPatterns( void * instance );
-int    SearchInstanceFindString( void * instance, const char *str, unsigned int str_len, int confine, int (*Match) (void *, int, void *));
+int    SearchInstanceFindString( void * instance, const char *str, unsigned int str_len, int confine, MatchFunction);
 
 typedef struct _search_api
 {

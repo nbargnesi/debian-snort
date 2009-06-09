@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -85,6 +85,13 @@ extern HttpUri UriBufs[URI_COUNT]; /* detect.c */
 #include "sfsnprintfappend.h"
 #include "stream_api.h"
 #include "sf_iph.h"
+#include <pcre.h>
+
+#ifdef TARGET_BASED
+#include "target-based/sftarget_protocol_reference.h"
+#include "target-based/sftarget_reader.h"
+#endif
+
 
 #ifndef DEBUG
 char *no_file = "unknown";
@@ -422,11 +429,13 @@ int LoadDynamicEngineLib(char *library_name, int indent)
     DynamicPluginMeta metaData;
     PluginHandle handle;
 
+#if 0
 #ifdef SUP_IP6
     LogMessage("%sDynamic engine will not be loaded since dynamic detection "
                  "libraries are not yet supported with IPv6.\n", 
                 indent?"  ":"");
     return 0;
+#endif
 #endif
 
     LogMessage("%sLoading dynamic engine %s... ",
@@ -463,20 +472,24 @@ void LoadAllDynamicEngineLibs(char *path)
 
 void CloseDynamicEngineLibs()
 {
-    DynamicEnginePlugin *plugin = loadedEngines;
+    DynamicEnginePlugin *tmpplugin, *plugin = loadedEngines;
     while (plugin)
     {
+        tmpplugin = plugin->next;
         if (!(plugin->metaData.type & TYPE_DETECTION))
         {
             CloseDynamicLibrary(plugin->handle);
+            free(plugin->metaData.libraryPath);
+            free(plugin);
         }
         else
         {
             /* NOP, handle will be closed when we close the DetectionLib */
             ;
         }
-        plugin = plugin->next;
+        plugin = tmpplugin;
     }
+    loadedEngines = NULL;
 }
 
 void RemovePreprocessorPlugin(DynamicPreprocessorPlugin *plugin)
@@ -581,10 +594,12 @@ int LoadDynamicDetectionLib(char *library_name, int indent)
     InitDetectionLibFunc detectionInit;
     PluginHandle handle;
 
+#if 0
 #ifdef SUP_IP6
     LogMessage("%sDynamic detection library \"%s\" will not be loaded. Not "
                  "supported with IPv6.\n", indent ? "  " : "", library_name);
     return 0;
+#endif
 #endif
 
     LogMessage("%sLoading dynamic detection library %s... ",
@@ -622,12 +637,16 @@ int LoadDynamicDetectionLib(char *library_name, int indent)
 
 void CloseDynamicDetectionLibs()
 {
-    DynamicDetectionPlugin *plugin = loadedDetectionPlugins;
+    DynamicDetectionPlugin *tmpplugin, *plugin = loadedDetectionPlugins;
     while (plugin)
     {
+        tmpplugin = plugin->next;
         CloseDynamicLibrary(plugin->handle);
-        plugin = plugin->next;
+        free(plugin->metaData.libraryPath);
+        free(plugin);
+        plugin = tmpplugin;
     }
+    loadedDetectionPlugins = NULL;
 }
 
 void LoadAllDynamicDetectionLibs(char *path)
@@ -961,6 +980,81 @@ void *DynamicGetRuleData(void *p)
     return NULL;
 }
 
+void *pcreCompile(const char *pattern, int options, const char **errptr, int *erroffset, const unsigned char *tableptr)
+{
+    options &= ~SNORT_PCRE_OVERRIDE_MATCH_LIMIT;
+    return (void *)pcre_compile(pattern, options, errptr, erroffset, tableptr);
+}
+
+void *pcreStudy(const void *code, int options, const char **errptr)
+{
+    pcre_extra *extra_extra;
+    int snort_options = options & SNORT_PCRE_OVERRIDE_MATCH_LIMIT;
+
+    extra_extra = pcre_study((const pcre*)code, 0, errptr);
+
+#define SNORT_PCRE_MATCH_LIMIT pv.pcre_match_limit
+#define SNORT_PCRE_MATCH_LIMIT_RECURSION pv.pcre_match_limit_recursion
+    if (extra_extra)
+    {
+        if ((SNORT_PCRE_MATCH_LIMIT != -1) && !(snort_options & SNORT_PCRE_OVERRIDE_MATCH_LIMIT))
+        {
+            if (extra_extra->flags & PCRE_EXTRA_MATCH_LIMIT)
+            {
+                extra_extra->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+            else
+            {
+                extra_extra->flags |= PCRE_EXTRA_MATCH_LIMIT;
+                extra_extra->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+        }
+
+#ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+        if ((SNORT_PCRE_MATCH_LIMIT_RECURSION != -1) && !(snort_options & SNORT_PCRE_OVERRIDE_MATCH_LIMIT))
+        {
+            if (extra_extra->flags & PCRE_EXTRA_MATCH_LIMIT_RECURSION)
+            {
+                extra_extra->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+            else
+            {
+                extra_extra->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+                extra_extra->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+        }
+#endif
+    }
+    else
+    {
+        if (!(snort_options & SNORT_PCRE_OVERRIDE_MATCH_LIMIT) &&
+            ((SNORT_PCRE_MATCH_LIMIT != -1) || (SNORT_PCRE_MATCH_LIMIT_RECURSION != -1)))
+        {
+            extra_extra = (pcre_extra *)SnortAlloc(sizeof(pcre_extra));
+            if (SNORT_PCRE_MATCH_LIMIT != -1)
+            {
+                extra_extra->flags |= PCRE_EXTRA_MATCH_LIMIT;
+                extra_extra->match_limit = SNORT_PCRE_MATCH_LIMIT;
+            }
+
+#ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+            if (SNORT_PCRE_MATCH_LIMIT_RECURSION != -1)
+            {
+                extra_extra->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+                extra_extra->match_limit_recursion = SNORT_PCRE_MATCH_LIMIT_RECURSION;
+            }
+#endif
+        }
+    }
+
+    return extra_extra;
+}
+
+int pcreExec(const void *code, const void *extra, const char *subj, int len, int start, int options, int *ovec, int ovecsize)
+{
+    return pcre_exec((const pcre *)code, (const pcre_extra *)extra, subj, len, start, options, ovec, ovecsize);
+}
+
 int InitDynamicEngines()
 {
     int i;
@@ -999,6 +1093,10 @@ int InitDynamicEngines()
     engineData.debugMsgLine = &no_line;
 #endif
 
+    engineData.pcreStudy = &pcreStudy;
+    engineData.pcreCompile = &pcreCompile;
+    engineData.pcreExec = &pcreExec;
+
     return InitDynamicEnginePlugins(&engineData);
 }
 
@@ -1026,10 +1124,11 @@ int InitDynamicPreprocessorPlugins(DynamicPreprocessorData *info)
 /* Do this to avoid exposing Packet & PreprocessFuncNode from
  * snort to non-GPL code */
 typedef void (*SnortPacketProcessFunc)(Packet *, void *);
-void *AddPreprocessor(void (*func)(void *, void *), unsigned short priority, unsigned int preproc_id)
+void *AddPreprocessor(void (*func)(void *, void *), unsigned short priority,
+                      unsigned int preproc_id, uint32_t proto_mask)
 {
     SnortPacketProcessFunc preprocessorFunc = (SnortPacketProcessFunc)func;
-    return (void *)AddFuncToPreprocList(preprocessorFunc, priority, preproc_id);
+    return (void *)AddFuncToPreprocList(preprocessorFunc, priority, preproc_id, proto_mask);
 }
 
 void *AddPreprocessorCheck(void (*func)(void))
@@ -1109,11 +1208,16 @@ void DynamicIP6Build(void *p, const void *hdr, int family)
     sfiph_build((Packet *)p, hdr, family);
 }
 
-static INLINE void DynamicIP6SetCallbacks(void *p, int family)
+static INLINE void DynamicIP6SetCallbacks(void *p, int family, char orig)
 {
-    set_callbacks((Packet *)p, family);
+    set_callbacks((Packet *)p, family, orig);
 }
 #endif
+
+int DynamicSnortEventqLog(void *p)
+{
+    return SnortEventqLog((Packet *)p);
+}
 
 int InitDynamicPreprocessors()
 {
@@ -1193,6 +1297,18 @@ int InitDynamicPreprocessors()
     preprocData.ip6Build = &DynamicIP6Build;
     preprocData.ip6SetCallbacks = &DynamicIP6SetCallbacks;
 #endif
+
+    preprocData.logAlerts = &DynamicSnortEventqLog;
+    preprocData.resetAlerts = &SnortEventqReset;
+
+#ifdef TARGET_BASED
+    preprocData.findProtocolReference = &FindProtocolReference;
+    preprocData.addProtocolReference = &AddProtocolReference;
+    preprocData.isAdaptiveConfigured = &IsAdaptiveConfigured;
+#endif
+
+    preprocData.preprocOptOverrideKeyword = &RegisterPreprocessorRuleOptionOverride;
+    preprocData.isPreprocEnabled = &IsPreprocEnabled;
 
     return InitDynamicPreprocessorPlugins(&preprocData);
 }
@@ -1289,12 +1405,16 @@ void LoadAllDynamicPreprocessors(char *path)
 
 void CloseDynamicPreprocessorLibs()
 {
-    DynamicPreprocessorPlugin *plugin = loadedPreprocessorPlugins;
+    DynamicPreprocessorPlugin *tmpplugin, *plugin = loadedPreprocessorPlugins;
     while (plugin)
     {
+        tmpplugin = plugin->next;
         CloseDynamicLibrary(plugin->handle);
-        plugin = plugin->next;
+        free(plugin->metaData.libraryPath);
+        free(plugin);
+        plugin = tmpplugin;
     }
+    loadedPreprocessorPlugins = NULL;
 }
 void *GetNextEnginePluginVersion(void *p)
 {

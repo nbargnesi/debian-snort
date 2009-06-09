@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2008 Sourcefire, Inc.
+** Copyright (C) 2005-2009 Sourcefire, Inc.
 ** Author: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -38,7 +38,7 @@
 #define PROFILE_SORT_TOTAL_TICKS 7
 
 /* MACROS that handle profiling of rules and preprocessors */
-#define PROFILE_VARS UINT64 ticks_start = 0, ticks_end = 0, ticks_delta
+#define PROFILE_VARS UINT64 ticks_start = 0, ticks_end = 0, ticks_delta = 0
 
 #define PROFILE_START \
     get_clockticks(ticks_start);
@@ -51,31 +51,39 @@
 #define PROFILING_RULES pv.profile_rules_flag
 #endif
 
-#define OTN_PROFILE_START(otn) \
+#define NODE_PROFILE_VARS UINT64 ticks_start = 0, ticks_end = 0, ticks_delta = 0, node_deltas = 0
+
+#define NODE_PROFILE_START(node) \
     if (PROFILING_RULES) { \
-        otn->checks++; \
+        node->checks++; \
         PROFILE_START; \
     }
 
-#define OTN_PROFILE_END_MATCH(otn) \
+#define NODE_PROFILE_END_MATCH(node) \
     if (PROFILING_RULES) { \
         PROFILE_END; \
-        otn->ticks += ticks_delta; \
-        otn->ticks_match += ticks_delta; \
-        otn->matches++; \
+        node->ticks += ticks_delta + node_deltas; \
+        node->ticks_match += ticks_delta + node_deltas; \
     }
 
-#define OTN_PROFILE_NOALERT(otn) \
-    if (PROFILING_RULES) { \
-        otn->noalerts=1; \
-    }
-
-#define OTN_PROFILE_END_NOMATCH(otn) \
+#define NODE_PROFILE_END_NOMATCH(node) \
     if (PROFILING_RULES) { \
         PROFILE_END; \
-        otn->ticks += ticks_delta; \
-        otn->ticks_no_match += ticks_delta; \
+        node->ticks += ticks_delta + node_deltas; \
+        node->ticks_no_match += ticks_delta + node_deltas; \
     }
+
+#define NODE_PROFILE_TMPSTART(node) \
+    if (PROFILING_RULES) { \
+        PROFILE_START; \
+    }
+
+#define NODE_PROFILE_TMPEND(node) \
+    if (PROFILING_RULES) { \
+        PROFILE_END; \
+        node_deltas += ticks_delta; \
+    }
+
 #define OTN_PROFILE_ALERT(otn) otn->alerts++;
 
 #ifndef PROFILING_PREPROCS
@@ -147,10 +155,12 @@ void ResetPreprocProfiling(void);
 extern PreprocStats totalPerfStats;
 #else
 #define PROFILE_VARS
-#define OTN_PROFILE_START(otn)
-#define OTN_PROFILE_END_MATCH(otn)
-#define OTN_PROFILE_END_NOMATCH(otn)
-#define OTN_PROFILE_NOALERT(otn)
+#define NODE_PROFILE_VARS
+#define NODE_PROFILE_START(node)
+#define NODE_PROFILE_END_MATCH(node)
+#define NODE_PROFILE_END_NOMATCH(node)
+#define NODE_PROFILE_TMPSTART(node)
+#define NODE_PROFILE_TMPEND(node)
 #define OTN_PROFILE_ALERT(otn)
 #define PREPROC_PROFILE_START(ppstat)
 #define PREPROC_PROFILE_REENTER_START(ppstat)

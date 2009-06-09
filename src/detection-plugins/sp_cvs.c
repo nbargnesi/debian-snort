@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -23,7 +23,7 @@
 **  @author      Taimur Aslam
 **  @author      Todd Wease
 ** 
-**  @brief       Decode and detect CVS vulnerabilies
+**  @brief       Decode and detect CVS vulnerabilities
 **
 **  This CVS detection plugin provides support for detecting published CVS vulnerabilities. The
 **  vulnerabilities that can be detected are:
@@ -57,12 +57,19 @@
 
 #include "sp_cvs.h"
 
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats cvsPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
 
 /* function prototypes */
 static void CvsInit(char *, OptTreeNode *, int);
 static void CvsRuleParse(char *, CvsRuleOption *);
-static int CvsDetect(Packet *, OptTreeNode *, OptFpList *);
+static int CvsDetect(void *option_data, Packet *p);
 static int CvsDecode(const u_int8_t *, u_int16_t, CvsRuleOption *);
 static void CvsGetCommand(const u_int8_t *, const u_int8_t *, CvsCommand *);
 static int CvsCmdCompare(const char *, const u_int8_t *, int);
@@ -70,7 +77,35 @@ static int CvsValidateEntry(const u_int8_t *, const u_int8_t *);
 static void CvsGetEOL(const u_int8_t *, const u_int8_t *,
                       const u_int8_t **, const u_int8_t **);
 
+u_int32_t CvsHash(void *d)
+{
+    u_int32_t a,b,c;
+    CvsRuleOption *data = (CvsRuleOption *)d;
 
+    a = data->type;
+    b = RULE_OPTION_TYPE_CVS;
+    c = 0;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int CvsCompare(void *l, void *r)
+{
+    CvsRuleOption *left = (CvsRuleOption *)l;
+    CvsRuleOption *right = (CvsRuleOption *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+    
+    if (left->type == right->type)
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 /*
 **  NAME
@@ -86,7 +121,11 @@ static void CvsGetEOL(const u_int8_t *, const u_int8_t *,
 
 void SetupCvs(void)
 { 
-    RegisterPlugin("cvs", CvsInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("cvs", CvsInit, NULL, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("cvs", &cvsPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: CVS Setup\n"););
 }
@@ -108,15 +147,22 @@ void SetupCvs(void)
 static void CvsInit(char *data, OptTreeNode *otn, int protocol)
 {
     CvsRuleOption *cvs_rule_option;
+    void *ds_ptr_dup;
     OptFpList *ofl;
-        
 
     cvs_rule_option = (CvsRuleOption *)SnortAlloc(sizeof(CvsRuleOption));
     
     CvsRuleParse(data, cvs_rule_option);
 
+    if (add_detection_option(RULE_OPTION_TYPE_CVS, (void *)cvs_rule_option, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(cvs_rule_option);
+        cvs_rule_option = ds_ptr_dup;
+    }
+
     /* Attach detection function to rule's detect function ptr */
     ofl = AddOptFuncToList(CvsDetect, otn);
+    ofl->type = RULE_OPTION_TYPE_CVS;
     ofl->context = (void *)cvs_rule_option;
 }
 
@@ -181,27 +227,26 @@ static void CvsRuleParse(char *rule_args, CvsRuleOption *cvs_rule_option)
 **  @retval CVS_ALERT
 **
 */
-
-static int CvsDetect(Packet *p, OptTreeNode *otn, OptFpList *fp_list)
+static int CvsDetect(void *option_data, Packet *p)
 {
     int ret;
-    CvsRuleOption *cvs_rule_option;
+    int rval = DETECTION_OPTION_NO_MATCH;
+    CvsRuleOption *cvs_rule_option = (CvsRuleOption *)option_data;
 
 
-    if ((p == NULL) || (otn == NULL) || (fp_list == NULL))
+    if (p == NULL)
     {
-        return 0;
+        return rval;
     }
 
     if ((p->tcph == NULL) || (p->data == NULL) || (p->dsize == 0))
     {
-        return 0;
+        return rval;
     }
 
-    cvs_rule_option = (CvsRuleOption *)fp_list->context;
     if (cvs_rule_option == NULL)
     {
-        return 0;
+        return rval;
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "CVS begin detection\n"););
@@ -210,10 +255,10 @@ static int CvsDetect(Packet *p, OptTreeNode *otn, OptFpList *fp_list)
 
     if (ret == CVS_ALERT)
     {
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        rval = DETECTION_OPTION_MATCH;
     }
 
-    return 0;
+    return rval;
 }
 
 
@@ -233,7 +278,7 @@ static int CvsDecode(const u_int8_t *data, u_int16_t data_len,
                      CvsRuleOption *cvs_rule_option)
 {
     const u_int8_t *line, *end;
-    const u_int8_t *eol, *eolm;
+    const u_int8_t *eol = NULL, *eolm = NULL;
     CvsCommand command;
     int ret;
 

@@ -2,11 +2,11 @@
 .\" groff -man -Tascii snort.8
 .\"
 .\" $Id$
-.TH SNORT 8 "February 2008"
+.TH SNORT 8 "February 2009"
 .SH NAME
 Snort \- open source network intrusion detection system
 .SH SYNOPSIS
-.B snort [-bCdDeEfHIMNoOpqQsTUvVwWXy?] [-A
+.B snort [-bCdDeEfHIMNoOpqQsTUvVwWxXy?] [-A
 .I alert-mode
 .B ] [-B
 .I address-conversion-mask
@@ -95,6 +95,9 @@ Snort \- open source network intrusion detection system
 .B ] [--pcap-no-filter
 .B ] [--pcap-reset
 .B ] [--pcap-show
+.I count
+.B ] [--conf-error-out
+.B ] [--require-rule-sid
 .B ]
 .I expression
 .SH DESCRIPTION
@@ -283,7 +286,7 @@ Turn off promiscuous mode sniffing.
 .IP "-P snap-length"
 Set the packet snaplen to 
 .I snap-length
-.  By default, this is set to 1514.
+\&.  By default, this is set to 1514.
 .IP "-q"
 Quiet operation.  Don't display banner and initialization information.
 .IP "-Q"
@@ -340,6 +343,8 @@ Show management frames if runnong on an 802.11 (wireless) network.
 .IP "-W"
 .B *WIN32 ONLY*
 Enumerate the network interfaces available.
+.IP "-x"
+Exit if Snort configuration problems occur such as duplicate gid/sid or flowbits without Stream5.
 .IP "-X"
 Dump the raw packet data starting at the link layer.  This switch overrides the '-d' switch.
 .IP "-y"
@@ -352,8 +357,8 @@ Show the program usage statement and exit.
 Same as -G.
 .IP "--perfmon-file pathname"
 Same as -Z.
-.IP "--pid-path pathname"
-Specify the pathname for the Snort PID file.
+.IP "--pid-path directory"
+Specify the directory for the Snort PID file.
 .IP "--snaplen snap-length"
 Same as -P.
 .IP "--help"
@@ -423,6 +428,13 @@ before reading next pcap.  The default, i.e. without this option,
 is not to reset state.
 .IP "--pcap-show"
 Print a line saying what pcap is currently being read.
+.IP "--exit-check=\fIcount\fP"
+Signal termination after <count> callbacks from pcap_dispatch(), showing the
+time it takes from signaling until pcap_close() is called.
+.IP "--conf-error-out"
+Same as -x.
+.IP "--require-rule-sid"
+Require an SID for every rule to be correctly hreshold all rules.
 
 .IP "\fI expression\fP"
 .RS

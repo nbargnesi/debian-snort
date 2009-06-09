@@ -89,7 +89,7 @@ void ExampleInit(char *args)
     }
 
     /* Register the preprocessor function, Transport layer, ID 10000 */
-    _dpd.addPreproc(ExampleProcess, PRIORITY_TRANSPORT, 10000);
+    _dpd.addPreproc(ExampleProcess, PRIORITY_TRANSPORT, 10000, PROTO_BIT__TCP | PROTO_BIT__UDP);
 
     DEBUG_WRAP(_dpd.debugMsg(DEBUG_PLUGIN, "Preprocessor: Example is initialized\n"););
 }

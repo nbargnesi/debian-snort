@@ -1,7 +1,7 @@
 /*
  * spp_dcerpc.c
  *
- * Copyright (C) 2004-2008 Sourcefire,Inc
+ * Copyright (C) 2004-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -78,6 +78,8 @@ PreprocStats dcerpcPerfStats;
 PreprocStats dcerpcDetectPerfStats;
 #endif
 
+#include "sf_types.h"
+
 /*
  * The length of the error string buffer.
  */
@@ -94,6 +96,13 @@ void ProcessDCERPCPacket(void *, void *);
 static void DCERPCCleanExitFunction(int, void *);
 static void DCERPCReset(int, void *);
 static void DCERPCResetStats(int, void *);
+static void _addPortsToStream5Filter();
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter();
+extern DCERPC_ProtoIds _dce_proto_ids;
+#endif
+extern char SMBPorts[MAX_PORT_INDEX];
+extern char DCERPCPorts[MAX_PORT_INDEX];
 
 
 /*
@@ -139,23 +148,41 @@ void DCERPCInit(char *args)
 
     ErrorString[ERRSTRLEN - 1] = '\0';
 
+    if (_dpd.isPreprocEnabled(PP_DCE2))
+    {
+        DynamicPreprocessorFatalMessage("%s(%d) => dcerpc: Only one DCE/RPC preprocessor can be configured.\n",
+                 *_dpd.config_file, *_dpd.config_line);
+    }
+
     DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"Preprocessor: DCERPC Initialized\n"););
 
-    /* parse the argument list into a list of ports to normalize */
+#ifdef TARGET_BASED
+    _dce_proto_ids.dcerpc = _dpd.findProtocolReference(DCE_PROTO_REF_STR__DCERPC);
+    if (_dce_proto_ids.dcerpc == SFTARGET_UNKNOWN_PROTOCOL)
+        _dce_proto_ids.dcerpc = _dpd.addProtocolReference(DCE_PROTO_REF_STR__DCERPC);
+
+    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"DCE/RPC: Target-based: Proto id for %s: %u.\n",
+                            DCE_PROTO_REF_STR__DCERPC, _dce_proto_ids.dcerpc););
+
+    /* smb and netbios-ssn refer to the same thing */
+    _dce_proto_ids.nbss = _dpd.findProtocolReference(DCE_PROTO_REF_STR__NBSS);
+    if (_dce_proto_ids.nbss == SFTARGET_UNKNOWN_PROTOCOL)
+        _dce_proto_ids.nbss = _dpd.addProtocolReference(DCE_PROTO_REF_STR__NBSS);
+
+    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"DCE/RPC: Target-based: Proto id for %s: %u.\n",
+                            DCE_PROTO_REF_STR__NBSS, _dce_proto_ids.nbss););
+    _addServicesToStream5Filter();
+#endif
     
+    /* Parse configuration */
     if (DCERPCProcessConf(token, ErrorString, iErrStrLen))
-    {
-        /*
-         * Fatal Error, log error and exit.
-         */
         DynamicPreprocessorFatalMessage("%s(%d) => %s\n", *_dpd.config_file, *_dpd.config_line, ErrorString);
-    }
 
     /* Init reassembly packet */
     DCERPC_InitPacket();
 
     /* Set the preprocessor function into the function list */
-	_dpd.addPreproc(ProcessDCERPCPacket, PRIORITY_APPLICATION, PP_DCERPC);
+	_dpd.addPreproc(ProcessDCERPCPacket, PRIORITY_APPLICATION, PP_DCERPC, PROTO_BIT__TCP);
 	_dpd.addPreprocExit(DCERPCCleanExitFunction, NULL, PRIORITY_LAST, PP_DCERPC);
 	_dpd.addPreprocReset(DCERPCReset, NULL, PRIORITY_LAST, PP_DCERPC);
 	_dpd.addPreprocResetStats(DCERPCResetStats, NULL, PRIORITY_LAST, PP_DCERPC);
@@ -164,6 +191,8 @@ void DCERPCInit(char *args)
 #ifdef PERF_PROFILING
     _dpd.addPreprocProfileFunc("dcerpc", &dcerpcPerfStats, 0, _dpd.totalPerfStats);
 #endif
+
+    _addPortsToStream5Filter();
 }
 
 #if 0
@@ -173,7 +202,6 @@ static void DCERPC_DisableDetect(SFSnortPacket *p)
 
     _dpd.setPreprocBit(p, PP_SFPORTSCAN);
     _dpd.setPreprocBit(p, PP_PERFMONITOR);
-    _dpd.setPreprocBit(p, PP_STREAM4);
     _dpd.setPreprocBit(p, PP_STREAM5);
 }
 #endif
@@ -184,7 +212,6 @@ static void DCERPC_DisablePreprocessors(SFSnortPacket *p)
 
     _dpd.setPreprocBit(p, PP_SFPORTSCAN);
     _dpd.setPreprocBit(p, PP_PERFMONITOR);
-    _dpd.setPreprocBit(p, PP_STREAM4);
     _dpd.setPreprocBit(p, PP_STREAM5);
 }
 
@@ -206,8 +233,6 @@ void ProcessDCERPCPacket(void *pkt, void *context)
     u_int32_t      session_flags = 0;
     PROFILE_VARS;
 
-    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"DCERPC packet with %d bytes\n", p->payload_size););
-
     /* no data to inspect */
     if (p->payload_size == 0)
         return;
@@ -217,21 +242,6 @@ void ProcessDCERPCPacket(void *pkt, void *context)
     if(!IsTCP(p))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"It isn't TCP session traffic\n"););
-        return;
-    }
-
-    if(p->flags & FLAG_FROM_SERVER)
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"This is from a server\n"););
-        return;
-    }
-
-    /*
-     * Check for valid packet
-     * if neither header or data is good, then we just abort.
-     */
-    if(!p->ip4_header || !p->tcp_header || !p->payload || !p->payload_size)
-    {
         return;
     }
 
@@ -289,4 +299,35 @@ static void DCERPCResetStats(int signal, void *data)
     return;
 }
 
+static void _addPortsToStream5Filter()
+{
+    unsigned int portNum;
+
+    //smb ports
+    for (portNum = 0; portNum < MAXPORTS; portNum++)
+    {
+        if(SMBPorts[(portNum/8)] & (1<<(portNum%8)))
+        {
+            //Add port the port. Only TCP port is used
+            _dpd.streamAPI->set_port_filter_status(IPPROTO_TCP, (u_int16_t)portNum, PORT_MONITOR_SESSION);
+        }
+    }
+
+    //dcerpc ports
+    for (portNum = 0; portNum < MAXPORTS; portNum++)
+    {
+        if(DCERPCPorts[(portNum/8)] & (1<<(portNum%8)))
+        {
+            //Add port the port. Only TCP port is used
+            _dpd.streamAPI->set_port_filter_status(IPPROTO_TCP, (u_int16_t)portNum, PORT_MONITOR_SESSION);
+        }
+    }
+}
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter()
+{
+    _dpd.streamAPI->set_service_filter_status(_dce_proto_ids.dcerpc, PORT_MONITOR_SESSION);
+    _dpd.streamAPI->set_service_filter_status(_dce_proto_ids.nbss, PORT_MONITOR_SESSION);
+}
+#endif
 

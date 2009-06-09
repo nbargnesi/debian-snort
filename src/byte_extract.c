@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2003-2008 Sourcefire, Inc.
+** Copyright (C) 2003-2009 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -73,43 +73,58 @@ int byte_extract(int endianess, int bytes_to_grab, const u_int8_t *ptr,
 
     /*
      * We only support grabbing 1, 2, or 4 bytes of binary data.
+     * And now, due to popular demand, 3 bytes!
      */
     switch(bytes_to_grab)
     {
-    case 1:
-        *value =  (*ptr) & 0xFF;
-        break;
-    case 2:
-        if(endianess == LITTLE)
-        {
-            *value = (*ptr) & 0xFF;
-            *value |= (*(ptr + 1) & 0xFF) << 8;
-	}
-        else
-        {
-            *value = ((*ptr) & 0xFF) << 8;
-            *value |= (*(ptr + 1)) & 0xFF;
-	}
-        break;
-    case 4:
-        if(endianess == LITTLE)
-        {
-            *value = (*ptr) & 0xFF;
-            *value |= ((*(ptr + 1)) & 0xFF) << 8;
-            *value |= ((*(ptr + 2)) & 0xFF) << 16;
-            *value |= ((*(ptr + 3)) & 0xFF) << 24;
-	}
-        else
-        {
-            *value =  ((*ptr) & 0xFF)       << 24;
-            *value |= ((*(ptr + 1)) & 0xFF) << 16;
-            *value |= ((*(ptr + 2)) & 0xFF) << 8;
-            *value |= (*(ptr + 3)) & 0xFF;
-        }
-        break;
-    default:
-        /* unknown type */
-        return -1;
+        case 1:
+            *value =  (*ptr) & 0xFF;
+            break;
+        case 2:
+            if(endianess == LITTLE)
+            {
+                *value = (*ptr) & 0xFF;
+                *value |= (*(ptr + 1) & 0xFF) << 8;
+            }
+            else
+            {
+                *value = ((*ptr) & 0xFF) << 8;
+                *value |= (*(ptr + 1)) & 0xFF;
+            }
+            break;
+        case 3:
+            if (endianess == LITTLE)
+            {
+                *value = (*ptr) & 0xFF;
+                *value |= ((*(ptr + 1)) & 0xFF) << 8;
+                *value |= ((*(ptr + 2)) & 0xFF) << 16;
+            }
+            else
+            {
+                *value = ((*ptr) & 0xFF) << 16;
+                *value |= ((*(ptr + 1)) & 0xFF) << 8;
+                *value |= (*(ptr + 2)) & 0xFF;
+            }
+            break;
+        case 4:
+            if(endianess == LITTLE)
+            {
+                *value = (*ptr) & 0xFF;
+                *value |= ((*(ptr + 1)) & 0xFF) << 8;
+                *value |= ((*(ptr + 2)) & 0xFF) << 16;
+                *value |= ((*(ptr + 3)) & 0xFF) << 24;
+            }
+            else
+            {
+                *value =  ((*ptr) & 0xFF)       << 24;
+                *value |= ((*(ptr + 1)) & 0xFF) << 16;
+                *value |= ((*(ptr + 2)) & 0xFF) << 8;
+                *value |= (*(ptr + 3)) & 0xFF;
+            }
+            break;
+        default:
+            /* unknown type */
+            return -1;
     }
 
     return 0;

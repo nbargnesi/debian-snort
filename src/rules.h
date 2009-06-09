@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -41,13 +41,7 @@
 #include "sfutil/sfportobject.h"
 #endif
 
-#ifdef SUNOS
-    #define INADDR_NONE -1
-#endif
-
-#ifdef SOLARIS
-    #define INADDR_NONE -1
-#endif
+#include "detection_options.h"
 
 #define RULE_LOG         0
 #define RULE_PASS        1
@@ -107,9 +101,11 @@
 #define MODE_EXIT_ON_MATCH   0
 #define MODE_FULL_SEARCH     1
 
-#define CHECK_SRC            0x01
-#define CHECK_DST            0x02
+#define CHECK_SRC_IP         0x01
+#define CHECK_DST_IP         0x02
 #define INVERSE              0x04
+#define CHECK_SRC_PORT       0x08
+#define CHECK_DST_PORT       0x10
 
 #define SESSION_PRINTABLE    1
 #define SESSION_ALL          2
@@ -145,7 +141,7 @@ typedef struct _RuleFpList
     void *context;
 
     /* rule check function pointer */
-    int (*RuleHeadFunc)(Packet *, struct _RuleTreeNode *, struct _RuleFpList *);
+    int (*RuleHeadFunc)(Packet *, struct _RuleTreeNode *, struct _RuleFpList *, int);
 
     /* pointer to the next rule function node */
     struct _RuleFpList *next;
@@ -157,11 +153,12 @@ typedef struct _OptFpList
     /* context data for this test */
     void *context;
 
-    int (*OptTestFunc)(Packet *, struct _OptTreeNode *, struct _OptFpList *);
+    int (*OptTestFunc)(void *option_data, Packet *p);
 
     struct _OptFpList *next;
 
     unsigned char isRelative;
+    option_type_t type;
 
 } OptFpList;
 
@@ -254,11 +251,12 @@ typedef struct _OptTreeNode
     u_int8_t noalerts; 
 #endif
 
-
     int pcre_flag; /* PPM */
     UINT64 ppm_suspend_time; /* PPM */
-    unsigned ppm_disable_cnt; /*PPM */
+    UINT64 ppm_disable_cnt; /*PPM */
 
+    char generated;
+    uint32_t num_detection_opts;
 
 } OptTreeNode;
 

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -466,6 +466,12 @@ static void SpoLogTcpdumpCleanup(int signal, void *arg, const char* msg)
                          data->logdir, strerror(errno));
         }
     }
+
+    if (data->filename)
+    {
+        free (data->filename);
+    }
+
     bzero(data, sizeof(LogTcpdumpData));
     free(data);
 }

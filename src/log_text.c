@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -170,9 +171,17 @@ static void LogEthHeader(TextLog* log, Packet* p)
             p->eh->ether_dst[4], p->eh->ether_dst[5]);
 
     /* protocol and pkt size */
-    TextLog_Print(log, "type:0x%X len:0x%X\n", ntohs(p->eh->ether_type), p->pkth->len);
+    TextLog_Print(log, "type:0x%X len:0x%X\n", ntohs(p->eh->ether_type), p->pkth->len);   
 }
 
+#ifdef MPLS
+static void LogMPLSHeader(TextLog* log, Packet* p)
+{
+
+    TextLog_Print(log,"label:0x%05X exp:0x%X bos:0x%X ttl:0x%X\n",
+            p->mplsHdr.label, p->mplsHdr.exp, p->mplsHdr.bos, p->mplsHdr.ttl);    
+}
+#endif
 /*--------------------------------------------------------------------
  * Function: LogSLLHeader(TextLog* )
  *
@@ -184,6 +193,7 @@ static void LogEthHeader(TextLog* log, Packet* p)
  * Returns: void function
  *--------------------------------------------------------------------
  */
+#ifdef DLT_LINUX_SLL        
 static void LogSLLHeader(TextLog* log, Packet* p)
 {
     switch (ntohs(p->sllh->sll_pkttype)) {
@@ -218,6 +228,7 @@ static void LogSLLHeader(TextLog* log, Packet* p)
                  ntohs(p->sllh->sll_pkttype),
                  ntohs(p->sllh->sll_protocol), p->pkth->len);
 }
+#endif
 
 /*--------------------------------------------------------------------
  * Function: LogWifiHeader(TextLog* )
@@ -541,13 +552,13 @@ void LogIPHeader(TextLog*  log, Packet * p)
         TextLog_Putc(log, ' ');
     }
 
-    TextLog_Print(log, "%s TTL:%d TOS:0x%X ID:%d IpLen:%d DgmLen:%d",
+    TextLog_Print(log, "%s TTL:%u TOS:0x%X ID:%u IpLen:%u DgmLen:%u",
             protocol_names[GET_IPH_PROTO(p)],
             GET_IPH_TTL(p),
             GET_IPH_TOS(p),
-            ntohs(GET_IPH_ID(p)),
+            IS_IP6(p) ? ntohl(GET_IPH_ID(p)) : ntohs((u_int16_t)GET_IPH_ID(p)),
             GET_IPH_HLEN(p) << 2, 
-            IS_IP6(p) ? ntohs(GET_IPH_LEN(p)) + 20 : ntohs(GET_IPH_LEN(p)) );
+            GET_IP_DGMLEN(p));
 
     /* print the reserved bit if it's set */
     if((u_int8_t)((ntohs(GET_IPH_OFF(p)) & 0x8000) >> 15) == 1)
@@ -573,7 +584,7 @@ void LogIPHeader(TextLog*  log, Packet * p)
     {
         TextLog_Print(log, "Frag Offset: 0x%04X   Frag Size: 0x%04X\n",
                 (p->frag_offset & 0x1FFF),
-                (ntohs(GET_IPH_LEN(p)) - (GET_IPH_HLEN(p) << 2)));
+                GET_IP_PAYLEN(p));
     }
 }
 
@@ -894,10 +905,10 @@ static void LogICMPEmbeddedIP(TextLog* log, Packet *p)
     orig_p->dp = p->orig_dp;
     orig_p->icmph = p->orig_icmph;
 #ifdef SUP_IP6
-    orig_p->iph_api = p->iph_api;
+    orig_p->iph_api = p->orig_iph_api;
     orig_p->ip4h = p->orig_ip4h;
     orig_p->ip6h = p->orig_ip6h;
-    orig_p->family = p->family;
+    orig_p->family = p->orig_family;
 #endif
 
     if(orig_p->iph != NULL)
@@ -1444,7 +1455,13 @@ void LogIPPkt(TextLog* log, int type, Packet * p)
     {
         Log2ndHeader(log, p);
     }
-
+    
+#ifdef MPLS
+    if(p->mpls)
+    {
+        LogMPLSHeader(log, p);
+    }
+#endif
     /* etc */
     LogIPHeader(log, p);
 
@@ -1484,24 +1501,7 @@ void LogIPPkt(TextLog* log, int type, Packet * p)
                 }
                 else
                 {
-#ifdef SUP_IP6
-                    if ( IS_IP4(p) )
-                        LogNetData(log, DATA_PTR(p),
-                            (ntohs(GET_IPH_LEN(p)) - (GET_IPH_HLEN(p) << 2)));
-                    else
-                        LogNetData(log, DATA_PTR(p),
-                        /* IPv6 packets don't include the IP header in the 
-                         * payload calculation.  Therefore, only need to get 
-                         * the payload length field.  However, for Snort-
-                         * compatibility's sake, the IPv6 payload field is 
-                         * faked to include the header length, so we subtract
-                         * off the difference here beteen the IPv6 and IPv4
-                         * header length. */
-                            ntohs(GET_IPH_LEN(p)) - 20);
-#else
-                    LogNetData(log, DATA_PTR(p),
-                        (ntohs(p->iph->ip_len) - (IP_HLEN(p->iph) << 2)));
-#endif
+                    LogNetData(log, DATA_PTR(p), GET_IP_PAYLEN(p));
                 }
                 break;
 

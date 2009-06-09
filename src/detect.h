@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -96,18 +96,18 @@ static inline void DisablePreprocessors(Packet *p)
 
 
 /* detection modules */
-int CheckBidirectional(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckSrcIP(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckDstIP(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckSrcIPNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckDstIPNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckSrcPortEqual(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckDstPortEqual(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckSrcPortNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int CheckDstPortNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *);
+int CheckBidirectional(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckSrcIP(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckDstIP(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckSrcIPNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckDstIPNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckSrcPortEqual(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckDstPortEqual(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckSrcPortNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int CheckDstPortNotEq(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
 
-int RuleListEnd(Packet *, struct _RuleTreeNode *, RuleFpList *);
-int OptListEnd(Packet *, struct _OptTreeNode *, OptFpList *);
+int RuleListEnd(Packet *, struct _RuleTreeNode *, RuleFpList *, int);
+int OptListEnd(void *option_data, Packet *p);
 void CallLogPlugins(Packet *, char *, void *, Event *);
 void CallAlertPlugins(Packet *, char *, void *, Event *);
 void CallLogFuncs(Packet *, char *, ListHead *, Event *);

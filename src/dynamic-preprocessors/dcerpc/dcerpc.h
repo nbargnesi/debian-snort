@@ -1,7 +1,7 @@
 /*
  * dcerpc.h
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  * Andrew Mullican
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,6 +37,11 @@
 #else
 #pragma pack(1)
 #endif
+
+#define DCERPC_SEGMENTED         1
+#define DCERPC_FULL_FRAGMENT     2
+#define DCERPC_FRAG_REASSEMBLED  3
+#define DCERPC_FRAGMENT          4
 
 typedef struct dcerpc_hdr
 {

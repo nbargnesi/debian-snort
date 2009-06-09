@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -99,16 +99,21 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "decode.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
 #include "sfrt_trie.h"
 #include "debug.h"
+#include "ipv6_port.h"
 
+#ifdef SUP_IP6
+typedef sfip_t *IP;
+#else
 typedef u_int32_t IP;
+#endif
 typedef void* GENERIC;   /* To be replaced with a pointer to a policy */
-typedef struct {
+typedef struct
+{
     word index;
     word length;
 } tuple_t;
@@ -120,7 +125,8 @@ typedef struct {
 #include "sfrt_lctrie.h"
 #endif
 
-enum types {
+enum types
+{
 #ifdef SUPPORT_LCTRIE
    LCT,
 #endif
@@ -131,11 +137,18 @@ enum types {
    DIR_8x4,
    DIR_4x8,
    DIR_2x16,
+#ifdef SUP_IP6
+   DIR_16_4x4_16x5_4x4,
+   DIR_16x7_4x4,
+   DIR_16x8,
+   DIR_8x16,
+#endif
    IPv4,
    IPv6
 };
 
-enum return_codes {
+enum return_codes
+{
    RT_SUCCESS=0,
    RT_INSERT_FAILURE,
    RT_POLICY_TABLE_EXCEEDED,
@@ -153,14 +166,16 @@ enum return_codes {
 /* Defined in sfrt.c */
 extern char *rt_error_messages[];
 
-enum { 
+enum
+{
    RT_FAVOR_TIME,
    RT_FAVOR_SPECIFIC
 };
 
 /*******************************************************************/
 /* Master table struct.  Abstracts DIR and LC-trie methods         */
-typedef struct {
+typedef struct
+{
     GENERIC *data;      /* data table. Each IP points to an entry here */
     u_int32_t num_ent;  /* Number of entries in the policy table */
     u_int32_t max_size; /* Max size of policies array */
@@ -169,6 +184,9 @@ typedef struct {
     u_int32_t allocated;
 
     void *rt;            /* Actual "routing" table */
+#ifdef SUP_IP6
+    void *rt6;            /* Actual "routing" table */
+#endif
 
     tuple_t (*lookup)(IP ip, GENERIC); 
     int (*insert)(IP ip, int len, word index, int behavior, GENERIC); 
@@ -181,6 +199,7 @@ typedef struct {
 table_t * sfrt_new(char type, char ip_type, long data_size, u_int32_t mem_cap);
 void      sfrt_free(table_t *table);
 GENERIC sfrt_lookup(void *adr, table_t* table);
+GENERIC sfrt_search(void *adr, unsigned char len, table_t *table);
 typedef void (*sfrt_iterator_callback)(void *);
 void    sfrt_iterate(table_t* table, sfrt_iterator_callback userfunc);
 void    sfrt_cleanup(table_t* table, sfrt_iterator_callback userfunc);

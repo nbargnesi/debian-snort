@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2008 Sourcefire, Inc.
+** Copyright (C) 2005-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -166,6 +166,16 @@ typedef struct _runtime_config
 
 #define MAX_IFS        1
 
+#ifdef MPLS
+#define DEFAULT_MPLS_MULTICAST        0
+#define DEFAULT_MPLS_OVERLAPPING_IP   0
+#define MPLS_PAYLOADTYPE_IPV4         1
+#define MPLS_PAYLOADTYPE_ETHERNET     2
+#define MPLS_PAYLOADTYPE_IPV6         3
+#define DEFAULT_MPLS_PAYLOADTYPE      1
+#define DEFAULT_LABELCHAIN_LENGTH      -1
+#endif
+
 /* This feature allows us to change the state of a rule,
  * independent of it appearing in a rules file.
  */
@@ -223,6 +233,14 @@ typedef struct _RuleState
 #define DISABLE_ATTRIBUTE_RELOAD  29
 #endif
 #define DETECTION_SEARCH_METHOD   30
+#define CONF_ERROR_OUT                 31
+#ifdef MPLS
+#define ENABLE_MPLS_MULTICAST     31
+#define ENABLE_OVERLAPPING_IP     32
+#define MAX_MPLS_LABELCHAIN_LEN   33
+#define MPLS_PAYLOAD_TYPE         34
+#endif
+#define REQUIRE_RULE_SID         35
 
 #ifdef DYNAMIC_PLUGIN
 typedef struct _DynamicDetectionSpecifier
@@ -364,6 +382,7 @@ typedef struct _progvars
     char *respond2_ethdev;
 #endif
     int usr_signal;
+    int cant_hup_signal;
 #ifdef TIMESTATS
     int alrm_signal;
     u_int32_t timestats_interval;
@@ -375,6 +394,10 @@ typedef struct _progvars
     int profile_rules_sort;
     int profile_preprocs_flag;
     int profile_preprocs_sort;
+    char *profile_rules_filename;
+    int profile_rules_append;
+    char *profile_preprocs_filename;
+    int profile_preprocs_append;
 #endif
     int tagged_packet_limit;
     int treat_drop_as_alert;
@@ -401,7 +424,7 @@ typedef struct _progvars
     char reload_attribute_table_flags;
 #define DEFAULT_MAX_ATTRIBUTE_HOSTS 10000
 #define MAX_MAX_ATTRIBUTE_HOSTS 512 * 1024
-#define MIN_MAX_ATTRIBUTE_HOSTS 8 * 1024
+#define MIN_MAX_ATTRIBUTE_HOSTS 32
     u_int32_t max_attribute_hosts;
     char disable_attribute_reload_thread;
 #endif
@@ -421,6 +444,20 @@ typedef struct _progvars
 #endif
     long pcre_match_limit;
     long pcre_match_limit_recursion;
+
+    unsigned max_inq;
+    UINT64 tot_inq_flush;
+    UINT64 tot_inq_inserts;
+    UINT64 tot_inq_uinserts;
+    int conf_error_out;
+#ifdef MPLS
+    u_int8_t mpls_multicast;
+    u_int8_t overlapping_IP;
+    int mpls_stack_depth;
+    u_int8_t mpls_payload_type;
+#endif
+
+    char require_rule_sid;
 } PV;
 
 /* struct to collect packet statistics */
@@ -443,6 +480,7 @@ typedef struct _PacketCount
     UINT64 arp;
     UINT64 eapol;
     UINT64 vlan;
+    UINT64 nested_vlan;
     UINT64 ipv6;
     UINT64 ipv6_up;
     UINT64 ipv6_upfail;
@@ -542,6 +580,9 @@ typedef struct _PacketCount
 #endif
 #endif
 
+#ifdef MPLS
+    UINT64 mpls;    
+#endif
 } PacketCount;
 
 typedef struct _PcapReadObject

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -78,6 +78,9 @@
 #define CURSOR_IN_BOUNDS       1
 #define CURSOR_OUT_OF_BOUNDS   0
 
+/* Defined in sf_dynamic_define.h */
+//#define SNORT_PCRE_OVERRIDE_MATCH_LIMIT 0x80000000
+
 #define CONTENT_NOCASE          0x01
 #define CONTENT_RELATIVE        0x02
 #define CONTENT_UNICODE2BYTE    0x04
@@ -89,6 +92,9 @@
 #define CONTENT_BUF_RAW         0x200
 #define CONTENT_BUF_URI         0x400
 #define CONTENT_BUF_POST        0x800
+#define CONTENT_BUF_HEADER      0x2000
+#define CONTENT_BUF_METHOD      0x4000
+#define CONTENT_BUF_COOKIE      0x8000
 
 #define BYTE_LITTLE_ENDIAN      0x0000
 #define BYTE_BIG_ENDIAN         0x1000
@@ -154,6 +160,7 @@ typedef struct _PCREInfo
     void     *compiled_extra;
     u_int32_t compile_flags;
     u_int32_t flags; /* must include a CONTENT_BUF_X */
+    int32_t   offset;
 } PCREInfo;
 
 #define FLOWBIT_SET       0x01  
@@ -180,6 +187,7 @@ typedef struct _ByteData
     int32_t   offset;     /* Offset from cursor */
     u_int32_t multiplier; /* Used for byte jump -- 32bits is MORE than enough */
     u_int32_t flags;      /* must include a CONTENT_BUF_X */
+    int32_t   post_offset;/* Use for byte jump -- adjust cusor by this much after the jump */
 } ByteData;
 
 typedef struct _ByteExtract
@@ -275,8 +283,8 @@ typedef struct _LoopInfo
 
 typedef struct _PreprocessorOption
 {
-    char *optionName;
-    char *optionParameters;
+    const char *optionName;
+    const char *optionParameters;
     u_int32_t flags;
     void *optionInit;
     void *optionEval;
@@ -366,6 +374,7 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
 ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags);
 ENGINE_LINKAGE int extractValue(void *p, ByteExtract *byteExtract, const u_int8_t *cursor);
 ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits);
+ENGINE_LINKAGE int getBuffer(void *p, int flags, const u_int8_t **start, const u_int8_t **end);
 ENGINE_LINKAGE int setCursor(void *p, CursorInfo *cursorInfo, const u_int8_t **cursor);
 ENGINE_LINKAGE int checkCursor(void *p, CursorInfo *cursorInfo, const u_int8_t *cursor);
 ENGINE_LINKAGE int checkValue(void *p, ByteData *byteData, u_int32_t value, const u_int8_t *cursor);
@@ -387,6 +396,9 @@ ENGINE_LINKAGE int MatchDecryptedRC4(
 );
 ENGINE_LINKAGE void storeRuleData(void *p, void *rule_data);
 ENGINE_LINKAGE void *getRuleData(void *p);
+
+ENGINE_LINKAGE int pcreExecWrapper(const PCREInfo *pcre_info, const char *buf, int len, int start_offset,
+                                    int options, int *ovector, int ovecsize);
 
 #endif /* SF_SNORT_PLUGIN_API_H_ */
 

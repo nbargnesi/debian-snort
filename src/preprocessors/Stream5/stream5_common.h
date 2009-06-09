@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -58,6 +58,23 @@
                                            /* 65535 << 14 (max wscale) */
 #define S5_MIN_MAX_WINDOW       0
 
+#define S5_DEFAULT_MAX_QUEUED_BYTES 1048576 /* 1 MB */
+#define S5_MIN_MAX_QUEUED_BYTES 1024       /* Don't let this go below 1024 */
+#define S5_MAX_MAX_QUEUED_BYTES 0x40000000 /* 1 GB, most we could reach within
+                                            * largest window scale */
+#define AVG_PKT_SIZE            400
+#define S5_DEFAULT_MAX_QUEUED_SEGS (S5_DEFAULT_MAX_QUEUED_BYTES/AVG_PKT_SIZE)
+#define S5_MIN_MAX_QUEUED_SEGS  2          /* Don't let this go below 2 */
+#define S5_MAX_MAX_QUEUED_SEGS  0x40000000 /* 1 GB worth of one-byte segments */
+
+#define S5_DEFAULT_MAX_SMALL_SEG_SIZE 0    /* disabled */
+#define S5_MAX_MAX_SMALL_SEG_SIZE 2048     /* 2048 bytes in single packet, uh, not small */
+#define S5_MIN_MAX_SMALL_SEG_SIZE 0        /* 0 means disabled */
+
+#define S5_DEFAULT_CONSEC_SMALL_SEGS 0     /* disabled */
+#define S5_MAX_CONSEC_SMALL_SEGS 2048      /* 2048 single byte packets without acks is alot */
+#define S5_MIN_CONSEC_SMALL_SEGS 0         /* 0 means disabled */
+
 /* target-based policy types */
 #define STREAM_POLICY_FIRST     1
 #define STREAM_POLICY_LINUX     2
@@ -89,6 +106,7 @@
 #define STREAM5_CONFIG_STATIC_FLUSHPOINTS       0x00001000
 #define STREAM5_CONFIG_DEFAULT_TCP_POLICY_SET   0x00002000
 #define STREAM5_CONFIG_CHECK_SESSION_HIJACKING  0x00004000
+#define STREAM5_CONFIG_NO_ASYNC_REASSEMBLY      0x00008000
 
 /* traffic direction identification */
 #define FROM_SERVER     0
@@ -131,6 +149,10 @@ typedef struct _SessionKey
     u_int16_t   vlan_tag;
     char        protocol;
     char        pad;
+#ifdef MPLS
+    u_int32_t   mplsLabel; /* MPLS label */
+    u_int32_t   mplsPad;
+#endif
 /* XXX If this data structure changes size, HashKeyCmp must be updated! */
 } SessionKey;
 
@@ -199,8 +221,26 @@ typedef struct _Stream5GlobalConfig
     u_int32_t   max_icmp_sessions;
     u_int32_t   memcap;
     u_int32_t   mem_in_use;
+    u_int32_t   prune_log_max;
     u_int32_t   flags;
 } Stream5GlobalConfig;
+
+/**Common statistics for tcp and udp packets, maintained by port filtering.
+ */
+typedef struct {
+    /**packets dropped without further processing by any preprocessor or
+     * detection engine.
+     */
+    u_int32_t  dropped;
+
+    /**packets inspected and but processed futher by stream5 preprocessor.
+     */
+    u_int32_t  inspected;
+
+    /**packets session tracked by stream5 preprocessor.
+     */
+    u_int32_t  session_tracked;
+} tPortFilterStats;
 
 typedef struct _Stream5Stats
 {
@@ -227,7 +267,20 @@ typedef struct _Stream5Stats
     u_int32_t   icmp_sessions_created;
     u_int32_t   icmp_sessions_released;
     u_int32_t   events;
+    tPortFilterStats  tcp_port_filter;
+    tPortFilterStats  udp_port_filter;
 } Stream5Stats;
+
+/**Whether incoming packets should be ignored or processed.
+ */
+typedef enum { 
+    /**Ignore the packet. */
+    PORT_MONITOR_PACKET_PROCESS = 0,
+
+    /**Process the packet. */
+    PORT_MONITOR_PACKET_DISCARD
+
+} PortMonitorPacketStates;
 
 extern Stream5GlobalConfig s5_global_config;
 extern Stream5Stats s5stats;
@@ -244,5 +297,10 @@ void Stream5SetApplicationProtocolIdFromHostEntry(Stream5LWSession *lwssn,
                                            HostAttributeEntry *host_entry,
                                            int direction);
 #endif
+
+int isPacketFilterDiscard(
+        Packet *p,
+        int ignore_any_rules
+        );
 
 #endif /* STREAM5_COMMON_H_ */

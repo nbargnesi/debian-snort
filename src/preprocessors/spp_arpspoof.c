@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2004-2009 Sourcefire, Inc.
 ** Copyright (C) 2001-2004 Jeff Nathan <jeff@snort.org>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -173,7 +174,7 @@ void ARPspoofInit(char *args)
 #endif
 
     /* Add arpspoof to the preprocessor function list */
-    AddFuncToPreprocList(DetectARPattacks, PRIORITY_NETWORK, PP_ARPSPOOF);
+    AddFuncToPreprocList(DetectARPattacks, PRIORITY_NETWORK, PP_ARPSPOOF, PROTO_BIT__ARP);
 
     /* Restart and CleanExit are identical */
     AddFuncToPreprocCleanExitList(ARPspoofCleanExit, NULL, PRIORITY_LAST, PP_ARPSPOOF);

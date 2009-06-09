@@ -3,7 +3,7 @@
 ** Copyright (C) 2000,2001 Christopher Cramer <cec@ee.duke.edu>
 ** Snort is Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 #include "config.h"
 #endif
 
+#include "debug.h"
 #include <sys/types.h>
 
 
@@ -52,7 +53,7 @@
 *  blen - byte length
 * 
 */
-static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
+static INLINE unsigned short in_chksum_ip(  unsigned short * w, int blen )
 {
    unsigned int cksum;
 
@@ -93,7 +94,7 @@ static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
 *  dlen - length of tcp hdr + payload in bytes
 *
 */
-static inline unsigned short in_chksum_tcp(  unsigned short *h, unsigned short * d, int dlen )
+static INLINE unsigned short in_chksum_tcp(  unsigned short *h, unsigned short * d, int dlen )
 {
    unsigned int cksum;
    unsigned short answer=0;
@@ -182,7 +183,7 @@ static inline unsigned short in_chksum_tcp(  unsigned short *h, unsigned short *
 *  dlen - length of tcp hdr + payload in bytes
 *
 */
-static inline unsigned short in_chksum_tcp6(  unsigned short *h, unsigned short * d, int dlen )
+static INLINE unsigned short in_chksum_tcp6(  unsigned short *h, unsigned short * d, int dlen )
 {
    unsigned int cksum;
    unsigned short answer=0;
@@ -284,7 +285,7 @@ static inline unsigned short in_chksum_tcp6(  unsigned short *h, unsigned short 
 *  dlen - length of payload in bytes
 *
 */
-static inline unsigned short in_chksum_udp6(  unsigned short *h, unsigned short * d, int dlen )
+static INLINE unsigned short in_chksum_udp6(  unsigned short *h, unsigned short * d, int dlen )
 {
    unsigned int cksum;
    unsigned short answer=0;
@@ -370,7 +371,7 @@ static inline unsigned short in_chksum_udp6(  unsigned short *h, unsigned short 
 
 
 
-static inline unsigned short in_chksum_udp(  unsigned short *h, unsigned short * d, int dlen )
+static INLINE unsigned short in_chksum_udp(  unsigned short *h, unsigned short * d, int dlen )
 {
    unsigned int cksum;
    unsigned short answer=0;
@@ -445,7 +446,7 @@ static inline unsigned short in_chksum_udp(  unsigned short *h, unsigned short *
 /*
 *  checksum icmp
 */
-static inline unsigned short in_chksum_icmp( unsigned short * w, int blen )
+static INLINE unsigned short in_chksum_icmp( unsigned short * w, int blen )
 {
   unsigned  short answer=0;
   unsigned int cksum = 0;
@@ -504,7 +505,7 @@ static inline unsigned short in_chksum_icmp( unsigned short * w, int blen )
 /*
 *  checksum icmp6
 */
-static inline unsigned short in_chksum_icmp6( unsigned short * w, int blen )
+static INLINE unsigned short in_chksum_icmp6( unsigned short * w, int blen )
 {
 // XXX ICMP6 CHECKSUM NOT YET IMPLEMENTED
   return 0;

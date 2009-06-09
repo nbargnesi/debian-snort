@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -61,8 +61,32 @@
 #include "inline.h"
 #endif
 
+/* ----------------External variables -------------------- */
 /* From fpdetect.c, for logging reassembled packets */
 extern u_int16_t event_id;
+extern OptTreeNode *otn_tmp;
+extern int thiszone;
+
+#ifdef GIDS
+#ifndef IPFW
+extern ipq_packet_msg_t *g_m;
+#endif
+#endif
+
+/* ------------------ Data structures --------------------------*/
+typedef struct _Unified2Config
+{
+    char *base_filename;
+    char filepath[STD_BUF];
+    uint32_t timestamp;
+    FILE *stream;
+    unsigned int limit;
+    unsigned int current;
+    int nostamp;
+#ifdef MPLS
+    int mpls_event_types;
+#endif
+} Unified2Config;
 
 /* Each unified 2 record will start out with one of these */
 typedef struct _Unified2RecordHeader
@@ -92,6 +116,7 @@ typedef struct _Unified2Event
     uint16_t dport_icode;
     uint8_t  protocol;
     uint8_t  packet_action;
+    uint16_t pad;  /* restore 4 byte alignment */
 } Unified2Event;
 
 typedef struct _Unified2Event6
@@ -111,7 +136,52 @@ typedef struct _Unified2Event6
     uint16_t dport_icode;
     uint8_t  protocol;
     uint8_t  packet_action;
+    uint16_t pad;  /* restore 4 byte alignment */
 } Unified2Event6;
+
+#ifdef MPLS
+typedef struct _Unified2Event_MPLS
+{
+    uint32_t sensor_id;
+    uint32_t event_id;
+    uint32_t event_second;
+    uint32_t event_microsecond;
+    uint32_t signature_id;
+    uint32_t generator_id;
+    uint32_t signature_revision;
+    uint32_t classification_id;
+    uint32_t priority_id;
+    uint32_t ip_source;
+    uint32_t ip_destination;
+    uint16_t sport_itype;
+    uint16_t dport_icode;
+    uint8_t  protocol;
+    uint8_t  packet_action;
+    uint16_t pad;  /* restore 4 byte alignment */
+    uint32_t mpls_label;
+} Unified2Event_MPLS;
+
+typedef struct _Unified2Event6_MPLS
+{
+    uint32_t sensor_id;
+    uint32_t event_id;
+    uint32_t event_second;
+    uint32_t event_microsecond;
+    uint32_t signature_id;
+    uint32_t generator_id;
+    uint32_t signature_revision;
+    uint32_t classification_id;
+    uint32_t priority_id;
+    struct in6_addr ip_source;
+    struct in6_addr ip_destination;
+    uint16_t sport_itype;
+    uint16_t dport_icode;
+    uint8_t  protocol;
+    uint8_t  packet_action;
+    uint16_t pad;  /* restore 4 byte alignment */
+    uint32_t mpls_label;
+} Unified2Event6_MPLS;
+#endif
 
 typedef struct _Unified2Packet
 {
@@ -122,55 +192,98 @@ typedef struct _Unified2Packet
     uint32_t packet_microsecond;
     uint32_t linktype;
     uint32_t packet_length;
-    uint8_t packet_data[4];
+    uint8_t packet_data[4];   /* For debugging */
 } Unified2Packet;
 
-/* ----------------External variables -------------------- */
-extern OptTreeNode *otn_tmp;
-extern int thiszone;
-
-#ifdef GIDS
-#ifndef IPFW
-extern ipq_packet_msg_t *g_m;
-#endif
-#endif
-
-/* ------------------ Data structures --------------------------*/
-typedef struct _Unified2Config
+typedef struct _Unified2LogStreamCallbackData
 {
-    char *filename;
-    FILE *stream;
-    unsigned int limit;
-    unsigned int current;
-    int nostamp;
-} Unified2Config;
-
+    Unified2Packet *logheader;
+    Unified2Config *config;
+    Event *event;
+    int once;
+} Unified2LogStreamCallbackData;
 
 /* -------------------- Global Variables ----------------------*/
 #ifdef GIDS
 EtherHdr g_ethernet;
 #endif
+
+/* Used for buffering header and payload of unified records so only one
+ * write is necessary.  Unified2Event6 is used as Unified2Event size
+ * since it is the largest */
+static uint8_t write_pkt_buffer[sizeof(Unified2RecordHeader) +
+                                sizeof(Unified2Event6) + IP_MAXPACKET];
+#define write_pkt_end (write_pkt_buffer + sizeof(write_pkt_buffer))
+
+#ifdef MPLS
+static uint8_t write_pkt_buffer_mpls[sizeof(Unified2RecordHeader) +
+                                     sizeof(Unified2Event6_MPLS) + IP_MAXPACKET];
+#define write_pkt_end_mpls (write_pkt_buffer_mpls + sizeof(write_pkt_buffer_mpls))
+#endif  /* MPLS */
+
+/* This is the buffer to use for I/O.  Try to make big enough so the system
+ * doesn't potentially flush in the middle of a record.  Every write is
+ * force flushed to disk immediately after the entire record is written so
+ * spoolers get an entire record */
+#define UNIFIED2_SETVBUF
+#ifndef WIN32
+/* use the size of the buffer we copy record data into */
+# ifndef MPLS
+static char io_buffer[sizeof(write_pkt_buffer)];
+# else
+static char io_buffer[sizeof(write_pkt_buffer_mpls)];
+# endif  /* MPLS */
+#else
+# ifdef _MSC_VER
+#  if _MSC_VER <= 1200
+/* use maximum size defined by VC++ 6.0 */
+static char io_buffer[32768];
+#  else
+#   ifndef MPLS
+static char io_buffer[sizeof(write_pkt_buffer)];
+#   else
+static char io_buffer[sizeof(write_pkt_buffer_mpls)];
+#   endif  /* MPLS */
+#  endif  /* _MSC_VER <= 1200 */
+# else
+/* no _MSC_VER, don't set I/O buffer */
+#  undef UNIFIED2_SETVBUF
+# endif  /* _MSC_VER */
+#endif  /* WIN32 */
+
+static int unified2_configured = 0;
+static int unified2_alert_configured = 0;
+static int unified2_log_configured = 0;
+
 /* -------------------- Local Functions -----------------------*/
-static Unified2Config *Unified2ParseArgs(char *, char *);
+static Unified2Config * Unified2ParseArgs(char *, char *);
 static void Unified2CleanExit(int, void *);
 static void Unified2Restart(int, void *);
 
 /* Unified2 Output functions */
 static void Unified2Init(char *);
+static void Unified2PostConfig(int, void *);
 static void Unified2InitFile(Unified2Config *);
-static void Unified2RotateFile(Unified2Config *);
+static INLINE void Unified2RotateFile(Unified2Config *);
 static void Unified2LogAlert(Packet *, char *, void *, Event *);
+static void _AlertIP4(Packet *, char *, Unified2Config *, Event *);
+static void _AlertIP6(Packet *, char *, Unified2Config *, Event *);
 static void Unified2LogPacketAlert(Packet *, char *, void *, Event *);
-static void _Unified2LogPacketAlert(Packet *p, char *msg, void *arg, Event *event);
-static void _Unified2LogStreamAlert(Packet *,char *,void *,Event *);
+static void _Unified2LogPacketAlert(Packet *, char *, Unified2Config *, Event *);
+static void _Unified2LogStreamAlert(Packet *, char *, Unified2Config *, Event *);
+static int Unified2LogStreamCallback(struct pcap_pkthdr *, u_int8_t *, void *);
+static void Unified2Write(uint8_t *, uint32_t, Unified2Config *);
+
+#ifdef MPLS
+static void _AlertIP4_mpls(Packet *, char *, Unified2Config *, Event *);
+static void _AlertIP6_mpls(Packet *, char *, Unified2Config *, Event *);
+#endif
 
 /* Unified2 Alert functions (deprecated) */
 static void Unified2AlertInit(char *);
 
 /* Unified2 Packet Log functions (deprecated) */
 static void Unified2LogInit(char *);
-
-static Unified2Config *unifiedConfig;
 
 /* XXX Remove these when the real Unified 2 header becomes available */
 #define UNIFIED2_EVENT 1
@@ -180,18 +293,13 @@ static Unified2Config *unifiedConfig;
 #define UNIFIED2_PERFORMANCE 67
 #define UNIFIED2_PORTSCAN 68
 #define UNIFIED2_IDS_EVENT_IPV6 72
+#define UNIFIED2_IDS_EVENT_MPLS 99
+#define UNIFIED2_IDS_EVENT_IPV6_MPLS 100
 
 #define U2_PACKET_FLAG 1
 
 #define U2_FLAG_BLOCKED 0x20
 
-/* Used for buffering header and payload of unified records so only one
- * write is necessary. */
-static char write_pkt_buffer[sizeof(Unified2RecordHeader) + 
-                             sizeof(Unified2Event) + IP_MAXPACKET];
-#define write_pkt_end \
-            write_pkt_buffer + sizeof(Unified2RecordHeader) + \
-            sizeof(Unified2Event) + IP_MAXPACKET
 /*
  * Function: SetupUnified2()
  *
@@ -204,7 +312,7 @@ static char write_pkt_buffer[sizeof(Unified2RecordHeader) +
  * Returns: void function
  *
  */
-void Unified2Setup()
+void Unified2Setup(void)
 {
     /* link the preprocessor keyword to the init function in 
        the preproc list */
@@ -226,108 +334,148 @@ void Unified2Setup()
  * Returns: void function
  *
  */
-void Unified2Init(char *args)
+static void Unified2Init(char *args)
 {
-    if(unifiedConfig)
-    {
-        FatalError("unified can only be instantiated once\n");
-    }
+    Unified2Config *config;
 
-    //DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: Unified2 Initialized\n"););
+    if (unified2_configured || unified2_alert_configured || unified2_log_configured)
+        FatalError("Unified2 can only be instantiated once\n");
+
     pv.log_plugin_active = 1;
     pv.alert_plugin_active = 1;
 
     /* parse the argument list from the rules file */
-    unifiedConfig = Unified2ParseArgs(args, "snort-unified");
-
-    Unified2InitFile(unifiedConfig);
+    config = Unified2ParseArgs(args, "snort-unified");
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogAlert, NT_OUTPUT_ALERT, unifiedConfig);
-    AddFuncToOutputList(Unified2LogPacketAlert, NT_OUTPUT_LOG, unifiedConfig);
+    AddFuncToOutputList(Unified2LogAlert, NT_OUTPUT_ALERT, config);
+    AddFuncToOutputList(Unified2LogPacketAlert, NT_OUTPUT_LOG, config);
 
-    AddFuncToCleanExitList(Unified2CleanExit, unifiedConfig);
-    AddFuncToRestartList(Unified2Restart, unifiedConfig);
+    AddFuncToCleanExitList(Unified2CleanExit, config);
+    AddFuncToRestartList(Unified2Restart, config);
+    AddFuncToPostConfigList(Unified2PostConfig, config);
+
+    unified2_configured = 1;
+}
+
+static void Unified2PostConfig(int unused, void *data)
+{
+    Unified2Config *config = (Unified2Config *)data;
+    int status;
+
+    if (config == NULL || config->base_filename == NULL)
+    {
+        FatalError("%s(%d) Could not initialize unified2 file: Unified2 "
+                   "configuration data or file name is NULL.\n",
+                   __FILE__, __LINE__);
+    }
+
+#ifndef WIN32
+    if (config->base_filename[0] == '/')
+    {
+        status = SnortSnprintf(config->filepath, sizeof(config->filepath),
+                               "%s", config->base_filename);
+    }
+    else
+#endif
+    {
+        status = SnortSnprintf(config->filepath, sizeof(config->filepath),
+                               "%s/%s", pv.log_dir, config->base_filename);
+    }
+
+    if (status != SNORT_SNPRINTF_SUCCESS)
+    {
+        FatalError("%s(%d) Failed to copy unified2 file name\n",
+                   __FILE__, __LINE__);
+    }
+
+    Unified2InitFile(config);
 }
 
 /*
- * Function: InitOutputFile()
+ * Function: Unified2InitFile()
  *
- * Purpose: Initialize the unified ouput file 
+ * Purpose: Initialize the unified2 ouput file 
  *
- * Arguments: data => pointer to the plugin's reference data struct 
+ * Arguments: config => pointer to the plugin's reference data struct 
  *
  * Returns: void function
  */
-static void Unified2InitFile(Unified2Config *data)
+static void Unified2InitFile(Unified2Config *config)
 {
-    time_t curr_time;      /* place to stick the clock data */
-    char logdir[STD_BUF];
-    int ret;
+    char filepath[STD_BUF];
+    char *fname_ptr;
 
-    bzero(logdir, STD_BUF);
-    curr_time = time(NULL);
-
-    if(data == NULL)
-        FatalError("SpoUnified2: Unable to get context data\n");
-
-    if(data->nostamp) 
+    if (config == NULL)
     {
-        if(data->filename[0] == '/')
-            ret = SnortSnprintf(logdir, STD_BUF, "%s",  data->filename);
-        else
-            ret = SnortSnprintf(logdir, STD_BUF, "%s/%s", pv.log_dir, data->filename);
+        FatalError("%s(%d) Could not initialize unified2 file: Unified2 "
+                   "configuration data is NULL.\n", __FILE__, __LINE__);
+    }
+
+    config->timestamp = (uint32_t)time(NULL);
+
+    if (!config->nostamp)
+    {
+        if (SnortSnprintf(filepath, sizeof(filepath), "%s.%u",
+                          config->filepath, config->timestamp) != SNORT_SNPRINTF_SUCCESS)
+        {
+            FatalError("%s(%d) Failed to copy unified2 file path.\n",
+                       __FILE__, __LINE__);
+        }
+
+        fname_ptr = filepath;
     }
     else
     {
-        if(*(data->filename) == '/')
-            ret = SnortSnprintf(logdir, STD_BUF, "%s.%u", data->filename, 
-                                (u_int32_t)curr_time);
-        else
-            ret = SnortSnprintf(logdir, STD_BUF, "%s/%s.%u", pv.log_dir,  
-                                data->filename, (u_int32_t)curr_time);
+        fname_ptr = config->filepath;
     }
 
-    if (ret != SNORT_SNPRINTF_SUCCESS)
-        FatalError("SpoUnified2: filepath too long\n");
-
-    if((data->stream = fopen(logdir, "wb")) == NULL)
-        FatalError("Unified2InitFile(%s): %s\n", logdir, strerror(errno));
-
-    return;
-}
-
-void Unified2RotateFile(Unified2Config *data)
-{
-    fclose(data->stream);
-    data->current = 0;
-    Unified2InitFile(data);
-}
-
-int Unified2FirstPacketCallback(struct pcap_pkthdr *pkth,
-                                u_int8_t *packet_data, void *userdata)
-{
-    Unified2Event *alertdata = (Unified2Event*)userdata;
-    /* loop thru all the packets in the stream */
-    if(pkth != NULL )
+    if ((config->stream = fopen(fname_ptr, "wb")) == NULL)
     {
-        alertdata->event_second = htonl((u_int32_t)pkth->ts.tv_sec);
-        alertdata->event_microsecond = htonl((u_int32_t)pkth->ts.tv_usec);
-    } 
+        FatalError("%s(%d) Could not open %s: %s\n",
+                   __FILE__, __LINE__, fname_ptr, strerror(errno));
+    }
 
-    /* return non-zero so we only do this once */
-    return 1;
+#ifdef UNIFIED2_SETVBUF
+    /* Set buffer to size of record buffer so the system doesn't flush
+     * part of a record if it's greater than BUFSIZ */
+    if (setvbuf(config->stream, io_buffer, _IOFBF, sizeof(io_buffer)) != 0)
+    {
+        ErrorMessage("%s(%d) Could not set I/O buffer: %s. "
+                     "Using system default.\n",
+                     __FILE__, __LINE__, strerror(errno));
+    }
+#endif
+
+    /* If test mode, close and delete the file */
+    if (pv.test_mode_flag)
+    {
+        fclose(config->stream);
+        config->stream = NULL;
+        if (unlink(fname_ptr) == -1)
+        {
+            ErrorMessage("%s(%d) Running in test mode so we want to remove "
+                         "test unified2 file. Could not unlink file \"%s\": %s\n",
+                         __FILE__, __LINE__, fname_ptr, strerror(errno));
+        }
+    }
 }
 
-static void _AlertIP4(Packet *p, char *msg, void *arg, Event *event)
+static INLINE void Unified2RotateFile(Unified2Config *config)
+{
+    fclose(config->stream);
+    config->current = 0;
+    Unified2InitFile(config);
+}
+
+static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
     Unified2RecordHeader hdr;
-    Unified2Config *data = (Unified2Config *)arg;
     Unified2Event alertdata;
-    
-    bzero(&alertdata, sizeof(alertdata));
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Event);
 
-    alertdata.sensor_id = 0;
+    memset(&alertdata, 0, sizeof(alertdata));
+    
     alertdata.event_id = htonl(event->event_id);
     alertdata.event_second = htonl(event->ref_time.tv_sec);
     alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
@@ -337,17 +485,11 @@ static void _AlertIP4(Packet *p, char *msg, void *arg, Event *event)
     alertdata.classification_id = htonl(event->classification);
     alertdata.priority_id = htonl(event->priority);
 
-    if(p)
+    if (p != NULL)
     {
         if (p->packet_flags & PKT_INLINE_DROP)
         {
             alertdata.packet_action = U2_FLAG_BLOCKED;
-        }
-
-        if((p->packet_flags & PKT_REBUILT_STREAM) && stream_api)
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_LOG, "man:Logging rebuilt stream data.\n");); 
-            stream_api->traverse_reassembled(p, Unified2FirstPacketCallback, &alertdata);
         }
 
         if(IPH_IS_VALID(p))
@@ -355,59 +497,54 @@ static void _AlertIP4(Packet *p, char *msg, void *arg, Event *event)
             alertdata.ip_source = p->iph->ip_src.s_addr;
             alertdata.ip_destination = p->iph->ip_dst.s_addr;
             alertdata.protocol = GET_IPH_PROTO(p);
-            if((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else
+            else if (alertdata.protocol != 255)
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
             }
         }
-
-        if(alertdata.protocol == 255) 
-        {
-             alertdata.sport_itype = 0;             
-             alertdata.dport_icode = 0;             
-        }   
     }
     
-    if((sizeof(Unified2RecordHeader) + sizeof(Unified2Event)) > data->limit)
-    {
-       Unified2RotateFile(data);
-    }
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2Event));
     hdr.type = htonl(UNIFIED2_IDS_EVENT);
 
-    SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
-               write_pkt_buffer, write_pkt_end);
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
     
-    SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
-               &alertdata, sizeof(Unified2Event), 
-               write_pkt_buffer, write_pkt_end);
+    if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
+                   &alertdata, sizeof(Unified2Event), 
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Event. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
 
-    if(fwrite(write_pkt_buffer, 
-              sizeof(Unified2RecordHeader) + sizeof(Unified2Event),
-               1, data->stream) != 1)
-        FatalError("SpoUnified2: write failed: %s\n", strerror(errno));
-
-    fflush(data->stream);
-    data->current += sizeof(Unified2RecordHeader) + sizeof(Unified2Event);
+    Unified2Write(write_pkt_buffer, write_len, config);
 }
-
-static void _AlertIP6(Packet *p, char *msg, void *arg, Event *event) 
+#ifdef MPLS
+static void _AlertIP4_mpls(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
-#ifdef SUP_IP6
     Unified2RecordHeader hdr;
-    Unified2Config *data = (Unified2Config *)arg;
-    Unified2Event6 alertdata;
-    
-    bzero(&alertdata, sizeof(alertdata));
+    Unified2Event_MPLS alertdata;
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Event_MPLS);
 
-    alertdata.sensor_id = 0;
+    memset(&alertdata, 0, sizeof(alertdata));
+    
     alertdata.event_id = htonl(event->event_id);
     alertdata.event_second = htonl(event->ref_time.tv_sec);
     alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
@@ -424,226 +561,399 @@ static void _AlertIP6(Packet *p, char *msg, void *arg, Event *event)
             alertdata.packet_action = U2_FLAG_BLOCKED;
         }
 
-        if((p->packet_flags & PKT_REBUILT_STREAM) && stream_api)
+        if(IPH_IS_VALID(p))
         {
-            DEBUG_WRAP(DebugMessage(DEBUG_LOG, "man:Logging rebuilt stream data.\n");); 
-            stream_api->traverse_reassembled(p, Unified2FirstPacketCallback, &alertdata);
+            alertdata.ip_source = p->iph->ip_src.s_addr;
+            alertdata.ip_destination = p->iph->ip_dst.s_addr;
+            alertdata.protocol = GET_IPH_PROTO(p);
+
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+            {
+                alertdata.sport_itype = htons(p->icmph->type);
+                alertdata.dport_icode = htons(p->icmph->code);
+            }
+            else if (alertdata.protocol != 255)
+            {
+                alertdata.sport_itype = htons(p->sp);
+                alertdata.dport_icode = htons(p->dp);
+            }
+
+            alertdata.mpls_label = p->mplsHdr.label;
+        }
+    }
+    
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
+
+    hdr.length = htonl(sizeof(Unified2Event_MPLS));
+    hdr.type = htonl(UNIFIED2_IDS_EVENT_MPLS);
+
+    if (SafeMemcpy(write_pkt_buffer_mpls, &hdr, sizeof(Unified2RecordHeader), 
+                   write_pkt_buffer_mpls, write_pkt_end_mpls) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+    
+    if (SafeMemcpy(write_pkt_buffer_mpls + sizeof(Unified2RecordHeader),
+                   &alertdata, sizeof(Unified2Event_MPLS), 
+                   write_pkt_buffer_mpls, write_pkt_end_mpls) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Event_MPLS. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+
+    Unified2Write(write_pkt_buffer_mpls, write_len, config);
+}
+#endif
+
+static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event) 
+{
+#ifdef SUP_IP6
+    Unified2RecordHeader hdr;
+    Unified2Event6 alertdata;
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Event6);
+
+    memset(&alertdata, 0, sizeof(alertdata));
+    
+    alertdata.event_id = htonl(event->event_id);
+    alertdata.event_second = htonl(event->ref_time.tv_sec);
+    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
+    alertdata.generator_id = htonl(event->sig_generator);
+    alertdata.signature_id = htonl(event->sig_id);
+    alertdata.signature_revision = htonl(event->sig_rev);
+    alertdata.classification_id = htonl(event->classification);
+    alertdata.priority_id = htonl(event->priority);
+
+    if(p)
+    {
+        if (p->packet_flags & PKT_INLINE_DROP)
+        {
+            alertdata.packet_action = U2_FLAG_BLOCKED;
         }
 
         if(IPH_IS_VALID(p))
         {
             snort_ip_p ip;
+
             ip = GET_SRC_IP(p);
             alertdata.ip_source = *(struct in6_addr*)ip->ip32;
+
             ip = GET_DST_IP(p);
             alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
+
             alertdata.protocol = GET_IPH_PROTO(p);
-            if((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else
+            else if (alertdata.protocol != 255)
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
             }
         }
-
-        if(alertdata.protocol == 255) 
-        {
-             alertdata.sport_itype = 0;             
-             alertdata.dport_icode = 0;             
-        }   
     }
     
-    if((sizeof(Unified2RecordHeader) + sizeof(Unified2Event6)) > data->limit)
-    {
-       Unified2RotateFile(data);
-    }
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2Event6));
     hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6);
 
-    SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
-               write_pkt_buffer, write_pkt_end);
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
     
-    SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
-               &alertdata, sizeof(Unified2Event6), 
-               write_pkt_buffer, write_pkt_end);
+    if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
+                   &alertdata, sizeof(Unified2Event6), 
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Event6. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
 
-    if(fwrite(write_pkt_buffer, 
-              sizeof(Unified2RecordHeader) +  sizeof(Unified2Event6),
-               1, data->stream) != 1)
-        FatalError("SpoUnified2: write failed: %s\n", strerror(errno));
-
-    fflush(data->stream);
-    data->current += sizeof(Unified2RecordHeader) + sizeof(Unified2Event6);
+    Unified2Write(write_pkt_buffer, write_len, config);
 #endif
 }
 
-void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
+#ifdef MPLS
+static void _AlertIP6_mpls(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
+#ifdef SUP_IP6
+    Unified2RecordHeader hdr;
+    Unified2Event6_MPLS alertdata;
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Event6_MPLS);
+
+    memset(&alertdata, 0, sizeof(alertdata));
+
+    alertdata.event_id = htonl(event->event_id);
+    alertdata.event_second = htonl(event->ref_time.tv_sec);
+    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
+    alertdata.generator_id = htonl(event->sig_generator);
+    alertdata.signature_id = htonl(event->sig_id);
+    alertdata.signature_revision = htonl(event->sig_rev);
+    alertdata.classification_id = htonl(event->classification);
+    alertdata.priority_id = htonl(event->priority);
+
+    if(p)
+    {
+        if (p->packet_flags & PKT_INLINE_DROP)
+        {
+            alertdata.packet_action = U2_FLAG_BLOCKED;
+        }
+
+        if(IPH_IS_VALID(p))
+        {
+            snort_ip_p ip;
+
+            ip = GET_SRC_IP(p);
+            alertdata.ip_source = *(struct in6_addr*)ip->ip32;
+
+            ip = GET_DST_IP(p);
+            alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
+
+            alertdata.protocol = GET_IPH_PROTO(p);
+
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+            {
+                alertdata.sport_itype = htons(p->icmph->type);
+                alertdata.dport_icode = htons(p->icmph->code);
+            }
+            else if (alertdata.protocol != 255)
+            {
+                alertdata.sport_itype = htons(p->sp);
+                alertdata.dport_icode = htons(p->dp);
+            }
+
+            alertdata.mpls_label = p->mplsHdr.label;
+        }
+    }
+    
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
+
+    hdr.length = htonl(sizeof(Unified2Event6_MPLS));
+    hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6_MPLS);
+
+    if (SafeMemcpy(write_pkt_buffer_mpls, &hdr, sizeof(Unified2RecordHeader), 
+                   write_pkt_buffer_mpls, write_pkt_end_mpls) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+    
+    if (SafeMemcpy(write_pkt_buffer_mpls + sizeof(Unified2RecordHeader),
+                   &alertdata, sizeof(Unified2Event6_MPLS), 
+                   write_pkt_buffer_mpls, write_pkt_end_mpls) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Event6_MPLS. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+
+    Unified2Write(write_pkt_buffer_mpls, write_len, config);
+#endif
+}
+#endif
+
+static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
+{
+    Unified2Config *config = (Unified2Config *)arg;
+
+    if (config == NULL)
+        return;
+
     if(!event) return;
-    if(IS_IP4(p)) _AlertIP4(p, msg, arg, event);
-    else _AlertIP6(p, msg, arg, event);
+#ifdef MPLS
+    if(IS_IP4(p))
+    {
+        if((p->mpls) && (config->mpls_event_types))
+            _AlertIP4_mpls(p, msg, config, event); 
+        else 
+            _AlertIP4(p, msg, config, event);
+    } 
+    else 
+    {
+        if((p->mpls) && (config->mpls_event_types))
+            _AlertIP6_mpls(p, msg, config, event); 
+        else 
+            _AlertIP6(p, msg, config, event);
+    }
+    return;
+#else
+    if(IS_IP4(p)) _AlertIP4(p, msg, config, event);
+    else _AlertIP6(p, msg, config, event);
+#endif
 }
 
 static void Unified2LogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
 {
+    Unified2Config *config = (Unified2Config *)arg;
+
+    if (config == NULL)
+        return;
+
     if(p) 
     {
-        if( p->packet_flags & PKT_REBUILT_STREAM)
+        if ((p->packet_flags & PKT_REBUILT_STREAM) && stream_api)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_LOG, 
                         "[*] Reassembled packet, dumping stream packets\n"););
-            _Unified2LogStreamAlert(p, msg, arg, event);
+            _Unified2LogStreamAlert(p, msg, config, event);
         }
         else 
         {
             DEBUG_WRAP(DebugMessage(DEBUG_LOG, "[*] Logging unified 2 packets...\n"););
-            _Unified2LogPacketAlert(p, msg, arg, event);
+            _Unified2LogPacketAlert(p, msg, config, event);
         }
    }
 }
 
 static void _Unified2LogPacketAlert(Packet *p, char *msg, 
-                void *arg, Event *event)
+                                    Unified2Config *config, Event *event)
 { 
     Unified2RecordHeader hdr;
     Unified2Packet logheader;
-    Unified2Config *data = (Unified2Config *)arg;
-    uint32_t pkt_length; 
+    uint32_t pkt_length = 0; 
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Packet) - 4;
 
-    if(event != NULL)
+    logheader.sensor_id = 0;
+    logheader.linktype = htonl(datalink);
+
+    if (event != NULL)
     {
-        logheader.sensor_id = 0;
         logheader.event_id = htonl(event->event_reference);
         logheader.event_second = htonl(event->ref_time.tv_sec);
-        logheader.linktype = htonl(datalink);
 
         DEBUG_WRAP(DebugMessage(DEBUG_LOG, "------------\n"));
+    }
+    else
+    {
+        logheader.event_id = 0;
+        logheader.event_second = 0;
     }
 
     if(p && p->pkt && p->pkth)
     {
         logheader.packet_second = htonl((u_int32_t)p->pkth->ts.tv_sec);
         logheader.packet_microsecond = htonl((u_int32_t)p->pkth->ts.tv_usec);
+        logheader.packet_length = htonl(p->pkth->caplen);
+
         pkt_length = p->pkth->caplen;
-        logheader.packet_length = htonl(pkt_length);
+        write_len += pkt_length;
     }
     else
     {
         logheader.packet_second = 0;
         logheader.packet_microsecond = 0;
         logheader.packet_length = 0;
-        pkt_length = 0;
     }
 
-    if((data->current + sizeof(Unified2Packet) + 
-                sizeof(Unified2RecordHeader) +
-                pkt_length - 4) > data->limit)
-    {
-       Unified2RotateFile(data);
-    }
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2Packet) - 4 + pkt_length);
     hdr.type = htonl(UNIFIED2_PACKET);
 
-    SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
-               write_pkt_buffer, write_pkt_end);
-    
-    SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
-               &logheader, sizeof(Unified2Packet) - 4, 
-               write_pkt_buffer, write_pkt_end);
-
-    if(p && p->pkt && p->pkth)
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader), 
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
-        SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader) +
-               sizeof(Unified2Packet) - 4,
-               p->pkt, p->pkth->caplen, 
-               write_pkt_buffer, write_pkt_end);
-            
-        if(fwrite(write_pkt_buffer, 
-           sizeof(Unified2RecordHeader) + sizeof(Unified2Packet)-4 + p->pkth->caplen,
-           1, data->stream) != 1)
-            FatalError("SpoUnified2: write failed: %s\n", strerror(errno));
-        
-        data->current += p->pkth->caplen;
-    }
-    else
-    {
-        if(fwrite(write_pkt_buffer, 
-           sizeof(Unified2RecordHeader) + sizeof(Unified2Packet) - 4,
-           1, data->stream) != 1)
-            FatalError("SpoUnified2: write failed: %s\n", strerror(errno));
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
     }
 
-    data->current += sizeof(Unified2RecordHeader) +
-                            sizeof(Unified2Packet);
+    if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
+                   &logheader, sizeof(Unified2Packet) - 4,
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Packet. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
 
-    fflush(data->stream);
+    if (pkt_length != 0)
+    {
+        if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader) +
+                       sizeof(Unified2Packet) - 4,
+                       p->pkt, pkt_length,
+                       write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+        {
+            ErrorMessage("%s(%d) Failed to copy packet data. "
+                         "Not writing unified2 event.\n", __FILE__, __LINE__);
+            return;
+        }
+    }
+
+    Unified2Write(write_pkt_buffer, write_len, config);
 }
-
-typedef struct _Unified2LogStreamCallbackData
-{
-    Unified2Packet *logheader;
-    Unified2Config *data;
-    Event *event;
-    int once;
-} Unified2LogStreamCallbackData;
 
 /**
  * Callback for the Stream reassembler to log packets
  *
  */
-int Unified2LogStreamCallback(struct pcap_pkthdr *pkth,
-                              u_int8_t *packet_data, void *userdata)
+static int Unified2LogStreamCallback(struct pcap_pkthdr *pkth,
+                                     u_int8_t *packet_data, void *userdata)
 {
-    Unified2LogStreamCallbackData *unifiedData;
+    Unified2LogStreamCallbackData *unifiedData = (Unified2LogStreamCallbackData *)userdata;
     Unified2RecordHeader hdr;
+    uint32_t write_len = sizeof(Unified2RecordHeader) + sizeof(Unified2Packet) - 4;
 
     if (!userdata || !pkth || !packet_data)
         return -1;
 
-    unifiedData = (Unified2LogStreamCallbackData *)userdata;
-
-    if((unifiedData->data->current +
-        sizeof(Unified2Packet) + sizeof(Unified2RecordHeader) +
-        pkth->caplen - 4) > unifiedData->data->limit)
-    {
-       Unified2RotateFile(unifiedData->data);
-    }
+    write_len += pkth->caplen;
+    if ((unifiedData->config->current + write_len) > unifiedData->config->limit)
+        Unified2RotateFile(unifiedData->config);
 
     hdr.type = htonl(UNIFIED2_PACKET);
     hdr.length = htonl(sizeof(Unified2Packet) - 4 + pkth->caplen);
-            
-    unifiedData->logheader->event_id = htonl(unifiedData->event->event_reference);
-    unifiedData->logheader->event_second = htonl(unifiedData->event->ref_time.tv_sec);
+
+    /* Event data will already be set */
+
     unifiedData->logheader->packet_second = htonl((u_int32_t)pkth->ts.tv_sec);
     unifiedData->logheader->packet_microsecond = htonl((u_int32_t)pkth->ts.tv_usec);
     unifiedData->logheader->packet_length = htonl(pkth->caplen);
 
-    SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader),
-               write_pkt_buffer, write_pkt_end);
-
-    SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader), 
-               unifiedData->logheader, sizeof(Unified2Packet) - 4,
-               write_pkt_buffer, write_pkt_end);
-
-    SafeMemcpy(write_pkt_buffer + 
-                sizeof(Unified2RecordHeader) + sizeof(Unified2Packet) - 4, 
-               packet_data, pkth->caplen,
-               write_pkt_buffer, write_pkt_end);
-
-    //if(fwrite(write_pkt_buffer, pkth->caplen, 1, 
-    if(fwrite(write_pkt_buffer, sizeof(Unified2RecordHeader) + sizeof(Unified2Packet) - 4 + pkth->caplen, 1, 
-               unifiedData->data->stream) != 1)
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Unified2RecordHeader),
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
-         FatalError("SpoUnified2: write failed: %s\n", strerror(errno));
+        ErrorMessage("%s(%d) Failed to copy Unified2RecordHeader. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return -1;
     }
 
-    unifiedData->data->current += ntohl(hdr.length);
+    if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader),
+                   unifiedData->logheader, sizeof(Unified2Packet) - 4,
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2Packet. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return -1;
+    }
+
+    if (SafeMemcpy(write_pkt_buffer + sizeof(Unified2RecordHeader) +
+                   sizeof(Unified2Packet) - 4,
+                   packet_data, pkth->caplen,
+                   write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy packet data. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return -1;
+    }
+
+    Unified2Write(write_pkt_buffer, write_len, unifiedData->config);
 
 #if 0 
     /* DO NOT DO THIS FOR UNIFIED2.
@@ -667,37 +977,39 @@ int Unified2LogStreamCallback(struct pcap_pkthdr *pkth,
     return 0;
 }
 
+
 /**
  * Log a set of packets stored in the stream reassembler
  *
  */
-static void _Unified2LogStreamAlert(Packet *p, char *msg, void *arg, Event *event)
+static void _Unified2LogStreamAlert(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
     Unified2LogStreamCallbackData unifiedData;
     Unified2Packet logheader;
-    Unified2Config *data = (Unified2Config *)arg;
     int once = 0;
 
+    logheader.sensor_id = 0;
+    logheader.linktype = htonl(datalink);
+
     /* setup the event header */
-    if(event != NULL)
+    if (event != NULL)
     {
-        logheader.sensor_id = 0;
         logheader.event_id = htonl(event->event_reference);
         logheader.event_second = htonl(event->ref_time.tv_sec);
-        logheader.linktype = htonl(datalink);
+    }
+    else
+    {
+        logheader.event_id = 0;
+        logheader.event_second = 0;
     }
 
     /* queue up the stream for logging */
-    if(p && stream_api)
-    {
-        unifiedData.logheader = &logheader;
-        unifiedData.data = data;
-        unifiedData.event = event;
-        unifiedData.once = once;
-        stream_api->traverse_reassembled(p, Unified2LogStreamCallback, &unifiedData);
-    }
-    
-    fflush(data->stream);
+    unifiedData.logheader = &logheader;
+    unifiedData.config = config;
+    unifiedData.event = event;
+    unifiedData.once = once;
+
+    stream_api->traverse_reassembled(p, Unified2LogStreamCallback, &unifiedData);
 }
 
 /*
@@ -713,27 +1025,19 @@ static void _Unified2LogStreamAlert(Packet *p, char *msg, void *arg, Event *even
  * Returns: void function
  *
  */
-Unified2Config *Unified2ParseArgs(char *args, char *default_filename)
+static Unified2Config * Unified2ParseArgs(char *args, char *default_filename)
 {
-    Unified2Config *tmp;
-    int limit = 0;
-
-    tmp = (Unified2Config *)calloc(sizeof(Unified2Config), sizeof(char));
-
-    if(tmp == NULL)
-    {
-        FatalError("Unable to allocate Unified2 Data struct!\n");
-    }
+    Unified2Config *config = (Unified2Config *)SnortAlloc(sizeof(Unified2Config));
 
     /* This is so the if 'nostamps' option is used on the command line,
      * it will be honored by unified2, and only one variable is used. */
-    tmp->nostamp = pv.nostamp;
+    config->nostamp = pv.nostamp;
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Args: %s\n", args););
 
     if(args != NULL)
     {
-        char **toks, *end;
+        char **toks;
         int num_toks;
         int i = 0;
         toks = mSplit((char *)args, ",", 31, &num_toks, '\\');
@@ -749,30 +1053,41 @@ Unified2Config *Unified2ParseArgs(char *args, char *default_filename)
             
             if(strcasecmp("filename", stoks[0]) == 0)
             {
-                if(num_stoks > 1 && tmp->filename == NULL)
-                    tmp->filename = strdup(stoks[1]);
+                if(num_stoks > 1 && config->base_filename == NULL)
+                    config->base_filename = SnortStrdup(stoks[1]);
                 else
                     FatalError("Argument Error in %s(%i): %s\n",
                             file_name, file_line, index);
             }
             else if(strcasecmp("limit", stoks[0]) == 0)
             {
-                if(num_stoks > 1 && limit == 0) 
-                {
-                    limit = strtol(stoks[1], &end, 10);
+                char *end;
 
-                    if(stoks[1] == end)
+                if ((num_stoks > 1) && (config->limit == 0))
+                {
+                    config->limit = strtoul(stoks[1], &end, 10);
+                    if ((stoks[1] == end) || (errno == ERANGE))
+                    {
                         FatalError("Argument Error in %s(%i): %s\n",
-                            file_name, file_line, index);
+                                   file_name, file_line, index);
+                    }
                 }
                 else
+                {
                     FatalError("Argument Error in %s(%i): %s\n",
-                            file_name, file_line, index);
+                               file_name, file_line, index);
+                }
             }
             else if(strcasecmp("nostamp", stoks[0]) == 0)
             {
-                tmp->nostamp = 1;
+                config->nostamp = 1;
             }
+#ifdef MPLS
+            else if(strcasecmp("mpls_event_types", stoks[0]) == 0)
+            {
+                config->mpls_event_types = 1;
+            }
+#endif
             else
             {
                 FatalError("Argument Error in %s(%i): %s\n",
@@ -784,26 +1099,24 @@ Unified2Config *Unified2ParseArgs(char *args, char *default_filename)
         mSplitFree(&toks, num_toks);
     }
 
-    if(tmp->filename == NULL)
-        tmp->filename = strdup(default_filename);
-    
-    //LogMessage("limit == %i\n", limit);
+    if (config->base_filename == NULL)
+        config->base_filename = SnortStrdup(default_filename);
 
-    if(limit <= 0)
+    if (config->limit == 0)
     {
-        limit = 128;
+        config->limit = 128;
     }
-    if(limit > 512)
+    else if (config->limit > 512)
     {
-        LogMessage("spo_unified %s(%d)=> Lowering limit of %iMB to 512MB\n", 
-            file_name, file_line, limit);
-        limit = 512;
+        LogMessage("spo_unified2 %s(%d)=> Lowering limit of %iMB to 512MB\n", 
+            file_name, file_line, config->limit);
+        config->limit = 512;
     }
 
     /* convert the limit to "MB" */
-    tmp->limit = limit << 20;
+    config->limit <<= 20;
 
-    return tmp;
+    return config;
 }
 
 /*
@@ -819,15 +1132,21 @@ Unified2Config *Unified2ParseArgs(char *args, char *default_filename)
 static void Unified2CleanExit(int signal, void *arg)
 {
     /* cast the arg pointer to the proper type */
-    Unified2Config *data = (Unified2Config *)arg;
+    Unified2Config *config = (Unified2Config *)arg;
 
     DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified2: CleanExit\n"););
 
-    fclose(data->stream);
-
     /* free up initialized memory */
-    free(data->filename);
-    free(data);
+    if (config != NULL)
+    {
+        if (config->stream != NULL)
+            fclose(config->stream);
+
+        if (config->base_filename != NULL)
+            free(config->base_filename);
+
+        free(config);
+    }
 }
 
 /*
@@ -842,39 +1161,54 @@ static void Unified2CleanExit(int signal, void *arg)
  */
 static void Unified2Restart(int signal, void *arg)
 {
-    Unified2Config *data = (Unified2Config *)arg;
+    Unified2Config *config = (Unified2Config *)arg;
 
     DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified2: Restart\n"););
 
-    fclose(data->stream);
-    free(data->filename);
-    free(data);
+    /* free up initialized memory */
+    if (config != NULL)
+    {
+        if (config->stream != NULL)
+            fclose(config->stream);
+
+        if (config->base_filename != NULL)
+            free(config->base_filename);
+
+        free(config);
+    }
 }
 
 /* Unified2 Alert functions (deprecated) */
-void Unified2AlertInit(char *args)
+static void Unified2AlertInit(char *args)
 {
-    Unified2Config *data;
+    Unified2Config *config;
+
+    if (unified2_configured || unified2_alert_configured)
+        FatalError("Unified2 can only be instantiated once\n");
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: Unified2 Alert Initialized\n"););
 
     pv.alert_plugin_active = 1;
 
     /* parse the argument list from the rules file */
-    data = Unified2ParseArgs(args, "snort-unified.alert");
-
-    Unified2InitFile(data);
+    config = Unified2ParseArgs(args, "snort-unified.alert");
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogAlert, NT_OUTPUT_ALERT, data);
-    AddFuncToCleanExitList(Unified2CleanExit, data);
-    AddFuncToRestartList(Unified2Restart, data);
+    AddFuncToOutputList(Unified2LogAlert, NT_OUTPUT_ALERT, config);
+    AddFuncToCleanExitList(Unified2CleanExit, config);
+    AddFuncToRestartList(Unified2Restart, config);
+    AddFuncToPostConfigList(Unified2PostConfig, config);
+
+    unified2_alert_configured = 1;
 }
 
 /* Unified2 Packet Log functions (deprecated) */
-void Unified2LogInit(char *args)
+static void Unified2LogInit(char *args)
 {
-    Unified2Config *Unified2Info;
+    Unified2Config *config;
+
+    if (unified2_configured || unified2_log_configured)
+        FatalError("Unified2 can only be instantiated once\n");
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: Unified2 Log Initialized\n"););
 
@@ -882,17 +1216,201 @@ void Unified2LogInit(char *args)
     pv.log_plugin_active = 1;
 
     /* parse the argument list from the rules file */
-    Unified2Info = Unified2ParseArgs(args, "snort-unified.log");
+    config = Unified2ParseArgs(args, "snort-unified.log");
 
     //LogMessage("Unified2LogFilename = %s\n", Unified2Info->filename);
-
-    Unified2InitFile(Unified2Info);
 
     pv.log_bitmap |= LOG_UNIFIED2;
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogPacketAlert, NT_OUTPUT_LOG, Unified2Info);
-    AddFuncToCleanExitList(Unified2CleanExit, Unified2Info);
-    AddFuncToRestartList(Unified2Restart, Unified2Info);
+    AddFuncToOutputList(Unified2LogPacketAlert, NT_OUTPUT_LOG, config);
+    AddFuncToCleanExitList(Unified2CleanExit, config);
+    AddFuncToRestartList(Unified2Restart, config);
+    AddFuncToPostConfigList(Unified2PostConfig, config);
+
+    unified2_log_configured = 1;
+}
+
+/******************************************************************************
+ * Function: Unified2Write()
+ *
+ * Main function for writing to the unified2 file.
+ *
+ * For low level I/O errors, the current unified2 file is closed and a new
+ * one created and a write to the new unified2 file is done.  It was found
+ * that when writing to an NFS mounted share that is using a soft mount option,
+ * writes sometimes fail and leave the unified2 file corrupted.  If the write
+ * to the newly created unified2 file fails, Snort will fatal error.
+ *
+ * In the case of interrupt errors, the write is retried, but only for a 
+ * finite number of times.
+ *
+ * All other errors are treated as non-recoverable and Snort will fatal error.
+ *
+ * Upon successful completion of write, the length of the data written is
+ * added to the current amount of total data written thus far to the
+ * unified2 file.
+ *
+ * Arguments
+ *  uint8_t *
+ *      The buffer containing the data to write
+ *  uint32_t
+ *      The length of the data to write
+ *  Unified2Config *
+ *      A pointer to the unified2 configuration data
+ *
+ * Returns: None
+ *
+ ******************************************************************************/
+static void Unified2Write(uint8_t *buf, uint32_t buf_len, Unified2Config *config)
+{
+    size_t fwcount = 0;
+    int ffstatus = 0;
+
+    /* Nothing to write or nothing to write to */
+    if ((buf == NULL) || (config == NULL) || (config->stream == NULL))
+        return;
+
+    /* Don't use fsync().  It is a total performance killer */
+    if (((fwcount = fwrite(buf, (size_t)buf_len, 1, config->stream)) != 1) ||
+        ((ffstatus = fflush(config->stream)) != 0))
+    {
+        /* errno is saved just to avoid other intervening calls
+         * (e.g. ErrorMessage) potentially reseting it to something else. */
+        int error = errno;
+        int max_retries = 3;
+
+        /* On iterations other than the first, the only non-zero error will be
+         * EINTR or interrupt.  Only iterate a maximum of max_retries times so 
+         * there is no chance of infinite looping if for some reason the write
+         * is constantly interrupted */
+        while ((error != 0) && (max_retries != 0))
+        {
+            if (config->nostamp)
+            {
+                ErrorMessage("%s(%d) Failed to write to unified2 file (%s): %s\n",
+                             __FILE__, __LINE__, config->filepath, strerror(error));
+            }
+            else
+            {
+                ErrorMessage("%s(%d) Failed to write to unified2 file (%s.%u): %s\n",
+                             __FILE__, __LINE__, config->filepath,
+                             config->timestamp, strerror(error));
+            }
+
+            while ((error == EINTR) && (max_retries != 0))
+            {
+                max_retries--;
+
+                /* Supposedly an interrupt can only occur before anything
+                 * has been written.  Try again */
+                ErrorMessage("%s(%d) Got interrupt. Retry write to unified2 "
+                             "file.\n", __FILE__, __LINE__);
+
+                if (fwcount != 1)
+                {
+                    /* fwrite() failed.  Redo fwrite and fflush */
+                    if (((fwcount = fwrite(buf, (size_t)buf_len, 1, config->stream)) == 1) &&
+                        ((ffstatus = fflush(config->stream)) == 0))
+                    {
+                        ErrorMessage("%s(%d) Write to unified2 file succeeded!\n",
+                                     __FILE__, __LINE__);
+                        error = 0;
+                        break;
+                    }
+                }
+                else if ((ffstatus = fflush(config->stream)) == 0)
+                {
+                    ErrorMessage("%s(%d) Write to unified2 file succeeded!\n",
+                                 __FILE__, __LINE__);
+                    error = 0;
+                    break;
+                }
+
+                error = errno;
+
+                ErrorMessage("%s(%d) Retrying write to unified2 file failed.\n",
+                             __FILE__, __LINE__);
+            }
+
+            /* If we've reached the maximum number of interrupt retries,
+             * just bail out of the main while loop */
+            if (max_retries == 0)
+                continue;
+
+            switch (error)
+            {
+                case 0:
+                    break;
+
+                case EIO:
+                    ErrorMessage("%s(%d) Unified2 file is possibly corrupt. "
+                                 "Closing this unified2 file and creating "
+                                 "a new one.\n", __FILE__, __LINE__);
+
+                    Unified2RotateFile(config);
+
+                    if (config->nostamp)
+                    {
+                        ErrorMessage("%s(%d) New unified2 file: %s\n",
+                                     __FILE__, __LINE__, config->filepath);
+                    }
+                    else
+                    {
+                        ErrorMessage("%s(%d) New unified2 file: %s.%u\n",
+                                     __FILE__, __LINE__,
+                                     config->filepath, config->timestamp);
+                    }
+
+                    if (((fwcount = fwrite(buf, (size_t)buf_len, 1, config->stream)) == 1) &&
+                        ((ffstatus = fflush(config->stream)) == 0))
+                    {
+                        ErrorMessage("%s(%d) Write to unified2 file succeeded!\n",
+                                     __FILE__, __LINE__);
+                        error = 0;
+                        break;
+                    }
+
+                    error = errno;
+
+                    /* Loop again if interrupt */
+                    if (error == EINTR)
+                        break;
+
+                    /* Write out error message again, then fall through and fatal */
+                    if (config->nostamp)
+                    {
+                        ErrorMessage("%s(%d) Failed to write to unified2 file (%s): %s\n",
+                                     __FILE__, __LINE__, config->filepath, strerror(error));
+                    }
+                    else
+                    {
+                        ErrorMessage("%s(%d) Failed to write to unified2 file (%s.%u): %s\n",
+                                     __FILE__, __LINE__, config->filepath,
+                                     config->timestamp, strerror(error));
+                    }
+
+                    /* Fall through */
+
+                case EAGAIN:  /* We're not in non-blocking mode */
+                case EBADF:
+                case EFAULT:
+                case EFBIG:
+                case EINVAL:
+                case ENOSPC:
+                case EPIPE:
+                default:
+                    FatalError("%s(%d) Cannot write to device.\n", __FILE__, __LINE__);
+            }
+        }
+
+        if ((max_retries == 0) && (error != 0))
+        {
+            FatalError("%s(%d) Maximum number of interrupts exceeded. "
+                       "Cannot write to device.\n", __FILE__, __LINE__);
+        }
+    }
+
+    config->current += buf_len;
 }
 

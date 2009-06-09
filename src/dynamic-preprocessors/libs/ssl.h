@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1998-2006 Sourcefire, Inc.
+ * Copyright (C) 1998-2009 Sourcefire, Inc.
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -181,9 +181,9 @@ typedef struct _SSLv2_shello
 #define SSL_HS_PAYLOAD_OFFSET (sizeof(u_int8_t) * 4) /* Type and length fields */
 
 #define SSL_BAD_HS(x) (x & SSL_BOGUS_HS_DIR_FLAG)
-#define SSL_IS_HANDSHAKE(x) (x & (SSL_CLIENT_HELLO_FLAG | SSL_SERVER_HELLO_FLAG\
-                                  | SSL_CERTIFICATE_FLAG | SSL_SERVER_KEYX_FLAG\
-                                  | SSL_CLIENT_KEYX_FLAG | SSL_CIPHER_SPEC_FLAG))
+#define SSL_IS_HANDSHAKE(x) (x & (SSL_CLIENT_HELLO_FLAG | SSL_SERVER_HELLO_FLAG | \
+                                  SSL_CERTIFICATE_FLAG | SSL_SERVER_KEYX_FLAG | \
+                                  SSL_CLIENT_KEYX_FLAG | SSL_CIPHER_SPEC_FLAG))
 #define SSL_IS_CHELLO(x) (x & SSL_CLIENT_HELLO_FLAG)
 #define SSL_IS_SHELLO(x) (x & SSL_SERVER_HELLO_FLAG)
 #define SSL_IS_CKEYX(x) (x & SSL_CLIENT_KEYX_FLAG)

@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2007-2008 Sourcefire, Inc.
+ * Copyright (C) 2007-2009 Sourcefire, Inc.
  *
  * Author: Russ Combs
  *
@@ -53,7 +53,10 @@ enum DynamicOptionType {
 #define FLOW_TO_SERVER           0x0080
 #define FLOW_FR_CLIENT           0x0080 /* Just for convenience */
 #define FLOW_IGNORE_REASSEMBLED  0x1000
-#define FLOW_ONLY_REASSMBLED     0x2000
+#define FLOW_ONLY_REASSEMBLED    0x2000
+#define FLOW_ONLY_REASSMBLED     FLOW_ONLY_REASSEMBLED
+
+#define SNORT_PCRE_OVERRIDE_MATCH_LIMIT 0x8000000
 
 #endif /* _SF_DYNAMIC_DEFINE_H_ */
 

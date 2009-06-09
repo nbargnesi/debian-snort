@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2001 Brian Caswell <bmc@mitre.org>
 **
@@ -477,7 +477,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
 	else if(!strncasecmp("id",type,2))
 	{
 	    if(IPH_IS_VALID(p))
-		TextLog_Print(log, "%d",ntohs(GET_IPH_ID(p)));
+            TextLog_Print(log, "%u", IS_IP6(p) ? ntohl(GET_IPH_ID(p)) : ntohs((u_int16_t)GET_IPH_ID(p)));
 	}
 	else if(!strncasecmp("iplen",type,5))
 	{

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2008 Sourcefire, Inc.
+ ** Copyright (C) 1998-2009 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -69,6 +69,8 @@ OptTreeNode * GenerateSnortEventOtn(
    p->sigInfo.message = msg;
    p->sigInfo.priority = priority;
    p->sigInfo.class_id = classification;
+
+   p->generated = 1;
             
    p->sigInfo.rule_type=SI_RULE_TYPE_PREPROC; /* TODO: could be detect ... */
    p->sigInfo.rule_flushing=SI_RULE_FLUSHING_OFF; /* only standard rules do this */
@@ -81,7 +83,10 @@ OptTreeNode * GenerateSnortEventOtn(
 
    p->rtn = calloc( 1, sizeof(RuleTreeNode) );
    if( !p->rtn )
-       return 0;
+   {
+       free(p);
+       return NULL;
+   }
 
    p->rtn->type = RULE_ALERT;
   
@@ -209,7 +214,7 @@ int LogTagData(Packet *p,
 
     SetEvent(&event, gen_id, sig_id, sig_rev, classification, priority, event_ref);
 
-    event.ref_time.tv_sec = ref_sec;
+    event.ref_time.tv_sec = (u_int32_t)ref_sec;
     
     if(p)
         CallLogFuncs(p, msg, NULL, &event);

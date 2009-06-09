@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -54,8 +54,8 @@
    are stored separately.
 */
 
-#ifndef LC_TRIE_H
-#define LC_TRIE_H
+#ifndef RT_TRIE_H
+#define RT_TRIE_H
 
 #define ADRSIZE 32        /* the number of bits in an address */
 

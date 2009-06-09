@@ -100,6 +100,11 @@ Global settings for the Stream5 preprocessor
                               default is set to off.
     show_rebuilt_packets    - Print/display packet after rebuilt (for
                               debugging).  The default is set to off.
+    prune_log_max <bytes>   - Print a message when a session terminates that
+                              was consuming more than the specified number of
+                              bytes.  The default is "1048576" (1MB), minimum
+                              is "0" (unlimited), maximum is not bounded, other
+                              than by the memcap.
 
 TCP Configuration
 -----------------
@@ -182,6 +187,22 @@ is not bound to an IP address or network.
                               for either the client or server when the MAC
                               address for one side or the other does not match.
                               The default is set to off.
+    dont_reassemble_async   - Don't queue packets for reassembly if traffic
+                              has not been seen in both directions.  The
+                              default is set to queue packets.
+    max_queued_bytes <bytes> - Limit the number of bytes queued for reassembly
+                              on a given TCP session to bytes.  Default is
+                              "1048576" (1MB).  A value of "0" means unlimited,
+                              with a non-zero minimum of "1024", and a maximum
+                              of "1073741824" (1GB).  A message is written to
+                              console/syslog when this limit is enforced.
+    max_queued_segs <num>   - Limit the number of segments queued for reassembly
+                              on a given TCP session.  The default is "2621",
+                              derived based on an average size of 400 bytes.
+                              A value of "0" means unlimited, with a non-zero
+                              minimum of "2", and a maximum of "1073741824"
+                              (1GB).  A message is written to console/syslog
+                              when this limit is enforced.
     ports <client|server|both> [all|space separated port list] 
                             - Specify the client, server, or both and list of
                               ports in which to perform reassembly.  This can
@@ -195,6 +216,16 @@ is not bound to an IP address or network.
                                              137 139 143 445 513 514 1433 1521 2401 3306
                               The minimum port allowed is "1" and the maximum
                               allowed is "65535".
+    ignore_any_rules        - Don't process any -> any (ports) rules for
+                              TCP that attempt to match payload if there are
+                              no port specific rules for the src or destination
+                              port.  Rules that have flow or flowbits will
+                              never be ignored.  This is a performance
+                              improvement, but may result in missed attacks. 
+                              Using this does not affect rules that look at
+                              protocol headers, only those with content, PCRE,
+                              or byte test options.  The default is "off". This
+                              option can be present only in default policy.
 
 If no options are specified for a given TCP policy, that is the default
 TCP policy.  If only a bind_to option is used with no other options that

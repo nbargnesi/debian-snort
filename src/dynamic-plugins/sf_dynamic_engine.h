@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -82,8 +82,14 @@ typedef int (*DetectAsn1)(void *, void *, const u_int8_t *);
 typedef int (*PreprocOptionEval)(void *p, const u_int8_t **cursor, void *dataPtr);
 typedef int (*PreprocOptionInit)(char *, char *, void **dataPtr);
 typedef void (*PreprocOptionCleanup)(void *dataPtr);
-typedef int (*RegisterPreprocRuleOpt)(char *, PreprocOptionInit, PreprocOptionEval, PreprocOptionCleanup);
+#define PREPROC_OPT_EQUAL       0
+#define PREPROC_OPT_NOT_EQUAL   1
+typedef u_int32_t (*PreprocOptionHash)(void *);
+typedef int (*PreprocOptionKeyCompare)(void *, void *);
+typedef int (*RegisterPreprocRuleOpt)(char *, PreprocOptionInit, PreprocOptionEval,
+                                      PreprocOptionCleanup, PreprocOptionHash, PreprocOptionKeyCompare);
 typedef int (*GetPreprocRuleOptFuncs)(char *, void **, void **);
+
 
 typedef void (*SetRuleData)(void *, void *);
 typedef void *(*GetRuleData)(void *);
@@ -101,7 +107,11 @@ typedef void *(*GetRuleData)(void *);
  */
 #include "sf_dynamic_common.h"
 
-#define ENGINE_DATA_VERSION 4
+#define ENGINE_DATA_VERSION 5
+
+typedef void *(*PCRECompileFunc)(const char *, int, const char **, int *, const unsigned char *);
+typedef void *(*PCREStudyFunc)(const void *, int, const char **);
+typedef int (*PCREExecFunc)(const void *, const void *, const char *, int, int, int, int *, int);
 
 typedef struct _DynamicEngineData
 {
@@ -129,6 +139,10 @@ typedef struct _DynamicEngineData
 
     char **debugMsgFile;
     int *debugMsgLine;
+
+    PCRECompileFunc pcreCompile;
+    PCREStudyFunc pcreStudy;
+    PCREExecFunc pcreExec;
 
 } DynamicEngineData;
 

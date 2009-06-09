@@ -1,5 +1,9 @@
 /*
-** Copyright (C) 1998-2008 Sourcefire, Inc.
+** Copyright (C) 1998-2009 Sourcefire, Inc.
+** Adam Keeton
+** Kevin Liu <kliu@sourcefire.com>
+* 
+** $ID: $
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -26,14 +30,21 @@
 #ifndef SF_IP_H
 #define SF_IP_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #ifndef WIN32
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#else
-#include <winsock2.h>
 #endif
+
+#ifdef TESTER
+#define INLINE inline
+#else
 #include "debug.h" /* for INLINE definition */
+#endif
 
 /* define SFIP_ROBUST to check pointers passed into the sfip libs.
  * Robustification should not be enabled if the client code is trustworthy.
@@ -65,7 +76,10 @@
 
 typedef struct _ip {
     int family;
+    int bits;
 
+    /* see sfip_size(): these address bytes
+     * must be the last field in this struct */
     union
     {
         u_int8_t  u6_addr8[16];
@@ -77,8 +91,6 @@ typedef struct _ip {
     #define ip16 ip.u6_addr16
     #define ip32 ip.u6_addr32
 //    #define ip64 ip.u6_addr64
-
-    int bits;
 } sfip_t;
 
 typedef enum _return_values {
@@ -106,10 +118,10 @@ typedef enum _return_values {
 
 /* Parses "src" and stores results in "dst" */
 /* If the conversion is invalid, returns SFIP_FAILURE */
-SFIP_RET sfip_pton(char *src, sfip_t *dst);
+SFIP_RET sfip_pton(const char *src, sfip_t *dst);
 
 /* Allocate IP address from a character array describing the IP */
-sfip_t *sfip_alloc(char *ip, SFIP_RET *status);
+sfip_t *sfip_alloc(const char *ip, SFIP_RET *status);
 
 /* Frees an sfip_t */
 void sfip_free(sfip_t *ip);
@@ -128,7 +140,13 @@ SFIP_RET sfip_set_ip(sfip_t *dst, sfip_t *src);
 /* Obfuscates an IP */
 void sfip_obfuscate(sfip_t *ob, sfip_t *ip);
 
-
+/* return required size (eg for hashing)
+ * requires that address bytes be the last field in sfip_t */
+static INLINE unsigned int sfip_size(sfip_t* ipt)
+{
+    if ( ipt->family == AF_INET6 ) return sizeof(*ipt);
+    return (unsigned int)((ipt->ip.u6_addr8+4) - (u_int8_t*)ipt);
+}
 
 /* Member-access *******************************************************/
 
@@ -141,7 +159,7 @@ void sfip_obfuscate(sfip_t *ob, sfip_t *ip);
 /* Returns the number of bits used for masking "ip" */
 static INLINE unsigned char sfip_bits(sfip_t *ip) {
     ARG_CHECK1(ip, 0);
-    return ip->bits;
+    return (unsigned char)ip->bits;
 }   
 
 static INLINE void sfip_set_bits(sfip_t *p, int bits) {
@@ -154,7 +172,7 @@ static INLINE void sfip_set_bits(sfip_t *p, int bits) {
     p->bits = bits;
 }
 
-///* Returns the raw IP address as an in6_addr */
+/* Returns the raw IP address as an in6_addr */
 //inline struct in6_addr sfip_to_raw(sfip_t *);
 
 
@@ -185,8 +203,10 @@ int sfip_ismapped(sfip_t *ip);
 
 /* Support function for sfip_compare */
 static INLINE int _ip4_cmp(u_int32_t ip1, u_int32_t ip2) {
-    if(ip1 < ip2) return SFIP_LESSER;
-    if(ip1 > ip2) return SFIP_GREATER;
+    uint32_t hip1 = htonl(ip1);
+    uint32_t hip2 = htonl(ip2);
+    if(hip1 < hip2) return SFIP_LESSER;
+    if(hip1 > hip2) return SFIP_GREATER;
     return SFIP_EQUAL;
 }
 
@@ -226,6 +246,48 @@ static INLINE SFIP_RET sfip_compare(sfip_t *ip1, sfip_t *ip2) {
      * an unset IP is considered to match anything.  Thus, if either IP is not
      * set here, it's considered equal. */
     if(!sfip_is_set(ip1) || !sfip_is_set(ip2)) return SFIP_EQUAL;
+
+    f1 = sfip_family(ip1);
+    f2 = sfip_family(ip2);
+
+    if(f1 == AF_INET && f2 == AF_INET) {
+        return _ip4_cmp(*ip1->ip32, *ip2->ip32);
+    } 
+/* Mixed families not presently supported */
+#if 0
+    else if(f1 == AF_INET && f2 == AF_INET6) {
+        conv = sfip_4to6(ip1);
+        return _ip6_cmp(&conv, ip2);
+    } else if(f1 == AF_INET6 && f2 == AF_INET) {
+        conv = sfip_4to6(ip2);
+        return _ip6_cmp(ip1, &conv);
+    } 
+    else {
+        return _ip6_cmp(ip1, ip2);
+    }
+#endif
+    else if(f1 == AF_INET6 && f2 == AF_INET6) {
+        return _ip6_cmp(ip1, ip2);
+    }
+
+    return SFIP_FAILURE;
+}
+
+/* Compares two IPs 
+ * Returns SFIP_LESSER, SFIP_EQUAL, SFIP_GREATER, if ip1 is less than, equal to, 
+ * or greater than ip2 In the case of mismatched families, the IPv4 address 
+ * is converted to an IPv6 representation. */
+/* XXX-IPv6 Should add version of sfip_compare that just tests equality */
+static INLINE SFIP_RET sfip_compare_unset(sfip_t *ip1, sfip_t *ip2) {
+    int f1,f2;
+
+    ARG_CHECK2(ip1, ip2, SFIP_ARG_ERR);
+
+    /* This is to handle the special case when one of the values being
+     * unset is considered to match nothing.  This is the opposite of
+     * sfip_compare(), defined above.  Thus, if either IP is not
+     * set here, it's considered not equal. */
+    if(!sfip_is_set(ip1) || !sfip_is_set(ip2)) return SFIP_FAILURE;
 
     f1 = sfip_family(ip1);
     f2 = sfip_family(ip2);
@@ -322,106 +384,49 @@ static INLINE int sfip_fast_eq6(sfip_t *ip1, sfip_t *ip2) {
 /* Checks if ip2 is equal to ip1 or contained within the CIDR ip1 */
 static INLINE int sfip_fast_cont4(sfip_t *ip1, sfip_t *ip2) {
     u_int32_t shift = 32 - sfip_bits(ip1);
-    u_int32_t ip = *ip2->ip32;
+    u_int32_t ip = ntohl(*ip2->ip32);
 
-#ifdef WORDS_BIGENDIAN
     ip >>= shift;
     ip <<= shift;
-#else
-    ip <<= shift;
-    ip >>= shift;
-#endif
 
-    return *ip1->ip32 == ip;
+    return ntohl(*ip1->ip32) == ip;
 }
 
 /* Checks if ip2 is equal to ip1 or contained within the CIDR ip1 */
 static INLINE int sfip_fast_cont6(sfip_t *ip1, sfip_t *ip2) {
-    u_int32_t bits = sfip_bits(ip1);
-    u_int32_t ip;
+    uint32_t ip;
+    int i, bits = sfip_bits(ip1);
+    int words = bits / 32;
+    bits = 32 - (bits % 32);
 
-    /* Divide bits by 32 to puts it in units of words to determine
-     * which words are, and are not, masked */
-    switch((bits / 32)) {
-        /* 0 to 31 bits */
-        case 0:
-            ip = *ip2->ip32;
-            ip <<= 32 - bits;
-            ip >>= 32 - bits;
-            return *ip1->ip32 == ip;
-
-        /* 32 to 63 bits */
-        case 1:
-            if(!sfip_fast_eq4(ip1, ip2)) 
-                return 0;
-
-            ip = ip2->ip32[1];
-
-            ip <<= 32 - bits;
-            ip >>= 32 - bits;
-            return ip1->ip32[1] == ip;
-        
-        /* 64 to 95 bits */
-        case 2:
-            if(!sfip_fast_eq4(ip1, ip2)) 
-                return 0;
-
-            if(!(ip1->ip32[1] && ip2->ip32[1]))
-                return 0;
-
-            ip = ip2->ip32[2];
-
-            ip <<= 32 - bits;
-            ip >>= 32 - bits;
-            return ip1->ip32[2] == ip;
-
-
-        /* 96 to 127 bits */
-        case 3:
-            if(!sfip_fast_eq4(ip1, ip2)) 
-                return 0;
-
-            if(!(ip1->ip32[1] && ip2->ip32[1]))
-                return 0;
-
-            if(!(ip1->ip32[2] && ip2->ip32[2]))
-                return 0;
-
-            ip = ip2->ip32[3];
-
-            ip <<= 32 - bits;
-            ip >>= 32 - bits;
-            return ip1->ip32[3] == ip;
-
-        /* 128 bits */
-        case 4:
-            return sfip_fast_eq6(ip1, ip2);
-
-        /* Black magic bits */
-        default:
+    for ( i = 0; i < words; i++ ) {
+        if ( ip1->ip32[i] != ip2->ip32[i] )
             return 0;
-    };      
+    }
+
+    if ( bits == 32 ) return 1;
+
+    ip = ntohl(ip2->ip32[i]);
+
+    ip >>= bits;
+    ip <<= bits;
+
+    return ntohl(ip1->ip32[i]) == ip;
 }
 
 #define sfip_equals(x,y) (sfip_compare(&x, &y) == SFIP_EQUAL)
 #define sfip_not_equals !sfip_equals
 #define sfip_clear(x) memset(x, 0, 16)
 
-
-
 /* Printing ************************************************************/
 
 /* Uses a static buffer to return a string representation of the IP */
-char *sfip_to_str(sfip_t *ip);
+char *sfip_to_str(const sfip_t *ip);
 #define sfip_ntoa(x) sfip_to_str(x)
 void sfip_raw_ntop(int family, const void *ip_raw, char *buf, int bufsize);
 
 #ifndef strndup
 char *strndup(const char *s, size_t n);
-#endif
-
-#ifndef inet_pton
-int inet_pton(int af, const char *src, void *dst);
 #endif
 
 #endif

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -78,6 +78,7 @@
 #define DEBUG_DNS             0x10000000  /* 268435456 */
 #define DEBUG_ATTRIBUTE       0x20000000  /* 536870912 */
 #define DEBUG_PORTLISTS       0x40000000  /* 1073741824 */
+#define DEBUG_SSL             0x80000000  /* 2147483648 */
 
 void DebugMessageFunc(int dbg,char *fmt, ...);
 #ifdef HAVE_WCHAR_H

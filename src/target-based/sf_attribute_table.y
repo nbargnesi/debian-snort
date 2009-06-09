@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -41,6 +41,8 @@
 
 #define YY_ACCEPT return 1;
 #define YY_ABORT return 0;
+
+#define YYSTACK_USE_ALLOCA 0
 
 extern ServiceClient sfat_client_or_service;
 extern char *sfat_grammar_error;
@@ -259,7 +261,11 @@ IpCidr:
   {
     /* Convert IP/CIDR to Snort IPCidr Object */
     /* determine the number of bits (done in SetHostIp4) */
+#ifdef SUP_IP6
+    if (SFAT_SetHostIp($2) != SFAT_OK)
+#else
     if (SFAT_SetHostIp4($2) != SFAT_OK)
+#endif
     {
         YY_ABORT;
     }

@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005-2008 Sourcefire, Inc.
+** Copyright (C) 2005-2009 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -46,6 +46,7 @@ int IgnoreChannel(snort_ip_p cliIP, u_int16_t cliPort,
                   u_int32_t timeout);
 
 char CheckIgnoreChannel(Packet *);
+void CleanupIgnore();
 
 #endif /* STREAM_IGNORE_H_ */
 

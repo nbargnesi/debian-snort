@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -142,7 +142,7 @@ static int ServerInspection(HI_SESSION *Session, const unsigned char *data,
     **  There's really only one thing that we do right now for server
     **  responses, that's HTTP flow.
     */
-    iRet = IsHttpServerData(Server, data, dsize, Session->server_conf->flow_depth);
+    iRet = IsHttpServerData(Server, data, dsize, Session->server_conf->server_flow_depth);
     if (iRet)
     {
         return iRet;

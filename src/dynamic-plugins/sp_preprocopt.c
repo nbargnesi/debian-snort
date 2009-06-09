@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -64,9 +64,12 @@
 #include "sf_dynamic_engine.h"
 
 #include "sfghash.h"
+#include "sfhashfcn.h"
 
 #include "snort.h"
 #include "profiler.h"
+#include "util.h"
+
 #ifdef PERF_PROFILING
 PreprocStats preprocRuleOptionPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
@@ -76,13 +79,14 @@ SFGHASH *preprocRulesOptions = NULL;
 
 extern const u_int8_t *doe_ptr;
 
-
 typedef struct _PreprocessorOptionInfo
 {
     PreprocOptionInit optionInit;
     PreprocOptionEval optionEval;
     PreprocOptionCleanup optionCleanup;
     void             *data;
+    PreprocOptionHash optionHash;
+    PreprocOptionKeyCompare optionKeyCompare;
 } PreprocessorOptionInfo;
 
 void PreprocessorRuleOptionsInit()
@@ -90,7 +94,20 @@ void PreprocessorRuleOptionsInit()
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("preproc_rule_options", &preprocRuleOptionPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
-    preprocRulesOptions = sfghash_new(10, 0, 0, NULL);
+    preprocRulesOptions = sfghash_new(10, 0, 0, free);
+}
+
+void PreprocessorRuleOptionsFreeFunc(void *data)
+{
+    PreprocessorOptionInfo *opt_info = (PreprocessorOptionInfo *)data;
+
+    if (opt_info == NULL)
+        return;
+
+    if (opt_info->optionCleanup != NULL)
+        opt_info->optionCleanup(opt_info->data);
+
+    free(opt_info);
 }
 
 void PreprocessorRuleOptionsFree()
@@ -102,9 +119,13 @@ void PreprocessorRuleOptionsFree()
     }
 }
 
-int RegisterPreprocessorRuleOption(char *optionName, PreprocOptionInit initFunc,
+int RegisterPreprocessorRuleOption(char *optionName,
+                                   PreprocOptionInit initFunc,
                                    PreprocOptionEval evalFunc,
-                                   PreprocOptionCleanup cleanupFunc)
+                                   PreprocOptionCleanup cleanupFunc,
+                                   PreprocOptionHash hashFunc,
+                                   PreprocOptionKeyCompare keyCompareFunc
+                                  )
 {
     int ret;
     PreprocessorOptionInfo *optionInfo;
@@ -114,7 +135,7 @@ int RegisterPreprocessorRuleOption(char *optionName, PreprocOptionInit initFunc,
     }
 
     optionInfo = sfghash_find(preprocRulesOptions, optionName);
-    if (optionInfo)
+    if (optionInfo != NULL)
     {
         FatalError("Duplicate Preprocessor Rule Option '%s'\n", optionName);
     }
@@ -122,6 +143,9 @@ int RegisterPreprocessorRuleOption(char *optionName, PreprocOptionInit initFunc,
     optionInfo = (PreprocessorOptionInfo *)SnortAlloc(sizeof(PreprocessorOptionInfo));
     optionInfo->optionEval = evalFunc;
     optionInfo->optionInit = initFunc;
+    optionInfo->optionCleanup = cleanupFunc;
+    optionInfo->optionHash = hashFunc;
+    optionInfo->optionKeyCompare = keyCompareFunc;
 
     ret = sfghash_add(preprocRulesOptions, optionName, optionInfo);
     if (ret != SFGHASH_OK)
@@ -152,17 +176,94 @@ int GetPreprocessorRuleOptionFuncs(char *optionName, void **initFunc, void **eva
     return 1;
 }
 
-/* Callback function for dynamic preprocessor options */
-int PreprocessorOptionFunc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
+u_int32_t PreprocessorRuleOptionHash(void *d)
 {
-    PreprocessorOptionInfo *optionInfo;
-    const u_int8_t *cursor = NULL;
+    u_int32_t a,b,c;
+    PreprocessorOptionInfo *option_data = (PreprocessorOptionInfo *)d;
+            
+#if (defined(__ia64) || defined(__amd64) || defined(_LP64))
+    {
+        /* Cleanup warning because of cast from 64bit ptr to 32bit int
+         * warning on 64bit OSs */
+        UINT64 ptr; /* Addresses are 64bits */
+
+        if (option_data->optionHash != NULL)
+        {
+            a = option_data->optionHash(option_data->data);
+            b = 0;
+        }
+        else
+        {
+            ptr = (UINT64)option_data->data;
+            a = (ptr << 32) & 0XFFFFFFFF;
+            b = (ptr & 0xFFFFFFFF);
+        }
+
+        ptr = (UINT64)option_data->optionInit;
+        c = (ptr << 32) & 0XFFFFFFFF;
+        mix(a,b,c);
+
+        a += (ptr & 0xFFFFFFFF); /* mix in the last half of optionInit */
+
+        ptr = (UINT64)option_data->optionEval;
+        b += (ptr << 32) & 0XFFFFFFFF;
+        c += (ptr & 0xFFFFFFFF);
+
+        mix(a,b,c);
+    }
+#else
+    if (option_data->optionHash != NULL)
+        a = option_data->optionHash(option_data->data);
+    else
+        a = (u_int32_t)option_data->data;
+
+    b = (u_int32_t)option_data->optionInit;
+    c = (u_int32_t)option_data->optionEval;
+    mix(a,b,c);
+#endif
+    a += RULE_OPTION_TYPE_PREPROCESSOR;
+
+    final(a,b,c);
+                                    
+    return c;
+}
+
+int PreprocessorRuleOptionCompare(void *l, void *r)
+{
+    PreprocessorOptionInfo *left = (PreprocessorOptionInfo *)l;
+    PreprocessorOptionInfo *right = (PreprocessorOptionInfo *)r;
+            
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if ((left->optionInit == right->optionInit) &&
+        (left->optionEval == right->optionEval) &&
+        (left->optionHash == right->optionHash) &&
+        (left->optionKeyCompare == right->optionKeyCompare))
+    {
+        if (left->optionKeyCompare != NULL)
+        {
+            if (left->optionKeyCompare(left->data, right->data) == PREPROC_OPT_EQUAL)
+                return DETECTION_OPTION_EQUAL;
+        }
+        else if (left->data == right->data)
+        {
+            return DETECTION_OPTION_EQUAL;
+        }
+    }
+                                                        
+    return DETECTION_OPTION_NOT_EQUAL;
+}
+
+/* Callback function for dynamic preprocessor options */
+int PreprocessorOptionFunc(void *option_data, Packet *p)
+{
+    PreprocessorOptionInfo *optionInfo = (PreprocessorOptionInfo *)option_data;
+    const u_int8_t *cursor = doe_ptr;
     int       success;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(preprocRuleOptionPerfStats);
-
-    optionInfo = (PreprocessorOptionInfo *) fp_list->context;
 
     //  Call eval function
     success = optionInfo->optionEval(p, &cursor, optionInfo->data);
@@ -174,11 +275,11 @@ int PreprocessorOptionFunc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_li
     if ( success )
     {
         PREPROC_PROFILE_END(preprocRuleOptionPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        return DETECTION_OPTION_MATCH;
     }
 
     PREPROC_PROFILE_END(preprocRuleOptionPerfStats);
-    return 0;
+    return DETECTION_OPTION_NO_MATCH;
 }
 
 int AddPreprocessorRuleOption(char *optionName, OptTreeNode *otn, void *data, PreprocOptionEval evalFunc)
@@ -186,6 +287,7 @@ int AddPreprocessorRuleOption(char *optionName, OptTreeNode *otn, void *data, Pr
     OptFpList *fpl;
     PreprocessorOptionInfo *optionInfo;
     PreprocessorOptionInfo *saveOptionInfo;
+    void *option_dup;
 
     optionInfo = sfghash_find(preprocRulesOptions, optionName);
     
@@ -207,7 +309,61 @@ int AddPreprocessorRuleOption(char *optionName, OptTreeNode *otn, void *data, Pr
      */
     fpl->context = (void *) saveOptionInfo;
 
+    if (add_detection_option(RULE_OPTION_TYPE_PREPROCESSOR, (void *)saveOptionInfo, &option_dup) == DETECTION_OPTION_EQUAL)
+    {
+        PreprocessorRuleOptionsFreeFunc(saveOptionInfo);
+        fpl->context = saveOptionInfo = option_dup;
+    }
+    fpl->type = RULE_OPTION_TYPE_PREPROCESSOR;
+
     return 1;
+}
+
+void PreprocessorRuleOptionOverrideFunc(char *keyword, char *option, char *args, OptTreeNode *otn, int protocol)
+{
+    PreprocessorOptionInfo *optionInfo;
+    char *keyword_plus_option;
+    void *opt_data;
+    int name_len = strlen(keyword) + strlen(option) + 2;
+
+    keyword_plus_option = (char *)SnortAlloc(name_len);
+    SnortSnprintf(keyword_plus_option, name_len, "%s %s", keyword, option);
+
+    optionInfo = sfghash_find(preprocRulesOptions, keyword_plus_option);
+    if (optionInfo == NULL)
+        return;
+
+    optionInfo->optionInit(keyword, args, &opt_data);
+    AddPreprocessorRuleOption(keyword_plus_option, otn, opt_data, optionInfo->optionEval);
+
+    free(keyword_plus_option);
+}
+
+void RegisterPreprocessorRuleOptionOverride(char *keyword, char *option,
+                                            PreprocOptionInit initFunc,
+                                            PreprocOptionEval evalFunc,
+                                            PreprocOptionCleanup cleanupFunc,
+                                            PreprocOptionHash hashFunc,
+                                            PreprocOptionKeyCompare keyCompareFunc
+                                           )
+{
+    int ret;
+    char *keyword_plus_option;
+    int name_len = strlen(keyword) + strlen(option) + 2;
+
+    keyword_plus_option = (char *)SnortAlloc(name_len);
+    SnortSnprintf(keyword_plus_option, name_len, "%s %s", keyword, option);
+
+    ret = RegisterPreprocessorRuleOption(keyword_plus_option, initFunc, evalFunc,
+                                         cleanupFunc, hashFunc, keyCompareFunc);
+
+    /* Hash table allocs and manages keys internally */
+    free(keyword_plus_option);
+
+    if (ret != 0)
+        return;
+
+    RegisterOverrideKeyword(keyword, option, &PreprocessorRuleOptionOverrideFunc);
 }
 
 #endif /* DYNAMIC_PLUGIN */

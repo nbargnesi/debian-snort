@@ -29,14 +29,19 @@ BUILT_SOURCES = \
 	include/pcap_pkthdr32.h \
 	include/stream_api.h \
 	include/str_search.h \
-	include/sf_types.h
+	include/sf_types.h \
+	include/sfrt.h \
+	include/sfrt.c \
+	include/sfrt_dir.h \
+	include/sfrt_dir.c \
+	include/sfrt_trie.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
 	    -e "s/->iph->ip_dst/->ip4_header->destination/" \
 	    -e "s/->iph->/->ip4_header->/" \
 	    -e "s/->iph$$/->ip4_header/" \
-	    -e "s/orig_iph/orig_ip4_header/" \
+	    -e "s/orig_iph/orig_ipv4h/" \
 	    -e "s/ip_verhl/version_headerlength/" \
 	    -e "s/ip_tos/type_service/" \
 	    -e "s/ip_len/data_length/" \
@@ -191,6 +196,21 @@ include/sf_ipvar.h: $(srcdir)/../sfutil/sf_ipvar.h
 include/sf_vartable.h: $(srcdir)/../sfutil/sf_vartable.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
+include/sfrt.h: $(srcdir)/../sfutil/sfrt.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt.c: $(srcdir)/../sfutil/sfrt.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_dir.h: $(srcdir)/../sfutil/sfrt_dir.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_dir.c: $(srcdir)/../sfutil/sfrt_dir.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_trie.h: $(srcdir)/../sfutil/sfrt_trie.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 # From dynamic-plugins/sf_engine/examples
 include/sfsnort_dynamic_detection_lib.c: $(srcdir)/../dynamic-plugins/sf_engine/examples/sfsnort_dynamic_detection_lib.c
 	@src_header=$?; dst_header=$@; $(copy_headers)
@@ -215,7 +235,7 @@ include/str_search.h: $(srcdir)/../preprocessors/str_search.h
 INCLUDES = @INCLUDES@ 
 
 if HAVE_DYNAMIC_PLUGINS
-SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl
+SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl dcerpc2
 endif
 
 clean-local:

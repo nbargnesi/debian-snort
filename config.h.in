@@ -69,6 +69,9 @@
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
 
+/* Define whether linuxthreads is being used */
+#undef HAVE_LINUXTHREADS
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -141,6 +144,9 @@
 /* Define if HPUX */
 #undef HPUX
 
+/* For INADDR_NONE definition */
+#undef INADDR_NONE
+
 /* Define if IRIX */
 #undef IRIX
 
@@ -155,6 +161,12 @@
 
 /* Define if MACOS */
 #undef MACOS
+
+/* For MySQL versions 5.0.13 and greater */
+#undef MYSQL_HAS_OPT_RECONNECT
+
+/* For MySQL versions 5.0.13 to 5.0.18 */
+#undef MYSQL_HAS_OPT_RECONNECT_BUG
 
 /* Define if OPENBSD */
 #undef OPENBSD

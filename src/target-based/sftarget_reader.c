@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -68,13 +68,19 @@ static SFXHASH *attribute_map_table_old = NULL;
 
 static HostAttributeEntry *current_host = NULL;
 static ApplicationEntry *current_app = NULL;
+
+static int adaptive_configured = 0;
+
 //static MapData *current_map_entry = NULL;
 ServiceClient sfat_client_or_service;
 
 extern char sfat_error_message[STD_BUF];
 extern char sfat_grammar_error_printed;
+extern char sfat_insufficient_space_logged;
+extern char sfat_fatal_error;
 int ParseTargetMap(char *filename);
 
+extern char *sfat_saved_file;
 /*****TODO: cleanup to use config directive *******/
 #define ATTRIBUTE_MAP_MAX_ROWS 1024
 u_int32_t SFAT_NumberOfHosts()
@@ -231,17 +237,50 @@ void PrintAttributeData(char *prefix, AttributeData *data)
 #endif
 }
 
+#ifdef SUP_IP6
+int SFAT_SetHostIp(char *ip)
+#else
 int SFAT_SetHostIp4(char *ip)
+#endif
 {
     static HostAttributeEntry *tmp_host = NULL;
+#ifdef SUP_IP6
+    sfip_t ipAddr;
+#else
     struct in_addr ip4_inAddr;
     u_int32_t ipAddr = 0;
     u_int8_t bits = 32;
     char *ipMask;
     char *hasMask;
-
+#endif
     SFAT_CHECKHOST;
 
+#ifdef SUP_IP6
+    if (sfip_pton(ip, &ipAddr) != SFIP_SUCCESS)
+    {
+        return SFAT_ERROR;
+    }
+
+    if (ipAddr.family == AF_INET)
+    {
+        ipAddr.ip32[0] = ntohl(ipAddr.ip32[0]);
+    }
+
+    tmp_host = sfrt_lookup(&ipAddr, attribute_lookup_table_tmp);
+
+    if (tmp_host &&
+        sfip_equals(tmp_host->ipAddr, ipAddr))
+    {
+        /* Exact match. */
+        FreeHostEntry(current_host);
+        current_host = tmp_host;
+    }
+    else
+    {
+        /* New entry for this host/CIDR */
+        sfip_set_ip(&current_host->ipAddr, &ipAddr);
+    }
+#else
     ipMask = strdup(ip); /* Don't use SnortStrdup, can't FatalError here */
     if (!ipMask)
     {
@@ -286,7 +325,7 @@ int SFAT_SetHostIp4(char *ip)
     }
 
     free(ipMask);
-
+#endif
     return SFAT_OK;
 }
 
@@ -351,11 +390,21 @@ int SFAT_AddApplicationData()
                           APPLICATION_ENTRY_PROTO);
         if ((current_app->fields & required_fields) != required_fields)
         {
+#ifdef SUP_IP6
+            sfip_t host_addr;
+            sfip_set_ip(&host_addr, &current_host->ipAddr);
+#else
             struct in_addr host_addr;
             host_addr.s_addr = current_host->ipAddr;
+#endif
             FatalError("%s(%d) ERROR: Missing required field in Service attribute table for host %s\n",
                 file_name, file_line,
-                inet_ntoa(host_addr));
+#ifdef SUP_IP6
+                inet_ntoa(&host_addr)
+#else
+                inet_ntoa(host_addr)
+#endif
+                );
         }
 
         AppendApplicationData(&current_host->services);
@@ -366,11 +415,21 @@ int SFAT_AddApplicationData()
         /* Currently, client data only includes PROTO, not IPPROTO */
         if ((current_app->fields & required_fields) != required_fields)
         {
+#ifdef SUP_IP6
+            sfip_t host_addr;
+            sfip_set_ip(&host_addr, &current_host->ipAddr);
+#else
             struct in_addr host_addr;
             host_addr.s_addr = current_host->ipAddr;
+#endif
             FatalError("%s(%d) ERROR: Missing required field in Client attribute table for host %s\n",
                 file_name, file_line,
-                inet_ntoa(host_addr));
+#ifdef SUP_IP6
+                inet_ntoa(&host_addr)
+#else
+                inet_ntoa(host_addr)
+#endif
+                );
         }
 
         AppendApplicationData(&current_host->clients);
@@ -437,7 +496,14 @@ void PrintHostAttributeEntry(HostAttributeEntry *host)
         return;
 
     DebugMessage(DEBUG_ATTRIBUTE, "Host IP: %s/%d\n",
-            inet_ntoax(ntohl(host->ipAddr)), host->bits);
+#ifdef SUP_IP6
+            inet_ntoa(&host->ipAddr),
+            host->ipAddr.bits
+#else
+            inet_ntoax(ntohl(host->ipAddr)),
+            host->bits
+#endif
+            );
     DebugMessage(DEBUG_ATTRIBUTE, "\tOS Information: %s(%d) %s(%d) %s(%d)\n",
             host->hostInfo.operatingSystem.value.s_value,
             host->hostInfo.operatingSystem.confidence,
@@ -516,26 +582,44 @@ int SFAT_AddHostEntryToMap()
 {
     HostAttributeEntry *host = current_host;
     int ret;
+#ifdef SUP_IP6
+    sfip_t *ipAddr;
+#else
     u_int32_t ipAddr;
+#endif
 
     SFAT_CHECKHOST;
 
     DEBUG_WRAP(PrintHostAttributeEntry(host););
 
+#ifdef SUP_IP6
+    ipAddr = &host->ipAddr;
+
+    ret = sfrt_insert(ipAddr, (unsigned char)ipAddr->bits, host,
+                        RT_FAVOR_SPECIFIC, attribute_lookup_table_tmp);
+#else
     ipAddr = host->ipAddr;
 
     ret = sfrt_insert(&ipAddr, host->bits, host,
                         RT_FAVOR_SPECIFIC, attribute_lookup_table_tmp);
+#endif
 
     if (ret != RT_SUCCESS)
     {
         if (ret == RT_POLICY_TABLE_EXCEEDED)
         {
-            SnortSnprintf(sfat_error_message, STD_BUF,
-                "AttributeTable insertion failed: %d Insufficient "
-                "space in attribute table, only configured to store %d hosts\n",
-                ret, pv.max_attribute_hosts);
-            sfat_grammar_error_printed = 1;
+            if (!sfat_insufficient_space_logged)
+            {
+                SnortSnprintf(sfat_error_message, STD_BUF,
+                    "AttributeTable insertion failed: %d Insufficient "
+                    "space in attribute table, only configured to store %d hosts\n",
+                    ret, pv.max_attribute_hosts);
+                sfat_grammar_error_printed = 1;
+                sfat_insufficient_space_logged = 1;
+                sfat_fatal_error = 0;
+            }
+            /* Reset return value and continue w/ only pv.max_attribute_hosts */
+            ret = RT_SUCCESS;
         }
         else
         {
@@ -551,11 +635,25 @@ int SFAT_AddHostEntryToMap()
     return ret == RT_SUCCESS ? SFAT_OK : SFAT_ERROR;
 }
 
+#ifdef SUP_IP6
+HostAttributeEntry *SFAT_LookupHostEntryByIP(sfip_t *ipAddr)
+#else
 HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(u_int32_t ipAddr)
+#endif
 {
     HostAttributeEntry *host = NULL;
+#ifdef SUP_IP6
+    sfip_t local_ipAddr;
+    sfip_set_ip(&local_ipAddr, ipAddr);
+    if (local_ipAddr.family == AF_INET)
+    {
+        local_ipAddr.ip32[0] = ntohl(local_ipAddr.ip32[0]);
+    }
 
+    host = sfrt_lookup(&local_ipAddr, attribute_lookup_table);
+#else
     host = sfrt_lookup(&ipAddr, attribute_lookup_table);
+#endif
 
     if (host)
     {
@@ -568,6 +666,12 @@ HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(u_int32_t ipAddr)
 
 HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p)
 {
+#ifdef SUP_IP6
+    if (!p || !p->iph)
+        return NULL;
+
+    return SFAT_LookupHostEntryByIP(GET_SRC_IP(p));
+#else
     u_int32_t ipAddr;
 
     if (!p || !p->iph)
@@ -576,10 +680,17 @@ HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p)
     ipAddr = ntohl(p->iph->ip_src.s_addr);
 
     return SFAT_LookupHostEntryByIp4Addr(ipAddr);
+#endif
 }
 
 HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p)
 {
+#ifdef SUP_IP6
+    if (!p || !p->iph)
+        return NULL;
+
+    return SFAT_LookupHostEntryByIP(GET_DST_IP(p));
+#else
     u_int32_t ipAddr;
 
     if (!p || !p->iph)
@@ -588,6 +699,7 @@ HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p)
     ipAddr = ntohl(p->iph->ip_dst.s_addr);
 
     return SFAT_LookupHostEntryByIp4Addr(ipAddr);
+#endif
 }
 
 static GetPolicyIdFunc updatePolicyCallback;
@@ -655,6 +767,7 @@ void SFAT_CleanupCallback(void *host_attr_ent)
 
 void SFAT_Cleanup()
 {
+    GetPolicyIdsCallbackList *list_entry, *tmp_list_entry = NULL;
     if (attribute_map_table)
     {
         sfxhash_delete(attribute_map_table);
@@ -693,6 +806,25 @@ void SFAT_Cleanup()
         sfrt_free(attribute_lookup_table_tmp);
         attribute_lookup_table_tmp = NULL;
     }
+    FreeProtoocolReferenceTable();
+
+    if (sfat_saved_file)
+    {
+        free(sfat_saved_file);
+        sfat_saved_file = NULL;
+    }
+
+    if (updatePolicyCallbackList)
+    {
+        list_entry = updatePolicyCallbackList;
+        while (list_entry)
+        {
+            tmp_list_entry = list_entry->next;
+            free(list_entry);
+            list_entry = tmp_list_entry;
+        }
+        updatePolicyCallbackList = NULL;
+    }
 }
 
 #define set_attribute_table_flag(flag) \
@@ -718,7 +850,6 @@ void SFAT_VTAlrmHandler(int signal)
     return;
 }
 
-extern char *sfat_saved_file;
 void *SFAT_ReloadAttributeTableThread(void *arg)
 {
 #ifndef WIN32
@@ -726,12 +857,14 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
     int ret;
     int reloads = 0;
 
+#ifdef HAVE_LINUXTHREADS
     /* This seems to be necessary if Linuxthreads are being used
      * (as opposed to NPTL) since the child threads do not inherit
      * the parent thread's uid/gid if the parent thread did a
      * setuid()/setgid().  Found that threads would eventually get
      * hung up in __libc_free in the mutex locks if this wasn't done. */
     SetUidGid();
+#endif
 
     sigemptyset(&mtmask);
     pv.attribute_reload_thread_pid = getpid();
@@ -805,7 +938,11 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
                 if (!attribute_lookup_table_tmp)
                 {
                     /* Add 1 to max for table purposes */
+#ifdef SUP_IP6
+                    attribute_lookup_table_tmp = sfrt_new(DIR_16x7_4x4, IPv6, pv.max_attribute_hosts+1, sizeof(HostAttributeEntry) * 200);
+#else
                     attribute_lookup_table_tmp = sfrt_new(DIR_16_4x4, IPv4, pv.max_attribute_hosts+1, sizeof(HostAttributeEntry) * 200);
+#endif
                     if (!attribute_lookup_table_tmp)
                     {
                         SnortSnprintf(sfat_error_message, STD_BUF,
@@ -834,10 +971,10 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
                         if (list_entry->policyCallback)
                         {
                             sfrt_iterate(attribute_lookup_table_tmp,
-                                (void *)list_entry->policyCallback);
+                                (sfrt_iterator_callback)list_entry->policyCallback);
                         }
                         list_entry = list_entry->next;
-    }
+                    }
 
                     set_attribute_table_flag(ATTRIBUTE_TABLE_AVAILABLE_FLAG);
                 }
@@ -925,7 +1062,11 @@ int SFAT_ParseAttributeTable(char *args)
     if (!attribute_lookup_table_tmp)
     {
         /* Add 1 to max for table purposes */
+#ifdef SUP_IP6
+        attribute_lookup_table_tmp = sfrt_new(DIR_16x7_4x4, IPv6, pv.max_attribute_hosts+1, sizeof(HostAttributeEntry) * 200);
+#else
         attribute_lookup_table_tmp = sfrt_new(DIR_16_4x4, IPv4, pv.max_attribute_hosts+1, sizeof(HostAttributeEntry) * 200);
+#endif
         if (!attribute_lookup_table_tmp)
         {
             FatalError("Failed to initialize attribute table memory\n");
@@ -948,6 +1089,10 @@ int SFAT_ParseAttributeTable(char *args)
                 file_name, file_line);
     }
 
+    /* Reset... */
+    sfat_insufficient_space_logged = 0;
+    sfat_fatal_error = 1;
+
     ret = ParseTargetMap(toks[2]);
 
     if (ret == SFAT_OK)
@@ -956,12 +1101,15 @@ int SFAT_ParseAttributeTable(char *args)
         attribute_lookup_table_tmp = NULL;
         attribute_map_table = attribute_map_table_tmp;
         attribute_map_table_tmp = NULL;
+        if (sfat_insufficient_space_logged)
+            LogMessage("%s", sfat_error_message);
     }
     else
     {
-        LogMessage(sfat_error_message);
-        FatalError("%s(%d) ==> failed to load attribute table from %s\n",
-            file_name, file_line, toks[2]);
+        LogMessage("%s", sfat_error_message);
+        if (sfat_fatal_error)
+            FatalError("%s(%d) ==> failed to load attribute table from %s\n",
+                file_name, file_line, toks[2]);
     }
     mSplitFree(&toks, num_toks);
 
@@ -993,7 +1141,15 @@ int SFAT_ParseAttributeTable(char *args)
             pv.attribute_reload_thread_id, pv.attribute_reload_thread_pid);
     }
 #endif
+
+    adaptive_configured = 1;
+
     return SFAT_OK;
+}
+
+int IsAdaptiveConfigured(void)
+{
+    return adaptive_configured;
 }
 
 #endif /* TARGET_BASED */

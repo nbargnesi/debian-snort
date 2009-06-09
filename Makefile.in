@@ -35,8 +35,7 @@ subdir = .
 DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/configure COPYING ChangeLog config.guess \
-	config.sub depcomp install-sh ltmain.sh missing mkinstalldirs \
-	ylwrap
+	config.sub install-sh ltmain.sh missing mkinstalldirs ylwrap
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
 	$(top_srcdir)/configure.in
@@ -200,7 +199,7 @@ AUTOMAKE_OPTIONS = foreign no-dependencies
 SUBDIRS = src doc etc templates contrib schemas rpm m4 preproc_rules
 EXTRA_DIST = ChangeLog snort.8 LICENSE verstuff.pl RELEASE.NOTES
 man_MANS = snort.8
-DISTCLEANFILES = stamp-h.in
+DISTCLEANFILES = stamp-h.in cflags.out
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

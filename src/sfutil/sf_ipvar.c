@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1998-2008 Sourcefire, Inc.
+** Copyright (C) 1998-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -36,40 +36,49 @@
 #define LIST_OPEN '['
 #define LIST_CLOSE ']'
 
-static INLINE sfip_var_t *_alloc_var() {
+static INLINE sfip_var_t *_alloc_var()
+{
     return (sfip_var_t*)calloc(1, sizeof(sfip_var_t));
 }
 
-void sfvar_free(sfip_var_t *var) {
+void sfvar_free(sfip_var_t *var)
+{
     sfip_node_t *p, *next;
 
     if(!var) return;
     
     if(var->name) free(var->name);
 
-    if(var->mode == SFIP_LIST) {
-        for(p=var->head; p; p=next) {
+    if(var->mode == SFIP_LIST)
+    {
+        for(p=var->head; p; p=next)
+        {
             next = p->next;
             if(p->ip) sfip_free(p->ip);
             free(p);
         }
-    } else if(var->mode == SFIP_TABLE) {
+    }
+    else if(var->mode == SFIP_TABLE)
+    {
         // XXX
     }
 
     free(var);
 }
 
-sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
+sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status)
+{
     sfip_node_t *ret;
 
-    if(!str) {
+    if(!str)
+    {
         if(status)
             *status = SFIP_ARG_ERR;
         return NULL;
     }
 
-    if( (ret = (sfip_node_t*)calloc(1, sizeof(sfip_node_t))) == NULL ) {
+    if( (ret = (sfip_node_t*)calloc(1, sizeof(sfip_node_t))) == NULL )
+    {
         if(status)
             *status = SFIP_ALLOC_ERR;
          return NULL;
@@ -77,15 +86,18 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
     
     /* Check if this string starts with a '!', if so,
      * then the node needs to be negated */
-    if(*str == '!') {
+    if(*str == '!')
+    {
         str++;
         ret->flags |= SFIP_NEGATED;
     } 
     
     /* Check if this is an "any" */
-    if(!strncasecmp(str, "any", 3)) {
+    if(!strncasecmp(str, "any", 3))
+    {
         /* Make sure they're not doing !any, which is meaningless */
-        if(ret->flags & SFIP_NEGATED) {
+        if(ret->flags & SFIP_NEGATED)
+        {
             if(status)
                 *status = SFIP_ARG_ERR;
             free(ret);
@@ -94,7 +106,8 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
 
         ret->flags |= SFIP_ANY;
 
-        if( (ret->ip = sfip_alloc("0.0.0.0", status)) == NULL ) {
+        if( (ret->ip = sfip_alloc("0.0.0.0", status)) == NULL )
+        {
             /* Failed to parse this string, so free and return */
             if(status)
                 *status = SFIP_ALLOC_ERR; 
@@ -106,15 +119,19 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
         if(status)
             *status = SFIP_SUCCESS;
 
-        if( (ret->ip = sfip_alloc("0.0.0.0", NULL)) == NULL) {
+#if 0
+        if( (ret->ip = sfip_alloc("0.0.0.0", NULL)) == NULL)
+        {
             if(status)
                 *status = SFIP_FAILURE;
             free(ret);
             return NULL;
         }
+#endif
 
     } 
-    else if( (ret->ip = sfip_alloc(str, status)) == NULL ) {
+    else if( (ret->ip = sfip_alloc(str, status)) == NULL )
+    {
         /* Failed to parse this string, so free and return */
         if(status)
              *status = SFIP_INET_PARSE_ERR;
@@ -123,9 +140,11 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
     }
 
     /* Check if this is a negated, zero'ed IP (equivalent of a "!any") */
-    if(!sfip_is_set(ret->ip) && (ret->flags & SFIP_NEGATED)) {
+    if(!sfip_is_set(ret->ip) && (ret->flags & SFIP_NEGATED))
+    {
         if(status)
             *status = SFIP_NOT_ANY;
+        free(ret->ip);
         free(ret);
         return NULL;        
     }
@@ -135,7 +154,8 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status) {
 
 /* Deep copy of src added to dst */
 /* Ordering is not necessarily preserved */
-SFIP_RET sfvar_add(sfip_var_t *dst, sfip_var_t *src) {
+SFIP_RET sfvar_add(sfip_var_t *dst, sfip_var_t *src)
+{
     sfip_node_t *oldhead, *oldneg, *idx;
     sfip_var_t *copiedvar;
 
@@ -144,39 +164,45 @@ SFIP_RET sfvar_add(sfip_var_t *dst, sfip_var_t *src) {
     oldhead = dst->head;
     oldneg = dst->neg_head;
 
-    if((copiedvar = sfvar_deep_copy(src)) == NULL) {
+    if((copiedvar = sfvar_deep_copy(src)) == NULL)
+    {
         return SFIP_ALLOC_ERR;
     }
     
     dst->head = copiedvar->head;
     dst->neg_head = copiedvar->neg_head;
 
-    free(copiedvar); 
+    free(copiedvar);
 
-    if(dst->head) {
+    if(dst->head)
+    {
         for(idx = dst->head; idx->next; idx = idx->next) 
             ;
 
         idx->next = oldhead;
     } 
-    else {
+    else
+    {
         dst->head = oldhead;
     }
 
-    if(dst->neg_head) {
+    if(dst->neg_head)
+    {
         for(idx = dst->neg_head; idx->next; idx = idx->next) 
             ;
 
         idx->next = oldneg; 
     }
-    else {
+    else
+    {
         dst->neg_head = oldneg;
     }
 
     return SFIP_SUCCESS;
 }
 
-SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated) {
+SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated)
+{
     sfip_node_t *p;
     sfip_node_t *swp;
     sfip_node_t **head;
@@ -193,7 +219,8 @@ SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated) {
         head = &var->head;
         
 
-    if(!(*head)) {
+    if(!(*head))
+    {
         *head = node;
         return SFIP_SUCCESS;
     }
@@ -201,7 +228,8 @@ SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated) {
     /* "Anys" should always be inserted first */
     /* Otherwise, check if this IP is less than the head's IP */
     if((node->flags & SFIP_ANY) || 
-       (sfip_compare(node->ip, (*head)->ip) == SFIP_LESSER)) {
+       (sfip_compare(node->ip, (*head)->ip) == SFIP_LESSER))
+       {
         node->next = *head;
         *head = node;
         return SFIP_SUCCESS;
@@ -210,14 +238,17 @@ SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated) {
     /* If we're here, the head node was lesser than the new node */
     /* Before searching the list, verify there is atleast two nodes.
      * (This saves an extra check during the loop below) */
-    if(!(*head)->next) {
+    if(!(*head)->next)
+    {
         (*head)->next = node;
         return SFIP_SUCCESS;
     }
 
     /* Insertion sort */
-    for(p = *head; p->next; p=p->next) {
-        if(sfip_compare(node->ip, p->next->ip) == SFIP_LESSER) {
+    for(p = *head; p->next; p=p->next)
+    {
+        if(sfip_compare(node->ip, p->next->ip) == SFIP_LESSER)
+        {
             swp = p->next;
             p->next = node;
             node->next = swp;
@@ -235,7 +266,8 @@ SFIP_RET sfvar_add_node(sfip_var_t *var, sfip_node_t *node, int negated) {
 }
 
 /* Check's if two variables have the same nodes */
-SFIP_RET sfvar_compare(sfip_var_t *one, sfip_var_t *two) {
+SFIP_RET sfvar_compare(sfip_var_t *one, sfip_var_t *two)
+{
     sfip_node_t *idx1, *idx2;
     int i, match;
     int total1 = 0;
@@ -281,7 +313,8 @@ SFIP_RET sfvar_compare(sfip_var_t *one, sfip_var_t *two) {
             }
         }
 
-        if(!match) {
+        if(!match)
+        {
             free(usage);
             return SFIP_FAILURE;
         }
@@ -296,16 +329,19 @@ SFIP_RET sfvar_compare(sfip_var_t *one, sfip_var_t *two) {
  *  (Can't just do strchr(str, ']') because of the 
  *  [a, [b], c] case, and can't do strrchr because
  *  of the [a, [b], [c]] case) */
-char *_find_end_token(char *str) {
+char *_find_end_token(char *str)
+{
     int stack = 0;
 
-    for(; *str; str++) {
+    for(; *str; str++)
+    {
         if(*str == LIST_OPEN)
             stack++;
         else if(*str == LIST_CLOSE)
             stack--;
 
-        if(!stack) {
+        if(!stack)
+        {
             return str;
         }
     }
@@ -315,12 +351,15 @@ char *_find_end_token(char *str) {
 
 /* Support function for sfvar_parse_iplist.
  *  Negates a node */
-static void _negate_node(sfip_node_t *node) {
-    if(node->addr_flags & SFIP_NEGATED) {
+static void _negate_node(sfip_node_t *node)
+{
+    if(node->addr_flags & SFIP_NEGATED)
+    {
         node->addr_flags &= ~SFIP_NEGATED;
         node->flags &= ~SFIP_NEGATED;
     }
-    else {
+    else
+    {
         node->addr_flags |= SFIP_NEGATED;
         node->flags |= SFIP_NEGATED;
     }
@@ -328,7 +367,8 @@ static void _negate_node(sfip_node_t *node) {
 
 /* Support function for sfvar_parse_iplist.
  *  Negates a variable */
-static void _negate_lists(sfip_var_t *var) {
+static void _negate_lists(sfip_var_t *var)
+{
     sfip_node_t *node;
     sfip_node_t *temp;
 
@@ -345,7 +385,8 @@ static void _negate_lists(sfip_var_t *var) {
 }
 
 SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
-                           char *str, int negation) {
+                           char *str, int negation)
+{
     char *end, *tok;
     SFIP_RET ret;
     int neg_ip;
@@ -353,9 +394,11 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
     if(!var || !table || !str) 
         return SFIP_ARG_ERR;
 
-    while(*str) {
+    while(*str)
+    {
         /* Skip whitespace and leading commas */
-        if(isspace((int)*str) || *str == ',') {
+        if(isspace((int)*str) || *str == ',')
+        {
             str++;
             continue;
         }
@@ -373,11 +416,13 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
 
         tok = SnortStrndup(str, end - str);
 
-        if(*str == LIST_OPEN) {
+        if(*str == LIST_OPEN)
+        {
             char *list_tok;
 
             /* Find end of this list */
-            if((end = _find_end_token(str)) == NULL) {
+            if((end = _find_end_token(str)) == NULL)
+            {
                 /* No trailing bracket found */
                 return SFIP_UNMATCHED_BRACKET;
             }
@@ -386,7 +431,8 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
             list_tok = SnortStrndup(str, end - str);
 
             if((ret = sfvar_parse_iplist(table, var, list_tok,
-                           negation ^ neg_ip)) != SFIP_SUCCESS) {
+                           negation ^ neg_ip)) != SFIP_SUCCESS)
+            {
                 free(list_tok);
                 free(tok);
                 return ret;
@@ -394,37 +440,49 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
 
             free(list_tok);
         } 
-        else if(*str == '$') {
+        else if(*str == '$')
+        {
             sfip_var_t *tmp_var;
+            sfip_var_t *copy_var;
 
-            if((tmp_var = sfvt_lookup_var(table, tok)) == NULL) {
+            if((tmp_var = sfvt_lookup_var(table, tok)) == NULL)
+            {
                 free(tok);
                 return SFIP_LOOKUP_FAILURE;
             }
 
-            sfvar_add(var, tmp_var);
-
+            copy_var = sfvar_deep_copy(tmp_var);
             /* Apply the negation */
-            if(negation ^ neg_ip) {
+            if(negation ^ neg_ip)
+            {
                 /* Check for a negated "any" */
-                if(var->head && var->head->flags & SFIP_ANY) {
+                if(copy_var->head && copy_var->head->flags & SFIP_ANY)
+                {
                     free(tok);
+                    sfvar_free(copy_var);
                     return SFIP_NOT_ANY;
                 }
 
                 /* Check if this is a negated, zero'ed IP (equivalent of a "!any") */
-                if(!sfip_is_set(var->head->ip)) {
+                if(copy_var->head && !sfip_is_set(copy_var->head->ip))
+                {
                     free(tok);
+                    sfvar_free(copy_var);
                     return SFIP_NOT_ANY;
                 }
 
-                _negate_lists(var);
+                _negate_lists(copy_var);
             }
+
+            sfvar_add(var, copy_var);
+            sfvar_free(copy_var);
         } 
-        else if(*str == LIST_CLOSE) {
+        else if(*str == LIST_CLOSE)
+        {
             /* This should be the last character, if not, then this is an
              * invalid extra closing bracket */
-            if(!(*(str+1))) {
+            if(!(*(str+1)))
+            {
                 free(tok);
                 return SFIP_SUCCESS; 
             }
@@ -432,38 +490,44 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
             free(tok);
             return SFIP_UNMATCHED_BRACKET;
         }
-        else {
+        else
+        {
             sfip_node_t *node;
 
             /* Skip leading commas */
             for(; *str == ','; str++) ;
 
             /* Check for a negated "any" */
-            if(negation ^ neg_ip && !strcasecmp(tok, "any")) {
+            if(negation ^ neg_ip && !strcasecmp(tok, "any"))
+            {
                 free(tok);
                 return SFIP_NOT_ANY;
             }
     
             /* This should be an IP address! */
             /* Allocate new node for this string and add it to "ret" */
-            if((node = sfipnode_alloc(tok, &ret)) == NULL) {     
+            if((node = sfipnode_alloc(tok, &ret)) == NULL)
+            {     
                 free(tok);
                 return ret;
             }
 
-            if(negation ^ neg_ip) {
+            if(negation ^ neg_ip)
+            {
                 _negate_node(node);
             }
 
             /* Check if this is a negated, zero'ed IP (equivalent of a "!any") */
-            if(!sfip_is_set(node->ip) && (node->flags & SFIP_NEGATED)) {
+            if(!sfip_is_set(node->ip) && (node->flags & SFIP_NEGATED))
+            {
                 free(tok);
                 return SFIP_NOT_ANY;
             }
 
             ret = sfvar_add_node(var, node, negation ^ neg_ip);
 
-            if(ret != SFIP_SUCCESS ) {
+            if(ret != SFIP_SUCCESS )
+            {
                 free(tok);
                 return ret;
             }
@@ -478,7 +542,8 @@ SFIP_RET sfvar_parse_iplist(vartable_t *table, sfip_var_t *var,
     return SFIP_SUCCESS;
 }
 
-SFIP_RET sfvar_validate(sfip_var_t *var) {
+SFIP_RET sfvar_validate(sfip_var_t *var)
+{
     sfip_node_t *idx, *neg_idx;
     
     if(!var->head || !var->neg_head)
@@ -502,17 +567,20 @@ SFIP_RET sfvar_validate(sfip_var_t *var) {
 }
 
 /* Allocates and returns a new variable, described by "variable". */
-sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
+sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status)
+{
     sfip_var_t *ret;
     char *str, *end;
     
-    if(!variable || !(*variable)) {
+    if(!variable || !(*variable))
+    {
         if(status)
             *status = SFIP_ARG_ERR;
         return NULL;
     }
     
-    if( (ret = _alloc_var()) == NULL ) {
+    if( (ret = _alloc_var()) == NULL )
+    {
         if(status)
             *status = SFIP_ALLOC_ERR;
         return NULL;
@@ -525,7 +593,8 @@ sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
     /* Find the end of the name */
     for(end = str; *end && !isspace((int)*end) && *end != '\\'; end++) ;
 
-    if(!isalpha((int)*str) && *str != '$' && *str != '!') {
+    if(!isalnum((int)*str) && *str != '$' && *str != '!')
+    {
         if(status)
             *status = SFIP_ARG_ERR;
 
@@ -533,7 +602,8 @@ sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
     }
 
     /* Set the new variable's name/key */
-    if((ret->name = strndup(str, end - str)) == NULL) {
+    if((ret->name = strndup(str, end - str)) == NULL)
+    {
         if(status)
             *status = SFIP_ALLOC_ERR;
 
@@ -545,12 +615,14 @@ sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
 
     /* Everything is treated as a list, even if it's one element that's not
      * surrounded by brackets */
-    if((*status = sfvar_parse_iplist(table, ret, str, 0)) != SFIP_SUCCESS) {
+    if((*status = sfvar_parse_iplist(table, ret, str, 0)) != SFIP_SUCCESS)
+    {
         return NULL;
     }
 
     if(ret->head && 
-       (ret->head->flags & SFIP_ANY && ret->head->flags & SFIP_NEGATED)) {
+       (ret->head->flags & SFIP_ANY && ret->head->flags & SFIP_NEGATED))
+       {
         if(status)
             *status = SFIP_NOT_ANY;
 
@@ -558,7 +630,8 @@ sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
         return NULL;
     }
 
-    if(sfvar_validate(ret) == SFIP_CONFLICT) {
+    if(sfvar_validate(ret) == SFIP_CONFLICT)
+    {
         if(status)
             *status = SFIP_CONFLICT;
 
@@ -569,20 +642,24 @@ sfip_var_t *sfvar_alloc(vartable_t *table, char *variable, SFIP_RET *status) {
     return ret;
 }
 
-static INLINE sfip_node_t *_sfvar_deep_copy_list(sfip_node_t *idx) {
+static INLINE sfip_node_t *_sfvar_deep_copy_list(sfip_node_t *idx)
+{
     sfip_node_t *ret, *temp, *prev;
 
     ret = temp = NULL;
     
-    for( ; idx; idx = idx->next) {
+    for( ; idx; idx = idx->next)
+    {
 
         prev = temp;
 
-        if( (temp = (sfip_node_t*)calloc(1, sizeof(sfip_node_t))) == NULL ) {
+        if( (temp = (sfip_node_t*)calloc(1, sizeof(sfip_node_t))) == NULL )
+        {
  // XXX WALK LIST AND DELETE NODES FIRST
             return NULL;
         }
-        if( (temp->ip = (sfip_t*)calloc(1, sizeof(sfip_t))) == NULL ) {
+        if( (temp->ip = (sfip_t*)calloc(1, sizeof(sfip_t))) == NULL )
+        {
  // XXX WALK LIST AND DELETE NODES FIRST
             return NULL;
         }
@@ -596,14 +673,16 @@ static INLINE sfip_node_t *_sfvar_deep_copy_list(sfip_node_t *idx) {
 
         if(prev)
             prev->next = temp;
-        else {
+        else
+        {
             ret = temp;
         }
     } 
     return ret;
 }
 
-sfip_var_t *sfvar_deep_copy(sfip_var_t *var) {
+sfip_var_t *sfvar_deep_copy(sfip_var_t *var)
+{
     sfip_var_t *ret;
 
     if(!var)
@@ -620,7 +699,8 @@ sfip_var_t *sfvar_deep_copy(sfip_var_t *var) {
 
 
 /* Support function for sfvar_ip_in  */
-static INLINE int _sfvar_ip_in4(sfip_var_t *var, sfip_t *ip) {
+static INLINE int _sfvar_ip_in4(sfip_var_t *var, sfip_t *ip)
+{
     int match;
     sfip_node_t *pos_idx, *neg_idx;
 
@@ -688,7 +768,8 @@ static INLINE int _sfvar_ip_in4(sfip_var_t *var, sfip_t *ip) {
 }
 
 /* Support function for sfvar_ip_in  */
-static INLINE int _sfvar_ip_in6(sfip_var_t *var, sfip_t *ip) {
+static INLINE int _sfvar_ip_in6(sfip_var_t *var, sfip_t *ip)
+{
     int match;
     sfip_node_t *pos_idx, *neg_idx;
 
@@ -757,15 +838,18 @@ static INLINE int _sfvar_ip_in6(sfip_var_t *var, sfip_t *ip) {
 }
 /* Returns SFIP_SUCCESS if ip is contained in 'var', SFIP_FAILURE otherwise */
 /* If either argument is NULL, SFIP_ARG_ERR is returned. */
-int sfvar_ip_in(sfip_var_t *var, sfip_t *ip) {
+int sfvar_ip_in(sfip_var_t *var, sfip_t *ip)
+{
     if(!var || !ip)
         return 0;
 
 #if 0
-    if(var->mode == SFIP_TABLE) {
+    if(var->mode == SFIP_TABLE)
+    {
         // XXX
     }
-    else {
+    else
+    {
 #endif
         /* Since this is a performance-critical function it uses different
          * codepaths for IPv6 and IPv4 traffic, rather than the dual-stack 
@@ -786,29 +870,37 @@ int sfvar_ip_in(sfip_var_t *var, sfip_t *ip) {
 
 
 /* Prints the variable "var" to the file descriptor 'f' */
-void sfvar_print(FILE *f, sfip_var_t *var) {
+void sfvar_print(FILE *f, sfip_var_t *var)
+{
     if(!f) return;
 
-    if(!var || !var->head) {
+    if(!var || !var->head)
+    {
         fprintf(f, "[no variable]\n");
         return;
     }
 
     fprintf(f, "Name: %s\n", var->name);
 
-    if(var->mode == SFIP_LIST) {
+    if(var->mode == SFIP_LIST)
+    {
         if(var->head->flags & SFIP_ANY) 
             fprintf(f, "\t%p: <any>\n", (void*)var->head);
-        else { 
+        else
+        { 
             sfip_set_print(f, var->head);
         }
-    } else if(var->mode == SFIP_TABLE) {
+    }
+    else if(var->mode == SFIP_TABLE)
+    {
         // XXX
     }
 }
 
-void sfip_set_print(FILE *f, sfip_node_t *p) {
-     for(; p; p = p->next)  {
+void sfip_set_print(FILE *f, sfip_node_t *p)
+{
+     for(; p; p = p->next)
+     {
          if(!p->ip) continue;
          if(p->flags & SFIP_NEGATED)
              fprintf(f, "\t!%s\n", sfip_to_str(p->ip));
@@ -817,7 +909,8 @@ void sfip_set_print(FILE *f, sfip_node_t *p) {
      }
 }
 
-int sfvar_flags(sfip_node_t *node) {
+int sfvar_flags(sfip_node_t *node)
+{
     if(node) return node->flags;
     return -1;
 }
@@ -825,7 +918,8 @@ int sfvar_flags(sfip_node_t *node) {
 /* XXX The unit tests for this code are performed within sf_vartable.c */
 #if 0
 
-int main() {
+int main()
+{
     sfip_vtable *table;
     sfip_var_t *var;
     sfip_t *ip;

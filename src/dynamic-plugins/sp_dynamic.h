@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -52,6 +52,9 @@ int DynamicHasFlowbit(OptTreeNode *otn);
 int DynamicHasContent(OptTreeNode *otn);
 int DynamicHasByteTest(OptTreeNode *otn);
 int DynamicHasPCRE(OptTreeNode *otn);
+
+u_int32_t DynamicRuleHash(void *d);
+int DynamicRuleCompare(void *l, void *r);
 
 #endif  /* __SP_DYNAMIC_H_ */
 

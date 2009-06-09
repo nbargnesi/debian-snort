@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -55,6 +55,9 @@ void Print2ndHeader(FILE *, Packet *);
 void PrintWifiPkt(FILE *, Packet *);
 void PrintTrHeader(FILE *, Packet *);
 void PrintEthHeader(FILE *, Packet *);
+#ifdef MPLS
+void PrintMPLSHeader(FILE *, Packet *);
+#endif
 void PrintWifiHeader(FILE *, Packet *);
 void PrintSLLHeader(FILE *, Packet *);
 void PrintArpHeader(FILE *, Packet *);

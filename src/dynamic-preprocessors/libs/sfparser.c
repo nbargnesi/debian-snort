@@ -1,3 +1,23 @@
+/****************************************************************************
+ * Copyright (C) 2007-2009 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -6,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 #include "sfcommon.h"
 #include "ctype.h"
 
@@ -49,7 +70,7 @@ SFP_ret_t SFP_ports(ports_tbl_t port_tbl, char *str, SFP_errstr_t errstr) {
     while((tok = strtok_r(NULL, " ", &saveptr)) != NULL)
     {
         char *port_end;
-        u_int32_t port;
+        long int port;
 
         str = NULL;
 
@@ -67,7 +88,9 @@ SFP_ret_t SFP_ports(ports_tbl_t port_tbl, char *str, SFP_errstr_t errstr) {
 
         port = strtol(tok, &port_end, 10);
 
-        if(port_end == tok || (*port_end && *port_end != '}'))
+        if((port_end == tok) ||
+           (*port_end && *port_end != '}') ||
+           (errno == ERANGE))
         {
             SET_ERR("Unable to parse: %s", tok);
             return SFP_ERROR;

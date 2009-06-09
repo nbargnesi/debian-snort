@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
 **
@@ -55,6 +55,9 @@ PreprocStats respondPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
+
 typedef struct _RespondData
 {
     u_int response_flag;
@@ -67,8 +70,35 @@ int SendICMP_UNREACH(int, snort_ip_p, snort_ip_p, Packet *);
 int SendTCPRST(snort_ip_p, snort_ip_p, u_short, u_short, u_long, u_long, u_short);
 int Respond(Packet *, RspFpList *);
 
+u_int32_t RespondHash(void *d)
+{
+    u_int32_t a,b,c;
+    RespondData *data = (RespondData *)d;
 
+    a = data->response_flag;
+    b = RULE_OPTION_TYPE_RESPOND;
+    c = 0;
 
+    final(a,b,c);
+
+    return c;
+}
+
+int RespondCompare(void *l, void *r)
+{
+    RespondData *left = (RespondData *)l;
+    RespondData *right = (RespondData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if (left->response_flag == right->response_flag)
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 int nd; /* raw socket descriptor */
 u_int8_t ttl;   /* placeholder for randomly generated TTL */
@@ -92,7 +122,7 @@ void PrecacheIcmp(void);
 
 void SetupRespond(void)
 {
-    RegisterPlugin("resp", RespondInit, OPT_TYPE_ACTION);
+    RegisterPlugin("resp", RespondInit, NULL, OPT_TYPE_ACTION);
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("resp", &respondPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
@@ -118,6 +148,7 @@ void RespondRestartFunction(int signal, void *foo)
 void RespondInit(char *data, OptTreeNode *otn, int protocol) 
 {
     RespondData *rd;
+    void *idx_dup;
 
     if(protocol != IPPROTO_TCP && protocol != IPPROTO_UDP &&
        protocol != IPPROTO_ICMP)
@@ -144,6 +175,12 @@ void RespondInit(char *data, OptTreeNode *otn, int protocol)
     
     rd->response_flag = ParseResponse(data);
     
+    if (add_detection_option(RULE_OPTION_TYPE_RESPOND, (void *)rd, &idx_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(rd);
+        rd = idx_dup;
+     }
+
     AddRspFuncToList(Respond, otn, (void *)rd );
     AddFuncToRestartList(RespondRestartFunction, NULL);
 

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,9 +19,7 @@
  *
  ****************************************************************************/
 
-/*!
- *
- *  \f sfxhash.c
+/*!@file sfxhash.c
  *
  *  A Customized hash table library for storing and accessing key + data pairs.
  *
@@ -99,7 +97,12 @@
 #include "util.h"
 #include "debug.h"
 
-/*
+/**@defgroup sfxhash sourcefire.container.sfxhash 
+ * Implements SFXHASH as specialized hash container
+ * @{
+ */
+
+ /*
  * Private Malloc - abstract the memory system
  */
 static INLINE
@@ -476,7 +479,7 @@ unsigned sfxhash_overhead_blocks( SFXHASH * t )
     return t->overhead_blocks;
 }
 
-/*
+/** Save the freed node for later use (recylcing).
  *  Free List - uses the NODE gnext/gprev fields
  */
 static
@@ -499,6 +502,9 @@ void sfxhash_save_free_node( SFXHASH *t, SFXHASH_NODE * hnode )
         t->ftail    = hnode;
     }
 }
+
+/**Get a previously freed node for reuse.
+ */
 static
 SFXHASH_NODE * sfxhash_get_free_node( SFXHASH *t )
 {
@@ -557,6 +563,8 @@ void sfxhash_gunlink_node( SFXHASH *t, SFXHASH_NODE * hnode )
         t->gtail  =  hnode->gprev;             
 }
 
+/**Move node to the front of global list. Node movement is application specific.
+ */
 void sfxhash_gmovetofront( SFXHASH *t, SFXHASH_NODE * hnode )
 {
     if( hnode != t->ghead )
@@ -1400,5 +1408,5 @@ int main ( int argc, char ** argv )
     return 0;
 }
 #endif
-
+/**@}*/
 

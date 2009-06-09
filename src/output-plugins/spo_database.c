@@ -68,35 +68,40 @@
 #include "inline.h"
 
 #ifdef ENABLE_POSTGRESQL
-    #include <libpq-fe.h>
+# include <libpq-fe.h>
 #endif
+
 #ifdef ENABLE_MYSQL
-    #if defined(_WIN32) || defined(_WIN64)
-        #include <windows.h>
-    #endif
-    #include <mysql.h>
+# if defined(_WIN32) || defined(_WIN64)
+#  include <windows.h>
+# endif
+# include <mysql.h>
+# include <errmsg.h>
 #endif
+
 #ifdef ENABLE_ODBC
-    #include <sql.h>
-    #include <sqlext.h>
-    #include <sqltypes.h>
-    /* The SQL Server libraries, for some reason I can't
-     * understand, define their own constants for SQLRETURN
-     * and SQLCHAR.  But, in SQL Server, these are numeric
-     * values, not datatypes.  So we define datatypes here
-     * with a non-conflicting name.
-     */
-    typedef SQLRETURN ODBC_SQLRETURN;
-    typedef SQLCHAR   ODBC_SQLCHAR;
+# include <sql.h>
+# include <sqlext.h>
+# include <sqltypes.h>
+  /* The SQL Server libraries, for some reason I can't
+   * understand, define their own constants for SQLRETURN
+   * and SQLCHAR.  But, in SQL Server, these are numeric
+   * values, not datatypes.  So we define datatypes here
+   * with a non-conflicting name.
+   */
+typedef SQLRETURN ODBC_SQLRETURN;
+typedef SQLCHAR   ODBC_SQLCHAR;
 #endif
+
 #ifdef ENABLE_ORACLE
-    #include <oci.h>
+# include <oci.h>
 #endif
+
 #ifdef ENABLE_MSSQL
-    #define DBNTWIN32
-    #include <windows.h>
-    #include <sqlfront.h>
-    #include <sqldb.h>
+# define DBNTWIN32
+# include <windows.h>
+# include <sqlfront.h>
+# include <sqldb.h>
 #endif
 
 /******** Data Types  **************************************************/
@@ -179,6 +184,7 @@ typedef struct _DatabaseData
     DBINT       ms_col;
 #endif
     char *args;
+    ListHead *head_tmp;
 } DatabaseData;
 
 /* list for lookup of shared data information */
@@ -249,11 +255,8 @@ static const char* FATAL_BAD_SCHEMA_1 =
 static const char* FATAL_BAD_SCHEMA_2 =
     "          Please re-run the appropriate DB creation script (e.g. create_mysql,\n"
     "          create_postgresql, create_oracle, create_mssql) located in the\n"
-    "          /usr/share/doc/snort-mysql/ or  /usr/share/doc/snort-pgsql/ directory.\n\n"
-    "          See the database documentation for cursory details (README.database),\n"
-    "          the README-database.Debian for details on how to create the database\n"
-    "          (both available in the Snort documentation directory /usr/share/doc/snort-mysql/\n"
-    "          or /usr/share/doc/snort-pgsql/ depending on your Database)\n"
+    "          contrib\\ directory.\n\n"
+    "          See the database documentation for cursory details (doc/README.database).\n"
     "          and the URL to the most recent database plugin documentation.\n";
 
 static const char* FATAL_OLD_SCHEMA_1 =
@@ -268,11 +271,8 @@ static const char* FATAL_OLD_SCHEMA_2 =
     "          If migrating old data is not desired, merely create a new instance\n"
     "          of the snort database using the appropriate DB creation script\n"
     "          (e.g. create_mysql, create_postgresql, create_oracle, create_mssql)\n"
-    "          located in the /usr/share/doc/snort-mysql/ or  /usr/share/doc/snort-pgsql/ directory.\n\n"
-    "          See the database documentation for cursory details (README.database),\n"
-    "          the README-database-upgrade.Debian for details on how to upgrade\n"
-    "          (both available in the Snort documentation directory /usr/share/doc/snort-mysql/\n"
-    "          or /usr/share/doc/snort-pgsql/ depending on your Database)\n"
+    "          located in the contrib\\ directory.\n\n"
+    "          See the database documentation for cursory details (doc/README.database).\n"
     "          and the URL to the most recent database plugin documentation.\n";
 
 static const char* FATAL_NO_SUPPORT_1 =
@@ -315,6 +315,7 @@ void          FreeSharedDataList();
 
 extern PV pv;
 extern OptTreeNode *otn_tmp;  /* rule node */
+extern ListHead *head_tmp;
 
 static SharedDatabaseDataNode *sharedDataList = NULL;
 static int instances = 0;
@@ -388,7 +389,8 @@ void DatabaseInit(char *args)
     data = InitDatabaseData(args);
     
     data->tz = GetLocalTimezone();
-
+    data->head_tmp = head_tmp;
+    
     AddFuncToPostConfigList(DatabaseInitFinalize, data);
 
 }
@@ -405,7 +407,9 @@ void DatabaseInitFinalize(int unused, void *arg)
     char * escapedInterfaceName = NULL;
     char * escapedBPFFilter = NULL;
     int ret, bad_query = 0;
-
+    ListHead *head_tmp_dup = NULL;
+    
+    
     if (!data)
     {
         FatalError("database:  data uninitialized\n");
@@ -719,7 +723,10 @@ void DatabaseInitFinalize(int unused, void *arg)
        ErrorMessage("database: The database is using an older version of the DB schema\n");
     }
     */
-
+    
+    head_tmp_dup = head_tmp;
+    head_tmp = data->head_tmp;
+    
     /* Add the processor function into the function list */
     if(!strncasecmp(data->facility,"log",3))
     {
@@ -733,7 +740,9 @@ void DatabaseInitFinalize(int unused, void *arg)
         if( !pv.quiet_flag ) printf("database: using the \"alert\" facility\n");
         AddFuncToOutputList(Database, NT_OUTPUT_ALERT, data);
     }
-
+    
+    head_tmp = head_tmp_dup;
+    
     AddFuncToCleanExitList(SpoDatabaseCleanExitFunction, data);
     AddFuncToRestartList(SpoDatabaseRestartFunction, data); 
     ++instances;
@@ -981,6 +990,12 @@ void ParseDatabaseArgs(DatabaseData *data)
     if(data->shared->dbname == NULL)
     {
         ErrorMessage("database: must enter database name in configuration file\n\n");
+        DatabasePrintUsage();
+        FatalError("");
+    }
+    else if(data->shared->host == NULL)
+    {
+        ErrorMessage("database: must enter host in configuration file\n\n");
         DatabasePrintUsage();
         FatalError("");
     }
@@ -2550,16 +2565,20 @@ int Insert(char * query, DatabaseData * data)
 #ifdef ENABLE_MYSQL
     if(data->shared->dbtype_id == DB_MYSQL)
     {
-        if(!(mysql_query(data->m_sock,query)))
+        result = 1;
+
+        if(mysql_query(data->m_sock,query) != 0)
         {
-            result = 1;
-        }
-        else
-        {
-            if(mysql_errno(data->m_sock))
+            /* Try again is case of reconnect */
+            if(mysql_query(data->m_sock,query) != 0)
             {
-              ErrorMessage("database: mysql_error: %s\nSQL=%s\n", 
-                           mysql_error(data->m_sock), query);
+                if(mysql_errno(data->m_sock))
+                {
+                    ErrorMessage("database: mysql_error: %s\nSQL=%s\n", 
+                                 mysql_error(data->m_sock), query);
+                }
+
+                result = 0;
             }
         }
     }
@@ -2569,6 +2588,7 @@ int Insert(char * query, DatabaseData * data)
     if(data->shared->dbtype_id == DB_ODBC)
     {
         if(SQLAllocStmt(data->u_connection, &data->u_statement) == SQL_SUCCESS)
+        {
             if(SQLPrepare(data->u_statement, (ODBC_SQLCHAR *)query, SQL_NTS) == SQL_SUCCESS)
             {
                 if(SQLExecute(data->u_statement) == SQL_SUCCESS)
@@ -2599,6 +2619,8 @@ int Insert(char * query, DatabaseData * data)
                     }
                 }
             }
+            SQLFreeStmt(data->u_statement, SQL_DROP);
+        }
     }
 #endif
 
@@ -2751,11 +2773,16 @@ int Select(char * query, DatabaseData * data)
 #ifdef ENABLE_MYSQL
     if(data->shared->dbtype_id == DB_MYSQL)
     {
-        if(mysql_query(data->m_sock,query))
+        result = 1;
+
+        if(mysql_query(data->m_sock,query) != 0)
         {
-            result = 0;
+            /* Try again in case of reconnect */
+            if(mysql_query(data->m_sock,query) != 0)
+                result = 0;
         }
-        else
+
+        if (result)
         {
             data->m_result = mysql_use_result(data->m_sock);
             if (!data->m_result)
@@ -2771,10 +2798,20 @@ int Select(char * query, DatabaseData * data)
                     {
                         result = atoi(data->m_row[0]);
                     }
+                    else
+                    {
+                        result = 0;
+                    }
+                }
+                else
+                {
+                    result = 0;
                 }
             }
+
             mysql_free_result(data->m_result);
         }
+
         if(!result)
         {
             if(mysql_errno(data->m_sock))
@@ -2904,14 +2941,13 @@ int Select(char * query, DatabaseData * data)
  ******************************************************************************/
 void Connect(DatabaseData * data)
 {
-#ifdef ENABLE_MYSQL
-    int x; 
-#endif
-
 #ifdef ENABLE_POSTGRESQL
     if( data->shared->dbtype_id == DB_POSTGRESQL )
     {
-        data->p_connection = PQsetdbLogin(data->shared->host,data->port,NULL,NULL,data->shared->dbname,data->user,data->password);
+        data->p_connection =
+            PQsetdbLogin(data->shared->host,data->port, NULL, NULL,
+                         data->shared->dbname, data->user, data->password);
+
         if(PQstatus(data->p_connection) == CONNECTION_BAD)
         {
             PQfinish(data->p_connection);
@@ -2923,29 +2959,42 @@ void Connect(DatabaseData * data)
 #ifdef ENABLE_MYSQL
     if(data->shared->dbtype_id == DB_MYSQL)
     {
+#ifdef MYSQL_HAS_OPT_RECONNECT
+        my_bool reconnect = 1;
+#endif  /* MYSQL_HAS_OPT_RECONNECT */
+
         data->m_sock = mysql_init(NULL);
         if(data->m_sock == NULL)
         {
             FatalError("database: Connection to database '%s' failed\n", data->shared->dbname);
         }
-        if(data->port != NULL)
-        {
-            x = atoi(data->port);
-        }
-        else
-        {
-            x = 0;
-        }
-        if(mysql_real_connect(data->m_sock, data->shared->host, data->user, data->password, data->shared->dbname, x, NULL, 0) == 0)
+
+#if defined(MYSQL_HAS_OPT_RECONNECT) && !defined(MYSQL_HAS_OPT_RECONNECT_BUG)
+        /* This is necessary for MySQL versions 5.0.3 and greater where the default
+         * behavior now is not to reconnect to the server.  Try to set the reconnect
+         * option which is only available as of MySQL 5.0.13. */
+        if (mysql_options(data->m_sock, MYSQL_OPT_RECONNECT, &reconnect) != 0)
+            FatalError("database: Failed to set reconnect option: %s\n", mysql_error(data->m_sock));
+#endif  /* !MYSQL_HAS_OPT_RECONNECT_BUG */
+
+        if(mysql_real_connect(data->m_sock, data->shared->host, data->user,
+                              data->password, data->shared->dbname,
+                              data->port == NULL ? 0 : atoi(data->port), NULL, 0) == NULL)
         {
             if(mysql_errno(data->m_sock))
-            {
                 FatalError("database: mysql_error: %s\n", mysql_error(data->m_sock));
-            }
+
             FatalError("database: Failed to logon to database '%s'\n", data->shared->dbname);
         }
+
+#if defined(MYSQL_HAS_OPT_RECONNECT) && defined(MYSQL_HAS_OPT_RECONNECT_BUG)
+        /* Versions 5.0.13 to 5.0.18 have a bug in that this needs to be set
+         * after the call to mysql_real_connect() */
+        if (mysql_options(data->m_sock, MYSQL_OPT_RECONNECT, &reconnect) != 0)
+            FatalError("database: Failed to set reconnect option: %s\n", mysql_error(data->m_sock));
+#endif  /* MYSQL_HAS_OPT_RECONNECT_BUG */
     }
-#endif
+#endif  /* ENABLE_MYSQL */
 
 #ifdef ENABLE_ODBC
     if(data->shared->dbtype_id == DB_ODBC)

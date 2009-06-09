@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include "decode.h"
@@ -85,7 +86,6 @@
 #include "fpdetect.h"
 #include "sfthreshold.h"
 #include "packet_time.h"
-#include "src/preprocessors/flow/flow_print.h"
 #include "src/detection-plugins/sp_flowbits.h"
 #include "src/preprocessors/spp_perfmonitor.h"
 #include "src/preprocessors/perf-base.h"
@@ -238,6 +238,7 @@ static void PrintVersion(void);
 void *InlinePatternMatcherInitThread(void *arg);
 void PcapIgnorePacket(char *user, struct pcap_pkthdr * pkthdr, u_char * pkt);
 #endif
+static INLINE void InitPreprocBitops(void);
 
 /* Signal handler declarations ************************************************/
 static void SigTermHandler(int signal);
@@ -273,6 +274,14 @@ int hup_check()
         pv.usr_signal = 0;
         pv.restart_flag = 1;
         return 1;
+    }
+
+    if (pv.cant_hup_signal == SIGHUP)
+    {
+        pv.quiet_flag = 0;
+        LogMessage("Reload via Signal HUP does not work if you aren't root or are chroot'ed\n");
+        pv.quiet_flag = quiet_flag;
+        pv.cant_hup_signal = 0;
     }
 
     return 0;
@@ -494,7 +503,9 @@ int SnortMain(int argc, char *argv[])
 
     /* initialize the packet counter to loop forever */
     pv.pkt_cnt = -1;
-
+    
+    pv.conf_error_out = 0;
+    
 #ifdef TIMESTATS
     /* Default to 1 hour */
     pv.timestats_interval = 3600;
@@ -547,7 +558,10 @@ int SnortMain(int argc, char *argv[])
 #ifdef PPM_MGR
     PPM_INIT();
 #endif
-    
+
+    /* Initialize ip protocol storage */
+    fpInitIpProtoGlobals();
+
 #if defined(WIN32) && defined(ENABLE_WIN32_SERVICE)
     /* initialize flags which control the Win32 service */
     pv.terminate_service_flag = 0;
@@ -569,6 +583,13 @@ int SnortMain(int argc, char *argv[])
     pv.max_attribute_hosts = DEFAULT_MAX_ATTRIBUTE_HOSTS;
 #endif
 
+#ifdef MPLS
+    pv.mpls_payload_type = DEFAULT_MPLS_PAYLOADTYPE;
+    pv.overlapping_IP = DEFAULT_MPLS_OVERLAPPING_IP;
+    pv.mpls_multicast = DEFAULT_MPLS_MULTICAST;
+    pv.mpls_stack_depth = DEFAULT_LABELCHAIN_LENGTH;
+#endif
+    
     /* chew up the command line */
     ParseCmdLine(argc, argv);
 
@@ -804,14 +825,8 @@ int SnortMain(int argc, char *argv[])
         RegisterPreprocessorProfile("detect", &detectPerfStats, 0, &totalPerfStats);
         RegisterPreprocessorProfile("mpse", &mpsePerfStats, 1, &detectPerfStats);
         RegisterPreprocessorProfile("rule eval", &rulePerfStats, 1, &detectPerfStats);
-        RegisterPreprocessorProfile("check already bit", &ruleCheckBitPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("set already bit", &ruleSetBitPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("failed flowbit", &ruleFailedFlowbitsPerfStats, 2, &rulePerfStats);
         RegisterPreprocessorProfile("rtn eval", &ruleRTNEvalPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("otn eval", &ruleOTNEvalPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("add event q", &ruleAddEventQPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("no event q", &ruleNQEventQPerfStats, 2, &rulePerfStats);
-        RegisterPreprocessorProfile("header no match", &ruleHeaderNoMatchPerfStats, 2, &rulePerfStats);
+        RegisterPreprocessorProfile("rule tree eval", &ruleOTNEvalPerfStats, 2, &rulePerfStats);
         RegisterPreprocessorProfile("decode", &decodePerfStats, 0, &totalPerfStats);
         RegisterPreprocessorProfile("eventq", &eventqPerfStats, 0, &totalPerfStats);
         RegisterPreprocessorProfile("total", &totalPerfStats, 0, NULL);
@@ -870,7 +885,9 @@ int SnortMain(int argc, char *argv[])
 
         asn1_init_mem(512);
 
+#ifndef SUP_IP6
         BsdFragHashInit(pv.ipv6_max_frag_sessions);
+#endif
 
         /*
         **  Handles Fatal Errors itself.
@@ -940,6 +957,7 @@ int SnortMain(int argc, char *argv[])
 #endif
 
     MapPreprocessorIds();
+    InitPreprocBitops();
 
     if(runMode == MODE_IDS || runMode == MODE_RULE_DUMP)
     {
@@ -1201,18 +1219,19 @@ int SnortMain(int argc, char *argv[])
         if (pv.daemon_flag)
         {
             char *arg;
-            int argIndex = 0;
-            for  (arg = progargs[argIndex]; arg; argIndex++)
+            int argIndex;
+            for  (argIndex = 0; argIndex < argc; argIndex++)
             {
-                if (!strcmp(progargs[argIndex], "--restart"))
+                arg = progargs[argIndex];
+                if (!strcmp(arg, "--restart"))
                 {
                     break;
                 }
-                if (!strcmp(progargs[argIndex], "-D"))
+                if (!strncmp(arg, "-D", 2))
                 {
                     /* Replace -D with --restart */
                     /* a probable memory leak - but we're exec()ing anyway */
-                    progargs[argIndex++] = SnortStrdup("--restart");
+                    progargs[argIndex] = SnortStrdup("--restart");
                     break;
                 }
             }
@@ -1370,8 +1389,8 @@ static void ExitCheckStart ()
 
 static void ExitCheckEnd ()
 {
-    UINT64 now;
-    double usecs;
+    UINT64 now = 0;
+    double usecs = 0.0;
 
     if ( !exitTime )
     {
@@ -1436,7 +1455,9 @@ void PcapProcessPacket(char *user, struct pcap_pkthdr * pkthdr, u_char * pkt)
     }
 #endif  /* WIN32 && ENABLE_WIN32_SERVICE */
 
+#ifndef SUP_IP6
     BsdPseudoPacket = NULL;
+#endif
 
     ProcessPacket(user, pkthdr, pkt, NULL);
     
@@ -1469,10 +1490,22 @@ static INLINE void free_packetBitOp(BITOP *BitOp, MemPool *BitOpPool, MemBucket 
 
 static MemPool bitop_pool;
 static PoolCount num_bitops = 8;
-static int s_bitOpInit = 0;
 static unsigned int bitop_numbits;
-
 extern unsigned int num_preprocs; /* from plugbase.c */
+
+static INLINE void InitPreprocBitops(void)
+{
+    unsigned int bitop_numbytes;
+
+    bitop_numbits = num_preprocs + 1;
+    bitop_numbytes = bitop_numbits >> 3;
+
+    if(bitop_numbits & 7) 
+        bitop_numbytes++;
+
+    if (mempool_init(&bitop_pool, num_bitops, bitop_numbytes) == 1)
+        FatalError("Out of memory initializing BitOp memory pool\n");
+}
 
 #ifdef MIMICK_IPV6
 static int mimick_ip6=0;
@@ -1494,40 +1527,6 @@ typedef struct iphdr    IPHDR;
 typedef struct ip6_hdr  IPV6;
 typedef struct ip6_frag IP6_FRAG;
 
-
-static 
-unsigned short in_chksum_ip(  unsigned short * w, int blen )
-{
-     unsigned int cksum;
-
-     /* IP must be >= 20 bytes */
-     cksum  = w[0];
-     cksum += w[1];
-     cksum += w[2];
-     cksum += w[3];
-     cksum += w[4];
-     cksum += w[5];
-     cksum += w[6];
-     cksum += w[7];
-     cksum += w[8];
-     cksum += w[9];
-
-     blen  -= 20;
-     w     += 10;
-
-     while( blen ) /* IP-hdr must be an integral number of 4 byte words */
-     {
-       cksum += w[0];
-       cksum += w[1];
-       w     += 2;
-       blen  -= 4;
-     }
-
-     cksum  = (cksum >> 16) + (cksum & 0x0000ffff);
-     cksum += (cksum >> 16);
-
-     return (unsigned short) (~cksum);
-}
 /*
  * convert an ip4 packet to an ip6 packet
  * 
@@ -1550,13 +1549,13 @@ int conv_ip4_to_ip6(const struct pcap_pkthdr *phdr,const  u_char *pkt,
                     struct pcap_pkthdr *phdrx, u_char *pktx, 
                     int  encap46 )
 {
-    EHDR   *ehdr=0;
-    VHDR   *vhdr=0;
-    IPHDR  *iphdr=0;
-    IPHDR  *ipe=0;
-    IPV6   *ipe6=0; 
-    IPV6   *ipv6=0; 
-    IPV6   *pip6=0;
+    EHDR   *ehdr=NULL;
+    VHDR   *vhdr=NULL;
+    IPHDR  *iphdr=NULL;
+    IPHDR  *ipe=NULL;
+    IPV6   *ipe6=NULL; 
+    IPV6   *ipv6=NULL; 
+    IPV6   *pip6=NULL;
     u_short pip6_size=0;
     u_short etype;
     u_short esize;
@@ -1564,7 +1563,7 @@ int conv_ip4_to_ip6(const struct pcap_pkthdr *phdr,const  u_char *pkt,
     int     ip4_encap=0;
     int     ip6_encap=0;
     int     isfrag=0; 
-    struct ip6_frag * pip6_frag=0;
+    struct ip6_frag * pip6_frag=NULL;
     
     memcpy(phdrx, phdr, sizeof(struct pcap_pkthdr));
 
@@ -1952,24 +1951,6 @@ void ProcessPacket(char *user, const struct pcap_pkthdr * pkthdr, const u_char *
     
 #endif
 
-    if (!s_bitOpInit)
-    {
-        unsigned int bitop_numbytes;
-
-        bitop_numbits = num_preprocs + 1;
-        bitop_numbytes = bitop_numbits >> 3;
-
-        if(bitop_numbits & 7) 
-            bitop_numbytes++;
-
-        if (mempool_init(&bitop_pool, num_bitops, bitop_numbytes) == 1)
-            FatalError("Out of memory initializing BitOp memory pool\n");
-
-        s_bitOpInit = 1;
-    }
-
-    /* reset the packet flags for each packet */
-    p.packet_flags = 0;
 #ifndef GIDS
     g_drop_pkt = 0;
 #endif
@@ -2024,11 +2005,7 @@ void ProcessPacket(char *user, const struct pcap_pkthdr * pkthdr, const u_char *
         DisableAllDetect(&p);
     }
 
-#ifdef GRE
-    if (ft && !p.encapsulated)
-#else
     if (ft)
-#endif  /* GRE */
     {
         p.packet_flags |= PKT_REBUILT_FRAG;
         p.fragtracker = ft;
@@ -2063,7 +2040,7 @@ void ProcessPacket(char *user, const struct pcap_pkthdr * pkthdr, const u_char *
         case MODE_IDS:
             /* allow the user to throw away TTLs that won't apply to the
                detection engine as a whole. */
-            if(pv.min_ttl && p.iph != NULL && (p.iph->ip_ttl < pv.min_ttl))
+            if(pv.min_ttl && IPH_IS_VALID((&p)) && (GET_IPH_TTL((&p)) < pv.min_ttl))
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DECODE,
                             "MinTTL reached in main detection loop\n"););
@@ -2188,6 +2165,7 @@ int ShowUsage(char *program_name)
     FPUTS_BOTH ("        -w         Dump 802.11 management and control frames\n");
 #endif
     FPUTS_BOTH ("        -X         Dump the raw packet data starting at the link layer\n");
+    FPUTS_BOTH ("        -x         Exit if Snort configuration problems occur\n");
     FPUTS_BOTH ("        -y         Include year in timestamp in the alert and log files\n");
     FPUTS_BOTH ("        -Z <file>  Set the performonitor preprocessor file path and name\n");
     FPUTS_BOTH ("        -?         Show this information\n");
@@ -2196,7 +2174,7 @@ int ShowUsage(char *program_name)
     FPUTS_BOTH ("Longname options and their corresponding single char version\n");
     FPUTS_BOTH ("   --logid <0xid>                  Same as -G\n");
     FPUTS_BOTH ("   --perfmon-file <file>           Same as -Z\n");
-    FPUTS_BOTH ("   --pid-path <path>               Specify the path for the Snort PID file\n");
+    FPUTS_BOTH ("   --pid-path <dir>                Specify the directory for the Snort PID file\n");
     FPUTS_BOTH ("   --snaplen <snap>                Same as -P\n");
     FPUTS_BOTH ("   --help                          Same as -?\n");
     FPUTS_BOTH ("   --version                       Same as -V\n");
@@ -2234,6 +2212,14 @@ int ShowUsage(char *program_name)
     FPUTS_BOTH ("   --pcap-show                     print a line saying what pcap is currently being read.\n");
     FPUTS_BOTH ("   --exit-check <count>            Signal termination after <count> callbacks from pcap_dispatch(), showing the time it\n"
                 "                                   takes from signaling until pcap_close() is called.\n");
+    FPUTS_BOTH ("   --conf-error-out                Same as -x\n");
+#ifdef MPLS
+    FPUTS_BOTH ("   --enable-mpls-multicast         Allow multicast MPLS\n");
+    FPUTS_BOTH ("   --enable-mpls-overlapping-ip    Handle overlapping IPs within MPLS clouds\n");
+    FPUTS_BOTH ("   --max-mpls-labelchain-len       Specify the max MPLS label chain\n");
+    FPUTS_BOTH ("   --mpls-payload-type             Specify the protocol (ipv4, ipv6, ethernet) that is encapsulated by MPLS\n");
+#endif
+    FPUTS_BOTH ("   --require-rule-sid              Require that all snort rules have SID specified.\n");
 #undef FPUTS_WIN32
 #undef FPUTS_UNIX
 #undef FPUTS_BOTH
@@ -2346,23 +2332,23 @@ void ParseDynamicLibInfo(int type)
 #ifndef WIN32
 #ifdef GIDS
 #ifndef IPFW
-static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XyzZ:";
+static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XxyzZ:";
 #else
-static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:IJ:k:K:l:L:m:Mn:NoOpP:qr:R:sS:t:Tu:UvVw:XyzZ:";
+static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:IJ:k:K:l:L:m:Mn:NoOpP:qr:R:sS:t:Tu:UvVw:XxyzZ:";
 #endif /* IPFW */
 #else
 #ifdef MIMICK_IPV6
     /* Unix does not support an argument to -s <wink marty!> OR -E, -W */
-static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XyzZ:6";
+static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XxyzZ:6";
 #else
     /* Unix does not support an argument to -s <wink marty!> OR -E, -W */
-static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XyzZ:";
+static char *valid_options = "?a:A:bB:c:CdDefF:g:G:h:Hi:Ik:K:l:L:m:Mn:NoOpP:qQr:R:sS:t:Tu:UvVw:XxyzZ:";
 #endif
 #endif /* GIDS */
 #else
     /* Win32 does not support:  -D, -g, -m, -t, -u */
     /* Win32 no longer supports an argument to -s, either! */
-static char *valid_options = "?A:bB:c:CdeEfF:G:h:Hi:Ik:K:l:L:Mn:NoOpP:qr:R:sS:TUvVw:WXyzZ:";
+static char *valid_options = "?A:bB:c:CdeEfF:G:h:Hi:Ik:K:l:L:Mn:NoOpP:qr:R:sS:TUvVw:WXxyzZ:";
 #endif
 
 #define LONGOPT_ARG_NONE 0
@@ -2374,6 +2360,7 @@ static struct option long_options[] = {
    {"snaplen", LONGOPT_ARG_REQUIRED, NULL, 'P'},
    {"version", LONGOPT_ARG_NONE, NULL, 'V'},
    {"help", LONGOPT_ARG_NONE, NULL, '?'},
+   {"conf-error-out", LONGOPT_ARG_NONE, NULL,'x'},
 #ifdef DYNAMIC_PLUGIN
    {"dynamic-engine-lib", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_ENGINE_FILE},
    {"dynamic-engine-lib-dir", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_ENGINE_DIRECTORY},
@@ -2415,6 +2402,13 @@ static struct option long_options[] = {
 #endif
    {"search-method", LONGOPT_ARG_REQUIRED, NULL, DETECTION_SEARCH_METHOD},
    {"man", LONGOPT_ARG_REQUIRED, NULL, DETECTION_SEARCH_METHOD},
+#ifdef MPLS
+   {"enable-mpls-multicast", LONGOPT_ARG_NONE, NULL, ENABLE_MPLS_MULTICAST},
+   {"enable-mpls-overlapping-ip", LONGOPT_ARG_NONE, NULL, ENABLE_OVERLAPPING_IP},
+   {"max-mpls-labelchain-len", LONGOPT_ARG_REQUIRED, NULL, MAX_MPLS_LABELCHAIN_LEN},
+   {"mpls-payload-type", LONGOPT_ARG_REQUIRED, NULL, MPLS_PAYLOAD_TYPE},
+#endif
+   {"require-rule-sid", LONGOPT_ARG_NONE, NULL, REQUIRE_RULE_SID},
    {0, 0, 0, 0}
 };
 
@@ -2661,7 +2655,6 @@ int ParseCmdLine(int argc, char *argv[])
 #else
                 DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Daemon mode flag set\n"););
                 pv.daemon_flag = 1;
-                flow_set_daemon();
                 pv.quiet_flag = 1;
 
                 if (pv.test_mode_flag)
@@ -3167,7 +3160,12 @@ int ParseCmdLine(int argc, char *argv[])
                 DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Verbose packet bytecode dumps enabled\n"););
                 pv.verbose_bytedump_flag = 1;
                 break;
-
+                
+            case 'x':
+                DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Error out if configuration problems occur\n"););
+                pv.conf_error_out = 1;
+                break;
+                
             case 'y':  /* Add year to timestamp in alert and log files */
                 pv.include_year = 1;
                 DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Enabled year in timestamp\n"););
@@ -3248,7 +3246,63 @@ int ParseCmdLine(int argc, char *argv[])
             case PCAP_SHOW:
                 pv.pcap_show = 1;
                 break;
+#ifdef MPLS
+            case ENABLE_MPLS_MULTICAST:
+                pv.mpls_multicast = 1;
+                break;
+            case ENABLE_OVERLAPPING_IP:
+                pv.overlapping_IP = 1;
+                break;
+            case MAX_MPLS_LABELCHAIN_LEN:
+                {
+                    char *endptr;
+                    int   len;
 
+                    len = strtol(optarg, &endptr, 10);
+                    if ((errno == ERANGE) || (*endptr != '\0') || (len < 1) )
+                    {
+                        FatalError("Invalid Max MPLS Stack Depth value\n");
+                    }
+                    pv.mpls_stack_depth = len;
+                }
+                break;
+            case MPLS_PAYLOAD_TYPE:
+                {
+                    if(!optarg)
+                    {
+                        FatalError("Missing MPLS Payload Type\n");
+                    } 
+                    else 
+                    {
+                        if(!strncmp(optarg, "ipv4", 4))
+                        {
+                            pv.mpls_payload_type = MPLS_PAYLOADTYPE_IPV4;
+                        } 
+                        else 
+                        {
+                            if(!strncmp(optarg, "ipv6", 4))
+                            {
+                                pv.mpls_payload_type = MPLS_PAYLOADTYPE_IPV6;
+                            } 
+                            else 
+                            {
+                                if(!strncmp(optarg, "ethernet", 8))
+                                {
+                                    pv.mpls_payload_type = MPLS_PAYLOADTYPE_ETHERNET;
+                                } 
+                                else 
+                                {
+                                    FatalError("Unsupported MPLS Payload Type\n");
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+#endif
+            case REQUIRE_RULE_SID:
+                pv.require_rule_sid = 1;
+                break;
             case '?':  /* show help and exit with 1 */
                 pv.print_version = ch;
                 pv.quiet_flag = 1;
@@ -3330,6 +3384,11 @@ int ParseCmdLine(int argc, char *argv[])
         pv.pcap_cmd = copy_argv(&argv[optind]);
     }
 
+    if(pv.pcap_cmd)
+    {
+        LogMessage("Snort BPF option: %s\n", pv.pcap_cmd);
+    }
+    
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "pcap_cmd is %s\n", 
                 pv.pcap_cmd !=NULL ? pv.pcap_cmd : "NULL"););
     return 0;
@@ -3743,14 +3802,8 @@ void *InterfaceThread(void *arg)
     {
         if (pv.pcap_show)
         {
-            int quiet_flag_save = pv.quiet_flag;
-
-            pv.quiet_flag = 0;
-
-            LogMessage("Reading network traffic from \"%s\" with snaplen = %d\n",
-                       pv.readfile, pcap_snapshot(pd));
-
-            pv.quiet_flag = quiet_flag_save;
+            fprintf(stdout, "Reading network traffic from \"%s\" with snaplen = %d\n",
+                    strcmp(pv.readfile, "-") == 0 ? "stdin" : pv.readfile, pcap_snapshot(pd));
         }
 
         pcap_ret = pcap_dispatch(pd, pkts_to_read, (pcap_handler)PcapProcessPacket, NULL);
@@ -3800,6 +3853,8 @@ void *InterfaceThread(void *arg)
                 /* reinitialize pcap */
                 pcap_close(pd);
                 OpenPcap();
+                if (pv.pcap_reset)
+                    SetPktProcessor();
 
                 /* open a new tcpdump file - necessary because the snaplen could be
                  * different between pcaps */
@@ -3883,7 +3938,9 @@ static void PcapReset(void)
 
     SnortEventqReset();
     sfthreshold_reset_active();
+#ifndef SUP_IP6
     BsdFragHashReset();
+#endif
     TagCacheReset();
 
 #ifdef PERF_PROFILING
@@ -4036,7 +4093,7 @@ int OpenPcap()
             if (first_pcap)
             {
                 LogMessage("Reading network traffic from \"%s\" file.\n", 
-                           pv.readfile);
+                           strcmp(pv.readfile, "-") == 0 ? "stdin" : pv.readfile);
             }
         }
 
@@ -4355,7 +4412,7 @@ static void SigHupHandler(int signal)
  */
 void SigCantHupHandler(int signal)
 {
-    LogMessage("Reload via Signal HUP does not work if you aren't root or are chroot'ed\n");
+    pv.cant_hup_signal = signal;
 }
 
 #ifdef TIMESTATS
@@ -4427,9 +4484,7 @@ extern PreprocSignalFuncNode *PreprocRestartList;
 void CleanExit(int exit_val)
 {
     PreprocSignalFuncNode *idxPreproc = NULL;
-    PreprocSignalFuncNode *tempPreproc = NULL;
     PluginSignalFuncNode *idxPlugin = NULL;
-    PluginSignalFuncNode *tempPlugin = NULL;
 
     /* This function can be called more than once.  For example,
      * once from the SIGINT signal handler, and once recursively
@@ -4505,9 +4560,7 @@ void CleanExit(int exit_val)
     while(idxPlugin)
     {
         idxPlugin->func(SIGQUIT, idxPlugin->arg);
-        tempPlugin = idxPlugin;
         idxPlugin = idxPlugin->next;
-        free(tempPlugin);
     }
 
     if (!exit_val)
@@ -4546,9 +4599,7 @@ void CleanExit(int exit_val)
     while(idxPreproc)
     {
         idxPreproc->func(SIGQUIT, idxPreproc->arg);
-        tempPreproc = idxPreproc;
         idxPreproc = idxPreproc->next;
-        free(tempPreproc);
     }
 
     /* Print Statistics */
@@ -4564,6 +4615,10 @@ void CleanExit(int exit_val)
             ShowRuleProfiles();
             pv.quiet_flag = quiet_flag_save;
         }
+#endif
+
+#ifdef SHUTDOWN_MEMORY_CLEANUP
+        fpDeleteFastPacketDetection();
 #endif
         DropStats(2);
     }
@@ -4595,7 +4650,9 @@ void CleanExit(int exit_val)
 
     /* free allocated memory */
     asn1_free_mem();
+#ifndef SUP_IP6
     BsdFragHashCleanup();
+#endif
     mempool_destroy(&bitop_pool);
 #ifdef DYNAMIC_PLUGIN
     CloseDynamicDetectionLibs();
@@ -4634,6 +4691,24 @@ void CleanExit(int exit_val)
 
     LogMessage("Snort exiting\n");
 
+#ifdef SHUTDOWN_MEMORY_CLEANUP
+    soid_otn_lookup_free();
+    otn_lookup_free();
+    sfthreshold_free();
+    ParserCleanup();
+    /* Stuff from plugbase */
+    PreprocessorRuleOptionsFree();
+    CleanupPlugIns();
+    CleanupPreprocessors();
+    CleanupOutputPlugins();
+    CloseDynamicPreprocessorLibs();
+    CloseDynamicDetectionLibs();
+    CloseDynamicEngineLibs();
+    OtnxMatchDataCleanup();
+    fpFreeIpProtoGlobals();
+#endif
+
+    CleanupTag();
     ClearDumpBuf();
 
     /* remove pid file */
@@ -4711,7 +4786,9 @@ static void Restart(void)
 
     /* free allocated memory */
     asn1_free_mem();
+#ifndef SUP_IP6
     BsdFragHashCleanup();
+#endif
     mempool_destroy(&bitop_pool);
 #ifdef DYNAMIC_PLUGIN
     CloseDynamicDetectionLibs();

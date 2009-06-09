@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 #endif
 
 #include "rules.h"
+#include "sf_types.h"
 
 #ifndef WIN32
     #include <sys/ioctl.h>
@@ -80,13 +81,13 @@ enum OptionType {
 
 /**************************** Detection Plugin API ****************************/
 
+typedef void (*RuleInitFunc)(char *, OptTreeNode *, int);
 typedef struct _KeywordXlate
 {
     char *keyword;
-    void (*func)(char *, OptTreeNode *, int);
+    RuleInitFunc func;
     enum OptionType type;
 } KeywordXlate;
-
 
 typedef struct _KeywordXlateList
 {
@@ -94,11 +95,30 @@ typedef struct _KeywordXlateList
     struct _KeywordXlateList *next;
 } KeywordXlateList;
 
+typedef void (*RuleOverrideFunc)(char *, char *, char *, OptTreeNode *, int);
+typedef void (*RuleInitOverrideFunc)(char *, char *, RuleOverrideFunc func);
+typedef struct _KeywordOverrideXlate
+{
+    char *keyword;
+    RuleInitOverrideFunc func;
+    enum OptionType type;
+} KeywordOverrideXlate;
+
+typedef struct _KeywordOverrideXlateList
+{
+    KeywordOverrideXlate entry;
+    struct _KeywordOverrideXlateList *next;
+} KeywordOverrideXlateList;
+
 void InitPlugIns();
-void RegisterPlugin(char *, void (*func)(char *, OptTreeNode *, int), enum OptionType);
+void CleanupPlugIns();
+int IsPreprocEnabled(unsigned int);
+void RegisterPlugin(char *, RuleInitFunc func, RuleInitOverrideFunc overridefunc, enum OptionType);
+void RegisterOverrideKeyword(char *keyword, char *option, RuleOverrideFunc func);
 void DumpPlugIns();
-OptFpList *AddOptFuncToList(int (*func)(Packet *, struct _OptTreeNode*,
-            struct _OptFpList*), OptTreeNode *);
+OptFpList *AddOptFuncToList(
+            int (*func) (void *option_data, Packet *p), 
+            OptTreeNode *);
 void AddRspFuncToList(int (*func) (Packet *, struct _RspFpList *),
                       OptTreeNode *, void *);
 
@@ -145,16 +165,19 @@ typedef struct _PreprocessFuncNode
     unsigned short priority;
     unsigned int preproc_id;
     unsigned int preproc_bit;
+    uint32_t proto_mask;
 
 } PreprocessFuncNode;
 
 void InitPreprocessors();
+void CleanupPreprocessors();
 void RegisterPreprocessor(char *, void (*func)(char *));
 void RegisterPreprocStats(char *keyword, void (*func)(int));
 void PreprocessStatsFree(void);
 void DumpPreprocessors();
 void MapPreprocessorIds();
-PreprocessFuncNode *AddFuncToPreprocList(void (*func)(Packet *, void *), unsigned short, unsigned int);
+PreprocessFuncNode *AddFuncToPreprocList(void (*func)(Packet *, void *),
+                                         unsigned short, unsigned int, uint32_t);
 int IsPreprocBitSet(Packet *p, unsigned int preproc_bit);
 int SetPreprocBit(Packet *p, unsigned int preproc_id);
 int IsPreprocGetReassemblyPktBitSet(Packet *p, unsigned int preproc_bit);

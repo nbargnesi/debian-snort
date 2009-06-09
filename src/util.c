@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -67,6 +68,8 @@
 #include "sflsq.h"
 
 #include "pcre.h"
+
+#include "mpse.h"
 
 #include "ppm.h"
 
@@ -299,6 +302,17 @@ void DefineIfaceVar(char *iname, u_char * network, u_char * netmask)
             network[3] & 0xff, netmask[0] & 0xff, netmask[1] & 0xff, 
             netmask[2] & 0xff, netmask[3] & 0xff);
 
+#ifdef WIN32
+    {
+        unsigned int i;
+        for (i=0;i<strlen(varbuf);i++)
+        {
+            if ((i != 0) && (varbuf[i] == '\\'))
+                varbuf[i] = '_';
+        }
+    }
+#endif
+
     VarDefine(varbuf, valbuf);
 }
 
@@ -360,14 +374,19 @@ int DisplayBanner()
 
     fprintf(stderr, "\n"
         "   ,,_     -*> Snort! <*-\n"
-        "  o\"  )~   Version %s%s (Build %s) %s %s\n"
+        "  o\"  )~   Version %s%s%s (Build %s) %s %s\n"
         "   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/team.html\n"
-        "           (C) Copyright 1998-2008 Sourcefire Inc., et al.\n"   
+        "           Copyright (C) 1998-2009 Sourcefire, Inc., et al.\n"   
         "           Using PCRE version: %s\n"
         "\n"
         , VERSION, 
 #ifdef SUP_IP6
           " IPv6",
+#else
+          "", 
+#endif
+#ifdef GRE
+          " GRE",
 #else
           "", 
 #endif
@@ -533,6 +552,17 @@ char *copy_argv(char **argv)
     }
 
     dst[-1] = '\0';
+
+    /* Check for an empty string */
+    dst = buf;
+    while (isspace((int)*dst))
+        dst++;
+
+    if (strlen(dst) == 0)
+    {
+        free(buf);
+        buf = NULL;
+    }
 
     return buf;
 }
@@ -812,12 +842,21 @@ void CreatePidFile(char *intf)
 
         if (strlen(pv.pid_path) != 0)
         {
-            stat(pv.pid_path, &pt);
-
-            if(!S_ISDIR(pt.st_mode) || access(pv.pid_path, W_OK) == -1)
+            if((stat(pv.pid_path, &pt) == -1) ||
+                !S_ISDIR(pt.st_mode) || access(pv.pid_path, W_OK) == -1)
             {
+#ifndef WIN32
+                /* Save this just in case it's reset with LogMessage call */
+                int err = errno;
+
                 LogMessage("WARNING: %s is invalid, trying "
                            "/var/run...\n", pv.pid_path);
+                if (err)
+                {
+                    LogMessage("Previous Error, errno=%d, (%s)\n",
+                               err, strerror(err) == NULL ? "Unknown error" : strerror(err));
+                }
+#endif
                 memset(pv.pid_path, '\0', STD_BUF);
             }
             else
@@ -1315,6 +1354,8 @@ void DropStatsPerTimeInterval()
             LogMessage("\n");
         }
 
+        mpse_print_qinfo();
+
     }  /* end if pcap_stats(ps, &ps) */
 
     alarm(pv.timestats_interval);   /* reset the alarm to go off again */
@@ -1489,24 +1530,16 @@ void DropStats(int exiting)
 
     total = pc.total_processed;
 
-#ifndef TIMESTATS
-    if(pv.quiet_flag)
-        return;
-#endif
-
 #ifdef PPM_MGR
     PPM_PRINT_SUMMARY();
 #endif
 
     LogMessage("================================================"
                "===============================\n");
-    /*
-     * you will hardly run snort in daemon mode and read from file i that is
-     * why no `LogMessage()' here
-     */
+
     if(pv.readmode_flag || InlineMode())
     {
-        printf("Snort processed " STDu64 " packets.\n", total);
+        LogMessage("Snort processed " STDu64 " packets.\n", total);
     }
     else
     {
@@ -1570,6 +1603,10 @@ void DropStats(int exiting)
 #endif  /* GIDS */
     LogMessage("     VLAN: " FMTu64("-10") " (%.3f%%)\n", 
                pc.vlan, CalcPct(pc.vlan, total));
+
+    if (pc.nested_vlan != 0)
+    LogMessage("Nested VLAN: " FMTu64("-10") " (%.3f%%)\n", 
+               pc.nested_vlan, CalcPct(pc.nested_vlan, total));
 
     LogMessage("     IPV6: " FMTu64("-10") " (%.3f%%)\n", 
                pc.ipv6, CalcPct(pc.ipv6, total));
@@ -1651,6 +1688,10 @@ void DropStats(int exiting)
     LogMessage(" GRE LOOP: " FMTu64("-10") " (%.3f%%)\n", 
                pc.gre_loopback, CalcPct(pc.gre_loopback, total));
 #endif  /* GRE */
+#ifdef MPLS
+    LogMessage("     MPLS: " FMTu64("-10") " (%.3f%%)\n", 
+                   pc.mpls, CalcPct(pc.mpls, total));
+#endif
     LogMessage("    OTHER: " FMTu64("-10") " (%.3f%%)\n", 
                pc.other, CalcPct(pc.other, total));
     LogMessage("  DISCARD: " FMTu64("-10") " (%.3f%%)\n", 
@@ -1681,6 +1722,7 @@ void DropStats(int exiting)
     LogMessage("    Table Reloaded: " STDu64 "\n", pc.attribute_table_reloads);
 #endif  /* TARGET_BASED */
 
+    mpse_print_qinfo();
 
 #ifdef DLT_IEEE802_11
     if(datalink == DLT_IEEE802_11)
@@ -1831,6 +1873,7 @@ char *read_infile(char *fname)
         }
     }
 
+    /** LogMessage("BPF filter file: %s\n", fname); **/
     
     return(cp);
 }
@@ -2237,6 +2280,67 @@ char * SnortStrdup(const char *str)
 }
 
 /*
+ * Find first occurrence of char of accept in s, limited by slen.
+ * A 'safe' version of strpbrk that won't read past end of buffer s
+ * in cases that s is not NULL terminated.
+ *
+ * This code assumes 'accept' is a static string.
+ */
+const char *SnortStrnPbrk(const char *s, int slen, const char *accept)
+{
+    char ch;
+    const char *s_end;
+    if (!s || !*s || !accept || slen == 0)
+        return NULL;
+
+    s_end = s + slen;
+    while (s < s_end)
+    {
+        ch = *s;
+        if (strchr(accept, ch))
+            return s;
+        s++;
+    }
+    return NULL;
+}
+
+/*
+ * Find first occurrence of searchstr in s, limited by slen.
+ * A 'safe' version of strstr that won't read past end of buffer s
+ * in cases that s is not NULL terminated.
+ */
+const char *SnortStrnStr(const char *s, int slen, const char *searchstr)
+{
+    char ch, nc;
+    int len;
+    if (!s || !*s || !searchstr || slen == 0)
+        return NULL;
+
+    if ((ch = *searchstr++) != 0)
+    {
+        len = strlen(searchstr);
+        do
+        {
+            do
+            {
+                if ((nc = *s++) == 0)
+                {
+                    return NULL;
+                }
+                slen--;
+                if (slen == 0)
+                    return NULL;
+            } while (nc != ch);
+            if (slen - len < 0)
+                return NULL;
+        } while (memcmp(s, searchstr, len) != 0);
+        s--;
+        slen++;
+    }
+    return s;
+}
+
+/*
  * Find first occurrence of substring in s, ignore case.
 */
 const char *SnortStrcasestr(const char *s, const char *substr)
@@ -2309,7 +2413,7 @@ void * SnortAlloc2(size_t size, const char *format, ...)
  * Chroot and adjust the pv.log_dir reference 
  * 
  * @param directory directory to chroot to
- * @param logdir ptr to pv.log_dir
+ * @param logstore ptr to pv.log_dir which must be dynamically allocated
  */
 void SetChroot(char *directory, char **logstore)
 {
@@ -2341,6 +2445,10 @@ void SetChroot(char *directory, char **logstore)
                                        CurrentWorkingDir()));
     
     logdir = SnortStrdup(logdir);
+
+    /* We're going to reset logstore, so free it now */
+    free(*logstore);
+    *logstore = NULL;
 
     /* change to the directory */
     if(chdir(directory) != 0)
@@ -2389,15 +2497,17 @@ void SetChroot(char *directory, char **logstore)
     
     if(abslen >= strlen(logdir))
     {
-        *logstore = "/";
+        *logstore = SnortStrdup("/");
     }
     else
     {
-        *logstore = logdir + abslen;
+        *logstore = SnortStrdup(logdir + abslen);
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"new logdir from %s to %s\n",
                             logdir, *logstore));
+
+    LogMessage("Chroot directory = %s\n", directory);
 
     /* install the I can't do this signal handler */
     signal(SIGHUP, SigCantHupHandler);
@@ -2491,18 +2601,21 @@ SF_LIST * SortDirectory(const char *path)
     dir_entries = sflist_new();
     if (dir_entries == NULL)
     {
-        LogMessage("Could not allocate new list for directory entries\n");
+        ErrorMessage("Could not allocate new list for directory entries\n");
         return NULL;
     }
 
     dir = opendir(path);
     if (dir == NULL)
     {
-        LogMessage("Error opening directory: %s: %s\n",
-                   path, strerror(errno));
+        ErrorMessage("Error opening directory: %s: %s\n",
+                     path, strerror(errno));
         sflist_free_all(dir_entries, free);
         return NULL;
     }
+
+    /* Reset errno since we'll be checking it unconditionally */
+    errno = 0;
 
     while ((direntry = readdir(dir)) != NULL)
     {
@@ -2527,7 +2640,7 @@ SF_LIST * SortDirectory(const char *path)
 
         if (ret == -1)
         {
-            LogMessage("Error adding directory entry to list\n");
+            ErrorMessage("Error adding directory entry to list\n");
             sflist_free_all(dir_entries, free);
             closedir(dir);
             return NULL;
@@ -2536,8 +2649,9 @@ SF_LIST * SortDirectory(const char *path)
 
     if (errno != 0)
     {
-        LogMessage("Error reading directory: %s: %s\n",
-                   path, strerror(errno));
+        ErrorMessage("Error reading directory: %s: %s\n",
+                     path, strerror(errno));
+        errno = 0;
         sflist_free_all(dir_entries, free);
         closedir(dir);
         return NULL;
@@ -2561,7 +2675,7 @@ int GetFilesUnderDir(const char *path, SF_QUEUE *dir_queue, const char *filter)
     dir_entries = SortDirectory(path);
     if (dir_entries == NULL)
     {
-        LogMessage("Error sorting entries in directory: %s\n", path);
+        ErrorMessage("Error sorting entries in directory: %s\n", path);
         return -1;
     }
 
@@ -2580,13 +2694,13 @@ int GetFilesUnderDir(const char *path, SF_QUEUE *dir_queue, const char *filter)
                             path, path[strlen(path) - 1] == '/' ? "" : "/", direntry);
         if (ret == SNORT_SNPRINTF_TRUNCATION)
         {
-            LogMessage("Error copying file to buffer: Path too long\n");
+            ErrorMessage("Error copying file to buffer: Path too long\n");
             sflist_free_all(dir_entries, free);
             return -1;
         }
         else if (ret != SNORT_SNPRINTF_SUCCESS)
         {
-            LogMessage("Error copying file to buffer\n");
+            ErrorMessage("Error copying file to buffer\n");
             sflist_free_all(dir_entries, free);
             return -1;
         }
@@ -2594,8 +2708,8 @@ int GetFilesUnderDir(const char *path, SF_QUEUE *dir_queue, const char *filter)
         ret = stat(path_buf, &file_stat);
         if (ret == -1)
         {
-            LogMessage("Could not stat file: %s: %s\n",
-                       path_buf, strerror(errno));
+            ErrorMessage("Could not stat file: %s: %s\n",
+                         path_buf, strerror(errno));
             sflist_free_all(dir_entries, free);
             return -1;
         }
@@ -2620,7 +2734,7 @@ int GetFilesUnderDir(const char *path, SF_QUEUE *dir_queue, const char *filter)
                 ret = sfqueue_add(dir_queue, (NODE_DATA)file);
                 if (ret == -1)
                 {
-                    LogMessage("Could not append item to list: %s\n", file);
+                    ErrorMessage("Could not append item to list: %s\n", file);
                     free(file);
                     sflist_free_all(dir_entries, free);
                     return -1;

@@ -45,7 +45,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_SMTP_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "NDEBUG" /D "SF_SMTP_EXPORTS" /D "SF_SNORT_PREPROC_DLL" /D "DYNAMIC_PLUGIN" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /D "TARGET_BASED" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\include" /I "..\..\win32\Win32-Includes" /I ".\\" /D "NDEBUG" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "SF_SNORT_PREPROC_DLL" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /YX /FD /c
 # SUBTRACT CPP /X
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -72,7 +72,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_SMTP_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "_DEBUG" /D "SF_SNORT_PREPROC_DLL" /D "DYNAMIC_PLUGIN" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /D "TARGET_BASED" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\include" /I "..\..\win32\Win32-Includes" /I ".\\" /D "SF_SNORT_PREPROC_DLL" /D "_DEBUG" /D "DEBUG" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /YX /FD /GZ /c
 # SUBTRACT CPP /X
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -95,13 +95,13 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "sf_ftptelnet___Win32_IPv6_Release"
-# PROP Intermediate_Dir "sf_ftptelnet___Win32_IPv6_Release"
+# PROP Output_Dir "IPv6_Release"
+# PROP Intermediate_Dir "IPv6_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "NDEBUG" /D "SF_SMTP_EXPORTS" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_SNORT_PREPROC_DLL" /D "HAVE_CONFIG_H" /D "DYNAMIC_PLUGIN" /YX /FD /c
 # SUBTRACT BASE CPP /X
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "SF_SMTP_EXPORTS" /D "SF_SNORT_PREPROC_DLL" /D "DYNAMIC_PLUGIN" /D "NDEBUG" /D "SUP_IP6" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\include" /I "..\..\win32\Win32-Includes" /I ".\\" /D "NDEBUG" /D "SUP_IP6" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "SF_SNORT_PREPROC_DLL" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /YX /FD /c
 # SUBTRACT CPP /X
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -124,13 +124,13 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "sf_ftptelnet___Win32_IPv6_Debug"
-# PROP Intermediate_Dir "sf_ftptelnet___Win32_IPv6_Debug"
+# PROP Output_Dir "IPv6_Debug"
+# PROP Intermediate_Dir "IPv6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_SNORT_PREPROC_DLL" /D "HAVE_CONFIG_H" /D "DYNAMIC_PLUGIN" /YX /FD /GZ /c
 # SUBTRACT BASE CPP /X
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\include" /I "..\..\win32\Win32-Includes" /I "..\..\\" /I ".\\" /D "SF_SNORT_PREPROC_DLL" /D "DYNAMIC_PLUGIN" /D "_DEBUG" /D "SUP_IP6" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\include" /I "..\..\win32\Win32-Includes" /I ".\\" /D "SUP_IP6" /D "SF_SNORT_PREPROC_DLL" /D "_DEBUG" /D "DEBUG" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /YX /FD /GZ /c
 # SUBTRACT CPP /X
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -216,11 +216,23 @@ SOURCE=..\include\sf_ip.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\sfrt.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\sfrt_dir.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\snort_ftptelnet.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\spp_ftptelnet.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\strtok_r.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

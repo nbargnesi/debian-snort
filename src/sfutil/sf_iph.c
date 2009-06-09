@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2007-2008 Sourcefire, Inc.
+ * Copyright (C) 2007-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -29,7 +29,8 @@
 #define SUCCESS 0
 #define IP6_HEADER_LEN 40
 
-#define IP6_VER(x) (x & 0xf000) >> 24
+/* Version is the first four bits of the uint32_t passed in */
+#define IP6_VER(x) ((x) >> 28)
 
 /* The 'Packet' structure is almost always allocated on the stack.
  * Likewise, return buffers will almost always be aswell. 
@@ -44,287 +45,380 @@
 #define VALIDATE(x,y)
 #endif
 
-sfip_t *ip6_ret_src(Packet *p) {
+sfip_t *ip6_ret_src(Packet *p)
+{
     VALIDATE(p, 1);
 
-    return &p->ip6h.ip_src;
+    return &p->ip6h->ip_src;
 }
 
-sfip_t *orig_ip6_ret_src(Packet *p) {
+sfip_t *orig_ip6_ret_src(Packet *p)
+{
     VALIDATE(p, 1);
 
-    return &p->orig_ip6h.ip_src;
+    return &p->orig_ip6h->ip_src;
 }
 
-sfip_t *ip6_ret_dst(Packet *p) {
+sfip_t *ip6_ret_dst(Packet *p)
+{
     VALIDATE(p, 1);
 
-    return &p->ip6h.ip_dst;
+    return &p->ip6h->ip_dst;
 }
 
 
-sfip_t *orig_ip6_ret_dst(Packet *p) {
+sfip_t *orig_ip6_ret_dst(Packet *p)
+{
     VALIDATE(p, 1);
 
-    return &p->orig_ip6h.ip_dst;
+    return &p->orig_ip6h->ip_dst;
 }
 
-u_int16_t ip6_ret_toc(Packet *p) {
+u_int16_t ip6_ret_toc(Packet *p)
+{
+    u_int16_t toc;
     VALIDATE(p,1);
 
-// XXX-IPv6 "NOT YET IMPLEMENTED - ip6_ret_toc"    
-    return 0;
+    toc = (u_int16_t)((ntohl(p->ip6h->vcl) & 0x0FF00000) >> 20);
+
+    return toc;
 }
 
-u_int16_t orig_ip6_ret_toc(Packet *p) {
+u_int16_t orig_ip6_ret_toc(Packet *p)
+{
+    u_int16_t toc;
     VALIDATE(p,1);
 
-// XXX-IPv6 "NOT YET IMPLEMENTED - ip6_ret_toc"    
-    return 0;
+    toc = (u_int16_t)((ntohl(p->orig_ip6h->vcl) & 0x0FF00000) >> 20);
+    return toc;
 }
 
-u_int8_t ip6_ret_hops(Packet *p) {
+u_int8_t ip6_ret_hops(Packet *p)
+{
 //    VALIDATE(p,1);
 
-    return p->ip6h.hop_lmt;
+    return p->ip6h->hop_lmt;
 }
-u_int8_t orig_ip6_ret_hops(Packet *p) {
+u_int8_t orig_ip6_ret_hops(Packet *p)
+{
 //    VALIDATE(p,1);
 
-    return p->orig_ip6h.hop_lmt;
+    return p->orig_ip6h->hop_lmt;
 }
 
-u_int16_t ip6_ret_len(Packet *p) {
+u_int16_t ip6_ret_len(Packet *p)
+{
     VALIDATE(p,1);
 
     /* The length field does not include the header in IPv6, but does in IPv4.
      * To make this analogous to IPv4, for Snort's purposes, we need to tack
      * on the difference. */
-    return p->ip6h.len;
+    return p->ip6h->len;
 }
 
-u_int16_t orig_ip6_ret_len(Packet *p) {
+u_int16_t orig_ip6_ret_len(Packet *p)
+{
     VALIDATE(p,1);
 
-    return p->orig_ip6h.len;
+    return p->orig_ip6h->len;
 }
 
-u_int16_t ip6_ret_id(Packet *p) {
+u_int32_t ip6_ret_id(Packet *p)
+{
+    IP6Frag *frag_hdr;
+    if (p->ip6_extension_count == 0)
+        return 0;
+
+    frag_hdr = (IP6Frag*)p->ip6_extensions[p->ip6_frag_index].data;
+
+    return frag_hdr->ip6f_ident;
+}
+
+u_int32_t orig_ip6_ret_id(Packet *p)
+{
 // XXX-IPv6 "NOT YET IMPLEMENTED - IP6 identification"
     return 0;
 }
 
-u_int16_t orig_ip6_ret_id(Packet *p) {
-    return 0;
-}
-
-u_int8_t ip6_ret_next(Packet *p) {
+u_int8_t ip6_ret_next(Packet *p)
+{
     VALIDATE(p,1);
-    return p->ip6h.next;
+    return p->ip6h->next;
 }
 
-u_int8_t orig_ip6_ret_next(Packet *p) {
+u_int8_t orig_ip6_ret_next(Packet *p)
+{
     VALIDATE(p,1);
-    return p->orig_ip6h.next;
+    return p->orig_ip6h->next;
 }
 
-u_int16_t ip6_ret_off(Packet *p) {
+u_int16_t ip6_ret_off(Packet *p)
+{
+    IP6Frag *frag_hdr;
+    if (p->ip6_extension_count == 0)
+        return 0;
+
+    frag_hdr = (IP6Frag *)p->ip6_extensions[p->ip6_frag_index].data;
+
+    return frag_hdr->ip6f_offlg;
+}
+
+u_int16_t orig_ip6_ret_off(Packet *p)
+{
 // XXX-IPv6 "NOT YET IMPLEMENTED - IP6 frag offset"
     return 0;
 }
 
-u_int16_t orig_ip6_ret_off(Packet *p) {
-// XXX-IPv6 "NOT YET IMPLEMENTED - IP6 frag offset"
-    return 0;
+u_int8_t ip6_ret_ver(Packet *p)
+{
+    return (u_int8_t)IP6_VER(p->ip6h->vcl); 
 }
 
-u_int8_t ip6_ret_ver(Packet *p) {
-    return IP6_VER(p->ip6h.vcl); 
+u_int8_t orig_ip6_ret_ver(Packet *p)
+{
+    return (u_int8_t)IP6_VER(p->orig_ip6h->vcl); 
 }
 
-u_int8_t orig_ip6_ret_ver(Packet *p) {
-    return IP6_VER(p->orig_ip6h.vcl); 
-}
-
-sfip_t *ip4_ret_dst(Packet *p) {
+sfip_t *ip4_ret_dst(Packet *p)
+{
     VALIDATE(p,1);
-    return &p->ip4h.ip_dst;
+    return &p->ip4h->ip_dst;
 }
 
-sfip_t *orig_ip4_ret_dst(Packet *p) {
+sfip_t *orig_ip4_ret_dst(Packet *p)
+{
     VALIDATE(p,1);
-    return &p->orig_ip4h.ip_dst;
+    return &p->orig_ip4h->ip_dst;
 }
 
-sfip_t *ip4_ret_src(Packet *p) {
+sfip_t *ip4_ret_src(Packet *p)
+{
     VALIDATE(p,1);
-    return &p->ip4h.ip_src;
+    return &p->ip4h->ip_src;
 }
 
-sfip_t *orig_ip4_ret_src(Packet *p) {
+sfip_t *orig_ip4_ret_src(Packet *p)
+{
     VALIDATE(p,1);
-    return &p->orig_ip4h.ip_src;
+    return &p->orig_ip4h->ip_src;
 }
 
-u_int16_t ip4_ret_tos(Packet *p) {
+u_int16_t ip4_ret_tos(Packet *p)
+{
    VALIDATE(p,1);
 
-   return p->ip4h.ip_tos;
+   return p->ip4h->ip_tos;
 }
 
-u_int16_t orig_ip4_ret_tos(Packet *p) {
+u_int16_t orig_ip4_ret_tos(Packet *p)
+{
    VALIDATE(p,1);
 
-   return p->orig_ip4h.ip_tos;
+   return p->orig_ip4h->ip_tos;
 }
 
-u_int8_t ip4_ret_ttl(Packet *p) {
+u_int8_t ip4_ret_ttl(Packet *p)
+{
     VALIDATE(p,1);
 
-    return p->ip4h.ip_ttl;
+    return p->ip4h->ip_ttl;
 }
 
-u_int8_t orig_ip4_ret_ttl(Packet *p) {
+u_int8_t orig_ip4_ret_ttl(Packet *p)
+{
     VALIDATE(p,1);
 
-    return p->orig_ip4h.ip_ttl;
+    return p->orig_ip4h->ip_ttl;
 }
 
-u_int16_t ip4_ret_len(Packet *p) {
+u_int16_t ip4_ret_len(Packet *p)
+{
     VALIDATE(p,1);
 
-    return p->ip4h.ip_len;
+    return p->ip4h->ip_len;
 }
 
-u_int16_t orig_ip4_ret_len(Packet *p) {
+u_int16_t orig_ip4_ret_len(Packet *p)
+{
     VALIDATE(p,1);
 
-    return p->orig_ip4h.ip_len;
+    return p->orig_ip4h->ip_len;
 }
 
-u_int16_t ip4_ret_id(Packet *p) {
+u_int32_t ip4_ret_id(Packet *p)
+{
     VALIDATE(p,1);
     
-    return p->ip4h.ip_id;
+    return (u_int32_t)p->ip4h->ip_id;
 }
 
-u_int16_t orig_ip4_ret_id(Packet *p) {
+u_int32_t orig_ip4_ret_id(Packet *p)
+{
     VALIDATE(p,1);
     
-    return p->orig_ip4h.ip_id;
+    return (u_int32_t)p->orig_ip4h->ip_id;
 }
 
-u_int8_t ip4_ret_proto(Packet *p) {
+u_int8_t ip4_ret_proto(Packet *p)
+{
     // VALIDATION()
     
-    return p->ip4h.ip_proto;
+    return p->ip4h->ip_proto;
 }
 
-u_int8_t orig_ip4_ret_proto(Packet *p) {
+u_int8_t orig_ip4_ret_proto(Packet *p)
+{
     // VALIDATION()
     
-    return p->orig_ip4h.ip_proto;
+    return p->orig_ip4h->ip_proto;
 }
 
-u_int16_t ip4_ret_off(Packet *p) {
-    return p->ip4h.ip_off;
+u_int16_t ip4_ret_off(Packet *p)
+{
+    return p->ip4h->ip_off;
 }
 
-u_int16_t orig_ip4_ret_off(Packet *p) {
-    return p->orig_ip4h.ip_off;
+u_int16_t orig_ip4_ret_off(Packet *p)
+{
+    return p->orig_ip4h->ip_off;
 }
 
-u_int8_t ip4_ret_ver(Packet *p) {
+u_int8_t ip4_ret_ver(Packet *p)
+{
     return IP_VER(p->iph); 
 }
 
-u_int8_t orig_ip4_ret_ver(Packet *p) {
+u_int8_t orig_ip4_ret_ver(Packet *p)
+{
     return IP_VER(p->orig_iph);
 }
 
-u_int8_t ip4_ret_hlen(Packet *p) {
+u_int8_t ip4_ret_hlen(Packet *p)
+{
     return IP_HLEN(p->iph);
 }
 
-u_int8_t orig_ip4_ret_hlen(Packet *p) {
+u_int8_t orig_ip4_ret_hlen(Packet *p)
+{
     return IP_HLEN(p->orig_iph);
 }
 
-u_int8_t ip6_ret_hlen(Packet *p) {
+u_int8_t ip6_ret_hlen(Packet *p)
+{
     /* Snort is expecting this number to be in terms of 32 bit words */
     return IP6_HDR_LEN / 4 ;
 }
 
-u_int8_t orig_ip6_ret_hlen(Packet *p) {
+u_int8_t orig_ip6_ret_hlen(Packet *p)
+{
     return IP6_HDR_LEN / 4;
 }
 
-void sfiph_build(Packet *p, const void *hdr, int family) {
+void sfiph_build(Packet *p, const void *hdr, int family)
+{
     IP6RawHdr *hdr6;
     IPHdr *hdr4;
 
     if(!p || !hdr)
         return;
 
-    set_callbacks(p, family);
+    /* If family is already set, we've been here before.
+     * That means this is a nested IP.  */
+    if (p->family != NO_IP)
+    {
+        if (p->iph_api.ver == IPH_API_V4)
+            memcpy(&p->outer_ip4h, &p->inner_ip4h, sizeof(IP4Hdr));
+        else if (p->iph_api.ver == IPH_API_V6)
+            memcpy(&p->outer_ip6h, &p->inner_ip6h, sizeof(IP6Hdr));
 
-    if(family == AF_INET) {
+        p->outer_iph_api = p->iph_api;
+        p->outer_family = p->family;
+    }
+
+    set_callbacks(p, family, CALLBACK_IP);
+
+    if(family == AF_INET)
+    {
         hdr4 = (IPHdr*)hdr;
 
         /* The struct Snort uses is identical to the actual IP6 struct, 
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
-        memcpy(&p->ip4h, hdr4, sizeof(IPHdr) - 8);
-        sfip_set_raw(&p->ip4h.ip_src, &hdr4->ip_src, p->family);
-        sfip_set_raw(&p->ip4h.ip_dst, &hdr4->ip_dst, p->family);
-        p->actual_ip_len = ntohs(p->ip4h.ip_len);
-    } else {
+        memcpy(&p->inner_ip4h, hdr4, sizeof(IPHdr) - 8);
+        sfip_set_raw(&p->inner_ip4h.ip_src, &hdr4->ip_src, p->family);
+        sfip_set_raw(&p->inner_ip4h.ip_dst, &hdr4->ip_dst, p->family);
+        p->actual_ip_len = ntohs(p->inner_ip4h.ip_len);
+        p->ip4h = &p->inner_ip4h;
+    }
+    else
+    {
         hdr6 = (IP6RawHdr*)hdr;
            
         /* The struct Snort uses is identical to the actual IP6 struct, 
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
-        memcpy(&p->ip6h, hdr6, sizeof(IP6RawHdr) - 32);
-        sfip_set_raw(&p->ip6h.ip_src, &hdr6->ip6_src, p->family);
-        sfip_set_raw(&p->ip6h.ip_dst, &hdr6->ip6_dst, p->family);
-        p->actual_ip_len = ntohs(p->ip6h.len) + IP6_HDR_LEN;
+        memcpy(&p->inner_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
+        sfip_set_raw(&p->inner_ip6h.ip_src, &hdr6->ip6_src, p->family);
+        sfip_set_raw(&p->inner_ip6h.ip_dst, &hdr6->ip6_dst, p->family);
+        p->actual_ip_len = ntohs(p->inner_ip6h.len) + IP6_HDR_LEN;
+        p->ip6h = &p->inner_ip6h;
     }
 }
 
-void sfiph_orig_build(Packet *p, const void *hdr, int family) {
+void sfiph_orig_build(Packet *p, const void *hdr, int family)
+{
     IP6RawHdr *hdr6;
     IPHdr *hdr4;
 
     if(!p || !hdr)
         return;
 
-    set_callbacks(p, family);
+    /* If iph_api is already set, we've been here before.
+     * That means this is a nested IP.  */
+    if (p->orig_iph_api.ver == IPH_API_V4)
+    {
+        memcpy(&p->outer_orig_ip4h, &p->inner_orig_ip4h, sizeof(IP4Hdr));
+        p->outer_orig_iph_api = p->orig_iph_api;
+    }
+    else if (p->orig_iph_api.ver == IPH_API_V6)
+    {
+        memcpy(&p->outer_orig_ip6h, &p->inner_orig_ip6h, sizeof(IP6Hdr));
+        p->outer_orig_iph_api = p->orig_iph_api;
+    }
 
-    if(family == AF_INET) {
+    set_callbacks(p, family, CALLBACK_ICMP_ORIG);
+
+    if(family == AF_INET)
+    {
         hdr4 = (IPHdr*)hdr;
 
         /* The struct Snort uses is identical to the actual IP6 struct, 
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
-        memcpy(&p->orig_ip4h, hdr4, sizeof(IPHdr) - 8);
-        sfip_set_raw(&p->orig_ip4h.ip_src, &hdr4->ip_src, p->family);
-        sfip_set_raw(&p->orig_ip4h.ip_dst, &hdr4->ip_dst, p->family);
-        p->actual_ip_len = ntohs(p->orig_ip4h.ip_len);
-    } else {
+        memcpy(&p->inner_orig_ip4h, hdr4, sizeof(IPHdr) - 8);
+        sfip_set_raw(&p->inner_orig_ip4h.ip_src, &hdr4->ip_src, p->family);
+        sfip_set_raw(&p->inner_orig_ip4h.ip_dst, &hdr4->ip_dst, p->family);
+        p->actual_ip_len = ntohs(p->inner_orig_ip4h.ip_len);
+        p->orig_ip4h = &p->inner_orig_ip4h;
+    }
+    else
+    {
         hdr6 = (IP6RawHdr*)hdr;
            
         /* The struct Snort uses is identical to the actual IP6 struct, 
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
-        memcpy(&p->orig_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
-        sfip_set_raw(&p->orig_ip6h.ip_src, &hdr6->ip6_src, p->family);
-        sfip_set_raw(&p->orig_ip6h.ip_dst, &hdr6->ip6_dst, p->family);
-        p->actual_ip_len = ntohs(p->orig_ip6h.len) + IP6_HDR_LEN;
+        memcpy(&p->inner_orig_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
+        sfip_set_raw(&p->inner_orig_ip6h.ip_src, &hdr6->ip6_src, p->family);
+        sfip_set_raw(&p->inner_orig_ip6h.ip_dst, &hdr6->ip6_dst, p->family);
+        p->actual_ip_len = ntohs(p->inner_orig_ip6h.len) + IP6_HDR_LEN;
+        p->orig_ip6h = &p->inner_orig_ip6h;
     }
 }
 
 #ifdef TESTER
-int main() {
+int main()
+{
     Packet p;
     IP4Hdr i4;
     IP6Hdr i6;
@@ -333,10 +427,10 @@ int main() {
      * that the correct callbacks are setup, and they return
      * the correct values. */
 
-    set_callbacks(AF_INET);
+    set_callbacks(&p, AF_INET, CALLBACK_IP);
 
     /* Same test as above, but with IPv6 */
-    set_callbacks(AF_INET6);
+    set_callbacks(&p, AF_INET6, CALLBACK_IP);
 
     return 0;
 }

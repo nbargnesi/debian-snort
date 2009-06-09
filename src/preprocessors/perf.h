@@ -3,7 +3,7 @@
 **
 ** perf.h
 **
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,6 @@
 **    These are the basic functions and structures that are needed to call 
 **    performance functions.
 **
-** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Dan Roelker
 **
 **
@@ -71,7 +70,7 @@ typedef struct _SFPERF {
     unsigned int    iPktCnt;
 
     int    sample_interval;
-    int    sample_time;
+    time_t    sample_time;
 
     SFBASE  sfBase;
     SFFLOW  sfFlow;

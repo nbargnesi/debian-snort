@@ -460,11 +460,15 @@ $ export LD_TWOLEVEL_NAMESPACE=1
 $ ./configure
 $ make
 
-For users of Max OSX 10.5 (Leopard), the following environment variables
-must be set before running configure & make.
+* MAC OSX TIGER & LEOPARD
+-------------------------
+For users of MAC OSX 10.5 (Leopard), the following environment variables
+must be set before running configure & make. 
 
-Reference information for MAC OSX 10.5 (Leopard) can be found at these
-two links.
+For users of MAC OSX 10.4 (Tiger), this also applies if the compiler
+has been updated, otherwise, the instructions above may be used.
+
+Reference information for MAC OSX can be found at these two links.
 
 http://developer.apple.com/releasenotes/Darwin/SymbolVariantsRelNotes
 http://lists.apple.com/archives/xcode-users/2007/Jun/msg00163.html

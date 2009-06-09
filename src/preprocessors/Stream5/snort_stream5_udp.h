@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -33,5 +33,12 @@ int Stream5ProcessUdp(Packet *p);
 void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
                         snort_ip_p ip, u_int16_t port);
 Stream5LWSession *GetLWUdpSession(SessionKey *key);
+void s5UdpSetPortFilterStatus(
+        unsigned short port, 
+        int status
+        );
+int s5UdpGetPortFilterStatus(
+        unsigned short port 
+        );
 
 #endif /* STREAM5_UDP_H_ */

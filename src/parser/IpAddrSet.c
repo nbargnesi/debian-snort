@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2002-2008 Sourcefire, Inc.
+ * Copyright (C) 2002-2009 Sourcefire, Inc.
  * 
  * Author(s):  Andrew R. Baker <andrewb@snort.org>
  *             Martin Roesch   <roesch@sourcefire.com>
@@ -288,6 +288,8 @@ int ParseIP(char *paddr, IpAddrSet *ias, int negate) //, IpAddrNode *node)
         ias->iplist->ip_addr = 0;
         ias->iplist->netmask = 0;
 
+        free(address_data);
+
         return 1;
     }
     /* break out the CIDR notation from the IP address */
@@ -461,6 +463,7 @@ int ParseIP(char *paddr, IpAddrSet *ias, int negate) //, IpAddrNode *node)
         }
         else 
         {
+            /* Get to the end of the list */
             for(idx = ias->iplist; idx->next; idx=idx->next) ;
 
             idx->next = address_data;
@@ -476,6 +479,7 @@ int ParseIP(char *paddr, IpAddrSet *ias, int negate) //, IpAddrNode *node)
         }
         else 
         {
+            /* Get to the end of the list */
             for(idx = ias->neg_iplist; idx->next; idx=idx->next) ;
 
             idx->next = address_data;

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2004-2008 Sourcefire, Inc.
+ ** Copyright (C) 2004-2009 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -24,8 +24,6 @@
 **  @author     Marc Norton <mnorton@sourcefire.com>
 **
 **  @brief      Snort wrapper to sfeventq library.
-**
-** Copyright (C) 2002-2008 Sourcefire, Inc.
 **
 **  These functions wrap the sfeventq API and provide the priority
 **  functions for ordering incoming events.
@@ -133,6 +131,9 @@ int SnortEventqAdd(unsigned int gid,
                                 en->classification,
                                 en->priority,
                                 en->msg);
+
+                if (potn != NULL)  
+                    otn_lookup_add(potn);
             }
         }
 
@@ -314,10 +315,12 @@ static int LogSnortEvents(void *event, void *user)
 
         if( potn )
         {
+            char *tmp = potn->sigInfo.message;
             snort_user->rule_alert = potn->sigInfo.rule_flushing;
             potn->sigInfo.message = en->msg;
 
             fpLogEvent( potn->rtn, potn, p );
+            potn->sigInfo.message = tmp;
         }
     }
 

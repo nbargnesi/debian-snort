@@ -1,6 +1,6 @@
 /****************************************************************************
  * 
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -284,7 +284,7 @@ static void PrintConfig(void)
 
     memset(&buf[0], 0, sizeof(buf));
 
-    _dpd.logMsg("\nSMTP Config:\n");
+    _dpd.logMsg("SMTP Config:\n");
     
     snprintf(buf, sizeof(buf) - 1, "    Ports: ");
 

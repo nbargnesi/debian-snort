@@ -74,12 +74,12 @@ in order for the "drops" options to work.
                                           field indicating a larger packet than we captured.
 
 
-    checksum_mode all|none|noip|notcp|noudp|noicmp|ip|tcp|udp|icmp
+    checksum_mode: all|none|noip|notcp|noudp|noicmp|ip|tcp|udp|icmp
                                         - By default checksums are computed for IP, TCP, UDP and ICMP.
                                           Use this option to disable checksum checking of specific
                                           protocols.  Use a space separated list.
 
-    checksum_drop all|none|noip|notcp|noudp|noicmp|ip|tcp|udp|icmp
+    checksum_drop: all|none|noip|notcp|noudp|noicmp|ip|tcp|udp|icmp
                                         - By default packets with bad checksums are not dropped if in
                                           inline mode.  Use a space separated list.  Note that Snort
                                           must be doing checksums for a particular protocol in order
@@ -111,12 +111,12 @@ To disable TCP option alerts:
 
 To disable IP and TCP checksum checking
 
-    config checksum_mode noip notcp
+    config checksum_mode: noip notcp
 
 
 To drop all packets that have bad checksums
 
-    config checksum_drop all
+    config checksum_drop: all
 
 
 
@@ -196,6 +196,12 @@ If GRE is enabled (--enable-gre was given to configure)
 160   The length of the captured packet (starting from GRE header) is less than the
       length of a GRE header
 161   There are multiple GRE encapsulations in the packet (currently not allowed)
+162   GRE version in packet is not 0 or 1.
+163   Flags in header are set that should be unset.
+164   For PPtP, the ether type is not PPP.
+165   For Transparent Ethernet Bridging, the length of the captured packet (starting
+      from the Transparent Ethernet Bridging header) is less than the length of a
+      Transparent Ethernet Bridging header.
 
 
 ipopt_alerts

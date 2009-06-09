@@ -23,14 +23,14 @@ README.asn1 \
 README.csv \
 README.database \
 README.dcerpc \
+README.dcerpc2 \
 README.decode \
+README.decoder_preproc_rules \
 README.dns \
 README.event_queue \
 README.FLEXRESP \
 README.FLEXRESP2 \
-README.flow \
 README.flowbits \
-README.flow-portscan \
 README.frag3 \
 README.ftptelnet \
 README.gre \
@@ -46,7 +46,6 @@ README.sfportscan \
 README.SMTP \
 README.ssh \
 README.ssl \
-README.stream4 \
 README.stream5 \
 README.tag \
 README.thresholding \
@@ -72,6 +71,10 @@ SUFFIXES = .tex .dvi .ps
 
 .ps.pdf:
 	ps2pdf $<
+
+.tex.html:
+	latex2html -local_icons $< 
+
 
 # perhaps one day, we will have a Makefile in the signatures directory...
 # SUBDIRS = signatures
