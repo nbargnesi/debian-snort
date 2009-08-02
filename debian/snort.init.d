@@ -182,8 +182,10 @@ case "$1" in
 
                 if [ "$run" = "yes" ] ; then
                     if [ ! -e "$CONFIGFILE" ]; then
-                        log_progress_msg "no /etc/snort/snort.$interface.conf found, defaulting to snort.conf"
+                        log_progress_msg "using /etc/snort/snort.conf"
                         CONFIGFILE=/etc/snort/snort.conf
+                    else
+                        log_progress_msg "using /etc/snort/snort.$interface.conf"
                     fi
 
                     set +e
