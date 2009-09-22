@@ -69,7 +69,18 @@ DEBIAN_SNORT_STATS_RCPT="$STATS_RCPT"
 DEBIAN_SNORT_STATS_THRESHOLD="$STATS_THRESHOLD"
 EOF
 
-	if [ -f /etc/snort/snort.conf ]; then
+	if [ -e /etc/snort/db-pending-config ] ; then
+	  STARTUP="manual"
+	  echo
+	  echo "/etc/snort/db-pending-config file found"
+	  echo "Snort will not start as its database is not yet configured."
+	  echo "Please configure the database as described in"
+	  echo "/usr/share/doc/snort-mysql/README-database.Debian"
+	  echo "and then remove /etc/snort/db-pending-config"
+	fi
+
+	if [ "$STARTUP" != "manual" ]; then
+	  if [ -f /etc/snort/snort.conf ]; then
 		# insert database config stuff in the configuration file,
 		# or configure it for syslog-logging.
 		db_get snort-mysql/configure_db
@@ -133,8 +144,8 @@ EOF
 			chown root:snort /etc/snort/snort.conf
 			chmod 640 /etc/snort/snort.conf
 		fi
+	  fi
 	fi
-
 	db_stop
 
 	# Check for left-over files from woody packages.

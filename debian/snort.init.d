@@ -323,9 +323,9 @@ case "$1" in
 		$0 start $interface || true
 	done
 
+        # If we did not find any instance of Snort then we restart all
 	if [ "$got_instance" = 0 ]; then
-		log_failure_msg "No snort instance found to be stopped!" >&2
-                exit 6
+                $0 start
 	fi
 	;;
   status)
