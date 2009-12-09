@@ -1,3 +1,25 @@
+snort (2.8.4.1-6) unstable; urgency=low
+
+  * Package rebuild to fix libmysql depedency (Closes: #548831)
+  * Remove use_static_footprint_sizes option from the stream5_tcp disassembler
+    in etc/snort.conf as the use in production systems is actually discouraged
+    [ see http://sourceforge.net/mailarchive/message.php?msg_name=d3a3e6ac0912080843i17a0302te36548e032b4b013%40mail.gmail.com ]
+  * Lintian fixes:
+     - Remove dh_undocumented from debian/rules
+     - Add ${misc:Depends} to all binary packages
+     - Use updated debhelper version (5)
+     - Update Standards-Version (3.8.3)
+
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Wed, 09 Dec 2009 02:05:57 +0100
+
+snort (2.8.4.1-5) unstable; urgency=low
+
+  * Fix snort-stat so that it can generate proper emails even if Classification
+    is missing from the alert log, use fix suggested by Pavel Mateja.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 01 Nov 2009 00:43:02 +0100
+
 snort (2.8.4.1-4) unstable; urgency=low
 
   * Fix init.d so that if 'restart' is executed when no instance is
