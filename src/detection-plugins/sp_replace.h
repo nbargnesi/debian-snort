@@ -1,8 +1,8 @@
 /* $Id$ */
+
 /*
-** Copyright (C) 2002-2004 Jeff Nathan <jeff@snort.org>
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
-** Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -20,18 +20,31 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/*  I N C L U D E S
-**********************************************************/
+#ifndef __SP_REPLACE_H__
+#define __SP_REPLACE_H__
 
-/*  D E F I N E S
-************************************************************/
-#ifndef __RESPOND2_H__
-#define __RESPOND2_H__
-#if defined(ENABLE_RESPONSE2) && !defined(ENABLE_RESPONSE)
+#include "sp_pattern_match.h"
 
-void SetupRespond2(void);
-u_int32_t Respond2Hash(void *d);
-int Respond2Compare(void *l, void *r);
+void PayloadReplaceInit(char *, OptTreeNode *, int);
 
-#endif /* ENABLE_RESPONSE2 && !ENABLE_RESPONSE */
-#endif /* __RESPOND2_H__ */
+extern void Replace_ResetQueue(void);
+extern void Replace_QueueChange(PatternMatchData*);
+extern void Replace_ModifyPacket(Packet*);
+
+static INLINE void Replace_ResetOffset(PatternMatchData* pmd)
+{
+    pmd->replace_depth = -1;
+}
+
+static INLINE void Replace_StoreOffset(PatternMatchData* pmd, int detect_depth)
+{
+    pmd->replace_depth = detect_depth;
+}
+
+static INLINE int Replace_OffsetStored(PatternMatchData* pmd)
+{
+    return pmd->replace_depth >= 0;
+}
+
+#endif  /* __SP_REACT_H__ */
+
