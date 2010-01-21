@@ -172,7 +172,7 @@ case "$1" in
                 CONFIGFILE=/etc/snort/snort.$interface.conf
 
                 # Defaults:
-		fail="failed (check /var/log/syslog and /var/log/snort)"
+		fail="failed (check /var/log/daemon.log, /var/log/syslog and /var/log/snort/)"
                 run="yes"
 
                 if [ -e "$PIDFILE" ] && running $PIDFILE; then

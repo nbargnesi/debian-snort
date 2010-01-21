@@ -1,3 +1,13 @@
+snort (2.8.5.2-2) unstable; urgency=low
+
+  * Remove the reverse_order debconf option since Snort no longer supports the
+    -o option. The default now in Snort is to have Pass|Alert|Log 
+    (Closes: 565567)
+  * Change error message in the init.d script to point to /var/log/daemon.log
+    for Snort log messages.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 22 Jan 2010 00:12:52 +0100
+
 snort (2.8.5.2-1) unstable; urgency=low
 
   * New upstream release 

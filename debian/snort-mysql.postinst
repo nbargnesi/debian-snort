@@ -42,14 +42,12 @@ case "$1" in
 	db_get snort-mysql/interface || true; 	INTERFACE="$RET"
 	db_get snort-mysql/address_range || true;	ADDRESS_RANGE="$RET"
 	db_get snort-mysql/disable_promiscuous || true; DISABLE_PROMISCUOUS=$RET
-	db_get snort-mysql/reverse_order || true;	REVERSE_ORDER=$RET
         db_get snort-mysql/send_stats || true;        STATS_SEND="$RET"
 	db_get snort-mysql/stats_rcpt || true;	STATS_RCPT="$RET"
 	db_get snort-mysql/stats_treshold || true;	STATS_THRESHOLD="$RET"
 	db_get snort-mysql/options || true;		OPTIONS="$RET"
 
 	test "$DISABLE_PROMISCUOUS" = "true" && OPTIONS="$OPTIONS -p"
-	test "$REVERSE_ORDER" = "true" && OPTIONS="$OPTIONS -o"
 	# Failsafe in case the values above are blank (jfs)
 	[ -z "$STATS_RCPT" ] && STATS_RCPT=root
 	[ -z "$STATS_THRESHOLD" ] && STATS_THRESHOLD=1
