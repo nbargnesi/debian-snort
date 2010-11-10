@@ -1,0 +1,91 @@
+--- a/README
++++ b/README
+@@ -23,20 +23,20 @@
+ Note that pcap >= 1.0.0 is required.  pcap 1.1.1 is available at the time
+ of this writing and is recommended.
+ 
+-Also, libdnet is required for IPQ and NFQ DAQs.  If you get a relocation error
+-trying to build those DAQs, you may need to reinstall libdnet and configure it
++Also, libdumbnet is required for IPQ and NFQ DAQs.  If you get a relocation error
++trying to build those DAQs, you may need to reinstall libdumbnet and configure it
+ with something like this:
+ 
+     ./configure "CFLAGS=-fPIC -g -O2"
+ 
+-You may also experience problems trying to find the dynamic dnet library
++You may also experience problems trying to find the dynamic dumbnet library
+ because it isn't always named properly.  Try creating a link to the shared
+ library (identified by its .x or .x.y etc. extension) with the same name but
+ with ".so" inserted as follows:
+ 
+-    $ ln -s libdnet.1.1 libdnet.so.1.1
+-    $ ldconfig -Rv /usr/local/lib 2>&1 | grep dnet
+-      Adding /usr/local/lib/libdnet.so.1.1
++    $ ln -s libdumbnet.1.1 libdumbnet.so.1.1
++    $ ldconfig -Rv /usr/local/lib 2>&1 | grep dumbnet
++      Adding /usr/local/lib/libdumbnet.so.1.1
+ 
+ Alternatively, you should be able to fix both issues as follows:
+ 
+--- a/config.h.in
++++ b/config.h.in
+@@ -3,7 +3,7 @@
+ /* Define to 1 if you have the <dlfcn.h> header file. */
+ #undef HAVE_DLFCN_H
+ 
+-/* Define to 1 if you have the <dnet.h> header file. */
++/* Define to 1 if you have the <dumbnet.h> header file. */
+ #undef HAVE_DNET_H
+ 
+ /* Define to 1 if you have the `gethostbyname' function. */
+--- a/configure.ac
++++ b/configure.ac
+@@ -71,20 +71,20 @@
+     LDFLAGS="${LDFLAGS} -L${with_pcap_libraries}"
+ fi
+ 
+-AC_ARG_WITH(dnet_includes,
+-            [  --with-dnet-includes=DIR    dnet include directory],
+-            [with_dnet_includes="$withval"], [with_dnet_includes="no"])
++AC_ARG_WITH(dumbnet_includes,
++            [  --with-dumbnet-includes=DIR    dumbnet include directory],
++            [with_dumbnet_includes="$withval"], [with_dumbnet_includes="no"])
+ 
+-AC_ARG_WITH(dnet_libraries,
+-            [  --with-dnet-libraries=DIR   dnet library directory],
+-            [with_dnet_libraries="$withval"], [with_dnet_libraries="no"])
++AC_ARG_WITH(dumbnet_libraries,
++            [  --with-dumbnet-libraries=DIR   dumbnet library directory],
++            [with_dumbnet_libraries="$withval"], [with_dumbnet_libraries="no"])
+ 
+-if test "x$with_dnet_includes" != "xno"; then
+-    CPPFLAGS="${CPPFLAGS} -I${with_dnet_includes}"
++if test "x$with_dumbnet_includes" != "xno"; then
++    CPPFLAGS="${CPPFLAGS} -I${with_dumbnet_includes}"
+ fi
+ 
+-if test "x$with_dnet_libraries" != "xno"; then
+-    LDFLAGS="${LDFLAGS} -L${with_dnet_libraries}"
++if test "x$with_dumbnet_libraries" != "xno"; then
++    LDFLAGS="${LDFLAGS} -L${with_dumbnet_libraries}"
+ fi
+ 
+ DEFAULT_ENABLE=yes
+@@ -129,7 +129,7 @@
+               AC_HELP_STRING([--disable-ipq-module],[don't build the bundled IPQ module]),
+               [enable_ipq_module="$enableval"], [enable_ipq_module="$DEFAULT_ENABLE"])
+ if test "$enable_ipq_module" = yes; then
+-    AC_CHECK_HEADERS([dnet.h netinet/in.h libipq.h], [], [enable_ipq_module=no])
++    AC_CHECK_HEADERS([dumbnet.h netinet/in.h libipq.h], [], [enable_ipq_module=no])
+     AC_CHECK_HEADER([linux/netfilter.h], [], [enable_ipq_module=no],
+                     [
+                         #include <netinet/in.h>
+@@ -142,7 +142,7 @@
+               AC_HELP_STRING([--disable-nfq-module],[don't build the bundled NFQ module]),
+               [enable_nfq_module="$enableval"], [enable_nfq_module="$DEFAULT_ENABLE"])
+ if test "$enable_nfq_module" = yes; then
+-    AC_CHECK_HEADERS([dnet.h netinet/in.h libnetfilter_queue/libnetfilter_queue.h], [], [enable_nfq_module=no])
++    AC_CHECK_HEADERS([dumbnet.h netinet/in.h libnetfilter_queue/libnetfilter_queue.h], [], [enable_nfq_module=no])
+     AC_CHECK_HEADER([linux/netfilter.h], [], [enable_nfq_module=no],
+                     [
+                         #include <netinet/in.h>

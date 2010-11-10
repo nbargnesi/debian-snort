@@ -1,104 +1,197 @@
-This package was adopted by Sander Smeenk <ssmeenk@debian.org>
-Tue,  4 Jun 2002 21:56:15 +0200
+This work was packaged for Debian by Javier Fernandez-Sanguino Pen~a
+<jfs@debian.org> on Thu, 11 Nov 2010 00:52:20 +0100
 
-This package was debianized by Robert van der Meulen <rvdm@debian.org>
-Sun Feb  4 17:20:36 CET 2001.
+It was downloaded from: http://www.snort.org/snort-downloads
 
-It was downloaded from http://www.snort.org/
+Upstream Authors:
 
-Upstream Author: Martin Roesch <roesch@clark.net>
+    Sourcefire, Inc. <snort-team@sourcefire.com>
+    Michael R. Altizer <maltizer@sourcefire.com>
 
+Contributing Authors:
+
+    Yen Yen Lim
+    Steven McCanne  -  Lawrence Berkeley Laboratory.
+    Van Jacobson -  Lawrence Berkeley Laboratory.
+    Atsushi Onoe
+    Sam Leffler, Errno Consulting
 
 Copyright:
 
-Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
-
-Portions:
- - Copyright (C) 2002-2007  Sourcefire, Inc.
- - Copyright (C) 1993-1998 by Christopher R. Hertel
- - Copyright (C) 2001 Brian Caswell <bmc@mitre.org>
- - Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
- - Copyright (C) 2006 Joshua Wright <jwright@arubanetworks.com>
- - Copyright (C) 2002-2004 Jeff Nathan <jeff@snort.org>
- - Copyright (C) 2000,2001,2002 Carnegie Mellon University
- - Copyright (C) 2001 Jed Pickel <jed@pickel.net>
- - Copyright (C) 2000-2003 MySQL AB & MySQL Finland AB & TCX DataKonsult AB
- - Copyright (C) 2005 PreludeIDS Technologies. 
- - Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
- - Copyright(C) 1975 Association for Computing Machinery,Inc
- - Copyright(C) 2002,2003,2004 Marc Norton
- - Copyright(C) 2003,2004 Daniel Roelker 
- - Copyright (c) 2001 Michael Davis <mike@datanerds.net>
- - Copyright (c) 1995, 1996, 1997 Kungliga Tekniska Högskolan
- - Copyright (c) 1997-2003 University of Cambridge
- - Copyright (C) 2000,2001 Maciej Szarpak
- - Copyright (C) 2001 Phil Wood <cpw@lanl.gov>
- - Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
- - Copyright (c) 1998 Sendmail, Inc.  All rights reserved.
- - Copyright (c) 1997 Eric P. Allman.  All rights reserved.
- - Copyright (c) 1988, 1993 The Regents of the University of California
- - Copyright (C) 2000,2001 Christopher Cramer <cec@ee.duke.edu>
- - Copyright (C) 2003 Michael J. Pomraning <mjp@securepipe.com>
- - Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
- - Copyright (C) 2000 Mike Andersen <mike@src.no>
- - Copyright (C) 2001 Andrew Stubbs <andrews@stusoft.com>
- - Copyright (C) 2002 Chris Reid <chris.reid@codecraftconsulants.com>
+Copyright (C) 2007-2010 Sourcefire, Inc.
+Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
+      The Regents of the University of California.  All rights reserved.
+Copyright (c) 1997 Yen Yen Lim and North Dakota State University
+Copyright (C) 1999 WIDE Project.
+Copyright (c) 2001 Atsushi Onoe
+Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
 
 
 
 License:
 
-   This package is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 dated June, 1991.
-   You may not use, modify or distribute this program under any other version
-   of the GNU General Public License.
+    This software is Copyright (C) Sourcefire, Inc.  and is licensed under the
+    GPL version 2, see "/usr/share/common-licenses/GPL-2". But it *can not* 
+    be used, modified or distributed under any other any other version of the
+    GNU General Public License.
 
-   This package is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+    The following note has been included by the authors to clarify the above:
 
-   You should have received a copy of the GNU General Public License
-   along with this package; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
-   MA  02110-1301  USA
+    *****************************************************************************
+    Section 9 of the GPL V2 acknowledges that the Free Software Foundation may
+    publish revised and/or new versions of the GPL V2 from time to time.  Section 9
+    further states that a licensee of a program subject to the GPL V2 could be
+    free to use any such revised and/or new versions under two different scenarios:
+
+    1. "Failure to Specify." Section 9 of the GPL V2 allows a licensee of a
+    program governed by an unspecified version of the General Public License to
+    choose any version of the General Public License ever published by the Free
+    Software Foundation to govern his or her use of such program.
+
+    This provision is not applicable to your use of SNORT because we have
+    expressly stated in a number of instances that any third party's use,
+    modification or distribution of SNORT is governed by GPL V2.
+
+    2. "Any Later Version." At the end of the terms and condition of the GPL V2 is
+    a section called "How to Apply these Terms to Your New Program," which
+    provides guidance to a developer on how to apply the GPL V2 to a third party's
+    use, modification and/or distribution of his/her program. Among other things,
+    this guidance suggests that the developer attach certain notices to the
+    program. Of particular importance is the following notice:
+
+    "This program is free software; you can redistribute it and/or modify it under
+    the terms of the GNU General Public License as published by the Free Software
+    Foundation; either version 2 of the License, or (at your option) any later
+    version."
+
+    Thus if a developer follows strictly the guidance provided by the Free
+    Software Foundation, Section 9 of the GPL V2 provides the licensee the option
+    to either use, modify or distribute the program under GPL V2 or under any
+    later version published by the Free Software Foundation.
+
+    SNORT is an open source project that is governed exclusively by the GPL V2
+    and any third party desiring to use, modify or distribute SNORT must do so by
+    strictly following the terms and conditions of GPL V2. Anyone using, modifying
+    or distributing SNORT does not have the option to chose to use, modify or
+    distribute SNORT under any revised or new version of the GPL, including
+    without limitation, the GNU General Public License Version 3.
+
+    For ease of reference, the comparable notice that is used with SNORT
+    (contained in the 'README' file) is as follows:
+
+    "This program is free software; you can redistribute it and/or modify it under
+    the terms of the GNU General Public License Version 2 as published by the Free
+    Software Foundation. You may not use, modify or distribute this program under
+    any other version of the GNU General Public License."
+
+    If you have any questions about this statement, please feel free to email
+    snort-info@snort.org.
+    *****************************************************************************
+
+The Debian packaging is:
+
+    Copyright (C) 2010 Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
+    and is licensed under the GPL version 2, see
+    "/usr/share/common-licenses/GPL-2".
+
+Other licenses in the code:
+
+    This library contains code derived from the Stanford/CMU enet packet filter,
+    (net/enet.c) distributed as part of 4.3BSD, and code contributed
+    to Berkeley by Steven McCanne and Van Jacobson both of Lawrence
+    Berkeley Laboratory.
+
+    This code (in the sfbpf/ subdirectory) code holds the following license:
+
+    File sfbpf/sf_bpf_filter.c
+    File sfbpf/arcnet.h
+    File sfbpf/atmuni31.h
+
+    * Redistribution and use in source and binary forms, with or without
+    * modification, are permitted provided that the following conditions
+    * are met:
+    * 1. Redistributions of source code must retain the above copyright
+    *    notice, this list of conditions and the following disclaimer.
+    * 2. Redistributions in binary form must reproduce the above copyright
+    *    notice, this list of conditions and the following disclaimer in the
+    *    documentation and/or other materials provided with the distribution.
+    * 3. All advertising materials mentioning features or use of this software
+    *    must display the following acknowledgement:
+    *      This product includes software developed by the University of
+    *      California, Berkeley and its contributors.
+    * 4. Neither the name of the University nor the names of its contributors
+    *    may be used to endorse or promote products derived from this software
+    *    without specific prior written permission.
+    *
+    * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+            * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    * SUCH DAMAGE.
+    *
+
+    File sfbpf/bittypes.h
+    File sfbpf/ieee80211.h
+
+    * Redistribution and use in source and binary forms, with or without
+    * modification, are permitted provided that the following conditions
+    * are met:
+    * 1. Redistributions of source code must retain the above copyright
+    *    notice, this list of conditions and the following disclaimer.
+    * 2. Redistributions in binary form must reproduce the above copyright
+    *    notice, this list of conditions and the following disclaimer in the
+    *    documentation and/or other materials provided with the distribution.
+    * 3. Neither the name of the project nor the names of its contributors
+    *    may be used to endorse or promote products derived from this software
+    *    without specific prior written permission.
+    * 
+    * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+    * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+    * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+            * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    * SUCH DAMAGE.
 
 
-On Debian GNU/Linux systems, the complete text of the GNU General
-Public License can be found in `/usr/share/common-licenses/GPL-2'.
+    In addition, there is code holding the following (BSD-type) license:
 
-Additional licenses / copyrights:
----------------------------------
+    File sfbpf/sfbpf-int.c
+    File sfbpf/sf_gencode.c
+    File sfbpf/sf_nametoaddr.c
+    File sfbpf/sf_optimize.c
+    File sfbpf/ethertype.h
+    File sfbpf/gencode.h
+    File sfbpf/
+    File sfbpf/
+    File sfbpf/
+    File sfbpf/
 
-Snort includes Winpcap which is:
+     * Redistribution and use in source and binary forms, with or without
+     * modification, are permitted provided that: (1) source code distributions
+     * retain the above copyright notice and this paragraph in its entirety, (2)
+     * distributions including binary code include the above copyright notice and
+     * this paragraph in its entirety in the documentation or other materials
+     * provided with the distribution, and (3) all advertising materials mentioning
+     * features or use of this software display the following acknowledgement:
+     * ``This product includes software developed by the University of California,
+     * Lawrence Berkeley Laboratory and its contributors.'' Neither the name of
+     * the University nor the names of its contributors may be used to endorse
+     * or promote products derived from this software without specific prior
+     * written permission.
+     * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
+     * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+     * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+     */
 
- * Copyright (c) 2001 - 2003
- * NetGroup, Politecnico di Torino (Italy)
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Politecnico di Torino nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 

@@ -1,0 +1,11 @@
+daq for Debian
+--------------
+
+This package currently does not need any patches to be built, atlthough the
+infrastructure is in place to add these using quilt.
+
+Changes to the sources should be done using quilt, and patches should be stored at debian/patches.
+
+
+
+
