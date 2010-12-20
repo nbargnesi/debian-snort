@@ -41,10 +41,10 @@ case "$1" in
 	;;
     configure)
 	# edit config file
-	db_get snort/startup || true; 		STARTUP=$RET
+	db_get snort/startup || true; 		STARTUP="$RET"
 	db_get snort/interface || true; 	INTERFACE="$RET"
 	db_get snort/address_range || true;	ADDRESS_RANGE="$RET"
-	db_get snort/disable_promiscuous || true; DISABLE_PROMISCUOUS=$RET
+	db_get snort/disable_promiscuous || true; DISABLE_PROMISCUOUS="$RET"
 	db_get snort/send_stats || true;	STATS_SEND="$RET"
 	db_get snort/stats_rcpt || true;	STATS_RCPT="$RET"
 	db_get snort/stats_treshold || true;	STATS_THRESHOLD="$RET"

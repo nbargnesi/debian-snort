@@ -1,3 +1,25 @@
+snort (2.8.5.2-3) unstable; urgency=low
+
+  * Move the database configuration code for the -mysql and -pgsql packages
+    into an independent file (/etc/snort/database.conf). This prevents the
+    debconf script from modifying /etc/snort/snort.conf, which is a conffile.
+    And, consequentely, prevents upgrade prompts for users as well as some
+    other issues when upgrading (Closes: #603428, #566308)
+    * Adding snort-common-preinst to split off exiting config or touch the
+      new database config file on new installations to ensure it exists.
+    * Modify etc/snort.conf to include the new database configuration file.
+    * Modify snort-{mysql,pgsql}.postinst to use new configuration file.
+    * Modify snort-{mysql,pgsql,common}.postrm to purge new configuration file if
+      it exists.
+    Thanks to Alexander Reichle-Schmehl for the initial patch used to fix this issue
+  * debian/NEWS: describe the new change on database handling
+  * debian/snort{,-inline,-mysql,-pgsql}.prerm: Move the code in charge of killing
+    snort astray children over to the proper location and also ignore errors 
+    if there are (process might appear spurously in the process table due to
+    race conditions) (Closes: 557729)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 20 Dec 2010 15:25:49 +0100
+
 snort (2.8.5.2-2) unstable; urgency=low
 
   * Remove the reverse_order debconf option since Snort no longer supports the
