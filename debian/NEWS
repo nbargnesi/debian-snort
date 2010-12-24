@@ -1,3 +1,16 @@
+snort (2.8.5.2-3) unstable; urgency=low
+
+  The database information used by Snort to log alerts into a database 
+  (and configured automatically through Debconf) has now been moved to the
+  /etc/snort/database.conf file.
+
+  Please make changes to your database setup using 'dpkg-reconfigure'
+  and do not edit that file directly.
+
+  Note that this file might be empty if you are not logging to a database
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 20 Dec 2010 15:31:24 +0100
+
 snort (2.7.0-15) unstable; urgency=low
 
   The Database schema changed in Snort from 2.6 to the 2.7 release,
