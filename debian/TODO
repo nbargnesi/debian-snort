@@ -2,7 +2,35 @@
 TODO things for Snort in Debian
 -------------------------------
 
-- Offer the user an option to automatically create the database since
+- Provide support to avoid specifying the address range for multiple
+  interfaces (or skip this if you have more than once and substitute
+  by a note telling the admin to configure this in the snort.$IFACE.conf 
+  file).  This could be done using 'ip addr show $IFACE' and extracting
+  the value from the 'inet' component.
+
+  Note: This should only be done if only *one interface is available
+
+- Try to use the interface defined IP address to set the address range (and
+  lower the questions priority
+  This should also handle multiple interfaces.
+  (see bug #248000)
+
+- Add a note in the debconf propmt that users can use '\$eth0_ADDRESS'
+  (or '\$eth1_ADDRESS' etc..) to use the interface's address regardless
+  of the configured address. (Note that \$ or otherwise it will
+  be expanded in the scripts)
+
+  REVIEW: How does Snort use this to expand it in HOME_NET
+
+
+- snort-{mysql,pgsl}:
+ Database configuration should ensure that only valid characters are included
+ here. Since the information is written into a configuration file at least
+ hashes should be prevented.  See:
+ http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=567495
+
+- snort-{mysql,pgsl}:
+  Offer the user an option to automatically create the database since
   the schemas (at /usr/share/doc/snort*) stuff is not available on installation.
 
   This confuses users since they are asked for some information (network
@@ -38,8 +66,6 @@ TODO things for Snort in Debian
 
 - Use LSB functions in Init.d script
 
-- Use ucf to integrate changes by the maintainer when upgrading
-
 - Break up the init.d script into reusable functions 
   Also: add a check in order to determine if the snort sensor started
   up properly or it did not.
@@ -55,23 +81,10 @@ TODO things for Snort in Debian
   config file provided, this is related to bug #247665 which is partially
   fixed by the snort-common Source-Version depends introduced in 2.2.0-2
 
-- Provide support to avoid specifying the address range for multiple
-  interfaces (or skip this if you have more than once and substitute
-  by a note telling the admin to configure this in the snort.$IFACE.conf 
-  file).  This could be done using 'ip addr show $IFACE' and extracting
-  the vaule from the 'inet' component.
-
-- Rewrite the "address range" question. It actually does not explain what
-  it is actually used for (HOME_NET)
-
-- Try to use the interface defined IP address to set the address range (and
-  lower the questions priority
-  This should also handle multiple interfaces.
-  (see bug #248000)
-
 - Add some common logcheck rules (see #222584, and #217175)
 
 DONE
+
 
 - Determine, if the interface is configured and up.
  (see bug #248000)
@@ -83,3 +96,13 @@ DONE
   Done: snort-rules-default currently recommends: 'oinkmaster' better
   that than maintaining a separate update script unmaintained upstream.
 
+
+- Rewrite the "address range" question. It actually does not explain what
+  it is actually used for (HOME_NET)
+
+NOT REQUIRED
+
+- Use ucf to integrate changes by the maintainer when upgrading. 
+
+  Justification: The package has be changed to try to not make changes through
+  scripts in the maintainer's file

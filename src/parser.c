@@ -4620,7 +4620,7 @@ char * ProcessFileOption(SnortConfig *sc, const char *filespec)
 
     if(filespec == NULL)
     {
-        FatalError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
+        FatalError("no argument in this file option, remove extra ':' at the end of the alert option\n");
     }
 
     /* look for ".." in the string and complain and exit if it is found */

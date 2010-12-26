@@ -268,7 +268,7 @@ static void ParseDNSArgs(DNSConfig *config, u_char* argp)
             if (( !cur_tokenp ) || ( strcmp(cur_tokenp, "{" )))
             {
                 DynamicPreprocessorFatalMessage("%s(%d) Bad value specified for %s.  Must start "
-                                                "with '{' and be space seperated.\n",
+                                                "with '{' and be space separated.\n",
                                                 *(_dpd.config_file), *(_dpd.config_line),
                                                 DNS_PORTS_KEYWORD);
                 //free(argcpyp);

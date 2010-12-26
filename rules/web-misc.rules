@@ -421,7 +421,10 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS 443 (msg:"WEB-MISC PCT Client_Hello
 # one of these days, we will have port lists...
 alert tcp $EXTERNAL_NET any -> $HOME_NET 81 (msg:"WEB-MISC McAfee ePO file upload attempt"; flow:to_server,established; content:"/spipe/repl_file"; nocase; content:"Command=BEGIN"; nocase; reference:bugtraq,10200; reference:cve,2004-0038; classtype:attempted-admin; sid:2562; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-MISC cPanel resetpass access"; flow:to_server,established; uricontent:"/resetpass"; nocase; reference:bugtraq,9848; classtype:web-application-activity; sid:2569; rev:1;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-MISC Invalid HTTP Version String"; flow:to_server,established; content:"HTTP/"; nocase; isdataat:6,relative; content:!"|0A|"; within:5; reference:bugtraq,9809; reference:nessus,11593; classtype:non-standard-protocol; sid:2570; rev:7;)
+# Note: URI size is unlimited as per RFC2068, the depth here is calculated
+# based on method (5) + space + URI + space + version 
+# to prevent false positives from User-Agent strings with HTTP content (jfs)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-MISC Invalid HTTP Version String"; flow:to_server,established; content:"HTTP/"; depth:300; nocase; isdataat:6,relative; content:!"|0A|"; within:5; reference:bugtraq,9809; reference:nessus,11593; classtype:non-standard-protocol; sid:2570; rev:8;)
 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-MISC Crystal Reports crystalimagehandler.aspx access"; flow:to_server,established; uricontent:"/crystalimagehandler.aspx"; nocase; reference:cve,2004-0204; reference:url,www.microsoft.com/security/bulletins/200406_crystal.mspx; classtype:web-application-activity; sid:2581; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-MISC Crystal Reports crystalImageHandler.aspx directory traversal attempt"; flow:to_server,established; uricontent:"/crystalimagehandler.aspx"; nocase; content:"dynamicimage=../"; nocase; reference:bugtraq,10260; reference:cve,2004-0204; reference:nessus,12271; reference:url,www.microsoft.com/security/bulletins/200406_crystal.mspx; classtype:web-application-attack; sid:2582; rev:3;)
