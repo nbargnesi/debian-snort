@@ -1,0 +1,33 @@
+--- snort-2.9.0.1.orig/src/parser.c
++++ snort-2.9.0.1/src/parser.c
+@@ -4770,7 +4770,7 @@
+ 
+     if(filespec == NULL)
+     {
+-        FatalError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
++        FatalError("no argument in this file option, remove extra ':' at the end of the alert option\n");
+     }
+ 
+     /* look for ".." in the string and complain and exit if it is found */
+--- snort-2.9.0.1.orig/src/sfutil/sfportobject.c
++++ snort-2.9.0.1/src/sfutil/sfportobject.c
+@@ -3664,7 +3664,7 @@
+     {
+     case POPERR_NO_NAME:            return "no name";
+     case POPERR_NO_ENDLIST_BRACKET: return "no end of list bracket."
+-                                           " Elements must be comma seperated,"
++                                           " Elements must be comma separated,"
+                                            " and no spaces may appear between"
+                                            " brackets.";
+     case POPERR_NOT_A_NUMBER:       return "not a number";
+--- snort-2.9.0.1.orig/src/dynamic-preprocessors/dns/spp_dns.c
++++ snort-2.9.0.1/src/dynamic-preprocessors/dns/spp_dns.c
+@@ -268,7 +268,7 @@
+             if (( !cur_tokenp ) || ( strcmp(cur_tokenp, "{" )))
+             {
+                 DynamicPreprocessorFatalMessage("%s(%d) Bad value specified for %s.  Must start "
+-                                                "with '{' and be space seperated.\n",
++                                                "with '{' and be space separated.\n",
+                                                 *(_dpd.config_file), *(_dpd.config_line),
+                                                 DNS_PORTS_KEYWORD);
+                 //free(argcpyp);

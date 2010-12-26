@@ -13,12 +13,7 @@ GENCONF="/etc/snort/snort.conf"
 
 case "$1" in
     install)
-        # TODO: Having an empty file here is a little bit weird for sysadmins
-        # it might be better to have a file with just a comment saying
-        # that it does nothing, but then it makes it difficult for
-        # snort-common to detect if he has to purge it on postrm
-        # make sure the database configuration file exists
-        [ ! -e "$DBCONF" ] && touch $DBCONF
+        # Do nothing
     ;;
     upgrade)
          # earlier versions modified /etc/snort/snort.conf directly for the
@@ -35,7 +30,7 @@ case "$1" in
             fi
         fi
 
-         if dpkg --compare-versions "$2" le "2.8.5.2-3" && grep -q "(#DBSTART#)" $GENCONF 
+         if dpkg --compare-versions "$2" le "2.8.5.2-3" && [ -e "$GENCONF" ] && grep -q "(#DBSTART#)" "$GENCONF" 
          then
              GENCONF_TEMPFILE=`mktemp`
              DBCONF_TEMPFILE=`mktemp`

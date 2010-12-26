@@ -1,3 +1,48 @@
+snort (2.9.0.1-3) experimental; urgency=low
+ 
+  [ Javier Fernandez-Sanguino ] 
+  * Forward port changes introduced in unstable package to experimental.
+
+  [ Andrew Pollow - <apollock@google.com> ] 
+  * Convert source package to 3.0 (quilt) format
+  * Migrate all patches from diff.gz to debian/patches
+      - community_rules: Include community rules
+      - configuration: Setup the configuration file for use in Debian
+      - document_database_changes: Document changes to the database
+      - dumbnet: Use the dumbnet library instead of dnet
+      - fix_manpage_typo: Fix typos in snort.8 manpage
+      - remove_builddep_on_latex2html: Have faq.tex use hyperref.sty instead of latex2html
+      - rules: Add GPL rules provided in earlier snort releases
+      - update_autotools: Update autotools
+      - upstream_historical_relnotes: Add historical Release Notes from older upstream
+        versions
+  * debian/control: s/gs-common/ghostscript/ in Build-Depends-Indep
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 26 Dec 2010 13:22:52 +0100
+
+snort (2.8.5.2-5) unstable; urgency=high
+
+  * Final RC bug fix:
+  * snort-common: Create the database.conf file on package's configuration not
+    on the preinstallation script (Closes: #607801)
+  * Lintian fixes:
+     * debian/control: Upgrade standards version, no changes required
+     * debian/snort.init.d: add $remote_fs to Required-Start and Required-Stop
+     * debian/snort.templates: Move the config_error template over to
+        debian/snort-common.templates as it is used there
+     * debian/snort-{mysql,pgsql}.templates: remove the config_error template
+        there as it is not used
+     * debian/control: Upgrade the Build-Depends on debhelper
+     * src/parser.c: Typo fix argu*e*ment -> argument
+     * src/preprocessors/spp_perfmonitor.c,
+       src/dynamic-preprocessors/dns/spp_dns.c: 
+        Typo fix: sep*e*rated --> separated
+  * rules/web-misc.rules: Limit the depth when searching for an HTTP version
+    to prevent false positives from apt-get User-Agent string (LP: #258155)
+  * debian/TODO: review contents and update
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 26 Dec 2010 13:20:25 +0100
+
 snort (2.9.0.1-2) experimental; urgency=low
 
   * [ The Merry Xmas for experimental users Release ! ]

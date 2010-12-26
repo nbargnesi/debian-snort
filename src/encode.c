@@ -24,7 +24,7 @@
 #endif
 
 #include <string.h>
-#include <dumbnet.h>
+#include <dnet.h>
 
 #include "encode.h"
 #include "sfdaq.h"

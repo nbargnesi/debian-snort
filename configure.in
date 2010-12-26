@@ -496,41 +496,41 @@ if test "x$enable_dynamicplugin" = "xyes"; then
     CPPFLAGS="$CPPFLAGS -DDYNAMIC_PLUGIN"
 fi
 
-# check for dumbnet first since some DAQs need it
-AC_ARG_WITH(dumbnet_includes,
-    [  --with-dumbnet-includes=DIR       libdumbnet include directory],
-    [with_dumbnet_includes="$withval"],[with_dumbnet_includes="no"])
+# check for dnet first since some DAQs need it
+AC_ARG_WITH(dnet_includes,
+    [  --with-dnet-includes=DIR       libdnet include directory],
+    [with_dnet_includes="$withval"],[with_dnet_includes="no"])
 
-AC_ARG_WITH(dumbnet_libraries,
-    [  --with-dumbnet-libraries=DIR      libdumbnet library directory],
-    [with_dumbnet_libraries="$withval"],[with_dumbnet_libraries="no"])
+AC_ARG_WITH(dnet_libraries,
+    [  --with-dnet-libraries=DIR      libdnet library directory],
+    [with_dnet_libraries="$withval"],[with_dnet_libraries="no"])
 
-if test "x$with_dumbnet_includes" != "xno"; then
-    CPPFLAGS="${CPPFLAGS} -I${with_dumbnet_includes}"
+if test "x$with_dnet_includes" != "xno"; then
+    CPPFLAGS="${CPPFLAGS} -I${with_dnet_includes}"
 else
-    CPPFLAGS="${CPPFLAGS} `dumbnet-config --cflags`"
+    CPPFLAGS="${CPPFLAGS} `dnet-config --cflags`"
 fi
 
-if test "x$with_dumbnet_libraries" != "xno"; then
-    LDFLAGS="${LDFLAGS} -L${with_dumbnet_libraries} -ldumbnet"
+if test "x$with_dnet_libraries" != "xno"; then
+    LDFLAGS="${LDFLAGS} -L${with_dnet_libraries} -ldnet"
 else
-    LDFLAGS="${LDFLAGS} `dumbnet-config --libs`"
+    LDFLAGS="${LDFLAGS} `dnet-config --libs`"
 fi
 
-AC_CHECK_HEADERS(dumbnet.h, DNET="yes", DNET="no")
+AC_CHECK_HEADERS(dnet.h, DNET="yes", DNET="no")
 if test "x$DNET" = "xno"; then
     echo
-    echo "   ERROR!  dumbnet header not found, go get it from"
-    echo "   http://code.google.com/p/libdnet/ or use the --with-dumbnet-*"
+    echo "   ERROR!  dnet header not found, go get it from"
+    echo "   http://code.google.com/p/libdnet/ or use the --with-dnet-*"
     echo "   options, if you have it installed in an unusual place"
     exit
 fi
 
-AC_CHECK_LIB(dumbnet, eth_set, DNET="yes", DNET="no")
+AC_CHECK_LIB(dnet, eth_set, DNET="yes", DNET="no")
 if test "x$DNET" = "xno"; then
     echo
-    echo "   ERROR!  dumbnet library not found, go get it from"
-    echo "   http://code.google.com/p/libdnet/ or use the --with-dumbnet-*"
+    echo "   ERROR!  dnet library not found, go get it from"
+    echo "   http://code.google.com/p/libdnet/ or use the --with-dnet-*"
     echo "   options, if you have it installed in an unusual place"
     exit
 fi

@@ -31,7 +31,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <dumbnet.h>
+#include <dnet.h>
 
 #include "decode.h"
 #include "snort.h"

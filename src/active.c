@@ -24,7 +24,7 @@
 #include "config.h"
 #endif
 
-#include "dumbnet.h"
+#include "dnet.h"
 
 #include "active.h"
 #include "stream_api.h"
