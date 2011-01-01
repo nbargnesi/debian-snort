@@ -1,3 +1,35 @@
+snort (2.8.5.2-6) unstable; urgency=high
+
+  * debian/snort{,-mysql,-pgsql}.postinst: Introduce code to be able to manage
+     the situation in which a local admin has introduced changes in the
+     /etc/snort/snort.debian.conf configuration file manually. Keep the
+     local changes and leave the file untouched on upgrades. (Closes: #608590)
+  * debian/snort-{mysql,-pgsql}.postinst: 
+       - Introduce code to be able to manage the situation in which a local
+         admin has introduced changes in /etc/snort/database.conf and has not
+         used dpkg-reconfigure. Keep the local changes and do not touch the
+         file on upgrades.
+       - Generate the database.conf regardless of the status of the
+         db-pending-config file as we need the configuration file in any case.
+  * debian/snort{,-mysql,-pgsql}.config: Read the values of the configuration
+     file /etc/snort/snort.debian.conf and use them to set to preseed all the
+     debconf values. This ensures that local changes are reloaded into debconf
+     if any changes are made in the file and makes it possible to regenerate
+     the file with dpkg-reconfigure.
+  * debian/snort{,-mysql,-inline,-pgsq}.config: Make it possible to debug the
+    scripts through the use of the  DEBIAN_SCRIPT_DEBUG environment variable
+  * debian/snort-{mysql,pgsql}.config: Fix error in call of template which
+    belongs to the snort package. Use the proper template now.
+  * debian/README-database.Debian: Fix syntax error in MySQL example calls and
+     reword the text a bit to clarify that the provided information are just
+     examples on how to setup the databases.
+  * debian/po/: Use debconf-updatepo to remove obsolete translations from PO
+    files.
+  * debian/NEWS: Remove the indication that database.conf should not be
+    manually edited.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 01 Jan 2011 23:40:30 +0100
+
 snort (2.8.5.2-5) unstable; urgency=high
 
   * Final RC bug fix:
