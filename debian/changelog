@@ -1,3 +1,22 @@
+daq (0.3-2) experimental; urgency=low
+
+  * Fix FTBFS: update Build-Depends with flex, bison (Closes: #609054)
+  * This version now supports inline mode since the dumbnet library is now properly 
+    detected (Closes: #609865)
+  * To fix the above change the debian/patches/10_dnet-to-dumbnet.diff patch
+    New changes in the patch:
+      - Make m4/sf.m4 work with latest autoconf since the AX_CFLAGS_GCC_OPTION
+        call would not work when using multiple GCC_OPTIONS, only one option (pedantic)
+        is now check to set 
+     - os-daq-modules/Makefile.am, os-daq-modules/daq_ipq.c, os-daq-modules/daq_nfq.c:
+        Modified to use 'dumbnet' instead of 'dnet'
+     - README: it's 'aclocal -I m4', there is no 'config' directory
+     - More changes due to the automatic regeneration of all autoconf files after doing the
+       above changes and running:
+       'libbtoolize --copy --force ; aclocal -I m4; autoheader; autoconf; automake --foreign '
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Thu, 13 Jan 2011 01:11:14 +0100
+
 daq (0.3-1) experimental; urgency=low
 
   * Initial release. 
