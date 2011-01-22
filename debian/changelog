@@ -1,3 +1,12 @@
+snort (2.8.5.2-8) unstable; urgency=low
+
+  * debian/snort{,-mysql,-pgsql}.config: Remove the '-o' from
+    DEBIAN_SNORT_OPTIONS that was prepended by the postinst script in
+    version 2.8.5.2-2 on upgrades.
+  * debian/snort{,-mysql,-pgsql}.prerm: Change /usr/sbin/nessus to /usr/sbin/snort
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Thu, 22 Jan 2011 12:18:03 +0100
+
 snort (2.8.5.2-7) unstable; urgency=low
 
   * debian/snort{,-mysql,-pgsql}.config: Remove the '-p' from
