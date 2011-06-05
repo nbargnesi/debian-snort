@@ -1,3 +1,10 @@
+snort (2.7.0-19) unstable; urgency=low
+
+  * Make the snort_rules_update example script use bash instead of sh.
+    (Closes: #489662)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 09 Aug 2008 22:31:47 +0200
+
 snort (2.7.0-18) unstable; urgency=low
 
   * Romain debconf translation provided by Eddy Petrior (Closes: 486137)
