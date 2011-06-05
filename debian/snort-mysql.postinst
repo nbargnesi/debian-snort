@@ -119,6 +119,7 @@ EOF
                 md5sum "$CONFIG" > "$CONFIG_CHECKSUM"
                 overwrite_config="yes"
             fi
+        rm -f "$OLD_CONFIG"
         fi
 
         # Create the new configuration file based on debconf information
