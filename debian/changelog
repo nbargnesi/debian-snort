@@ -1,4 +1,12 @@
-snort (2.7.0-20.1) unstable; urgency=low
+snort (2.7.0-20.3) testing-proposed-updates; urgency=low
+
+  * Reupload to testing to *really* depend on newer libpcre.
+  * Include patch from dato to make the package binNMU-safe
+  * Remove debian/CVS and debian/my/CVS
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 04 Nov 2008 22:35:26 +0100
+
+snort (2.7.0-20.2) testing-proposed-updates; urgency=high
 
   * Upload to testing-proposed-updates to fix security bug CVE-2008-1804 (see
     below). This package cannot go through sid since the sid build uses
