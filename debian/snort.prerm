@@ -24,7 +24,7 @@ case "$1" in
                                 /etc/init.d/snort stop || exit $?
                         fi
         else
-                start-stop-daemon --stop --quiet --oknodo --exec /usr/sbin/nessusd
+                start-stop-daemon --stop --quiet --oknodo --exec /usr/sbin/snort
         fi
         rm -f /var/run/snort_*.pid
 
