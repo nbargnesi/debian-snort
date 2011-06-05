@@ -1,3 +1,14 @@
+snort (2.7.0-20.4) stable; urgency=high
+
+  * Fix error in call to LogMessage (missing parameters) which caused a
+    segfault when fragmented packages were received. This bug was introduced in
+    the patch to fix CVE-2008-1804. Urgency set to 'high' as in some
+    circunstances it makes Snort fail to start on startup or die after
+    working for only a few minutes. Also, this could be used as a DoS
+    attack against an IDS sensor rendering it useless. (Closes: #503992)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 22 Mar 2009 00:16:44 +0100
+
 snort (2.7.0-20.3) testing-proposed-updates; urgency=low
 
   * Reupload to testing to *really* depend on newer libpcre.
