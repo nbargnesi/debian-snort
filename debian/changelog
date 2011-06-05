@@ -1,3 +1,13 @@
+snort (2.3.0-7) unstable; urgency=low
+
+  * Do not change the permissions of /var/log/snort/ and 
+    /etc/snort/snort.conf if the administrator has setup an override
+    using dpkg-statoverride (Closes: #296927)
+  * Updated translation to Catalan with the one provided by Aleix Badia i
+    Bosch
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat, 26 Feb 2005 13:09:14 +0100
+
 snort (2.3.0-6) unstable; urgency=low
 
   * Added tetex-extra to Build-Depends (Closes: #296814)
