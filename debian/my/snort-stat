@@ -177,8 +177,6 @@ for $i ( 0 .. $#result ) {
 # begin report
 
 exit 0 unless ($total);
-# Abort if the total does not exceed the threshold
-exit 0 unless ($total >$th);
 print_head();
 print_summary();
 print_menu();
