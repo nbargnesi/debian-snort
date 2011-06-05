@@ -1,0 +1,10 @@
+update_autotools
+configuration
+rules
+community_rules
+document_database_changes
+upstream_historical_relnotes
+remove_builddep_on_latex2html
+fix_manpage_typo
+dumbnet
+fix_typos_source
