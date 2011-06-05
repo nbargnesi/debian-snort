@@ -1,3 +1,21 @@
+snort (2.9.0.1-1) experimental; urgency=low
+
+  * New upstream release. 
+  * Change configure.in to use 'dumbnet' instead of 'dnet' since the library
+    is renamed in Debian
+  * debian/control: 
+       - Make it Build-Depend on libdumbnet-dev since this release now requires
+         it (it was previously optional)
+       - Remove iptables-dev (no longer required)
+  * debian/rules: 
+        - Do not use --enable-smbalerts (no longer available) when configuring
+  * Remove the following documentation from the installation as it is no longer
+    available: doc/README.FLEXRESP, doc/README.FLEXRESP2
+
+  * Upload to experimental until I get wider testing.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Thu, 11 Nov 2010 00:32:49 +0100
+
 snort (2.8.5.2-2) unstable; urgency=low
 
   * Remove the reverse_order debconf option since Snort no longer supports the
