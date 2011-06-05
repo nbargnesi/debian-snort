@@ -1,17 +1,17 @@
 # translation of ro.po to Romanian
-# Romanian translations for PACKAGE package
-# Traducerea în limba română pentru pachetul PACKAGE.
-# Copyright (C) 2007 THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# Romanian translations for snort package
+# Traducerea în limba română pentru pachetul snort.
+# Copyright (C) 2007 Javier Fernandez-Sanguino
+# This file is distributed under the same license as the snort package.
 #
 # Eddy Petrisor <eddy.petrisor@gmail.com>, 2007.
-# Eddy Petrișor <eddy.petrisor@gmail.com>, 2007.
+# Eddy Petrișor <eddy.petrisor@gmail.com>, 2007, 2008.
 msgid ""
 msgstr ""
 "Project-Id-Version: ro\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2007-12-28 01:31+0100\n"
-"PO-Revision-Date: 2007-02-02 14:56+0200\n"
+"POT-Creation-Date: 2008-01-28 00:26+0100\n"
+"PO-Revision-Date: 2008-01-12 11:22+0200\n"
 "Last-Translator: Eddy Petrișor <eddy.petrisor@gmail.com>\n"
 "Language-Team: Romanian <debian-l10n-romanian@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -50,10 +50,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
-msgstr "Pe care interfaţă/interfeţe ascultă Snort?"
+msgstr "Interfața/interfețele pe care ascultă Snort:"
 
 #. Type: string
 #. Description
@@ -61,44 +59,32 @@ msgstr "Pe care interfaţă/interfeţe ascultă Snort?"
 #: ../snort-pgsql.templates:2001
 msgid ""
 "This value usually is 'eth0', but you might want to vary this depending on "
-"your environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate (Hint: use 'ip link show' of 'ifconfig')."
+"your environment; if you are using a dialup connection 'ppp0' might be more "
+"appropiate (Hint: use 'ip link show' or 'ifconfig')."
 msgstr ""
+"Această valoare este, de obicei, „eth0”, însă este posibil să doriți "
+"altceva, în funcție de condițiile locale; dacă folosiți o conexiune "
+"„dialup”, „ppp0” ar putea fi mai potrivită (Indiciu: folosiți „ip link show” "
+"sau „ifconfig”)."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid ""
-#| "Notice that Snort is usually configured to inspect all traffic coming "
-#| "from the Internet, so the interface you add here is usually the same the "
-#| "'default route' is on.  You can determine which interface is used for "
-#| "this running either '/sbin/ip ro sh' or '/sbin/route -n' (look for "
-#| "'default' or '0.0.0.0')."
 msgid ""
 "Typically this is the same interface than the 'default route' is on.  You "
 "can determine which interface is used for this running either '/sbin/ip ro "
 "sh' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
 msgstr ""
-"A se observa că, de obicei, Snort este configurat să inspecteze tot traficul "
-"care soseşte din internet, deci interfaţa adăugată aici este, de cele mai "
-"multe ori, aceeaşi cu cea pe care este definită ruta implicită. Puteţi "
-"detecta care interfaţă este folosită acum rulând fie '/sbin/ip ro sh', fie '/"
-"sbin/route -n' (căutaţi după 'default' sau '0.0.0.0')."
+"De cele mai multe ori, aceasta este aceeași cu cea pe care este definită "
+"ruta implicită. Puteți detecta care interfață este folosită acum în acest "
+"scop rulând fie '/sbin/ip ro sh', fie '/sbin/route -n' (căutați textul "
+"'default' sau '0.0.0.0')."
 
 #. Type: string
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#, fuzzy
-#| msgid ""
-#| "It is also not uncommon to run Snort on an interface with no IP and "
-#| "configured in promiscuous mode, if this is your case, select the "
-#| "interface in this system that is physically connected to the network you "
-#| "want to inspect, enable promiscuous mode later on and make sure that the "
-#| "network traffic is sent to this interface (either connected to a 'port "
-#| "mirroring/spanning' port in a switch, to a hub or to a tap)"
 msgid ""
 "It is also not uncommon to use an interface with no IP and configured in "
 "promiscuous mode, if this is your case, select the interface in this system "
@@ -107,12 +93,12 @@ msgid ""
 "this interface (either connected to a 'port mirroring/spanning' port in a "
 "switch, to a hub or to a tap)"
 msgstr ""
-"De asemenea, nu este deloc neobişnuit a rula Snort pe o interfaţă fără "
-"adresă IP care este configurată în modul promiscuu; dacă e cazul, selectaţi "
-"interfaţa care este conectată fizic la reţeaua pe care o doriţi inspectată, "
-"activând mai târziu modul promiscuu şi asiguraţi-vă că traficul de reţea "
-"este trimis către acestă interfaţă (fie prin conectarea la un port de tip "
-"oglindă într-un switch, fie la un hub sau un interceptor)"
+"De asemenea, nu este deloc neobișnuit să folosiți o interfață fără adresă IP "
+"care este configurată în modul promiscuu; dacă e cazul, selectați interfața "
+"care este conectată fizic la rețeaua pe care o doriți inspectată, activând "
+"mai târziu modul promiscuu și asigurați-vă că traficul de rețea este trimis "
+"către acestă interfață (fie prin conectarea la un port de tip oglindă într-"
+"un switch, fie la un hub sau un interceptor)"
 
 #. Type: string
 #. Description
@@ -123,18 +109,16 @@ msgid ""
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
-"Puteţi configura mai multe interfeţe prin simpla adăugare a mai mult de un "
-"singur nume de interfaţă, separatorul fiind spaţiul. Fiecare interfaţă poate "
-"avea propria configuraţie specifică."
+"Puteți configura mai multe interfețe prin simpla adăugare a mai mult de un "
+"singur nume de interfață, separatorul fiind spațiul. Fiecare interfață poate "
+"avea propria configurație specifică."
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-#, fuzzy
-#| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range that Snort will listen on:"
-msgstr "Introduceţi intervalul de adrese pe care să asculte Snort."
+msgstr "Intervalul de adrese pe care Snort va asculta:"
 
 #. Type: string
 #. Description
@@ -145,10 +129,10 @@ msgid ""
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
-"Trebuie să folosiţi forma CIDR, şi anume forma 192.168.1.0/24 pentru un bloc "
-"de 256 de adrese IP sau 192.168.1.42/32 doar pentru o adresă. Precizaţi mai "
+"Trebuie să folosiți forma CIDR, și anume forma 192.168.1.0/24 pentru un bloc "
+"de 256 de adrese IP sau 192.168.1.42/32 doar pentru o adresă. Precizați mai "
 "multe adrese pe o singură linie separate prin caracterul virgulă ',', "
-"nefiind permise spaţiile!"
+"nefiind permise spațiile!"
 
 # XXX: it would be nice if "any" would be translatable, too
 # XXX: of course, the postinst script uses the non-translated string
@@ -159,8 +143,8 @@ msgstr ""
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
-"Dacă doriţi puteţi alege 'any' (eng. pentru 'oricare'), dacă nu aveţi "
-"încredere în nici o parte a reţelei."
+"Dacă doriți puteți alege 'any' (eng. pentru 'oricare'), dacă nu aveți "
+"încredere în nici o parte a rețelei."
 
 #. Type: string
 #. Description
@@ -170,15 +154,15 @@ msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
 msgstr ""
-"A se reţine că dacă folosiţi mai multe interfeţe această definiţie va fi "
-"folosită ca definiţia lui HOME_NET pentru toate."
+"A se reține că dacă folosiți mai multe interfețe această definiție va fi "
+"folosită ca definiția lui HOME_NET pentru toate."
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:4001 ../snort-mysql.templates:4001
 #: ../snort-pgsql.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
-msgstr "Va trebui ca Snort să dezactiveze modul promiscuu pe interfaţă?"
+msgstr "Va trebui ca Snort să dezactiveze modul promiscuu pe interfață?"
 
 #. Type: boolean
 #. Description
@@ -191,16 +175,16 @@ msgid ""
 "computers."
 msgstr ""
 "Dezactivarea modului promiscuu înseamnă că Snort va \"vedea\" doar pachetele "
-"adresate doar propriei interfeţe. Activarea acestuia îi va permite lui Snort "
+"adresate doar propriei interfețe. Activarea acestuia îi va permite lui Snort "
 "să verifice fiecare pachet care trece prin segmentul de adrese, chiar dacă "
-"aparţine unei conexiuni între alte două calculatoare."
+"aparține unei conexiuni între alte două calculatoare."
 
 #. Type: note
 #. Description
 #: ../snort.templates:5001 ../snort-mysql.templates:5001
 #: ../snort-pgsql.templates:5001
 msgid "Invalid interface"
-msgstr "Interfaţa nu e validă"
+msgstr "Interfața nu e validă"
 
 #. Type: note
 #. Description
@@ -211,9 +195,9 @@ msgid ""
 "system or be down). Please introduce a valid interface when answering the "
 "question of which interface(s) should Snort listen on."
 msgstr ""
-"Una dintre interfeţele precizate de dumneavoastră nu este validă (poate nu "
-"există în sistem sau nu era activă). Introduceţi o interfaţă validă când se "
-"răspunde la întrebarea legată de interfaţa/interfeţele pe care trebuie să "
+"Una dintre interfețele precizate de dumneavoastră nu este validă (poate nu "
+"există în sistem sau nu era activă). Introduceți o interfață validă când se "
+"răspunde la întrebarea legată de interfața/interfețele pe care trebuie să "
 "asculte Snort."
 
 #. Type: note
@@ -224,7 +208,7 @@ msgid ""
 "If you did not configure an interface then the package is trying to use the "
 "default ('eth0') which does not seem to be valid in your system."
 msgstr ""
-"Dacă nu aţi configurat o interfaţă atunci pachetul va încerca să folosească "
+"Dacă nu ați configurat o interfață atunci pachetul va încerca să folosească "
 "valoarea implicită ('eth0') care nu pare a fi validă în sistemul "
 "dumneavoastră."
 
@@ -246,10 +230,10 @@ msgid ""
 "This will prevent people from having to make huge Berky Packet Filter "
 "command line arguments to filter their alert rules."
 msgstr ""
-"Dacă schimbaţi ordinea de testare a regulilor în Trece|Alarmă|Jurnal, "
+"Dacă schimbați ordinea de testare a regulilor în Trece|Alarmă|Jurnal, "
 "regulile vor fi aplicate în ordinea Trece->Alarmă->Jurnal, în loc de ordinea "
 "standard Alarmă->Trece->Jurnal. Acest lucru va permite oamenilor să nu fie "
-"forţaţi să creeze liste imense de argumente pentru Filtrul de pachete "
+"forțați să creeze liste imense de argumente pentru Filtrul de pachete "
 "Berkley pentru a filtra regulile de alertare."
 
 #. Type: boolean
@@ -257,7 +241,7 @@ msgstr ""
 #: ../snort.templates:7001 ../snort-mysql.templates:7001
 #: ../snort-pgsql.templates:7001
 msgid "Should daily summaries be sent by e-mail?"
-msgstr "Doriţi mesaje electronice zilnice cu sumarul?"
+msgstr "Doriți mesaje electronice zilnice cu sumarul?"
 
 #. Type: boolean
 #. Description
@@ -269,18 +253,16 @@ msgid ""
 "disable this feature say 'no' here."
 msgstr ""
 "Această instalare de Snort furnizează o sarcină de cron care rulează zilnic "
-"şi sumarizează informaţiile din jurnalele lui Snort către o adresă de poştă "
-"electronică selectată. Dacă doriţi să dezactivaţi acestă facilitate alegeţi "
+"și sumarizează informațiile din jurnalele lui Snort către o adresă de poștă "
+"electronică selectată. Dacă doriți să dezactivați acestă facilitate alegeți "
 "'nu'."
 
 #. Type: string
 #. Description
 #: ../snort.templates:8001 ../snort-mysql.templates:8001
 #: ../snort-pgsql.templates:8001
-#, fuzzy
-#| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
-msgstr "Cine va primi mesajele zilnice cu statistici?"
+msgstr "Destinatarul mesajelor zilnice cu statistici:"
 
 #. Type: string
 #. Description
@@ -293,31 +275,28 @@ msgid ""
 "you keep this value, make sure that the mail of the administrator is "
 "redirected to a user that actually reads those mails."
 msgstr ""
-"O sarcină de cron care rulează zilnic va sumariza informaţiilor din "
+"O sarcină de cron care rulează zilnic va sumariza informațiilor din "
 "jurnalele generate de Snort folosind un script numit 'snort-stat'. "
-"Introduceţi destinatarul acestor mesaje. Valoarea implicită este "
-"administratorul de sistem. Dacă păstraţi această valoare, asiguraţi-vă că "
+"Introduceți destinatarul acestor mesaje. Valoarea implicită este "
+"administratorul de sistem. Dacă păstrați această valoare, asigurați-vă că "
 "mesajele către adresa administratorului sunt redirectate către un utilizator "
-"care chiar citeşte acele mesaje."
+"care chiar citește acele mesaje."
 
 #. Type: string
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
 msgid "Additional custom options:"
-msgstr ""
+msgstr "Opțiuni particulare adiționale:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
-#, fuzzy
-#| msgid ""
-#| "If you want to specify custom options to Snort, please specify them here."
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
 msgstr ""
-"Dacă doriţi să folosiţi opţiuni particularizate pentru Snort, precizaţi-le "
+"Dacă doriți să folosiți opțiuni particularizate pentru Snort, precizați-le "
 "aici."
 
 #. Type: string
@@ -325,16 +304,12 @@ msgstr ""
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
 msgid "Minimum occurence to report alerts:"
-msgstr ""
+msgstr "Număr minim de apariții pentru a raporta o alertă:"
 
 #. Type: string
 #. Description
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
-#, fuzzy
-#| msgid ""
-#| "An alert needs to appear more times than this number to be included in "
-#| "the daily statistics."
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
@@ -346,10 +321,8 @@ msgstr ""
 #. Description
 #: ../snort.templates:11001 ../snort-mysql.templates:11001
 #: ../snort-pgsql.templates:11001
-#, fuzzy
-#| msgid "You are running Snort manually."
 msgid "You are running Snort manually"
-msgstr "Rulaţi Snort manual."
+msgstr "Rulați Snort manual"
 
 #. Type: note
 #. Description
@@ -360,16 +333,16 @@ msgid ""
 " /etc/init.d/snort start\n"
 "to let the settings take effect."
 msgstr ""
-"Reporniţi Snort folosind:\n"
+"Reporniți Snort folosind:\n"
 " /etc/init.d/snort start\n"
-"pentru a permite opţiunilor de configurare să îşi facă efectul."
+"pentru a permite opțiunilor de configurare să își facă efectul."
 
 #. Type: note
 #. Description
 #: ../snort.templates:12001 ../snort-mysql.templates:12001
 #: ../snort-pgsql.templates:12001
 msgid "There is an error in your configuration"
-msgstr "Există o eroare în configuraţia dumneavoastră"
+msgstr "Există o eroare în configurația dumneavoastră"
 
 #. Type: note
 #. Description
@@ -383,19 +356,19 @@ msgid ""
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
 msgstr ""
-"Configuraţia dumneavoastră pentru Snort nu este corectă şi Snort nu va putea "
-"să pornească normal. Revizuiţi şi reparaţi configuraţia. Dacă nu, probabil "
+"Configurația dumneavoastră pentru Snort nu este corectă și Snort nu va putea "
+"să pornească normal. Revizuiți și reparați configurația. Dacă nu, probabil "
 "că actualizările lui Snort se vor solda cu erori. Pentru a verifica ce erori "
-"sunt generate, rulaţi '/usr/sbin/snort -T -c /etc/snort/snort.conf' (sau "
-"indicaţi un alt fişier de configurare, dacă folosiţi fişiere diferite pentru "
-"diferitele interfeţe)"
+"sunt generate, rulați '/usr/sbin/snort -T -c /etc/snort/snort.conf' (sau "
+"indicați un alt fișier de configurare, dacă folosiți fișiere diferite pentru "
+"diferitele interfețe)"
 
 #. Type: note
 #. Description
 #: ../snort.templates:13001 ../snort-mysql.templates:13001
 #: ../snort-pgsql.templates:13001
 msgid "This system uses an obsolete configuration file"
-msgstr "Acest sistem foloseşte un fişier de configurare depăşit"
+msgstr "Acest sistem folosește un fișier de configurare depășit"
 
 #. Type: note
 #. Description
@@ -409,11 +382,11 @@ msgid ""
 "script will not use the new configuration and you will not take advantage of "
 "the benefits introduced in newer releases."
 msgstr ""
-"Sistemul dumneavoastră are un fişier de configurare învechit (/etc/snort/"
+"Sistemul dumneavoastră are un fișier de configurare învechit (/etc/snort/"
 "snort.common.parameters) care a fost convertit automat la noul format de "
-"fişier (acum /etc/default/snort). Verificaţi noul fişier de configurare şi "
-"ştergeţi-l pe cel vechi. Până atunci, scriptul init.d nu va folosi "
-"configurarea nouă şi nu va profita de beneficiile introduse în versiunile "
+"fișier (acum /etc/default/snort). Verificați noul fișier de configurare și "
+"ștergeți-l pe cel vechi. Până atunci, scriptul init.d nu va folosi "
+"configurarea nouă și nu va profita de beneficiile introduse în versiunile "
 "mai noi."
 
 #. Type: boolean
@@ -421,7 +394,7 @@ msgstr ""
 #: ../snort-mysql.templates:14001
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
-"Doriţi să pregătiţi o bază de date pentru snort-mysql în care să se facă "
+"Doriți să pregătiți o bază de date pentru snort-mysql în care să se facă "
 "jurnalizarea?"
 
 #. Type: boolean
@@ -437,13 +410,13 @@ msgid ""
 "logging later, by reconfiguring the snort-mysql package with 'dpkg-"
 "reconfigure -plow snort-mysql'"
 msgstr ""
-"Trebuie să faceţi acest lucru doar prima dată când instalaţi snort-mysql. "
-"Înainte de a continua, asiguraţi-vă că aveţi (1) numele calculatorului pe "
+"Trebuie să faceți acest lucru doar prima dată când instalați snort-mysql. "
+"Înainte de a continua, asigurați-vă că aveți (1) numele calculatorului pe "
 "care rulează serverul mysql configurat să accepte conexiuni tcp de pe acest "
-"calculator, (2) o bază de date pe acel server, (3) un nume şi o parolă "
-"pentru a accesa baza de date. Dacă nu aveţi _toate_ acestea, fie selectaţi "
-"'nu' şi rulaţi cu suport pentru jurnalizare în fişiere, fie rezolvaţi "
-"această problemă. Puteţi oricând, mai târziu, să configuraţi baza de date de "
+"calculator, (2) o bază de date pe acel server, (3) un nume și o parolă "
+"pentru a accesa baza de date. Dacă nu aveți _toate_ acestea, fie selectați "
+"'nu' și rulați cu suport pentru jurnalizare în fișiere, fie rezolvați "
+"această problemă. Puteți oricând, mai târziu, să configurați baza de date de "
 "jurnalizare prin reconfigurarea pachetului snort-mysql cu 'dpkg-reconfigure -"
 "plow snort-mysql'"
 
@@ -451,7 +424,7 @@ msgstr ""
 #. Description
 #: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Database server hostname:"
-msgstr ""
+msgstr "Numele serverului cu baza de date:"
 
 #. Type: string
 #. Description
@@ -460,14 +433,14 @@ msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
 msgstr ""
-"Asiguraţi-vă că a fost configurat corect să permită primirea de conexiuni de "
+"Asigurați-vă că a fost configurat corect să permită primirea de conexiuni de "
 "pe acest calculator!"
 
 #. Type: string
 #. Description
 #: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Database to use:"
-msgstr ""
+msgstr "Baza de date folosită:"
 
 #. Type: string
 #. Description
@@ -476,45 +449,41 @@ msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
 msgstr ""
-"Asiguraţi-vă că acestă bază de date a fost creată şi că utilizatorul "
+"Asigurați-vă că acestă bază de date a fost creată și că utilizatorul "
 "dumneavoastră de bază de date are acces să scrie în acestă bază de date."
 
 #. Type: string
 #. Description
 #: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
 msgid "Username for database access:"
-msgstr ""
+msgstr "Numele de utilizator pentru a accesa baza de date:"
 
 #. Type: string
 #. Description
 #: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
 msgid "Make sure this user has been created and has write access."
-msgstr "Asiguraţi-vă că acest utilizator de bază de date are acces să scrie."
+msgstr "Asigurați-vă că acest utilizator de bază de date are acces să scrie."
 
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
-#, fuzzy
-#| msgid "Please enter the password for the database connection."
 msgid "Password for the database connection:"
-msgstr "Introduceţi parola pentru conectarea la baza de date."
+msgstr "Parola pentru conectarea la baza de date:"
 
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
-"Introduceţi o parolă pentru conectarea la baza de date pentru alarmele Snort."
+"Introduceți o parolă pentru conectarea la baza de date pentru alarmele Snort."
 
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:19001 ../snort-pgsql.templates:19001
-#, fuzzy
-#| msgid "Snort needs a configured database to log to before it starts."
 msgid "Snort needs a configured database to log to before it starts"
 msgstr ""
-"Snort are nevoie de o bază de date configurată pentru a jurnalizare înainte "
-"de a porni."
+"Înainte de a porni, Snort are nevoie de o bază de date configurată pentru a "
+"jurnalizare"
 
 #. Type: note
 #. Description
@@ -529,12 +498,12 @@ msgid ""
 "will prompt you for the password."
 msgstr ""
 "Snort are nevoie de o bază de date configurată anterior pentru a putea "
-"porni. Pentru a crea structura, trebuie să rulaţi următoarele comenzi DUPĂ "
+"porni. Pentru a crea structura, trebuie să rulați următoarele comenzi DUPĂ "
 "ce pachetul este instalat:\n"
 " cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <utilizator> -h <calculator> -p "
 "<numele_bazei_de_date>\n"
-"Completaţi valorile corecte pentru utilizator, calculator şi "
+"Completați valorile corecte pentru utilizator, calculator și "
 "numele_bazei_de_date. MySQL vă va cere parola."
 
 #. Type: note
@@ -544,7 +513,7 @@ msgid ""
 "After you created the database structure, you will need to start Snort "
 "manually."
 msgstr ""
-"După ce aţi creat structura bazei de date, va trebui să-l porniţi manual pe "
+"După ce ați creat structura bazei de date, va trebui să-l porniți manual pe "
 "Snort."
 
 #. Type: boolean
@@ -552,7 +521,7 @@ msgstr ""
 #: ../snort-pgsql.templates:14001
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
-"Doriţi să configuraţi o bază de date pentru a-i permite lui snort-pgsql să "
+"Doriți să configurați o bază de date pentru a-i permite lui snort-pgsql să "
 "se conecteze la ea?"
 
 #. Type: boolean
@@ -568,13 +537,13 @@ msgid ""
 "logging later, by reconfiguring the snort-pgsql package with 'dpkg-"
 "reconfigure -plow snort-pgsql'"
 msgstr ""
-"Trebuie să faceţi acest lucru doar prima dată când instalaţi snort-pgsql. "
-"Înainte de a continua, asiguraţi-vă că aveţi (1) numele calculatorului pe "
+"Trebuie să faceți acest lucru doar prima dată când instalați snort-pgsql. "
+"Înainte de a continua, asigurați-vă că aveți (1) numele calculatorului pe "
 "care rulează serverul pgsql configurat să accepte conexiuni tcp de pe acest "
-"calculator, (2) o bază de date pe acel server, (3) un nume şi o parolă "
-"pentru a accesa baza de date. Dacă nu aveţi _toate_ acestea, fie selectaţi "
-"'nu' şi rulaţi cu suport pentru jurnalizare în fişiere, fie rezolvaţi "
-"această problemă. Puteţi oricând, mai târziu, să configuraţi baza de date de "
+"calculator, (2) o bază de date pe acel server, (3) un nume și o parolă "
+"pentru a accesa baza de date. Dacă nu aveți _toate_ acestea, fie selectați "
+"'nu' și rulați cu suport pentru jurnalizare în fișiere, fie rezolvați "
+"această problemă. Puteți oricând, mai târziu, să configurați baza de date de "
 "jurnalizare prin reconfigurarea pachetului snort-pgsql cu 'dpkg-reconfigure -"
 "plow snort-pgsql'"
 
@@ -591,19 +560,19 @@ msgid ""
 "PostgreSQL will prompt you for the password."
 msgstr ""
 "Snort are nevoie de o bază de date configurată anterior pentru a putea "
-"porni. Pentru a crea structura, trebuie să rulaţi următoarele comenzi DUPĂ "
+"porni. Pentru a crea structura, trebuie să rulați următoarele comenzi DUPĂ "
 "ce pachetul este instalat:\n"
 " cd /usr/share/doc/snort-pgsql/\n"
 " zcat create_postgresql.gz | psql -U <utilizator> -h <calculator> -W "
 "<numele_bazei_de_date>\n"
-"Completaţi valorile corecte pentru utilizator, calculator şi "
+"Completați valorile corecte pentru utilizator, calculator și "
 "numele_bazei_de_date. PostgreSQL vă va cere parola."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:1001
 msgid "Your configuration file is deprecated"
-msgstr "Fişierul dumneavoastră de configurare este învechit"
+msgstr "Fișierul dumneavoastră de configurare este învechit"
 
 #. Type: note
 #. Description
@@ -615,12 +584,12 @@ msgid ""
 "your configuration file with the one provided in this package or fix it "
 "manually by removing deprecated options."
 msgstr ""
-"Fişierul dumneavoastră de configurare pentru Snort (/etc/snort/snort.conf) "
-"foloseşte opţiuni depăşite care nu mai sunt disponibile în această versiune "
-"de Snort. Snort nu va putea porni decât dacă furnizaţi un fişier de "
-"configurare corect. Puteţi înlocui fişierul dumneavoastră de configurare cu "
-"cel furnizat de pachet sau să îl reparaţi manual prin ştergerea opţiunilor "
-"depăşite."
+"Fișierul dumneavoastră de configurare pentru Snort (/etc/snort/snort.conf) "
+"folosește opțiuni depășite care nu mai sunt disponibile în această versiune "
+"de Snort. Snort nu va putea porni decât dacă furnizați un fișier de "
+"configurare corect. Puteți înlocui fișierul dumneavoastră de configurare cu "
+"cel furnizat de pachet sau să îl reparați manual prin ștergerea opțiunilor "
+"depășite."
 
 #. Type: note
 #. Description
@@ -629,8 +598,8 @@ msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
 msgstr ""
-"În fişierul dumneavoastră de configurare au fost găsite următoarele opţiuni "
-"depăşite: ${DEP_CONFIG}"
+"În fișierul dumneavoastră de configurare au fost găsite următoarele opțiuni "
+"depășite: ${DEP_CONFIG}"
 
 #~ msgid ""
 #~ "Please enter the name(s) of the interface(s) which Snort should listen "
@@ -639,36 +608,36 @@ msgstr ""
 #~ "you might want to vary this depending on your environment, if you are "
 #~ "using a dialup connection 'ppp0' might be more appropiate."
 #~ msgstr ""
-#~ "Introduceţi numele interfeţei/interfeţelor pe care să asculte Snort. "
-#~ "Numele interfeţelor disponibile sunt furnizate prin rularea 'ip link "
+#~ "Introduceți numele interfeței/interfețelor pe care să asculte Snort. "
+#~ "Numele interfețelor disponibile sunt furnizate prin rularea 'ip link "
 #~ "show' sau 'ifconfig'. De obicei, această valoare este 'eth0', dar este "
-#~ "posibil să doriţi să schimbaţi acest lucru, dependent de situaţie, iar "
-#~ "dacă folosiţi o conexiune dialup, 'ppp0' probabil este mai potrivită."
+#~ "posibil să doriți să schimbați acest lucru, dependent de situație, iar "
+#~ "dacă folosiți o conexiune dialup, 'ppp0' probabil este mai potrivită."
 
 #~ msgid "Please enter the address range that Snort will listen on."
-#~ msgstr "Introduceţi intervalul de adrese pe care să asculte Snort."
+#~ msgstr "Introduceți intervalul de adrese pe care să asculte Snort."
 
 #~ msgid ""
 #~ "Disable promiscuous mode if you are configuring Snort on an interface "
 #~ "without a configured IP address."
 #~ msgstr ""
-#~ "Dezactivaţi modul promiscuu dacă Snort este configurat pe o interfaţă "
+#~ "Dezactivați modul promiscuu dacă Snort este configurat pe o interfață "
 #~ "fără adresă IP."
 
 #~ msgid "Please enter the hostname of the mysql database server to use."
 #~ msgstr ""
-#~ "Introduceţi numele calculatorului al cărui bază de date mysql va fi "
+#~ "Introduceți numele calculatorului al cărui bază de date mysql va fi "
 #~ "folosită."
 
 #~ msgid "Please enter the name of the database to use."
-#~ msgstr "Introduceţi numele bazei de date care va fi folosită."
+#~ msgstr "Introduceți numele bazei de date care va fi folosită."
 
 #~ msgid "Please enter the name of the database user you want to use."
 #~ msgstr ""
-#~ "Introduceţi numele utilizatorului de bază de date pe care doriţi să-l "
-#~ "folosiţi."
+#~ "Introduceți numele utilizatorului de bază de date pe care doriți să-l "
+#~ "folosiți."
 
 #~ msgid "Please enter the hostname of the pgsql database server to use."
 #~ msgstr ""
-#~ "Introduceţi numele calculatorului al cărui bază de date pgsql va fi "
+#~ "Introduceți numele calculatorului al cărui bază de date pgsql va fi "
 #~ "folosită."
