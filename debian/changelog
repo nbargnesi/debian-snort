@@ -1,3 +1,14 @@
+snort (2.7.0-2) experimental; urgency=low
+
+  * Fix generation of the common snort binary, which was distributed without
+    prelude support.
+  * Fix location of dynamic engines in snort.conf
+  * Change signatures 1443 and 1444 since there was an error in their
+    definition ( Cannot use 'rawbytes' and 'http_uri' as modifiers for the
+    same "content" nor use 'rawbytes' with "uricontent". )
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Wed, 01 Aug 2007 02:49:50 +0200
+
 snort (2.7.0-1) experimental; urgency=low
 
   * New upstream release (Closes: #435417, #404991, #320920, #323985)
