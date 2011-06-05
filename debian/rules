@@ -27,6 +27,11 @@ CONFFLAGS= --prefix=/usr \
 # Cannot enable flexresp since it builds only with libnet 1.0.2a
 #	--enable-flexresp \
 
+aclocal.m4:
+	aclocal-1.9 -I m4/
+	automake-1.9 -i
+	autoconf
+
 clean-sources:
 	# Clean the sources
 	[ ! -f Makefile ] ||  $(MAKE) distclean
