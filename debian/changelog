@@ -1,3 +1,16 @@
+snort (2.7.0-14) unstable; urgency=high
+
+  * Move installation of the snort.default file from the install-indep rule to
+    the install rule. This error was preventing /etc/snort/default from being
+    created in the Snort binary packages and, consequently, the init.d would
+    fail to start properly and the package would not install (Closes: #471895,
+    #473282)
+  * Add libgnutls-dev Build-Depend (Closes: #476651)
+  * Fix typo in the name of the community rules in snort.conf, thanks to
+    David Gil for providing a patch (Closes: #470881)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 20 Apr 2008 21:39:47 +0200
+
 snort (2.7.0-13) unstable; urgency=low
 
   * Make the build: target be an empty one, instead of having it depend on
