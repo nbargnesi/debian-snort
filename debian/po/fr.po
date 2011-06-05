@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2007-12-28 01:31+0100\n"
+"POT-Creation-Date: 2008-01-28 00:26+0100\n"
 "PO-Revision-Date: 2007-12-28 18:38+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -45,7 +45,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
 msgstr "Interface(s) où Snort sera à l'écoute :"
 
@@ -55,8 +54,8 @@ msgstr "Interface(s) où Snort sera à l'écoute :"
 #: ../snort-pgsql.templates:2001
 msgid ""
 "This value usually is 'eth0', but you might want to vary this depending on "
-"your environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate (Hint: use 'ip link show' of 'ifconfig')."
+"your environment; if you are using a dialup connection 'ppp0' might be more "
+"appropiate (Hint: use 'ip link show' or 'ifconfig')."
 msgstr ""
 "La valeur la plus usuelle est « eth0 » mais elle peut varier selon votre "
 "environnement : ainsi, si vous utilisez une connexion ponctuelle "
@@ -67,12 +66,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#| msgid ""
-#| "Notice that Snort is usually configured to inspect all traffic coming "
-#| "from the Internet, so the interface you add here is usually the same the "
-#| "'default route' is on.  You can determine which interface is used for "
-#| "this running either '/sbin/ip ro sh' or '/sbin/route -n' (look for "
-#| "'default' or '0.0.0.0')."
 msgid ""
 "Typically this is the same interface than the 'default route' is on.  You "
 "can determine which interface is used for this running either '/sbin/ip ro "
@@ -86,13 +79,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:2001 ../snort-mysql.templates:2001
 #: ../snort-pgsql.templates:2001
-#| msgid ""
-#| "It is also not uncommon to run Snort on an interface with no IP and "
-#| "configured in promiscuous mode, if this is your case, select the "
-#| "interface in this system that is physically connected to the network you "
-#| "want to inspect, enable promiscuous mode later on and make sure that the "
-#| "network traffic is sent to this interface (either connected to a 'port "
-#| "mirroring/spanning' port in a switch, to a hub or to a tap)"
 msgid ""
 "It is also not uncommon to use an interface with no IP and configured in "
 "promiscuous mode, if this is your case, select the interface in this system "
@@ -125,7 +111,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:3001 ../snort-mysql.templates:3001
 #: ../snort-pgsql.templates:3001
-#| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range that Snort will listen on:"
 msgstr "Plage d'adresses surveillées par Snort :"
 
@@ -150,8 +135,8 @@ msgstr ""
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
-"Vous pouvez, si vous le souhaitez, indiquer « any » "
-"pour n'accorder votre confiance à aucune partie du réseau."
+"Vous pouvez, si vous le souhaitez, indiquer « any » pour n'accorder votre "
+"confiance à aucune partie du réseau."
 
 #. Type: string
 #. Description
@@ -267,7 +252,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:8001 ../snort-mysql.templates:8001
 #: ../snort-pgsql.templates:8001
-#| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
 msgstr "Destinataire des courriers électroniques quotidiens de statistiques :"
 
@@ -299,8 +283,6 @@ msgstr "Options personnelles supplémentaires :"
 #. Description
 #: ../snort.templates:9001 ../snort-mysql.templates:9001
 #: ../snort-pgsql.templates:9001
-#| msgid ""
-#| "If you want to specify custom options to Snort, please specify them here."
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
 msgstr ""
@@ -318,9 +300,6 @@ msgstr "Nombre d'occurrences minimales avant l'envoi d'alertes :"
 #. Description
 #: ../snort.templates:10001 ../snort-mysql.templates:10001
 #: ../snort-pgsql.templates:10001
-#| msgid ""
-#| "An alert needs to appear more times than this number to be included in "
-#| "the daily statistics."
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
@@ -332,7 +311,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:11001 ../snort-mysql.templates:11001
 #: ../snort-pgsql.templates:11001
-#| msgid "You are running Snort manually."
 msgid "You are running Snort manually"
 msgstr "Utilisation manuelle de Snort"
 
@@ -488,7 +466,6 @@ msgstr ""
 #. Type: password
 #. Description
 #: ../snort-mysql.templates:18001 ../snort-pgsql.templates:18001
-#| msgid "Please enter the password for the database connection."
 msgid "Password for the database connection:"
 msgstr "Mot de passe de connexion au serveur de bases de données :"
 
@@ -503,7 +480,6 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-mysql.templates:19001 ../snort-pgsql.templates:19001
-#| msgid "Snort needs a configured database to log to before it starts."
 msgid "Snort needs a configured database to log to before it starts"
 msgstr "Base de données existante indispensable pour les journaux de Snort"
 

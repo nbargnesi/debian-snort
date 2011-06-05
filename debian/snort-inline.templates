@@ -11,8 +11,8 @@ Type: string
 Default: eth0
 _Description: Interface(s) which Snort should listen on:
  This value usually is 'eth0', but you might want to vary this depending
- on your environment, if you are using a dialup connection 'ppp0' might
- be more appropiate (Hint: use 'ip link show' of 'ifconfig').
+ on your environment; if you are using a dialup connection 'ppp0' might
+ be more appropiate (Hint: use 'ip link show' or 'ifconfig').
  .
  Typically this is the same interface than the 'default route' is on.  You can
  determine which interface is used for this running either '/sbin/ip ro sh' or
