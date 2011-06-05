@@ -126,7 +126,7 @@ install-stamp: build-stamp
 binary-indep: build install
 	dh_testdir -i
 	dh_testroot -i
-	dh_installdocs
+	dh_installdocs 
 	
 	cp -R $(TMP)/snort/usr/share/doc/snort/* $(TMP)/snort-doc/usr/share/doc/snort-doc/
 	rm -rf $(TMP)/snort-doc/usr/share/doc/snort-doc/CVS
@@ -134,11 +134,12 @@ binary-indep: build install
 	dh_installexamples -i
 	chmod +x $(TMP)/snort-doc/usr/share/doc/snort-doc/examples/snort*
 	dh_installdebconf -i
-	dh_installmanpages -i 
+	dh_installman -i 
 	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
 	rm -rf $(TMP)/snort-doc/usr/share/man
 	rm -rf $(TMP)/snort-rules-default/usr/share/man
 	dh_undocumented -i
+	rm -rf $(TMP)/snort-common/usr/share/man/man8/snort.*
 	dh_installchangelogs -i ChangeLog
 	dh_link -i
 	dh_strip -i
@@ -157,13 +158,13 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
-	dh_installdocs 
+	dh_installdocs
 	dh_installexamples -a
 	chmod +x $(TMP)/snort/usr/share/doc/snort/examples/snort*
 	chmod +x $(TMP)/snort-mysql/usr/share/doc/snort-mysql/examples/snort*
 	chmod +x $(TMP)/snort-pgsql/usr/share/doc/snort-pgsql/examples/snort*
 	dh_installdebconf -a
-	dh_installmanpages -a 
+	dh_installman -a 
 	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
 	rm -rf $(TMP)/snort-mysql/usr/share/man/man8/snort-stat.*
 	rm -rf $(TMP)/snort-pgsql/usr/share/man/man8/snort-stat.*
@@ -194,6 +195,12 @@ binary-arch: build install
 
 source diff:                                                                  
 	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+
+update-rules:
+	mv rules rules.old
+	wget -q -O ../snortrules-snapshot-2_2.tar.gz http://www.snort.org/dl/rules/snortrules-snapshot-2_2.tar.gz
+	tar -zxf ../snortrules-snapshot-2_2.tar.gz
+	if [ -d rules ] ; then mv rules.old/Makefile* rules/; rm -rf rules.old; fi
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary
