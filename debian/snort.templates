@@ -86,3 +86,13 @@ _Description: You are running Snort manually.
  Please restart Snort using:
   /etc/init.d/snort start
  to let the settings take effect.
+
+Template: snort/config_error
+Type: note
+_Description: There is an error in your configuration
+ Your Snort configuration is not correct and Snort will not be able to start
+ up normally. Please review your configuration and fix it. If you do not
+ do this, Snort package upgrades will probably break. To check which error
+ is being generated run '/usr/sbin/snort -T -c /etc/snort/snort.conf'
+ (or point to an alternate configuration file if you are using different
+ files for different interfaces)

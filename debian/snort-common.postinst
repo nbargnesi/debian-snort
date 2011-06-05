@@ -37,6 +37,23 @@ if [ "$deprecated" -eq 1 ] ; then
 	db_go || true
 fi
 
+# Check if Snort will be able to run properly
+# Obviously, if you are using deprecated preprocessors it's not going
+# to work either
+# TODO: Maybe it's also best if we could tell dpkg that snort should
+# not be started if this fails.
+if [ "$deprecated" -ne 1 ] ; then
+	if [ -x /etc/init.d/snort ] ; then
+		set +e
+		/etc/init.d/snort config-check >/dev/null 2>&1
+		if [ $? -ne 0 ] ; then
+			db_input high snort/config_error || true
+			db_go || true
+		fi
+		set -e
+	fi
+fi
+
 db_stop
 
 exit 0
