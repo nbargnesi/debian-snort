@@ -240,7 +240,15 @@
  
  By default, \`make install' will install all the files in
  \`$ac_default_prefix/bin', \`$ac_default_prefix/lib' etc.  You can specify
-@@ -904,12 +922,45 @@
+@@ -855,6 +873,7 @@
+   --with-mysql=DIR        support for mysql
+   --with-odbc=DIR         support for odbc
+   --with-postgresql=DIR   support for postgresql
++  --with-pgsql-includes=DIR  postgresql include directory
+   --with-oracle=DIR       support for oracle
+   --with-libipq-includes=DIR  libipq include directory
+   --with-libipq-libraries=DIR  libipq library directory
+@@ -904,12 +923,45 @@
      ac_srcdir=$ac_top_builddir$srcdir$ac_dir_suffix
      ac_top_srcdir=$ac_top_builddir$srcdir ;;
  esac
@@ -292,7 +300,7 @@
  
      cd $ac_dir
      # Check for guested configure; otherwise get Cygnus style configure.
-@@ -920,13 +971,13 @@
+@@ -920,13 +972,13 @@
        echo
        $SHELL $ac_srcdir/configure  --help=recursive
      elif test -f $ac_srcdir/configure.ac ||
@@ -308,7 +316,7 @@
    done
  fi
  
-@@ -934,8 +985,7 @@
+@@ -934,8 +986,7 @@
  if $ac_init_version; then
    cat <<\_ACEOF
  
@@ -318,7 +326,7 @@
  This configure script is free software; the Free Software Foundation
  gives unlimited permission to copy, distribute and modify it.
  _ACEOF
-@@ -947,7 +997,7 @@
+@@ -947,7 +998,7 @@
  running configure, to aid debugging if configure makes a mistake.
  
  It was created by $as_me, which was
@@ -327,7 +335,7 @@
  
    $ $0 $@
  
-@@ -999,27 +1049,54 @@
+@@ -999,27 +1050,54 @@
  
  # Keep a trace of the command line.
  # Strip out --no-create and --no-recursion so they do not pile up.
@@ -398,7 +406,7 @@
  
  # When interrupted or exit'd, cleanup temporary files, and complete
  # config.log.  We remove comments because anyway the quotes in there
-@@ -1030,6 +1107,7 @@
+@@ -1030,6 +1108,7 @@
    # Save into config.log some information that might help in debugging.
    {
      echo
@@ -406,7 +414,7 @@
      cat <<\_ASBOX
  ## ---------------- ##
  ## Cache variables. ##
-@@ -1042,16 +1120,45 @@
+@@ -1042,16 +1121,45 @@
      case `(ac_space='"'"' '"'"'; set | grep ac_space) 2>&1` in
      *ac_space=\ *)
        sed -n \
@@ -455,7 +463,7 @@
      if test -s confdefs.h; then
        cat <<\_ASBOX
  ## ----------- ##
-@@ -1059,14 +1166,14 @@
+@@ -1059,14 +1167,14 @@
  ## ----------- ##
  _ASBOX
        echo
@@ -472,7 +480,7 @@
    rm -rf conftest* confdefs* conf$$* $ac_clean_files &&
      exit $exit_status
       ' 0
-@@ -1146,7 +1253,7 @@
+@@ -1146,7 +1254,7 @@
  # value.
  ac_cache_corrupted=false
  for ac_var in `(set) 2>&1 |
@@ -481,7 +489,7 @@
    eval ac_old_set=\$ac_cv_env_${ac_var}_set
    eval ac_new_set=\$ac_env_${ac_var}_set
    eval ac_old_val="\$ac_cv_env_${ac_var}_value"
-@@ -1163,13 +1270,13 @@
+@@ -1163,13 +1271,13 @@
      ,);;
      *)
        if test "x$ac_old_val" != "x$ac_new_val"; then
@@ -499,7 +507,7 @@
        fi;;
    esac
    # Pass precious variables to config.status.
-@@ -1216,9 +1323,10 @@
+@@ -1216,9 +1324,10 @@
  
  
  
@@ -511,7 +519,7 @@
  
  
  
-@@ -1261,6 +1369,7 @@
+@@ -1261,6 +1370,7 @@
  # AIX 4 /usr/bin/installbsd, which doesn't work without a -g flag
  # AFS /usr/afsws/bin/install, which mishandles nonexistent args
  # SVR4 /usr/ucb/install, which tries to use the nonexistent group "staff"
@@ -519,7 +527,7 @@
  # ./install, which can be erroneously created by make from ./install.sh.
  echo "$as_me:$LINENO: checking for a BSD-compatible install" >&5
  echo $ECHO_N "checking for a BSD-compatible install... $ECHO_C" >&6
-@@ -1277,6 +1386,7 @@
+@@ -1277,6 +1387,7 @@
  case $as_dir/ in
    ./ | .// | /cC/* | \
    /etc/* | /usr/sbin/* | /usr/etc/* | /sbin/* | /usr/afsws/bin/* | \
@@ -527,7 +535,7 @@
    /usr/ucb/* ) ;;
    *)
      # OSF1 and SCO ODT 3.0 have their own names for install.
-@@ -1284,20 +1394,20 @@
+@@ -1284,20 +1395,20 @@
      # by default.
      for ac_prog in ginstall scoinst install; do
        for ac_exec_ext in '' $ac_executable_extensions; do
@@ -562,7 +570,7 @@
        done
      done
      ;;
-@@ -1439,15 +1549,15 @@
+@@ -1439,15 +1550,15 @@
    test -n "$AWK" && break
  done
  
@@ -582,7 +590,7 @@
  _ACEOF
  # GNU make sometimes prints "make[1]: Entering...", which would confuse us.
  eval `${MAKE-make} -f conftest.make 2>/dev/null | grep temp=`
-@@ -1623,7 +1733,7 @@
+@@ -1623,7 +1734,7 @@
  rmdir .deps 2>/dev/null
  
  
@@ -591,7 +599,7 @@
  
  
  am_make=${MAKE-make}
-@@ -1889,9 +1999,7 @@
+@@ -1889,9 +2000,7 @@
      # However, it has the same basename, so the bogon will be chosen
      # first if we set CC to just the basename; use the full file name.
      shift
@@ -602,7 +610,7 @@
    fi
  fi
  fi
-@@ -1996,8 +2104,10 @@
+@@ -1996,8 +2105,10 @@
  fi
  
  
@@ -615,7 +623,7 @@
     { (exit 1); exit 1; }; }
  
  # Provide some information about the compiler.
-@@ -2021,15 +2131,12 @@
+@@ -2021,15 +2132,12 @@
    (exit $ac_status); }
  
  cat >conftest.$ac_ext <<_ACEOF
@@ -636,7 +644,7 @@
  int
  main ()
  {
-@@ -2039,12 +2146,12 @@
+@@ -2039,12 +2147,12 @@
  }
  _ACEOF
  ac_clean_files_save=$ac_clean_files
@@ -652,7 +660,7 @@
  ac_link_default=`echo "$ac_link" | sed 's/ -o *conftest[^ ]*//'`
  if { (eval echo "$as_me:$LINENO: \"$ac_link_default\"") >&5
    (eval $ac_link_default) 2>&5
-@@ -2058,26 +2165,39 @@
+@@ -2058,26 +2166,39 @@
  # Be careful to initialize this variable, since it used to be cached.
  # Otherwise an old cache value of `no' led to `EXEEXT = no' in a Makefile.
  ac_cv_exeext=
@@ -707,7 +715,7 @@
     { (exit 77); exit 77; }; }
  fi
  
-@@ -2104,9 +2224,11 @@
+@@ -2104,9 +2225,11 @@
  	cross_compiling=yes
      else
  	{ { echo "$as_me:$LINENO: error: cannot run C compiled programs.
@@ -721,7 +729,7 @@
     { (exit 1); exit 1; }; }
      fi
    fi
-@@ -2114,7 +2236,7 @@
+@@ -2114,7 +2237,7 @@
  echo "$as_me:$LINENO: result: yes" >&5
  echo "${ECHO_T}yes" >&6
  
@@ -730,7 +738,7 @@
  ac_clean_files=$ac_clean_files_save
  # Check the compiler produces executables we can run.  If not, either
  # the compiler is broken, or we cross compile.
-@@ -2134,18 +2256,21 @@
+@@ -2134,18 +2257,21 @@
  # catch `conftest.exe'.  For instance with Cygwin, `ls conftest' will
  # work properly (i.e., refer to `conftest.exe'), while it won't with
  # `rm'.
@@ -758,7 +766,7 @@
     { (exit 1); exit 1; }; }
  fi
  
-@@ -2162,15 +2287,12 @@
+@@ -2162,15 +2288,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -779,7 +787,7 @@
  int
  main ()
  {
-@@ -2187,16 +2309,19 @@
+@@ -2187,16 +2310,19 @@
    (exit $ac_status); }; then
    for ac_file in `(ls conftest.o conftest.obj; ls conftest.*) 2>/dev/null`; do
    case $ac_file in
@@ -803,7 +811,7 @@
     { (exit 1); exit 1; }; }
  fi
  
-@@ -2212,15 +2337,12 @@
+@@ -2212,15 +2338,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -824,7 +832,7 @@
  int
  main ()
  {
-@@ -2234,11 +2356,20 @@
+@@ -2234,11 +2357,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -847,7 +855,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2247,10 +2378,11 @@
+@@ -2247,10 +2379,11 @@
    ac_compiler_gnu=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -861,7 +869,7 @@
  ac_cv_c_compiler_gnu=$ac_compiler_gnu
  
  fi
-@@ -2266,15 +2398,12 @@
+@@ -2266,15 +2399,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -882,7 +890,7 @@
  int
  main ()
  {
-@@ -2285,11 +2414,20 @@
+@@ -2285,11 +2415,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -905,7 +913,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2298,10 +2436,11 @@
+@@ -2298,10 +2437,11 @@
    ac_cv_prog_cc_g=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -919,7 +927,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_prog_cc_g" >&5
  echo "${ECHO_T}$ac_cv_prog_cc_g" >&6
-@@ -2320,6 +2459,120 @@
+@@ -2320,6 +2460,120 @@
      CFLAGS=
    fi
  fi
@@ -1040,7 +1048,7 @@
  # Some people use a C++ compiler to compile C.  Since we use `exit',
  # in C++ we need to declare it.  In case someone uses the same compiler
  # for both compiling C and C++ we need to have the C++ compiler decide
-@@ -2331,19 +2584,27 @@
+@@ -2331,19 +2585,27 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1072,7 +1080,7 @@
     'extern "C" void std::exit (int) throw (); using std::exit;' \
     'extern "C" void std::exit (int); using std::exit;' \
     'extern "C" void exit (int) throw ();' \
-@@ -2351,16 +2612,13 @@
+@@ -2351,16 +2613,13 @@
     'void exit (int);'
  do
    cat >conftest.$ac_ext <<_ACEOF
@@ -1095,7 +1103,7 @@
  int
  main ()
  {
-@@ -2371,11 +2629,20 @@
+@@ -2371,11 +2630,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1118,7 +1126,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2384,20 +2651,18 @@
+@@ -2384,20 +2652,18 @@
    :
  else
    echo "$as_me: failed program was:" >&5
@@ -1147,7 +1155,7 @@
  int
  main ()
  {
-@@ -2408,11 +2673,20 @@
+@@ -2408,11 +2674,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1170,7 +1178,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2421,9 +2695,10 @@
+@@ -2421,9 +2696,10 @@
    break
  else
    echo "$as_me: failed program was:" >&5
@@ -1183,7 +1191,7 @@
  done
  rm -f conftest*
  if test -n "$ac_declaration"; then
-@@ -2434,9 +2709,10 @@
+@@ -2434,9 +2710,10 @@
  
  else
    echo "$as_me: failed program was:" >&5
@@ -1196,7 +1204,7 @@
  ac_ext=c
  ac_cpp='$CPP $CPPFLAGS'
  ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-@@ -2534,8 +2810,11 @@
+@@ -2534,8 +2811,11 @@
  do
    CC="$ac_save_CC $ac_arg"
    cat >conftest.$ac_ext <<_ACEOF
@@ -1210,7 +1218,7 @@
  #include <stdarg.h>
  #include <stdio.h>
  #include <sys/types.h>
-@@ -2565,12 +2844,6 @@
+@@ -2565,12 +2845,6 @@
  int argc;
  char **argv;
  
@@ -1223,7 +1231,7 @@
  int
  main ()
  {
-@@ -2583,11 +2856,20 @@
+@@ -2583,11 +2857,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1246,7 +1254,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -2596,9 +2878,10 @@
+@@ -2596,9 +2879,10 @@
    am_cv_prog_cc_stdc="$ac_arg"; break
  else
    echo "$as_me: failed program was:" >&5
@@ -1259,7 +1267,7 @@
  done
  CC="$ac_save_CC"
  
-@@ -2900,9 +3183,7 @@
+@@ -2900,9 +3184,7 @@
      # However, it has the same basename, so the bogon will be chosen
      # first if we set CC to just the basename; use the full file name.
      shift
@@ -1270,7 +1278,7 @@
    fi
  fi
  fi
-@@ -3007,8 +3288,10 @@
+@@ -3007,8 +3289,10 @@
  fi
  
  
@@ -1283,7 +1291,7 @@
     { (exit 1); exit 1; }; }
  
  # Provide some information about the compiler.
-@@ -3037,15 +3320,12 @@
+@@ -3037,15 +3321,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -1304,7 +1312,7 @@
  int
  main ()
  {
-@@ -3059,11 +3339,20 @@
+@@ -3059,11 +3340,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1327,7 +1335,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3072,10 +3361,11 @@
+@@ -3072,10 +3362,11 @@
    ac_compiler_gnu=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -1341,7 +1349,7 @@
  ac_cv_c_compiler_gnu=$ac_compiler_gnu
  
  fi
-@@ -3091,15 +3381,12 @@
+@@ -3091,15 +3382,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -1362,7 +1370,7 @@
  int
  main ()
  {
-@@ -3110,11 +3397,20 @@
+@@ -3110,11 +3398,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1385,7 +1393,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3123,10 +3419,11 @@
+@@ -3123,10 +3420,11 @@
    ac_cv_prog_cc_g=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -1399,7 +1407,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_prog_cc_g" >&5
  echo "${ECHO_T}$ac_cv_prog_cc_g" >&6
-@@ -3145,30 +3442,152 @@
+@@ -3145,30 +3443,152 @@
      CFLAGS=
    fi
  fi
@@ -1570,7 +1578,7 @@
     'extern "C" void std::exit (int) throw (); using std::exit;' \
     'extern "C" void std::exit (int); using std::exit;' \
     'extern "C" void exit (int) throw ();' \
-@@ -3176,16 +3595,13 @@
+@@ -3176,16 +3596,13 @@
     'void exit (int);'
  do
    cat >conftest.$ac_ext <<_ACEOF
@@ -1593,7 +1601,7 @@
  int
  main ()
  {
-@@ -3196,11 +3612,20 @@
+@@ -3196,11 +3613,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1616,7 +1624,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3209,20 +3634,18 @@
+@@ -3209,20 +3635,18 @@
    :
  else
    echo "$as_me: failed program was:" >&5
@@ -1645,7 +1653,7 @@
  int
  main ()
  {
-@@ -3233,11 +3656,20 @@
+@@ -3233,11 +3657,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1668,7 +1676,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3246,9 +3678,10 @@
+@@ -3246,9 +3679,10 @@
    break
  else
    echo "$as_me: failed program was:" >&5
@@ -1681,7 +1689,7 @@
  done
  rm -f conftest*
  if test -n "$ac_declaration"; then
-@@ -3259,9 +3692,10 @@
+@@ -3259,9 +3693,10 @@
  
  else
    echo "$as_me: failed program was:" >&5
@@ -1694,7 +1702,7 @@
  ac_ext=c
  ac_cpp='$CPP $CPPFLAGS'
  ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-@@ -3427,17 +3861,14 @@
+@@ -3427,17 +3862,14 @@
  else
    # See if sys/param.h defines the BYTE_ORDER macro.
  cat >conftest.$ac_ext <<_ACEOF
@@ -1717,7 +1725,7 @@
  int
  main ()
  {
-@@ -3451,11 +3882,20 @@
+@@ -3451,11 +3883,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1740,7 +1748,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3463,17 +3903,14 @@
+@@ -3463,17 +3904,14 @@
    (exit $ac_status); }; }; then
    # It does; now see whether it defined to BIG_ENDIAN or not.
  cat >conftest.$ac_ext <<_ACEOF
@@ -1763,7 +1771,7 @@
  int
  main ()
  {
-@@ -3487,11 +3924,20 @@
+@@ -3487,11 +3925,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1786,7 +1794,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -3500,32 +3946,31 @@
+@@ -3500,32 +3947,31 @@
    ac_cv_c_bigendian=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -1830,7 +1838,7 @@
  int
  main ()
  {
-@@ -3536,20 +3981,29 @@
+@@ -3536,20 +3982,29 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -1864,7 +1872,7 @@
    if test "$ac_cv_c_bigendian" = unknown; then
      ac_cv_c_bigendian=no
    else
-@@ -3559,13 +4013,17 @@
+@@ -3559,13 +4014,17 @@
  fi
  else
    echo "$as_me: failed program was:" >&5
@@ -1886,7 +1894,7 @@
  int
  main ()
  {
-@@ -3594,14 +4052,15 @@
+@@ -3594,14 +4053,15 @@
  else
    echo "$as_me: program exited with status $ac_status" >&5
  echo "$as_me: failed program was:" >&5
@@ -1905,7 +1913,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_c_bigendian" >&5
  echo "${ECHO_T}$ac_cv_c_bigendian" >&6
-@@ -3615,9 +4074,9 @@
+@@ -3615,9 +4075,9 @@
    no)
       ;;
    *)
@@ -1917,7 +1925,7 @@
  presetting ac_cv_c_bigendian=no (or yes) will help" >&2;}
     { (exit 1); exit 1; }; } ;;
  esac
-@@ -3816,24 +4275,34 @@
+@@ -3816,24 +4276,34 @@
  do
    # Use a header file that comes with gcc, so configuring glibc
    # with a fresh cross-compiler works.
@@ -1957,7 +1965,7 @@
    else
      ac_cpp_err=
    fi
-@@ -3844,7 +4313,8 @@
+@@ -3844,7 +4314,8 @@
    :
  else
    echo "$as_me: failed program was:" >&5
@@ -1967,7 +1975,7 @@
    # Broken: fails on valid input.
  continue
  fi
-@@ -3853,20 +4323,24 @@
+@@ -3853,20 +4324,24 @@
    # OK, works on sane cases.  Now check whether non-existent headers
    # can be detected and how.
    cat >conftest.$ac_ext <<_ACEOF
@@ -1995,7 +2003,7 @@
    else
      ac_cpp_err=
    fi
-@@ -3878,7 +4352,8 @@
+@@ -3878,7 +4353,8 @@
  continue
  else
    echo "$as_me: failed program was:" >&5
@@ -2005,7 +2013,7 @@
    # Passes both tests.
  ac_preproc_ok=:
  break
-@@ -3907,24 +4382,34 @@
+@@ -3907,24 +4383,34 @@
  do
    # Use a header file that comes with gcc, so configuring glibc
    # with a fresh cross-compiler works.
@@ -2045,7 +2053,7 @@
    else
      ac_cpp_err=
    fi
-@@ -3935,7 +4420,8 @@
+@@ -3935,7 +4421,8 @@
    :
  else
    echo "$as_me: failed program was:" >&5
@@ -2055,7 +2063,7 @@
    # Broken: fails on valid input.
  continue
  fi
-@@ -3944,20 +4430,24 @@
+@@ -3944,20 +4431,24 @@
    # OK, works on sane cases.  Now check whether non-existent headers
    # can be detected and how.
    cat >conftest.$ac_ext <<_ACEOF
@@ -2083,7 +2091,7 @@
    else
      ac_cpp_err=
    fi
-@@ -3969,7 +4459,8 @@
+@@ -3969,7 +4460,8 @@
  continue
  else
    echo "$as_me: failed program was:" >&5
@@ -2093,7 +2101,7 @@
    # Passes both tests.
  ac_preproc_ok=:
  break
-@@ -3982,8 +4473,10 @@
+@@ -3982,8 +4474,10 @@
  if $ac_preproc_ok; then
    :
  else
@@ -2106,7 +2114,7 @@
     { (exit 1); exit 1; }; }
  fi
  
-@@ -3994,55 +4487,88 @@
+@@ -3994,55 +4488,88 @@
  ac_compiler_gnu=$ac_cv_c_compiler_gnu
  
  
@@ -2216,7 +2224,7 @@
    :
  else
    ac_cv_header_stdc=no
-@@ -4054,13 +4580,16 @@
+@@ -4054,13 +4581,16 @@
  if test $ac_cv_header_stdc = yes; then
    # ISC 2.0.2 stdlib.h does not declare free, contrary to ANSI.
    cat >conftest.$ac_ext <<_ACEOF
@@ -2236,7 +2244,7 @@
    :
  else
    ac_cv_header_stdc=no
-@@ -4075,16 +4604,20 @@
+@@ -4075,16 +4605,20 @@
    :
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -2262,7 +2270,7 @@
  # define TOUPPER(c) (ISLOWER(c) ? ((c) | 0x40) : (c))
  #endif
  
-@@ -4095,7 +4628,7 @@
+@@ -4095,7 +4629,7 @@
    int i;
    for (i = 0; i < 256; i++)
      if (XOR (islower (i), ISLOWER (i))
@@ -2271,7 +2279,7 @@
        exit(2);
    exit (0);
  }
-@@ -4115,11 +4648,12 @@
+@@ -4115,11 +4649,12 @@
  else
    echo "$as_me: program exited with status $ac_status" >&5
  echo "$as_me: failed program was:" >&5
@@ -2286,7 +2294,7 @@
  fi
  fi
  fi
-@@ -4144,7 +4678,7 @@
+@@ -4144,7 +4679,7 @@
  
  
  for ac_header in sys/types.h sys/stat.h stdlib.h string.h memory.h strings.h \
@@ -2295,7 +2303,7 @@
  do
  as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
  echo "$as_me:$LINENO: checking for $ac_header" >&5
-@@ -4153,19 +4687,31 @@
+@@ -4153,19 +4688,31 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -2331,7 +2339,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4174,10 +4720,11 @@
+@@ -4174,10 +4721,11 @@
    eval "$as_ac_Header=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -2345,7 +2353,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4208,18 +4755,30 @@
+@@ -4208,18 +4756,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2380,7 +2388,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4228,10 +4787,11 @@
+@@ -4228,10 +4788,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2394,7 +2402,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4239,20 +4799,24 @@
+@@ -4239,20 +4800,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2422,7 +2430,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4263,7 +4827,8 @@
+@@ -4263,7 +4828,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2432,7 +2440,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4271,26 +4836,43 @@
+@@ -4271,26 +4837,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -2485,7 +2493,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4322,18 +4904,30 @@
+@@ -4322,18 +4905,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2520,7 +2528,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4342,10 +4936,11 @@
+@@ -4342,10 +4937,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2534,7 +2542,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4353,20 +4948,24 @@
+@@ -4353,20 +4949,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2562,7 +2570,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4377,7 +4976,8 @@
+@@ -4377,7 +4977,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2572,7 +2580,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4385,26 +4985,43 @@
+@@ -4385,26 +4986,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -2625,7 +2633,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4436,18 +5053,30 @@
+@@ -4436,18 +5054,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2660,7 +2668,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4456,10 +5085,11 @@
+@@ -4456,10 +5086,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2674,7 +2682,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4467,20 +5097,24 @@
+@@ -4467,20 +5098,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2702,7 +2710,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4491,7 +5125,8 @@
+@@ -4491,7 +5126,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2712,7 +2720,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4499,26 +5134,43 @@
+@@ -4499,26 +5135,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -2765,7 +2773,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4550,18 +5202,30 @@
+@@ -4550,18 +5203,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2800,7 +2808,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4570,10 +5234,11 @@
+@@ -4570,10 +5235,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2814,7 +2822,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4581,20 +5246,24 @@
+@@ -4581,20 +5247,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2842,7 +2850,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4605,7 +5274,8 @@
+@@ -4605,7 +5275,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2852,7 +2860,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4613,26 +5283,43 @@
+@@ -4613,26 +5284,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -2905,7 +2913,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4664,18 +5351,30 @@
+@@ -4664,18 +5352,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2940,7 +2948,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4684,10 +5383,11 @@
+@@ -4684,10 +5384,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2954,7 +2962,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4695,20 +5395,24 @@
+@@ -4695,20 +5396,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -2982,7 +2990,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4719,7 +5423,8 @@
+@@ -4719,7 +5424,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -2992,7 +3000,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4727,26 +5432,43 @@
+@@ -4727,26 +5433,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -3045,7 +3053,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4778,18 +5500,30 @@
+@@ -4778,18 +5501,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -3080,7 +3088,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4798,10 +5532,11 @@
+@@ -4798,10 +5533,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -3094,7 +3102,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -4809,20 +5544,24 @@
+@@ -4809,20 +5545,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -3122,7 +3130,7 @@
    else
      ac_cpp_err=
    fi
-@@ -4833,7 +5572,8 @@
+@@ -4833,7 +5573,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -3132,7 +3140,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -4841,26 +5581,43 @@
+@@ -4841,26 +5582,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -3185,7 +3193,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -4886,8 +5643,11 @@
+@@ -4886,8 +5644,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lnsl  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -3199,7 +3207,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -4896,12 +5656,6 @@
+@@ -4896,12 +5657,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char inet_ntoa ();
@@ -3212,7 +3220,7 @@
  int
  main ()
  {
-@@ -4912,11 +5666,20 @@
+@@ -4912,11 +5667,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -3235,7 +3243,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4925,10 +5688,12 @@
+@@ -4925,10 +5689,12 @@
    ac_cv_lib_nsl_inet_ntoa=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -3250,7 +3258,7 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_nsl_inet_ntoa" >&5
-@@ -4954,8 +5719,11 @@
+@@ -4954,8 +5720,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lsocket  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -3264,7 +3272,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -4964,12 +5732,6 @@
+@@ -4964,12 +5733,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char socket ();
@@ -3277,7 +3285,7 @@
  int
  main ()
  {
-@@ -4980,11 +5742,20 @@
+@@ -4980,11 +5743,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -3300,7 +3308,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -4993,10 +5764,12 @@
+@@ -4993,10 +5765,12 @@
    ac_cv_lib_socket_socket=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -3315,114 +3323,7 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_socket_socket" >&5
-@@ -5027,49 +5800,72 @@
-   echo $ECHO_N "(cached) $ECHO_C" >&6
- else
-   cat >conftest.$ac_ext <<_ACEOF
--#line $LINENO "configure"
--#include "confdefs.h"
-+/* confdefs.h.  */
-+_ACEOF
-+cat confdefs.h >>conftest.$ac_ext
-+cat >>conftest.$ac_ext <<_ACEOF
-+/* end confdefs.h.  */
-+/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
-+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-+#define $ac_func innocuous_$ac_func
-+
- /* System header to define __stub macros and hopefully few prototypes,
--    which can conflict with char $ac_func (); below.  */
--#include <assert.h>
-+    which can conflict with char $ac_func (); below.
-+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
-+    <limits.h> exists even on freestanding compilers.  */
-+
-+#ifdef __STDC__
-+# include <limits.h>
-+#else
-+# include <assert.h>
-+#endif
-+
-+#undef $ac_func
-+
- /* Override any gcc2 internal prototype to avoid an error.  */
- #ifdef __cplusplus
- extern "C"
-+{
- #endif
- /* We use char because int might match the return type of a gcc2
-    builtin and then its argument prototype would still apply.  */
--char $ac_func ();
--char (*f) ();
--
--#ifdef F77_DUMMY_MAIN
--#  ifdef __cplusplus
--     extern "C"
--#  endif
--   int F77_DUMMY_MAIN() { return 1; }
--#endif
--int
--main ()
--{
-+char $ac_func ();
- /* The GNU C library defines this for functions which it implements
-     to always fail with ENOSYS.  Some functions are actually named
-     something starting with __ and the normal name is an alias.  */
- #if defined (__stub_$ac_func) || defined (__stub___$ac_func)
- choke me
- #else
--f = $ac_func;
-+char (*f) () = $ac_func;
-+#endif
-+#ifdef __cplusplus
-+}
- #endif
- 
-+int
-+main ()
-+{
-+return f != $ac_func;
-   ;
-   return 0;
- }
- _ACEOF
- rm -f conftest.$ac_objext conftest$ac_exeext
- if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
--  (eval $ac_link) 2>&5
-+  (eval $ac_link) 2>conftest.er1
-   ac_status=$?
-+  grep -v '^ *+' conftest.er1 >conftest.err
-+  rm -f conftest.er1
-+  cat conftest.err >&5
-   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-   (exit $ac_status); } &&
--         { ac_try='test -s conftest$ac_exeext'
-+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
-+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-+  (eval $ac_try) 2>&5
-+  ac_status=$?
-+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-+  (exit $ac_status); }; } &&
-+	 { ac_try='test -s conftest$ac_exeext'
-   { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-   (eval $ac_try) 2>&5
-   ac_status=$?
-@@ -5078,10 +5874,12 @@
-   eval "$as_ac_var=yes"
- else
-   echo "$as_me: failed program was:" >&5
--cat conftest.$ac_ext >&5
-+sed 's/^/| /' conftest.$ac_ext >&5
-+
- eval "$as_ac_var=no"
- fi
--rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-+rm -f conftest.err conftest.$ac_objext \
-+      conftest$ac_exeext conftest.$ac_ext
- fi
- echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
- echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5105,49 +5903,72 @@
+@@ -5027,49 +5801,72 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -3513,7 +3414,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5156,10 +5977,12 @@
+@@ -5078,10 +5875,12 @@
    eval "$as_ac_var=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -3528,7 +3429,114 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5202,8 +6025,11 @@
+@@ -5105,49 +5904,72 @@
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+-#line $LINENO "configure"
+-#include "confdefs.h"
++/* confdefs.h.  */
++_ACEOF
++cat confdefs.h >>conftest.$ac_ext
++cat >>conftest.$ac_ext <<_ACEOF
++/* end confdefs.h.  */
++/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
++   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
++#define $ac_func innocuous_$ac_func
++
+ /* System header to define __stub macros and hopefully few prototypes,
+-    which can conflict with char $ac_func (); below.  */
+-#include <assert.h>
++    which can conflict with char $ac_func (); below.
++    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
++    <limits.h> exists even on freestanding compilers.  */
++
++#ifdef __STDC__
++# include <limits.h>
++#else
++# include <assert.h>
++#endif
++
++#undef $ac_func
++
+ /* Override any gcc2 internal prototype to avoid an error.  */
+ #ifdef __cplusplus
+ extern "C"
++{
+ #endif
+ /* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+ char $ac_func ();
+-char (*f) ();
+-
+-#ifdef F77_DUMMY_MAIN
+-#  ifdef __cplusplus
+-     extern "C"
+-#  endif
+-   int F77_DUMMY_MAIN() { return 1; }
+-#endif
+-int
+-main ()
+-{
+ /* The GNU C library defines this for functions which it implements
+     to always fail with ENOSYS.  Some functions are actually named
+     something starting with __ and the normal name is an alias.  */
+ #if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+ choke me
+ #else
+-f = $ac_func;
++char (*f) () = $ac_func;
++#endif
++#ifdef __cplusplus
++}
+ #endif
+ 
++int
++main ()
++{
++return f != $ac_func;
+   ;
+   return 0;
+ }
+ _ACEOF
+ rm -f conftest.$ac_objext conftest$ac_exeext
+ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+-  (eval $ac_link) 2>&5
++  (eval $ac_link) 2>conftest.er1
++  ac_status=$?
++  grep -v '^ *+' conftest.er1 >conftest.err
++  rm -f conftest.er1
++  cat conftest.err >&5
++  echo "$as_me:$LINENO: \$? = $ac_status" >&5
++  (exit $ac_status); } &&
++	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
++  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
++  (eval $ac_try) 2>&5
+   ac_status=$?
+   echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } &&
+-         { ac_try='test -s conftest$ac_exeext'
++  (exit $ac_status); }; } &&
++	 { ac_try='test -s conftest$ac_exeext'
+   { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+   (eval $ac_try) 2>&5
+   ac_status=$?
+@@ -5156,10 +5978,12 @@
+   eval "$as_ac_var=yes"
+ else
+   echo "$as_me: failed program was:" >&5
+-cat conftest.$ac_ext >&5
++sed 's/^/| /' conftest.$ac_ext >&5
++
+ eval "$as_ac_var=no"
+ fi
+-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
++rm -f conftest.err conftest.$ac_objext \
++      conftest$ac_exeext conftest.$ac_ext
+ fi
+ echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+ echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+@@ -5202,8 +6026,11 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -3542,7 +3550,7 @@
  
  #include <stdio.h>
  #ifdef HAVE_STRING_H
-@@ -5222,12 +6048,6 @@
+@@ -5222,12 +6049,6 @@
  #include <sys/socket.h>
  #include <syslog.h>
  
@@ -3555,7 +3563,7 @@
  int
  main ()
  {
-@@ -5238,11 +6058,20 @@
+@@ -5238,11 +6059,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -3578,7 +3586,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5251,10 +6080,11 @@
+@@ -5251,10 +6081,11 @@
    eval "sn_cv_decl_needed_$sn_decl=no"
  else
    echo "$as_me: failed program was:" >&5
@@ -3592,7 +3600,7 @@
  fi
  
  
-@@ -5286,49 +6116,72 @@
+@@ -5286,49 +6117,72 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -3683,7 +3691,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5337,10 +6190,12 @@
+@@ -5337,10 +6191,12 @@
    eval "$as_ac_var=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -3698,7 +3706,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5362,49 +6217,72 @@
+@@ -5362,49 +6218,72 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -3789,7 +3797,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5413,10 +6291,12 @@
+@@ -5413,10 +6292,12 @@
    eval "$as_ac_var=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -3804,7 +3812,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5438,49 +6318,72 @@
+@@ -5438,49 +6319,72 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -3895,7 +3903,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5489,10 +6392,12 @@
+@@ -5489,10 +6393,12 @@
    eval "$as_ac_var=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -3910,7 +3918,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5514,49 +6419,72 @@
+@@ -5514,49 +6420,72 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -4001,7 +4009,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5565,10 +6493,12 @@
+@@ -5565,10 +6494,12 @@
    eval "$as_ac_var=yes"
  else
    echo "$as_me: failed program was:" >&5
@@ -4016,7 +4024,7 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
-@@ -5582,17 +6512,14 @@
+@@ -5582,17 +6513,14 @@
  
  
  cat >conftest.$ac_ext <<_ACEOF
@@ -4039,7 +4047,7 @@
  int
  main ()
  {
-@@ -5603,11 +6530,20 @@
+@@ -5603,11 +6531,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -4062,7 +4070,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5620,24 +6556,22 @@
+@@ -5620,24 +6557,22 @@
  
  else
    echo "$as_me: failed program was:" >&5
@@ -4095,7 +4103,7 @@
  int
  main ()
  {
-@@ -5648,11 +6582,20 @@
+@@ -5648,11 +6583,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -4118,7 +4126,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5661,10 +6604,11 @@
+@@ -5661,10 +6605,11 @@
    sn_cv_have___FUNCTION__=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4132,7 +4140,7 @@
  if test "x$sn_cv_have___FUNCTION__" = "xyes"; then
     echo "$as_me:$LINENO: result: yes" >&5
  echo "${ECHO_T}yes" >&6
-@@ -5679,17 +6623,14 @@
+@@ -5679,17 +6624,14 @@
     echo "$as_me:$LINENO: checking for __func__" >&5
  echo $ECHO_N "checking for __func__... $ECHO_C" >&6
     cat >conftest.$ac_ext <<_ACEOF
@@ -4155,7 +4163,7 @@
  int
  main ()
  {
-@@ -5700,11 +6641,20 @@
+@@ -5700,11 +6642,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -4178,7 +4186,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5713,10 +6663,11 @@
+@@ -5713,10 +6664,11 @@
    sn_cv_have___func__=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4192,7 +4200,7 @@
     if test "x$sn_cv_have___func__" = "xyes"; then
        echo "$as_me:$LINENO: result: yes" >&5
  echo "${ECHO_T}yes" >&6
-@@ -5777,8 +6728,11 @@
+@@ -5777,8 +6729,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lm  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4206,7 +4214,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -5787,12 +6741,6 @@
+@@ -5787,12 +6742,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char floor ();
@@ -4219,7 +4227,7 @@
  int
  main ()
  {
-@@ -5803,11 +6751,20 @@
+@@ -5803,11 +6752,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4242,7 +4250,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5816,10 +6773,12 @@
+@@ -5816,10 +6774,12 @@
    ac_cv_lib_m_floor=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4257,7 +4265,7 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_m_floor" >&5
-@@ -5844,8 +6803,11 @@
+@@ -5844,8 +6804,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lpcap  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4271,7 +4279,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -5854,12 +6816,6 @@
+@@ -5854,12 +6817,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char pcap_datalink ();
@@ -4284,7 +4292,7 @@
  int
  main ()
  {
-@@ -5870,11 +6826,20 @@
+@@ -5870,11 +6827,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4307,7 +4315,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5883,10 +6848,12 @@
+@@ -5883,10 +6849,12 @@
    ac_cv_lib_pcap_pcap_datalink=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4322,7 +4330,16 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_pcap_pcap_datalink" >&5
-@@ -5966,18 +6933,30 @@
+@@ -5909,7 +6877,7 @@
+   echo "   http://www.tcpdump.org"
+   echo "   or use the --with-libpcap-* options, if you have it installed"
+   echo "   in unusual place"
+-  exit
++  exit 1
+ fi
+ 
+ default_directory="/usr /usr/local"
+@@ -5966,18 +6934,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4357,7 +4374,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -5986,10 +6965,11 @@
+@@ -5986,10 +6966,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4371,7 +4388,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -5997,20 +6977,24 @@
+@@ -5997,20 +6978,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4399,7 +4416,7 @@
    else
      ac_cpp_err=
    fi
-@@ -6021,7 +7005,8 @@
+@@ -6021,7 +7006,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4409,7 +4426,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -6029,26 +7014,43 @@
+@@ -6029,26 +7015,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -4462,7 +4479,16 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -6083,8 +7085,11 @@
+@@ -6069,7 +7072,7 @@
+   echo
+   echo "   ERROR!  Libpcre header not found, go get it from"
+   echo "   http://www.pcre.org"
+-  exit
++  exit 1
+ fi
+ 
+ # Verify that we have the library
+@@ -6083,8 +7086,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lpcre  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4476,7 +4502,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -6093,12 +7098,6 @@
+@@ -6093,12 +7099,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char pcre_compile ();
@@ -4489,7 +4515,7 @@
  int
  main ()
  {
-@@ -6109,11 +7108,20 @@
+@@ -6109,11 +7109,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4512,7 +4538,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -6122,10 +7130,12 @@
+@@ -6122,10 +7131,12 @@
    ac_cv_lib_pcre_pcre_compile=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4527,7 +4553,34 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_pcre_pcre_compile" >&5
-@@ -6277,8 +7287,11 @@
+@@ -6146,7 +7157,7 @@
+     echo "    ERROR!  Libpcre library not found, go get it from"
+     echo "    http://www.pcre.org"
+     echo
+-    exit
++    exit 1
+ fi
+ 
+ 
+@@ -6226,7 +7237,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+     else
+       echo "$as_me:$LINENO: result: no" >&5
+@@ -6257,7 +7268,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+       else
+         echo "$as_me:$LINENO: result: no" >&5
+@@ -6277,8 +7288,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lz  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4541,7 +4594,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -6287,12 +7300,6 @@
+@@ -6287,12 +7301,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char compress ();
@@ -4554,7 +4607,7 @@
  int
  main ()
  {
-@@ -6303,11 +7310,20 @@
+@@ -6303,11 +7311,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4577,7 +4630,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -6316,10 +7332,12 @@
+@@ -6316,10 +7333,12 @@
    ac_cv_lib_z_compress=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4592,7 +4645,180 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_z_compress" >&5
-@@ -6682,18 +7700,30 @@
+@@ -6388,7 +7407,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+     else
+       echo "$as_me:$LINENO: result: no" >&5
+@@ -6418,7 +7437,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+       else
+         echo "$as_me:$LINENO: result: no" >&5
+@@ -6443,6 +7462,15 @@
+    with_postgresql=no
+ fi;
+ 
++
++# Check whether --with-pgsql_includes or --without-pgsql_includes was given.
++if test "${with_pgsql_includes+set}" = set; then
++  withval="$with_pgsql_includes"
++  with_pgsql_includes="$withval"
++else
++  with_pgsql_includes=no
++fi;
++
+ if test "$with_postgresql" != "no"; then
+   if test "$with_postgresql" = "yes"; then
+     postgresql_directory="$default_directory /usr/local/pgsql /usr/pgsql /usr/local"
+@@ -6458,23 +7486,42 @@
+   echo "$as_me:$LINENO: checking for postgresql" >&5
+ echo $ECHO_N "checking for postgresql... $ECHO_C" >&6
+ 
+-  for i in $postgresql_directory; do
+-    if test -r $i/include/pgsql/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include/pgsql
+-    elif test -r $i/include/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include
+-    elif test -r $i/include/postgresql/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include/postgresql
+-    fi
+-  done
++  if test "$with_pgsql_includes" != "no"; then
++    for i in $with_pgsql_includes $postgresql_directory; do
++      if test -r $i/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i
++      elif test -r $i/include/pgsql/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include/pgsql
++      elif test -r $i/include/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include
++      elif test -r $i/include/postgresql/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include/postgresql
++      fi
++    done
++  fi
+ 
+-  if test -z "$POSTGRESQL_DIR"; then
++  if test -z "$POSTGRESQL_INC_DIR"; then
++    for i in $postgresql_directory; do
++      if test -r $i/include/pgsql/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include/pgsql
++      elif test -r $i/include/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include
++      elif test -r $i/include/postgresql/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include/postgresql
++      fi
++    done
++  fi
++
++  if test -z "$POSTGRESQL_INC_DIR"; then
+     if test "$postgresql_fail" != "no"; then
+       tmp=""
+-      for i in $postgesql_directory; do
++      if test "$with_pgsql_includes" != "no"; then
++        tmp="$tmp $with_pgsql_includes"
++      fi
++      for i in $postgresql_directory; do
+         tmp="$tmp $i/include $i/include/pgsql"
+       done
+ 
+@@ -6488,26 +7535,30 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+     else
+       echo "$as_me:$LINENO: result: no" >&5
+ echo "${ECHO_T}no" >&6
+     fi
+-  else
++  fi
+ 
+-    for i in lib lib/pgsql; do
+-      str="$POSTGRESQL_DIR/$i/libpq.*"
+-      for j in `echo $str`; do
+-        if test -r $j; then
+-          POSTGRESQL_LIB_DIR="$POSTGRESQL_DIR/$i"
+-          break 2
+-        fi
+-      done
+-    done
++  if test -z "$POSTGRESQL_DIR"; then
++    for dir in $postgresql_directory; do
++       for i in lib lib/pgsql; do
++         str="$dir/$i/libpq.*"
++         for j in `echo $str`; do
++           if test -r $j; then
++  	     POSTGRESQL_LIB_DIR="$dir/$i"
++             break 2
++           fi
++         done
++       done
++   done
++  fi
+ 
+-    if test -z "$POSTGRESQL_LIB_DIR"; then
+-      if test "$postgresql_fail" != "no"; then
++  if test -z "$POSTGRESQL_LIB_DIR"; then
++     if test "$postgresql_fail" != "no"; then
+ 
+    echo
+    echo
+@@ -6519,19 +7570,18 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+-      else
+-        echo "$as_me:$LINENO: result: no" >&5
++     else
++       echo "$as_me:$LINENO: result: no" >&5
+ echo "${ECHO_T}no" >&6;
+-      fi
+-    else
+-      echo "$as_me:$LINENO: result: yes" >&5
++     fi
++  else
++     echo "$as_me:$LINENO: result: yes" >&5
+ echo "${ECHO_T}yes" >&6
+-      LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
+-      CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
+-      LIBS="${LIBS} -lpq"
+-    fi
++     LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
++     CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
++     LIBS="${LIBS} -lpq"
+   fi
+ fi
+ 
+@@ -6583,7 +7633,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+     else
+       echo "$as_me:$LINENO: result: no" >&5
+@@ -6682,18 +7732,30 @@
  echo "$as_me:$LINENO: checking libipq.h usability" >&5
  echo $ECHO_N "checking libipq.h usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4627,7 +4853,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -6702,10 +7732,11 @@
+@@ -6702,10 +7764,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4641,7 +4867,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -6713,20 +7744,24 @@
+@@ -6713,20 +7776,24 @@
  echo "$as_me:$LINENO: checking libipq.h presence" >&5
  echo $ECHO_N "checking libipq.h presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4669,7 +4895,7 @@
    else
      ac_cpp_err=
    fi
-@@ -6737,7 +7772,8 @@
+@@ -6737,7 +7804,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4679,7 +4905,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -6745,19 +7781,36 @@
+@@ -6745,19 +7813,36 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -4724,7 +4950,7 @@
  esac
  echo "$as_me:$LINENO: checking for libipq.h" >&5
  echo $ECHO_N "checking for libipq.h... $ECHO_C" >&6
-@@ -6793,8 +7846,11 @@
+@@ -6793,8 +7878,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lipq  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4738,7 +4964,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -6803,12 +7859,6 @@
+@@ -6803,12 +7891,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char ipq_set_mode ();
@@ -4751,7 +4977,7 @@
  int
  main ()
  {
-@@ -6819,11 +7869,20 @@
+@@ -6819,11 +7901,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4774,7 +5000,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -6832,10 +7891,12 @@
+@@ -6832,10 +7923,12 @@
    ac_cv_lib_ipq_ipq_set_mode=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4789,7 +5015,25 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_ipq_ipq_set_mode" >&5
-@@ -6946,18 +8007,30 @@
+@@ -6858,7 +7951,7 @@
+                echo "   www.netfilter.org or use the --with-libipq-* options, "
+                echo "   if you have it installed in unusual place"
+                echo
+-               exit
++               exit 1
+            fi
+         fi
+ 
+@@ -6885,7 +7978,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+             fi
+             CFLAGS="${CFLAGS} `libnet-config --defines` `libnet-config --cflags`"
+@@ -6946,18 +8039,30 @@
  echo "$as_me:$LINENO: checking $ac_header usability" >&5
  echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4824,7 +5068,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -6966,10 +8039,11 @@
+@@ -6966,10 +8071,11 @@
    ac_header_compiler=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4838,7 +5082,7 @@
  echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
  echo "${ECHO_T}$ac_header_compiler" >&6
  
-@@ -6977,20 +8051,24 @@
+@@ -6977,20 +8083,24 @@
  echo "$as_me:$LINENO: checking $ac_header presence" >&5
  echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
  cat >conftest.$ac_ext <<_ACEOF
@@ -4866,7 +5110,7 @@
    else
      ac_cpp_err=
    fi
-@@ -7001,7 +8079,8 @@
+@@ -7001,7 +8111,8 @@
    ac_header_preproc=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4876,7 +5120,7 @@
    ac_header_preproc=no
  fi
  rm -f conftest.err conftest.$ac_ext
-@@ -7009,26 +8088,43 @@
+@@ -7009,26 +8120,43 @@
  echo "${ECHO_T}$ac_header_preproc" >&6
  
  # So?  What about this header?
@@ -4929,7 +5173,34 @@
  fi
  echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
  echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-@@ -7125,8 +8221,11 @@
+@@ -7051,7 +8179,7 @@
+     echo "   http://www.packetfactory.net/projects/libnet/"
+     echo "   or use the --with-libnet-* options, if you have it installed"
+     echo "   in unusual place"
+-    exit
++    exit 1
+   fi
+ 
+   echo "$as_me:$LINENO: checking for libnet version 1.0.2a" >&5
+@@ -7092,7 +8220,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+     fi
+     echo "$as_me:$LINENO: result: yes" >&5
+@@ -7111,7 +8239,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ 
+   fi
+ 
+@@ -7125,8 +8253,11 @@
    ac_check_lib_save_LIBS=$LIBS
  LIBS="-lnet  $LIBS"
  cat >conftest.$ac_ext <<_ACEOF
@@ -4943,7 +5214,7 @@
  
  /* Override any gcc2 internal prototype to avoid an error.  */
  #ifdef __cplusplus
-@@ -7135,12 +8234,6 @@
+@@ -7135,12 +8266,6 @@
  /* We use char because int might match the return type of a gcc2
     builtin and then its argument prototype would still apply.  */
  char libnet_build_ip ();
@@ -4956,7 +5227,7 @@
  int
  main ()
  {
-@@ -7151,11 +8244,20 @@
+@@ -7151,11 +8276,20 @@
  _ACEOF
  rm -f conftest.$ac_objext conftest$ac_exeext
  if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -4979,7 +5250,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7164,10 +8266,12 @@
+@@ -7164,10 +8298,12 @@
    ac_cv_lib_net_libnet_build_ip=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -4994,7 +5265,16 @@
  LIBS=$ac_check_lib_save_LIBS
  fi
  echo "$as_me:$LINENO: result: $ac_cv_lib_net_libnet_build_ip" >&5
-@@ -7201,15 +8305,12 @@
+@@ -7189,7 +8325,7 @@
+     echo "   http://www.packetfactory.net/projects/libnet/"
+     echo "   or use the --with-libnet-* options, if you have it installed"
+     echo "   in unusual place"
+-    exit
++    exit 1
+   fi
+ 
+ fi
+@@ -7201,15 +8337,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5015,7 +5295,7 @@
  int
  main ()
  {
-@@ -7223,11 +8324,20 @@
+@@ -7223,11 +8356,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5038,7 +5318,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7236,10 +8346,11 @@
+@@ -7236,10 +8378,11 @@
    ac_cv_type_u_int8_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5052,7 +5332,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int8_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int8_t" >&6
-@@ -7259,15 +8370,12 @@
+@@ -7259,15 +8402,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5073,7 +5353,7 @@
  int
  main ()
  {
-@@ -7281,11 +8389,20 @@
+@@ -7281,11 +8421,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5096,7 +5376,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7294,10 +8411,11 @@
+@@ -7294,10 +8443,11 @@
    ac_cv_type_u_int16_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5110,7 +5390,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int16_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int16_t" >&6
-@@ -7317,15 +8435,12 @@
+@@ -7317,15 +8467,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5131,7 +5411,7 @@
  int
  main ()
  {
-@@ -7339,11 +8454,20 @@
+@@ -7339,11 +8486,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5154,7 +5434,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7352,10 +8476,11 @@
+@@ -7352,10 +8508,11 @@
    ac_cv_type_u_int32_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5168,7 +5448,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int32_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int32_t" >&6
-@@ -7377,15 +8502,12 @@
+@@ -7377,15 +8534,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5189,7 +5469,7 @@
  int
  main ()
  {
-@@ -7399,11 +8521,20 @@
+@@ -7399,11 +8553,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5212,7 +5492,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7412,10 +8543,11 @@
+@@ -7412,10 +8575,11 @@
    ac_cv_type_u_int8_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5226,7 +5506,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int8_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int8_t" >&6
-@@ -7435,15 +8567,12 @@
+@@ -7435,15 +8599,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5247,7 +5527,7 @@
  int
  main ()
  {
-@@ -7457,11 +8586,20 @@
+@@ -7457,11 +8618,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5270,7 +5550,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7470,10 +8608,11 @@
+@@ -7470,10 +8640,11 @@
    ac_cv_type_u_int16_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5284,7 +5564,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int16_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int16_t" >&6
-@@ -7493,15 +8632,12 @@
+@@ -7493,15 +8664,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5305,7 +5585,7 @@
  int
  main ()
  {
-@@ -7515,11 +8651,20 @@
+@@ -7515,11 +8683,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5328,7 +5608,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7528,10 +8673,11 @@
+@@ -7528,10 +8705,11 @@
    ac_cv_type_u_int32_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5342,7 +5622,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int32_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int32_t" >&6
-@@ -7552,15 +8698,12 @@
+@@ -7552,15 +8730,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5363,7 +5643,7 @@
  int
  main ()
  {
-@@ -7574,11 +8717,20 @@
+@@ -7574,11 +8749,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5386,7 +5666,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7587,10 +8739,11 @@
+@@ -7587,10 +8771,11 @@
    ac_cv_type_u_int8_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5400,7 +5680,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int8_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int8_t" >&6
-@@ -7610,15 +8763,12 @@
+@@ -7610,15 +8795,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5421,7 +5701,7 @@
  int
  main ()
  {
-@@ -7632,11 +8782,20 @@
+@@ -7632,11 +8814,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5444,7 +5724,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7645,10 +8804,11 @@
+@@ -7645,10 +8836,11 @@
    ac_cv_type_u_int16_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5458,7 +5738,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int16_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int16_t" >&6
-@@ -7668,15 +8828,12 @@
+@@ -7668,15 +8860,12 @@
    echo $ECHO_N "(cached) $ECHO_C" >&6
  else
    cat >conftest.$ac_ext <<_ACEOF
@@ -5479,7 +5759,7 @@
  int
  main ()
  {
-@@ -7690,11 +8847,20 @@
+@@ -7690,11 +8879,20 @@
  _ACEOF
  rm -f conftest.$ac_objext
  if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
@@ -5502,7 +5782,7 @@
    { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
    (eval $ac_try) 2>&5
    ac_status=$?
-@@ -7703,10 +8869,11 @@
+@@ -7703,10 +8901,11 @@
    ac_cv_type_u_int32_t=yes
  else
    echo "$as_me: failed program was:" >&5
@@ -5516,7 +5796,7 @@
  fi
  echo "$as_me:$LINENO: result: $ac_cv_type_u_int32_t" >&5
  echo "${ECHO_T}$ac_cv_type_u_int32_t" >&6
-@@ -7744,6 +8911,7 @@
+@@ -7744,6 +8943,7 @@
  # AIX 4 /usr/bin/installbsd, which doesn't work without a -g flag
  # AFS /usr/afsws/bin/install, which mishandles nonexistent args
  # SVR4 /usr/ucb/install, which tries to use the nonexistent group "staff"
@@ -5524,7 +5804,7 @@
  # ./install, which can be erroneously created by make from ./install.sh.
  echo "$as_me:$LINENO: checking for a BSD-compatible install" >&5
  echo $ECHO_N "checking for a BSD-compatible install... $ECHO_C" >&6
-@@ -7760,6 +8928,7 @@
+@@ -7760,6 +8960,7 @@
  case $as_dir/ in
    ./ | .// | /cC/* | \
    /etc/* | /usr/sbin/* | /usr/etc/* | /sbin/* | /usr/afsws/bin/* | \
@@ -5532,7 +5812,7 @@
    /usr/ucb/* ) ;;
    *)
      # OSF1 and SCO ODT 3.0 have their own names for install.
-@@ -7767,20 +8936,20 @@
+@@ -7767,20 +8968,20 @@
      # by default.
      for ac_prog in ginstall scoinst install; do
        for ac_exec_ext in '' $ac_executable_extensions; do
@@ -5567,7 +5847,7 @@
        done
      done
      ;;
-@@ -7810,7 +8979,7 @@
+@@ -7810,7 +9011,7 @@
  
  test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
  
@@ -5576,7 +5856,7 @@
  cat >confcache <<\_ACEOF
  # This file is a shell script that caches the results of configure
  # tests run on this system so they can be shared between configure
-@@ -7821,7 +8990,7 @@
+@@ -7821,7 +9022,7 @@
  # config.status only pays attention to the cache file if you give it
  # the --recheck option to rerun configure.
  #
@@ -5585,7 +5865,7 @@
  # loading this file, other *unset* `ac_cv_foo' will be assigned the
  # following values.
  
-@@ -7839,13 +9008,13 @@
+@@ -7839,13 +9040,13 @@
        # `set' does not quote correctly, so add quotes (double-quote
        # substitution turns \\\\ into \\, and sed turns \\ into \).
        sed -n \
@@ -5602,7 +5882,7 @@
        ;;
      esac;
  } |
-@@ -7856,7 +9025,7 @@
+@@ -7856,7 +9057,7 @@
       t end
       /^ac_cv_env/!s/^\([^=]*\)=\(.*\)$/\1=${\1=\2}/
       : end' >>confcache
@@ -5611,7 +5891,7 @@
    if test -w $cache_file; then
      test "x$cache_file" != "x/dev/null" && echo "updating cache $cache_file"
      cat confcache >$cache_file
-@@ -7875,18 +9044,33 @@
+@@ -7875,18 +9076,33 @@
  # trailing colons and then remove the whole line if VPATH becomes empty
  # (actually we leave an empty line to preserve line numbers).
  if test "x$srcdir" = x.; then
@@ -5648,7 +5928,7 @@
  if test -z "${AMDEP_TRUE}" && test -z "${AMDEP_FALSE}"; then
    { { echo "$as_me:$LINENO: error: conditional \"AMDEP\" was never defined.
  Usually this means the macro was only invoked conditionally." >&5
-@@ -7908,11 +9092,12 @@
+@@ -7908,11 +9124,12 @@
  # configure, is in config.log if it exists.
  
  debug=false
@@ -5662,7 +5942,7 @@
  ## --------------------- ##
  ## M4sh Initialization.  ##
  ## --------------------- ##
-@@ -7921,46 +9106,57 @@
+@@ -7921,46 +9138,57 @@
  if test -n "${ZSH_VERSION+set}" && (emulate sh) >/dev/null 2>&1; then
    emulate sh
    NULLCMD=:
@@ -5747,7 +6027,7 @@
  $as_expr X/"$0" : '.*/\([^/][^/]*\)/*$' \| \
  	 X"$0" : 'X\(//\)$' \| \
  	 X"$0" : 'X\(/\)$' \| \
-@@ -7971,6 +9167,7 @@
+@@ -7971,6 +9199,7 @@
    	  /^X\/\(\/\).*/{ s//\1/; q; }
    	  s/.*/./; q'`
  
@@ -5755,7 +6035,7 @@
  # PATH needs CR, and LINENO needs CR and PATH.
  # Avoid depending upon Character Ranges.
  as_cr_letters='abcdefghijklmnopqrstuvwxyz'
-@@ -7981,15 +9178,15 @@
+@@ -7981,15 +9210,15 @@
  
  # The user is always right.
  if test "${PATH_SEPARATOR+set}" != set; then
@@ -5776,7 +6056,7 @@
  fi
  
  
-@@ -8038,6 +9235,8 @@
+@@ -8038,6 +9267,8 @@
    as_lineno_3=`(expr $as_lineno_1 + 1) 2>/dev/null`
    test "x$as_lineno_1" != "x$as_lineno_2" &&
    test "x$as_lineno_3"  = "x$as_lineno_2" ') 2>/dev/null; then
@@ -5785,7 +6065,7 @@
  	     CONFIG_SHELL=$as_dir/$as_base
  	     export CONFIG_SHELL
  	     exec "$CONFIG_SHELL" "$0" ${1+"$@"}
-@@ -8111,13 +9310,20 @@
+@@ -8111,13 +9342,20 @@
  fi
  rm -f conf$$ conf$$.exe conf$$.file
  
@@ -5808,7 +6088,7 @@
  
  
  # IFS
-@@ -8127,7 +9333,7 @@
+@@ -8127,7 +9365,7 @@
  IFS=" 	$as_nl"
  
  # CDPATH.
@@ -5817,7 +6097,7 @@
  
  exec 6>&1
  
-@@ -8144,7 +9350,7 @@
+@@ -8144,7 +9382,7 @@
  cat >&5 <<_CSEOF
  
  This file was extended by $as_me, which was
@@ -5826,7 +6106,7 @@
  
    CONFIG_FILES    = $CONFIG_FILES
    CONFIG_HEADERS  = $CONFIG_HEADERS
-@@ -8184,12 +9390,13 @@
+@@ -8184,12 +9422,13 @@
  
    -h, --help       print this help, then exit
    -V, --version    print version number, then exit
@@ -5842,7 +6122,7 @@
  
  Configuration files:
  $config_files
-@@ -8206,11 +9413,10 @@
+@@ -8206,11 +9445,10 @@
  cat >>$CONFIG_STATUS <<_ACEOF
  ac_cs_version="\\
  config.status
@@ -5856,7 +6136,7 @@
  This config.status script is free software; the Free Software Foundation
  gives unlimited permission to copy, distribute and modify it."
  srcdir=$srcdir
-@@ -8227,25 +9433,25 @@
+@@ -8227,25 +9465,25 @@
    --*=*)
      ac_option=`expr "x$1" : 'x\([^=]*\)='`
      ac_optarg=`expr "x$1" : 'x[^=]*=\(.*\)'`
@@ -5892,7 +6172,7 @@
    --version | --vers* | -V )
      echo "$ac_cs_version"; exit 0 ;;
    --he | --h)
-@@ -8260,13 +9466,16 @@
+@@ -8260,13 +9498,16 @@
    --debug | --d* | -d )
      debug=: ;;
    --file | --fil | --fi | --f )
@@ -5913,7 +6193,7 @@
  
    # This is an error.
    -*) { { echo "$as_me:$LINENO: error: unrecognized option: $1
-@@ -8281,6 +9490,20 @@
+@@ -8281,6 +9522,20 @@
    shift
  done
  
@@ -5934,7 +6214,7 @@
  _ACEOF
  
  cat >>$CONFIG_STATUS <<_ACEOF
-@@ -8346,6 +9569,9 @@
+@@ -8346,6 +9601,9 @@
    test "${CONFIG_COMMANDS+set}" = set || CONFIG_COMMANDS=$config_commands
  fi
  
@@ -5944,7 +6224,7 @@
  # Create a temporary directory, and hook for its removal unless debugging.
  $debug ||
  {
-@@ -8354,17 +9580,17 @@
+@@ -8354,17 +9612,17 @@
  }
  
  # Create a (secure) tmp directory for tmp files.
@@ -5966,7 +6246,7 @@
     { (exit 1); exit 1; }
  }
  
-@@ -8455,7 +9681,10 @@
+@@ -8455,7 +9713,10 @@
  s,@host_os@,$host_os,;t t
  s,@extra_incl@,$extra_incl,;t t
  s,@CPP@,$CPP,;t t
@@ -5977,7 +6257,7 @@
  CEOF
  
  _ACEOF
-@@ -8485,9 +9714,9 @@
+@@ -8485,9 +9746,9 @@
        (echo ':t
    /@[a-zA-Z_][a-zA-Z_0-9]*@/!b' && cat $tmp/subs.frag) >$tmp/subs-$ac_sed_frag.sed
        if test -z "$ac_sed_cmds"; then
@@ -5989,7 +6269,7 @@
        fi
        ac_sed_frag=`expr $ac_sed_frag + 1`
        ac_beg=$ac_end
-@@ -8505,46 +9734,51 @@
+@@ -8505,46 +9766,51 @@
    # Support "outfile[:infile[:infile...]]", defaulting infile="outfile.in".
    case $ac_file in
    - | *:- | *:-:* ) # input from stdin
@@ -6068,7 +6348,7 @@
  
    ac_builddir=.
  
-@@ -8571,12 +9805,45 @@
+@@ -8571,12 +9837,45 @@
      ac_srcdir=$ac_top_builddir$srcdir$ac_dir_suffix
      ac_top_srcdir=$ac_top_builddir$srcdir ;;
  esac
@@ -6120,7 +6400,7 @@
  
  
    case $INSTALL in
-@@ -8584,11 +9851,6 @@
+@@ -8584,11 +9883,6 @@
    *) ac_INSTALL=$ac_top_builddir$INSTALL ;;
    esac
  
@@ -6132,7 +6412,7 @@
    # Let's still pretend it is `configure' which instantiates (i.e., don't
    # use $as_me), people would be surprised to read:
    #    /* config.h.  Generated by config.status.  */
-@@ -8598,7 +9860,7 @@
+@@ -8598,7 +9892,7 @@
      configure_input="$ac_file.  "
    fi
    configure_input=$configure_input"Generated from `echo $ac_file_in |
@@ -6141,7 +6421,7 @@
  
    # First look for the input files in the build tree, otherwise in the
    # src tree.
-@@ -8607,26 +9869,32 @@
+@@ -8607,26 +9901,32 @@
        case $f in
        -) echo $tmp/stdin ;;
        [\\/$]*)
@@ -6187,7 +6467,7 @@
  _ACEOF
  cat >>$CONFIG_STATUS <<_ACEOF
    sed "$ac_vpsub
-@@ -8666,12 +9934,12 @@
+@@ -8666,12 +9966,12 @@
  # NAME is the cpp macro being defined and VALUE is the value it is being given.
  #
  # ac_d sets the value in "#define NAME VALUE" lines.
@@ -6203,7 +6483,7 @@
  ac_uB='$,\1#\2define\3'
  ac_uC=' '
  ac_uD=',;t'
-@@ -8680,11 +9948,11 @@
+@@ -8680,11 +9980,11 @@
    # Support "outfile[:infile[:infile...]]", defaulting infile="outfile.in".
    case $ac_file in
    - | *:- | *:-:* ) # input from stdin
@@ -6219,7 +6499,7 @@
    * )   ac_file_in=$ac_file.in ;;
    esac
  
-@@ -8698,28 +9966,29 @@
+@@ -8698,28 +9998,29 @@
        case $f in
        -) echo $tmp/stdin ;;
        [\\/$]*)
@@ -6263,7 +6543,7 @@
  
  _ACEOF
  
-@@ -8742,9 +10011,9 @@
+@@ -8742,9 +10043,9 @@
  s,[\\$`],\\&,g
  t clear
  : clear
@@ -6275,7 +6555,7 @@
  : end
  _ACEOF
  # If some macros were called several times there might be several times
-@@ -8758,13 +10027,13 @@
+@@ -8758,13 +10059,13 @@
  # example, in the case of _POSIX_SOURCE, which is predefined and required
  # on some systems where configure will not decide to define it.
  cat >>conftest.undefs <<\_ACEOF
@@ -6291,7 +6571,7 @@
  echo '  # If there are no defines, we may have an empty if/fi' >>$CONFIG_STATUS
  echo '  :' >>$CONFIG_STATUS
  rm -f conftest.tail
-@@ -8773,7 +10042,7 @@
+@@ -8773,7 +10074,7 @@
    # Write a limited-size here document to $tmp/defines.sed.
    echo '  cat >$tmp/defines.sed <<CEOF' >>$CONFIG_STATUS
    # Speed up: don't consider the non `#define' lines.
@@ -6300,7 +6580,7 @@
    # Work around the forget-to-reset-the-flag bug.
    echo 't clr' >>$CONFIG_STATUS
    echo ': clr' >>$CONFIG_STATUS
-@@ -8788,7 +10057,7 @@
+@@ -8788,7 +10089,7 @@
    mv conftest.tail conftest.defines
  done
  rm -f conftest.defines
@@ -6309,7 +6589,7 @@
  echo >>$CONFIG_STATUS
  
  # Break up conftest.undefs because some shells have a limit on the size
-@@ -8800,7 +10069,7 @@
+@@ -8800,7 +10101,7 @@
    # Write a limited-size here document to $tmp/undefs.sed.
    echo '  cat >$tmp/undefs.sed <<CEOF' >>$CONFIG_STATUS
    # Speed up: don't consider the non `#undef'
@@ -6318,7 +6598,7 @@
    # Work around the forget-to-reset-the-flag bug.
    echo 't clr' >>$CONFIG_STATUS
    echo ': clr' >>$CONFIG_STATUS
-@@ -8828,41 +10097,46 @@
+@@ -8828,41 +10129,46 @@
    cat $tmp/in >>$tmp/config.h
    rm -f $tmp/in
    if test x"$ac_file" != x-; then
@@ -6389,7 +6669,7 @@
  
        rm -f $ac_file
        mv $tmp/config.h $ac_file
-@@ -8889,16 +10163,41 @@
+@@ -8889,16 +10195,41 @@
    ac_source=`echo "$ac_file" | sed 's,[^:]*:,,'`
    ac_dir=`(dirname "$ac_dest") 2>/dev/null ||
  $as_expr X"$ac_dest" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
@@ -6435,7 +6715,7 @@
    ac_builddir=.
  
  if test "$ac_dir" != .; then
-@@ -8924,12 +10223,45 @@
+@@ -8924,12 +10255,45 @@
      ac_srcdir=$ac_top_builddir$srcdir$ac_dir_suffix
      ac_top_srcdir=$ac_top_builddir$srcdir ;;
  esac
@@ -6487,7 +6767,7 @@
  
  
    { echo "$as_me:$LINENO: executing $ac_dest commands" >&5
-@@ -8947,10 +10279,10 @@
+@@ -8947,10 +10311,10 @@
    if grep '^#.*generated by automake' $mf > /dev/null 2>&1; then
      dirpart=`(dirname "$mf") 2>/dev/null ||
  $as_expr X"$mf" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
@@ -6502,7 +6782,7 @@
  echo X"$mf" |
      sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }
    	  /^X\(\/\/\)[^/].*/{ s//\1/; q; }
-@@ -8986,35 +10318,40 @@
+@@ -8986,35 +10350,40 @@
      test -f "$dirpart/$file" && continue
      fdir=`(dirname "$file") 2>/dev/null ||
  $as_expr X"$file" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
@@ -6566,7 +6846,7 @@
  
      # echo "creating $dirpart/$file"
      echo '# dummy' > "$dirpart/$file"
-@@ -9043,8 +10380,11 @@
+@@ -9043,8 +10412,11 @@
  # need to make the FD available again.
  if test "$no_create" != yes; then
    ac_cs_success=:
@@ -6579,6 +6859,197 @@
    exec 5>>config.log
    # Use ||, not &&, to avoid exiting from the if with $? = 1, which
    # would make configure fail if this is the last instruction.
+--- snort-2.3.2.orig/configure.in
++++ snort-2.3.2/configure.in
+@@ -288,7 +288,7 @@
+   echo "   http://www.tcpdump.org"
+   echo "   or use the --with-libpcap-* options, if you have it installed"
+   echo "   in unusual place"
+-  exit
++  exit 1
+ fi
+ 
+ default_directory="/usr /usr/local"
+@@ -304,7 +304,7 @@
+    done
+    echo "**********************************************"
+    echo
+-   exit
++   exit 1
+ ])
+ 
+ AC_ARG_WITH(libpcre_includes,
+@@ -335,7 +335,7 @@
+   echo
+   echo "   ERROR!  Libpcre header not found, go get it from"
+   echo "   http://www.pcre.org"
+-  exit
++  exit 1
+ fi
+ 
+ # Verify that we have the library
+@@ -346,7 +346,7 @@
+     echo "    ERROR!  Libpcre library not found, go get it from"
+     echo "    http://www.pcre.org"
+     echo
+-    exit
++    exit 1
+ fi
+ 
+ AC_ARG_WITH(libnet_includes,
+@@ -511,6 +511,11 @@
+     [ with_postgresql="$withval" ],
+     [ with_postgresql=no ])
+ 
++AC_ARG_WITH(pgsql_includes,
++    [  --with-pgsql-includes=DIR  postgresql include directory],
++    [with_pgsql_includes="$withval" ],
++    [with_pgsql_includes=no ])
++
+ if test "$with_postgresql" != "no"; then
+   if test "$with_postgresql" = "yes"; then
+     postgresql_directory="$default_directory /usr/local/pgsql /usr/pgsql /usr/local"
+@@ -525,54 +530,76 @@
+ 
+   AC_MSG_CHECKING(for postgresql)
+ 
+-  for i in $postgresql_directory; do
+-    if test -r $i/include/pgsql/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include/pgsql
+-    elif test -r $i/include/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include
+-    elif test -r $i/include/postgresql/libpq-fe.h; then
+-      POSTGRESQL_DIR=$i
+-      POSTGRESQL_INC_DIR=$i/include/postgresql
+-    fi
+-  done
++  if test "$with_pgsql_includes" != "no"; then
++    for i in $with_pgsql_includes $postgresql_directory; do
++      if test -r $i/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i
++      elif test -r $i/include/pgsql/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include/pgsql
++      elif test -r $i/include/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include
++      elif test -r $i/include/postgresql/libpq-fe.h; then
++        POSTGRESQL_INC_DIR=$i/include/postgresql
++      fi
++    done
++  fi
+ 
+-  if test -z "$POSTGRESQL_DIR"; then
++  if test -z "$POSTGRESQL_INC_DIR"; then
++    for i in $postgresql_directory; do
++      if test -r $i/include/pgsql/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include/pgsql
++      elif test -r $i/include/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include
++      elif test -r $i/include/postgresql/libpq-fe.h; then
++        POSTGRESQL_DIR=$i
++        POSTGRESQL_INC_DIR=$i/include/postgresql
++      fi
++    done
++  fi
++
++  if test -z "$POSTGRESQL_INC_DIR"; then
+     if test "$postgresql_fail" != "no"; then
+       tmp=""
+-      for i in $postgesql_directory; do
++      if test "$with_pgsql_includes" != "no"; then
++        tmp="$tmp $with_pgsql_includes"
++      fi
++      for i in $postgresql_directory; do
+         tmp="$tmp $i/include $i/include/pgsql"
+       done
+       FAIL_MESSAGE("postgresql header file (libpq-fe.h)", $tmp)
+     else
+       AC_MSG_RESULT(no)
+     fi
+-  else
++  fi
+ 
+-    for i in lib lib/pgsql; do
+-      str="$POSTGRESQL_DIR/$i/libpq.*"
+-      for j in `echo $str`; do
+-        if test -r $j; then
+-          POSTGRESQL_LIB_DIR="$POSTGRESQL_DIR/$i"
+-          break 2
+-        fi
+-      done
+-    done
++  if test -z "$POSTGRESQL_DIR"; then
++    for dir in $postgresql_directory; do
++       for i in lib lib/pgsql; do
++         str="$dir/$i/libpq.*"
++         for j in `echo $str`; do
++           if test -r $j; then
++  	     POSTGRESQL_LIB_DIR="$dir/$i"
++             break 2
++           fi
++         done
++       done
++   done
++  fi
+ 
+-    if test -z "$POSTGRESQL_LIB_DIR"; then
+-      if test "$postgresql_fail" != "no"; then
+-        FAIL_MESSAGE("postgresql library libpq",
+-        "$POSTGRESQL_DIR/lib $POSTGRESQL_DIR/lib/pgsql")
+-      else
+-        AC_MSG_RESULT(no);
+-      fi
+-    else
+-      AC_MSG_RESULT(yes)
+-      LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
+-      CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
+-      LIBS="${LIBS} -lpq"
+-    fi
++  if test -z "$POSTGRESQL_LIB_DIR"; then
++     if test "$postgresql_fail" != "no"; then
++       FAIL_MESSAGE("postgresql library libpq",
++       "$POSTGRESQL_DIR/lib $POSTGRESQL_DIR/lib/pgsql")
++     else
++       AC_MSG_RESULT(no);
++     fi
++  else
++     AC_MSG_RESULT(yes)
++     LDFLAGS="${LDFLAGS} -L${POSTGRESQL_LIB_DIR}"
++     CPPFLAGS="${CPPFLAGS} -I${POSTGRESQL_INC_DIR} -DENABLE_POSTGRESQL"
++     LIBS="${LIBS} -lpq"
+   fi
+ fi
+ 
+@@ -681,7 +708,7 @@
+                echo "   www.netfilter.org or use the --with-libipq-* options, "
+                echo "   if you have it installed in unusual place"
+                echo
+-               exit
++               exit 1
+            fi
+         fi
+ 
+@@ -737,7 +764,7 @@
+     echo "   http://www.packetfactory.net/projects/libnet/"
+     echo "   or use the --with-libnet-* options, if you have it installed"
+     echo "   in unusual place"
+-    exit
++    exit 1
+   fi
+ 
+   AC_MSG_CHECKING(for libnet version 1.0.2a)
+@@ -781,7 +808,7 @@
+     echo "   http://www.packetfactory.net/projects/libnet/"
+     echo "   or use the --with-libnet-* options, if you have it installed"
+     echo "   in unusual place"
+-    exit
++    exit 1
+   fi
+ 
+ fi
 --- snort-2.3.2.orig/etc/snort.conf
 +++ snort-2.3.2/etc/snort.conf
 @@ -44,7 +44,7 @@
