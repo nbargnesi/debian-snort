@@ -130,9 +130,7 @@ build-indep-stamp:
 	fi
 	touch $@
 
-build: build-arch build-indep build-stamp
-build-stamp:
-	touch $@
+build: 
 	
 install: install-indep install-arch
 
