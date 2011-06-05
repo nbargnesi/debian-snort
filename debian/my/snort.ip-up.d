@@ -8,7 +8,7 @@ NAME=snort
 DESC="Network Intrusion Detection System"
 
 CONFIG=/etc/snort/snort.debian.conf
-COMMON=$(cat /etc/snort/snort.common.parameters)
+[ -r /etc/snort/snort.common.parameters] && COMMON=`cat /etc/snort/snort.common.parameters`
 
 test -x $DAEMON || exit 0
 test -f $CONFIG && . $CONFIG
@@ -65,13 +65,20 @@ if [ "$PPPD_PID" -a "$PPP_IFACE" -a "$PPP_LOCAL" ]; then
 			fail="already running"
 
 	cd /etc/snort
+	CONFIGFILE=/etc/snort/snort.$PPP_IFACE.conf
+	if [ ! -e $CONFIGFILE ]; then
+		echo "No /etc/snort/snort.$PPP_IFACE.conf, defaulting to snort.conf"
+		CONFIGFILE=/etc/snort/snort.conf
+	fi
 
 	# We intentionally set +e here, thus (new) environment is even
 	# saved, if startup fails - for further startup attempts
 	set +e
 	/sbin/start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		--exec $DAEMON -- $COMMON $DEBIAN_SNORT_OPTIONS \
-		-S "HOME_NET=[$PPP_LOCAL/32]" -i $PPP_IFACE >/dev/null
+		-c $CONFIGFILE \
+		-S "HOME_NET=[$PPP_LOCAL/32]" \
+		-i $PPP_IFACE >/dev/null
 	ret=$?
 	set -e
 	case "$ret" in
