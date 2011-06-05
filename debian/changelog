@@ -1,3 +1,20 @@
+snort (2.7.0-25) unstable; urgency=low
+
+  * Use src/output-plugins/spo_database.c from the 2.8.4.1 release. This version includes
+    the necessary code to configure the mysql connection so that it reconnects to the database
+    in case the connection gets lost. This might happen if too few events are logged in
+    Snort and the database connection timeouts. (Closes: #449568)
+  * Copy over src/ipv6_port.h from 2.8.4.1 and include it in src/output-plugins/spo_database.c
+  * Update Japanese translation for the templates, thanks to Hideki Yamane (Closes: 510704)
+  * Move the code that detects if interfaces are down over to snort-pgsql and snort-mysql.
+    This way, if the interface defined is not available it will prompt again, raising the
+    debconf priority (Closes: #502084)
+  * Change all the config_parameters debconf input from 'medium' to 'error'
+  * Change all the needs_db_config debconf questions from 'medium' to 'high' since users 
+    that do not see this note will end up with a non-functioning package.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 03 May 2009 23:40:26 +0200
+
 snort (2.7.0-24) unstable; urgency=low
 
   * Remove the LogMessage associated with fragmented traffic since it shows up
