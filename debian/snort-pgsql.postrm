@@ -33,6 +33,9 @@ case "$1" in
 		if [ -e /etc/default/snort ] ; then
 			rm /etc/default/snort
 		fi
+		if [ -e /etc/snort/db-pending-config ] ; then
+			rm /etc/snort/db-pending-config
+		fi
 
 		# Remove configuration dir
 		rmdir --ignore-fail-on-non-empty /etc/snort
