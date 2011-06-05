@@ -1,6 +1,7 @@
 #!/bin/sh -e
 
 . /usr/share/debconf/confmodule
+test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
 # Check if Snort will be able to run properly
 # Obviously, if you are using deprecated preprocessors (checked on config)
