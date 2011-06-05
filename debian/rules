@@ -150,6 +150,15 @@ install-arch:
 	install -m 755 -o root -g root src/snort-pgsql $(TMP)/snort-pgsql/usr/sbin/snort
 #	install -m 755 -o root -g root src/snort-inline   $(TMP)/snort/usr/sbin/snort
 
+# Default config
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
+#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-mysql/etc/default/snort
+	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-pgsql/etc/default/snort
+#	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-inline/etc/default/snort
+
 
 #  Install init.d initscripts
 	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort/etc/init.d/snort
@@ -196,15 +205,6 @@ install-indep:
 	install -m 644 -o root -g root `pwd`/etc/snort.conf $(TMP)/snort-common/etc/snort/
 	install -m 644 -o root -g root `pwd`/etc/unicode.map $(TMP)/snort-common/etc/snort/
 	install -m 644 -o root -g root `pwd`/etc/threshold.conf $(TMP)/snort-common/etc/snort/
-
-# Default config
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-mysql/etc/snort/snort.common.parameters
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort-pgsql/etc/snort/snort.common.parameters
-#	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-mysql/etc/default/snort
-	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-pgsql/etc/default/snort
-#	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-inline/etc/default/snort
 
 
 #  Install files of the arch-independent packages
