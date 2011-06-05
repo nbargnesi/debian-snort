@@ -77,8 +77,7 @@ EOF
 	fi
 
         if [ "$STARTUP" != "manual" ]; then
-	  if [ -f /etc/snort/snort.conf ]; then
-		# insert database config stuff in the configuration file,
+		# create database config stuff in the database.conf configuration file,
 		# or configure it for syslog-logging.
 		db_get snort-pgsql/configure_db
 		if  [ "$RET" = "true" ]; then
@@ -87,53 +86,32 @@ EOF
 			db_get snort-pgsql/db_user || true; DB_USER=$RET
 			db_get snort-pgsql/db_pass || true; DB_PASS=$RET
 
-			# Here we put the database stuff in the config file.
 			TEMPFILE=`mktemp`
-			cat /etc/snort/snort.conf | while read LINE
-			do
-				if [ "$LINE" = "# (#DBSTART#)" ]
-				then
-					echo "# (#DBSTART#)" >> $TEMPFILE
-					echo -n "output database: log, postgresql, " >> $TEMPFILE
-					if [ $DB_USER ]
-					then
-						echo -n "user=$DB_USER " >> $TEMPFILE
-					fi
-					if [ $DB_PASS ]
-					then
-						echo -n "password=$DB_PASS " >> $TEMPFILE
-					fi
-					if [ $DB_DATABASE ]
-					then
-						echo -n "dbname=$DB_DATABASE " >> $TEMPFILE
-					fi
-					if [ $DB_HOST ]
-					then
-						echo -n "host=$DB_HOST " >> $TEMPFILE
-					fi
-					echo " " >> $TEMPFILE
-					echo "# (#DBEND#)" >> $TEMPFILE
-					break
-				else
-					echo $LINE >> $TEMPFILE
-				fi
-			done
+                        # Header information
+                        echo "# AUTOMATIC GENERATED FILE -- DO NOT EDIT" >> $TEMPFILE
+                        echo "# Please, keep your paws off of these file" >> $TEMPFILE
+                        echo "# or you *will* break the configure process (snort-pgsql/snort-mysql only)" >> $TEMPFILE
+                        echo "# Anything you put in this file will be removed on (re)configure." >> $TEMPFILE
 
-			WRITE=0
-			cat /etc/snort/snort.conf | while read LINE
-			do
-				if [ $WRITE -eq 1 ]
-				then
-					echo $LINE >> $TEMPFILE
-				fi
-
-				if [ "$LINE" = "# (#DBEND#)" ]
-				then
-					WRITE=1
-				fi
-			done
-			mv -f $TEMPFILE /etc/snort/snort.conf
-		fi
+			echo -n "output database: log, postgresql, " >> $TEMPFILE
+			if [ $DB_USER ]
+			then
+				echo -n "user=$DB_USER " >> $TEMPFILE
+			fi
+			if [ $DB_PASS ]
+			then
+				echo -n "password=$DB_PASS " >> $TEMPFILE
+			fi
+			if [ $DB_DATABASE ]
+			then
+				echo -n "dbname=$DB_DATABASE " >> $TEMPFILE
+			fi
+			if [ $DB_HOST ]
+			then
+				echo -n "host=$DB_HOST " >> $TEMPFILE
+			fi
+			mv -f $TEMPFILE /etc/snort/database.conf
+		fi # of  if $RET
 
 		# Ensure the config file is readable by root.root and mode 600
 		if ! dpkg-statoverride --list /etc/snort/snort.conf >/dev/null
@@ -141,8 +119,12 @@ EOF
 			chown root:snort /etc/snort/snort.conf
 			chmod 640 /etc/snort/snort.conf
 		fi
-	  fi
-	fi
+		if ! dpkg-statoverride --list /etc/snort/database.conf >/dev/null
+                then
+			chown root:snort /etc/snort/database.conf
+			chmod 640 /etc/snort/database.conf
+		fi
+	fi # of if $STARTUP
 	db_stop
 
 	# Check for left-over files from woody packages.
