@@ -123,6 +123,7 @@ install-stamp: build-stamp
 	
 	cp etc/sid-msg.map $(TMP)/snort-rules-default/etc/snort/
 	cp etc/gen-msg.map $(TMP)/snort-rules-default/etc/snort/
+	cp etc/community-sid-msg.map $(TMP)/snort-rules-default/etc/snort/
 	cp etc/classification.config $(TMP)/snort-rules-default/etc/snort/
 	cp etc/reference.config $(TMP)/snort-rules-default/etc/snort/
 
