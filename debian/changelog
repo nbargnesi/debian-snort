@@ -1,3 +1,10 @@
+snort (2.7.0-17) unstable; urgency=low
+
+  * Include the README-database-upgrade.Debian in the documentation of the
+    database packages, I forgot to do this in -15
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 02 May 2008 11:52:12 +0200
+
 snort (2.7.0-16) unstable; urgency=low
 
   * Lintian fixes:
