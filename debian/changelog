@@ -1,3 +1,31 @@
+snort (2.2.0-3) unstable; urgency=high
+
+  * Added config-file discovery to ppp init.scripts so that Snort is
+    started (-c) with the proper configuration file if available or 
+    snort.conf if not. Setting high severity so that users running
+    Snort with PPP don't end up with a full /var filesystem (Closes: #268707)
+  * Fixed bashism in /etc/ppp/if-up.d/snort
+  * Modified the init.d an if-up.d scripts so that
+    /etc/snort/snort.common.parameters is only used if it exists.
+  * Snort-rules-default now Recommends: oinkmaster 
+    now that it is in the archive (accepted 01 Oct 2004), this does not
+    close #191105 since IMHO a better signature update mechanism should 
+    be introduced. Also updated the related TODO item.
+  * Added a FAQ Q&A regarding rule updates in README.Debian
+  * Added code to detect for deprecated preprocessors and warn the user,
+    curretnly the code will not touch the configuration files himself and
+    will not detect if you are using the standard package configuration file.
+    It will prevent users from having configuration issues, however
+    (Closes: #247665)
+  * Modified the init.d file so you can use 'status' to determine if
+    the Snort sensors are up or not.
+  * Updated the 2.2 rule set with the snapshot provided at snort.org, new rules
+    include detection of the recent JPEG exploit (Closes: #274244)
+  * Fixed typo in templates (unfuzzied modified entries) and updated
+    JA translation provided by Hideki Yamane (Closes: #273138)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sat,  2 Oct 2004 12:41:50 +0200
+
 snort (2.2.0-2) unstable; urgency=low
 
   * Taking over maintainership of this package (Closes: #265343)
