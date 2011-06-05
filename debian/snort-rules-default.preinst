@@ -1,0 +1,20 @@
+#!/bin/sh
+
+#
+# Migration from old /etc/snort to new /etc/snort setup
+#
+
+if [ ! -d /etc/snort/rules ]
+then
+	mkdir -p /etc/snort/rules
+	chown root.root /etc/snort/rules
+	chmod 755 /etc/snort/rules
+fi
+
+if [ ! -z "`ls /etc/snort/*.rules 2>/dev/null | head -1`" ]
+then
+	echo "Moving old rulefiles to new directory!"
+	mv /etc/snort/*.rules /etc/snort/rules/
+fi
+
+#DEBHELPER#

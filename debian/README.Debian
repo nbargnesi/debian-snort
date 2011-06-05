@@ -1,0 +1,84 @@
+
+ SNORT ON MULTIPLE INTERFACES
+------------------------------
+
+This package of snort is not capable of managing multiple interfaces.
+This feature is planned for later releases of Snort in Debian.
+
+If you want to try with this version of the packages, please use the 
+init.d script provided in /usr/share/doc/snort*/examples/. It's not a
+plug-and-play replacement for the current init.d script, since you need
+to create /etc/snort/snort.$INTERFACE.conf configuration files for reach
+interface you want Snort to listen on. All sensors can use the same rule
+sets so it's easy to update them and all your sensors.
+
+Remember: This is work in progress! 
+
+-----------------------------------------------------------------------------
+
+The database layout has changed a bit since 1.9.0beta4:
+
+         - DB schema v106
+         - Added the sensor.last_cid field to the schema so the
+           database can store the last used cid for a given sensor.
+           This field will ensure that a cid will never be reused.
+
+           Upgrading from v105 -> v106 is as simple as:
+
+           mysql> ALTER TABLE sensor ADD last_cid INT UNSIGNED NOT NULL;
+           mysql> UPDATE schema SET vseq=106;
+
+            psql> ALTER TABLE sensor ADD last_cid INT8;
+            psql> UPDATE schema SET vseq=106;
+          
+#
+# Q & A
+#
+Q.  I want to use FLEXRESP rules, but snort won't start with those rules
+    enabled! What is wrong, what should I do?
+A.	FLEXRESP rules need root-priviledges to access raw ethernet interface.
+    To resolve this, start snort as root.
+
+Q0. I can reconfigure snort as often as I want but it won't ask me any
+    questions!
+A0. You are probably victim of a bug in an older version of debconf. Just do:
+    dpkg-reconfigure --priority=low debconf; dpkg-reconfigure snort
+
+Q1. How can I test snort without having an ethernet card or a connection
+    to other computers ?
+A1. You have to use routing between two dummy devices:
+    # modprobe -a dummy    (The dummy device has to be build by the kernel)
+    # ifconfig dummy0   192.168.0.1
+    # ifconfig dummy0:0 192.168.0.2
+    # telnet 192.168.0.3 12345
+
+    It's important that the second IP is on the same interface and not
+    e.g. dummy1 or dummy2 and that the IP you try to access is *not* one
+    of those you put on the interfaces. Use snort's ability to hear in
+    promiscuous mode on an IP address range. (HOMEDIR=192.168.0.0/16)
+
+Q2. I saw that syslog logging is enabled, but I can't see any warnings in
+    /var/log/syslog ?
+A2. That's because /etc/syslog.conf directs every output for the syslog
+    facility LOG_AUTH to the /var/log/auth.log file. You can still find
+    detail information about every logged scan in /var/log/snort/.
+
+Q3. You told me about the files in /var/log/snort, but I can't read them!
+A3. For performance reasons they are logged in tcpdump-binary format. You 
+    can read them with "tcpdump -r /var/log/snort/snort.log" or 
+	mkdir /tmp/dir
+    	cd /etc/snort
+	. snort.conf
+	snort -r /var/log/snort/snort.log \
+		-S "HOME_NET=$DEBIAN_SNORT_HOME_NET" \
+		-c /etc/snort/snort.conf-lib \
+		-l /tmp/dir
+    The "-l /tmp/dir" creates the files in the /tmp/dir directory which MUST
+    be existing. You can use -s instead for logging to /var/log/auth.log.
+    
+Q4. It seems you disabled some checks and modified snort-lib, why?
+    Because they either generated too many false positives or generate too 
+    much noise for harmless things like traceroutes or nmap fingerprint 
+    attempts. These modifications are marked by a leading #debian#.
+    For more information see /usr/share/doc/snort/README.Maintainer.
+

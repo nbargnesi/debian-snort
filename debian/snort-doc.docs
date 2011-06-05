@@ -1,0 +1,14 @@
+debian/my/FAQ.html
+doc/README
+doc/README.FLEXRESP
+doc/README.PLUGINS
+doc/README.UNSOCK
+doc/README.WIN32
+doc/README.alert_order
+doc/README.csv
+doc/README.database
+doc/README.flow
+doc/README.flow-portscan
+doc/README.http_inspect
+doc/README.thresholding
+doc/README.wireless

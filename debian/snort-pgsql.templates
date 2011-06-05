@@ -1,0 +1,128 @@
+Template: snort-pgsql/startup
+Type: select
+_Choices: boot, dialup, manual
+Default: boot
+_Description: When should Snort be started?
+ Snort can be started during boot, when connecting to the net with pppd or
+ only when you manually start it via /usr/sbin/snort.
+
+Template: snort-pgsql/interface
+Type: string
+Default: eth0
+_Description: On which interface should Snort listen?
+ Please enter the interface name wich snort should listen on. The name
+ of the available interfaces are provided by running 'ip link show'.
+ This value usually is 'eth0', but you might want to vary this depending
+ on your environment, if you are using a dialup connection 'ppp0' might
+ be more appropiate.
+ .
+ Notice that Snort is usually configured to inspect all traffic coming
+ from the Internet, so the interface you add here is usually the same the
+ 'default route' is on.  You can determine which interface is used
+ for this running either '/sbin/ip ro sh' or '/sbin/route -n' (look for
+ 'default' or '0.0.0.0').
+ .
+ It is also not uncommon to run Snort on an interface with no IP
+ and configured in promiscuous mode, if this is your case, select the
+ interface in this system that is physically connected to the network
+ you want to inspect, enable promiscuous mode later on and make sure
+ that the network traffic is sent to this interface (either connected
+ to a 'port mirroring/spanning' port in a switch, to a hub or to a tap)
+
+Template: snort-pgsql/address_range
+Type: string
+Default: 192.168.0.0/16
+_Description: Please enter the address range that Snort will listen on.
+ You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or
+ 192.168.1.42/32 for just one. Specify multiple addresses on a single line
+ separated by ',' (comma characters), no spaces allowed!
+ .
+ If you want you can specify 'any', to not trust any side of the network.
+
+Template: snort-pgsql/disable_promiscuous
+Type: boolean
+Default: false
+_Description: Should Snort disable promiscous mode on the interface?
+ Disabling promiscuous mode means that Snort will only see packets
+ addressed to it's own interface. Enabling it allows Snort to check 
+ every packet that passes ethernet segment even if it's a connection
+ between two other computers. 
+ .
+ Disable promiscuous mode if you are configuring Snort on an interface
+ without a configured IP address.
+
+Template: snort-pgsql/reverse_order
+Type: boolean
+Default: false
+_Description: Should Snort's rules testing order be changed to Pass|Alert|Log?
+ If you change Snort's rules testing order to Pass|Alert|Log, they will be
+ applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log.
+ This will prevent people from having to make huge Berky Packet Filter
+ command line arguments to filter their alert rules.
+
+Template: snort-pgsql/stats_rcpt
+Type: string
+Default: root
+_Description: Who should receive the daily statistics mails?
+
+Template: snort-pgsql/options
+Type: string
+_Description: If you want to specify custom options to Snort, please specify them here.
+
+Template: snort-pgsql/stats_treshold
+Type: string
+Default: 1
+_Description: An alert needs to appear more times than this number to be included in the daily statistics.
+
+Template: snort-pgsql/configure_db
+Type: boolean
+Default: true
+_Description: Do you want to set up a database for snort-pgsql to log to?
+ You only need to do this the first time you install snort-pgsql. Before
+ you go on, make sure you have (1) the hostname of a machine running a
+ pgsql server set up to allow tcp connections from this host, (2) a
+ database on that server, (3) a username and password to access the
+ database. If you don't have _all_ of these, either select 'no' and run
+ with regular file logging support, or fix this first. You can always
+ configure database logging later, by reconfiguring the snort-pgsql
+ package with 'dpkg-reconfigure -plow snort-pgsql'
+
+Template: snort-pgsql/wait_for_db_config
+Type: note
+_Description: Snort needs a configured database to log to.
+ Please create the database structure now, using the following command:
+  cd /usr/share/doc/snort-pgsql/contrib
+  zcat create_pgsql.gz | psql -U <user> -h <host> -W <databasename>
+ Fill in the correct values for the user, host, and database names.
+ PostgreSQL will prompt you for the password.
+ .
+ After you created the database structure, press 'ok' to continue.
+
+Template: snort-pgsql/db_host
+Type: string
+_Description: Please enter the hostname of the pgsql database server to use.
+ Make sure it has been set up correctly to allow incoming connections from
+ this host!
+
+Template: snort-pgsql/db_database
+Type: string
+_Description: Please enter the name of the database to use.
+ Make sure this database has been created and your database user has write
+ access to this database.
+
+Template: snort-pgsql/db_user
+Type: string
+_Description: Please enter the name of the database user you want to use.
+ Make sure this user has been created and has write access.
+
+Template: snort-pgsql/db_pass
+Type: password
+_Description: Please enter the password for the database connection.
+ Please enter a password to connect to the Snort Alert database.
+
+Template: snort-pgsql/please_restart_manually
+Type: note
+_Description: You are running Snort manually.
+ Please restart Snort using:
+  /etc/init.d/snort start
+ to let the settings take effect.
