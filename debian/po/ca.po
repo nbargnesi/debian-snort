@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort_2.0.1-2_templates\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-12-01 17:07+0100\n"
+"POT-Creation-Date: 2005-02-09 00:20+0100\n"
 "PO-Revision-Date: 2004-01-31 19:41GMT\n"
 "Last-Translator: Aleix Badia i Bosch <abadia@ica.es>\n"
 "Language-Team: Debian L10n Catalan <debian-l10n-catalan@lists.debian.org>\n"
@@ -225,15 +225,15 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:125
-#: ../snort-pgsql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:135
+#: ../snort-pgsql.templates:135
 msgid "You are running Snort manually."
 msgstr "Esteu executant el Snort manualment."
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:125
-#: ../snort-pgsql.templates:125
+#: ../snort.templates:92 ../snort-mysql.templates:135
+#: ../snort-pgsql.templates:135
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
@@ -258,6 +258,26 @@ msgid ""
 "being generated run '/usr/sbin/snort -T -c /etc/snort/snort.conf' (or point "
 "to an alternate configuration file if you are using different files for "
 "different interfaces)"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort.templates:109 ../snort-mysql.templates:79
+#: ../snort-pgsql.templates:79
+msgid "This system uses an obsolete configuration file"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort.templates:109 ../snort-mysql.templates:79
+#: ../snort-pgsql.templates:79
+msgid ""
+"Your system has an obsolete configuration file (/etc/snort/common."
+"parameters) which has been automatically converted into the new "
+"configuration file format (at /etc/default/snort). Please review the new "
+"configuration and remove the obsolete one. Until you do this, the init.d "
+"script will not use the new configuration and you will not take advantage of "
+"the benefits introduced in newer releases."
 msgstr ""
 
 #. Type: string
@@ -290,14 +310,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:80
+#: ../snort-mysql.templates:90
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
 "Voleu configurar una base de dades perquè el snort-mysql hi registri dades?"
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:80
+#: ../snort-mysql.templates:90
 #, fuzzy
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
@@ -321,24 +341,24 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92 ../snort-pgsql.templates:92
+#: ../snort-mysql.templates:102 ../snort-pgsql.templates:102
 msgid "Snort needs a configured database to log to."
 msgstr ""
 "El Snort necessita una base de dades configurar per registrar-hi les dades."
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92
+#: ../snort-mysql.templates:102
 #, fuzzy
 msgid ""
 "Please create the database structure now, using the following command:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
+" cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>\n"
 "Fill in the correct values for the user, host, and database names. MySQL "
 "will prompt you for the password."
 msgstr ""
 "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
+" cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom "
 "base de dades>\n"
 "Omplint correctament les dades de l'usuari, ordinador central i nom de la "
@@ -346,7 +366,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:92 ../snort-pgsql.templates:92
+#: ../snort-mysql.templates:102 ../snort-pgsql.templates:102
 #, fuzzy
 msgid "After you created the database structure, press 'ok' to continue."
 msgstr ""
@@ -355,7 +375,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:103
+#: ../snort-mysql.templates:113
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr ""
 "Introduïu el nom de l'ordinador central del servidor de base de dades de "
@@ -363,7 +383,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
+#: ../snort-mysql.templates:113 ../snort-pgsql.templates:113
 #, fuzzy
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
@@ -374,13 +394,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:109 ../snort-pgsql.templates:109
+#: ../snort-mysql.templates:119 ../snort-pgsql.templates:119
 msgid "Please enter the name of the database to use."
 msgstr "Introduïu el nom de la base de dades a utilitzar."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:109 ../snort-pgsql.templates:109
+#: ../snort-mysql.templates:119 ../snort-pgsql.templates:119
 #, fuzzy
 msgid ""
 "Make sure this database has been created and your database user has write "
@@ -391,26 +411,26 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:115 ../snort-pgsql.templates:115
+#: ../snort-mysql.templates:125 ../snort-pgsql.templates:125
 msgid "Please enter the name of the database user you want to use."
 msgstr "Introduïu el nom de usuari de la base de dades que voleu utilitzar."
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:115 ../snort-pgsql.templates:115
+#: ../snort-mysql.templates:125 ../snort-pgsql.templates:125
 #, fuzzy
 msgid "Make sure this user has been created and has write access."
 msgstr "Assegureu-vos que l'usuari està creat i té permís d'escriptura."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:130 ../snort-pgsql.templates:130
 msgid "Please enter the password for the database connection."
 msgstr "Introduïu la contrasenya per a la connexió amb la base de dades."
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:130 ../snort-pgsql.templates:130
 #, fuzzy
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
@@ -426,7 +446,7 @@ msgstr "S'hauria d'inhabilitar el mode promiscu?"
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:80
+#: ../snort-pgsql.templates:90
 #, fuzzy
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
@@ -434,7 +454,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:80
+#: ../snort-pgsql.templates:90
 #, fuzzy
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
@@ -458,17 +478,17 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:92
+#: ../snort-pgsql.templates:102
 #, fuzzy
 msgid ""
 "Please create the database structure now, using the following command:\n"
-" cd /usr/share/doc/snort-pgsql/contrib\n"
+" cd /usr/share/doc/snort-pgsql/\n"
 " zcat create_pgsql.gz | psql -U <user> -h <host> -W <databasename>\n"
 "Fill in the correct values for the user, host, and database names. "
 "PostgreSQL will prompt you for the password."
 msgstr ""
 "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-" cd /usr/share/doc/snort-mysql/contrib\n"
+" cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <usuari> -h <ordinador central> -p <nom "
 "base de dades>\n"
 "Omplint correctament les dades de l'usuari, ordinador central i nom de la "
@@ -476,7 +496,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:103
+#: ../snort-pgsql.templates:113
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr ""
 "Introduïu el nom de l'ordinador central del servidor de base de dades de "
@@ -601,13 +621,13 @@ msgstr ""
 
 #~ msgid ""
 #~ "Please create the database structure now, using the following command:\n"
-#~ " cd /usr/share/doc/snort-pgsql/contrib\n"
+#~ " cd /usr/share/doc/snort-pgsql/\n"
 #~ " zcat create_postgresql.gz | psql -u <user> -h <host> <databasename>\n"
 #~ "Filling in the correct values for the user, host, and database names. The "
 #~ "pgsql tool will prompt you for the password."
 #~ msgstr ""
 #~ "Creeu l'estructura de la base de dades utilitzant la següent ordre:\n"
-#~ " cd /usr/share/doc/snort-pgsql/contrib\n"
+#~ " cd /usr/share/doc/snort-pgsql/\n"
 #~ " zcat create_postgresql.gz | pgsql -u <usuari> -h <ordinador central> "
 #~ "<nom base de dades>\n"
 #~ "Omplint correctament les dades de l'usuari, ordinador central i nom de la "
