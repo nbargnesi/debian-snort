@@ -1,3 +1,16 @@
+snort (2.7.0-16) unstable; urgency=low
+
+  * Lintian fixes:
+    - NEWS file now says unstable instead of experimental
+    - copyright file is now UTF-8
+    - wrap around files in the changelog
+    - remove empty /usr/src directory from snort-common-libraries
+    - fix spelling error in NEWS file
+    - fix manpage error in snort.8
+    - change doc-base sections to Network/Monitoring
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 02 May 2008 10:28:21 +0200
+
 snort (2.7.0-15) unstable; urgency=low
 
   * Update to Standards-Version 3.7.3:
@@ -44,15 +57,18 @@ snort (2.7.0-15) unstable; urgency=low
     - Galician translation, updated by Jacobo Tarrio (Closes: #474622)
     - Portuguese translation, updated by Traduz (Closes: #475086)
     - German translation, updated by Erik Schanze (Closes: #477082)
-    - Vietnamese translation, updated by Clytie Siddall (Closes: #477324, #478223)
-    - French translation, updated by Christian Perrier  (Closes: #478229, #478320)
+    - Vietnamese translation, updated by Clytie Siddall 
+      (Closes: #477324, #478223)
+    - French translation, updated by Christian Perrier  
+      (Closes: #478229, #478230)
     - Czech translation, updated by Jan Outrata (Closes: #478246)
     - Russian translation, updated by Yuri Kozlov (Closes: 478303)
     - Dutch translation, updated by Peter Vandenabeele
     - Spanish translation, updated by myself
   * [New Debconf translations]
     - Basque translation, provided by Piarres Beobide (Closes: #475457)
-    - Finnish translation, provided by Esko Esko Arajärvi (Closes: #475648, #478211)
+    - Finnish translation, provided by Esko Esko Arajärvi 
+      (Closes: #475648, #478211)
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 27 Apr 2008 21:58:37 +0200
 
