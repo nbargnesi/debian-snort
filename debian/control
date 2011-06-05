@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
 Uploaders: Pascal Hakim <pasc@debian.org>
-Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 4.1.13), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, iptables-dev
+Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 4.1.13), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, iptables-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
 Build-Depends-Indep: texlive, texlive-latex-base, gs-common
 Standards-Version: 3.5.6
 
@@ -13,7 +13,8 @@ Pre-Depends: adduser (>= 3.11)
 Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${binary:Version}), debconf (>= 0.2.80) | debconf-2.0, syslogd | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${binary:Version}), logrotate
 Conflicts: snort-mysql, snort-pgsql
 Replaces: snort-common (<< 2.0.2-3)
-Recommends: snort-doc
+Recommends: iproute
+Suggests: snort-doc
 Homepage: http://www.snort.org/
 Description: Flexible Network Intrusion Detection System
  Snort is a libpcap-based packet sniffer/logger which can be used as a
@@ -70,6 +71,8 @@ Architecture: any
 Priority: extra
 Pre-Depends: adduser (>= 3.11)
 Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${binary:Version}), debconf (>= 0.2.80) | debconf-2.0, syslogd | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${binary:Version}), logrotate
+Recommends: iproute
+Suggests: snort-doc
 Conflicts: snort, snort-pgsql
 Homepage: http://www.snort.org/
 Description: Flexible Network Intrusion Detection System [MySQL]
@@ -89,6 +92,8 @@ Provides: snort
 Architecture: any
 Priority: optional
 Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${binary:Version}), debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), syslogd | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${binary:Version}), logrotate
+Recommends: iproute
+Suggests: snort-doc
 Conflicts: snort, snort-mysql
 Homepage: http://www.snort.org/
 Description: Flexible Network Intrusion Detection System [PostgreSQL]
