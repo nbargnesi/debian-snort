@@ -1,7 +1,18 @@
+snort (2.7.0-24) unstable; urgency=low
+
+  * Remove the LogMessage associated with fragmented traffic since it shows up
+    even in systems that do not have ttl_limit set.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 28 Feb 2009 13:03:22 +0100
+
 snort (2.7.0-23) unstable; urgency=high
 
   * Fix error in call to LogMessage (missing parameters) which caused a segfault
-    when fragmented packages were received and ttl_limit was set (Closes: 503992)
+    when fragmented packages were received and ttl_limit was set.  This bug was
+    introduced in the patch to fix CVE-2008-1804. Urgency set to 'high' as in
+    some circunstances it makes Snort fail to start on startup or die after
+    working for only a few minutes. Also, this could be used as a DoS attack
+    against an IDS sensor rendering it useless.(Closes: 503992)
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 21 Feb 2009 12:11:33 +0100
 
