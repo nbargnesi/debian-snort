@@ -29,6 +29,10 @@ CONFFLAGS= --prefix=/usr \
 # Cannot enable flexresp since it builds only with libnet 1.0.2a
 #	--enable-flexresp \
 
+build-indep: build-indep-stamp
+build-indep-stamp:
+	dh_testdir
+	cd doc && make snort_manual.pdf
 
 build: build-stamp
 build-stamp:
@@ -128,11 +132,10 @@ install-stamp: build-stamp
 	touch install-stamp
 
 # Build architecture-independent files here.
-binary-indep: build install
+binary-indep: build build-indep install
 	dh_testdir -i
 	dh_testroot -i
 
-	cd doc && make snort_manual.pdf
 	dh_installdocs 
 	
 	cp -R $(TMP)/snort/usr/share/doc/snort/* $(TMP)/snort-doc/usr/share/doc/snort-doc/
