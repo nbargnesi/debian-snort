@@ -1,3 +1,11 @@
+snort (2.7.0-20.1) unstable; urgency=low
+
+  * Upload to testing-proposed-updates to fix security bug CVE-2008-1804 (see
+    below). This package cannot go through sid since the sid build uses
+    a newer libpcre version not available in lenny. (Closes: #483160)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 28 Oct 2008 21:32:48 +0100
+
 snort (2.7.0-20) unstable; urgency=high
 
   [ CVE-2008-1804 ]
