@@ -1,4 +1,30 @@
 
+TODO things for Snort in Debian
+-------------------------------
+
+- Breakup the init.d script into reusable functions 
+  Also: add a check in order to determine if the snort sensor started
+  up properly or it did not.
+
+- The check_log_dir check in the init.d script could best check if the
+  LOGDIR directory is writable by the snort user. It might not be good
+  (security-wise) to force it's owned by the snort user (since then
+  it would be able to remove its own logs)
+
+- Check if --enable-flexresp works with libnet 1.1.x
+
+- Offer the user an option to automatically create the database since
+  the schemas (at /usr/share/doc/snort*) stuff is not available on installation.
+  Review what other packages (gnudip? horde? imp? sitebar? openwebmail?)
+  have done and consider the use of the generic user for database
+  administration.  Note that database permissions for the 'snort' 
+  user need to be properly setup!
+  Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
+  http://lists.debian.org/debian-devel/2004/10/msg00340.html
+  and
+  http://lists.debian.org/debian-devel/2004/10/msg00962.html
+
+  I probably need to take a look at how wwwconfig-common does it...
 
 - The snort-common package currently does not check if you _accepted_ the
   config file provided, this is related to bug #247665 which is partially
@@ -20,17 +46,10 @@
 - Provide an update script, as required in #191105, snort-rules-default
   currently recommends: 'oinkmaster' but that is sub-optimal
 
-- Offer the user an option to automatically create the database since
-  the /usr/share/doc/snort* stuff is not available on installation.
-  Review what other packages (gnudip? horde? imp? sitebar? openwebmail?)
-  have done and consider the use of the generic user for database
-  administration.  Note that database permissions for the 'snort' 
-  user need to be properly setup!
-  Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
-  http://lists.debian.org/debian-devel/2004/10/msg00340.html
-  and
-  http://lists.debian.org/debian-devel/2004/10/msg00962.html
-
-  I probably need to take a look at how wwwconfig-common does it...
-
 - Add some common logcheck rules (see #222584, and #217175)
+
+DONE
+
+- Have a way in preinst to migragte from the old common.parameters to the
+  new /etc/default/snort so that all users can benefit from it. 
+
