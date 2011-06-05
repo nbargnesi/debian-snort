@@ -1,3 +1,16 @@
+snort (2.3.3-12) unstable; urgency=low
+
+  * Translations updated:
+    - Czech (Closes: #408619)
+    - Swedish
+  * New translations
+    - Galician, provided by Jacobo Tarrio (Closes: #409651)
+    - Italian, provided by Gianluca Cotrino. Slightly edited to fix header. (Closes: #411270)
+    - Romanian, provided by Eddy Petrisor (Closes: #409505)
+    - Portuguese, provided by Miguel Figueiredo
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sun, 18 Feb 2007 12:25:45 +0100
+
 snort (2.3.3-11) unstable; urgency=low
 
   * Restore German translation (somehow removed in previous upload), courtesy
@@ -1561,6 +1574,3 @@ snort (1.1-1) unstable; urgency=low
 
  -- Christian Hammers <ch@debian.org>  Mon, 12 Jul 1999 21:30:57 +0200
 
-Local variables:
-mode: debian-changelog
-End:
