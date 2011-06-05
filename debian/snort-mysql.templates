@@ -10,8 +10,8 @@ Template: snort-mysql/interface
 Type: string
 Default: eth0
 _Description: On which interface should Snort listen?
- Please enter the name(s) of the interface(s) which snort should listen on. 
- The names of the available interfaces are provided by running 'ip link show'.
+ Please enter the interface name which snort should listen on. The name
+ of the available interfaces are provided by running 'ip link show'.
  This value usually is 'eth0', but you might want to vary this depending
  on your environment, if you are using a dialup connection 'ppp0' might
  be more appropiate.

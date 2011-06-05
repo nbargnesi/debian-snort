@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-06-22 23:37+0200\n"
+"POT-Creation-Date: 2005-02-25 01:01+0100\n"
 "PO-Revision-Date: 2004-08-07 22:06-0300\n"
 "Last-Translator: André Luís Lopes <andrelop@ig.com.br>\n"
 "Language-Team: Debian-BR Project <debian-l10n-portuguese@lists.debian.org>\n"
@@ -55,14 +55,14 @@ msgstr "Em qual interface de rede o Snort deve ouvir ?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-pgsql.templates:12
+#: ../snort.templates:12
 #, fuzzy
 msgid ""
-"Please enter the name(s) of the interface(s) which snort should listen on. "
-"The names of the available interfaces are provided by running 'ip link "
-"show'. This value usually is 'eth0', but you might want to vary this "
-"depending on your environment, if you are using a dialup connection 'ppp0' "
-"might be more appropiate."
+"Please enter the interface(s) name(s) which snort should listen on. The name "
+"of the available interfaces are provided by running 'ip link show'. This "
+"value usually is 'eth0', but you might want to vary this depending on your "
+"environment, if you are using a dialup connection 'ppp0' might be more "
+"appropiate."
 msgstr ""
 "Por favor, informe o nome da interface na qual o snort deverá ouvir. O nome "
 "das interfaces disponíveis podem ser visualizados executando-se o comando "
@@ -321,14 +321,13 @@ msgstr "Em qual interface de rede o Snort deve ouvir ?"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:12
-#, fuzzy
+#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
 msgid ""
-"Please enter the name(s) of the interface(s) which snort should listen on.  "
-"The names of the available interfaces are provided by running 'ip link "
-"show'. This value usually is 'eth0', but you might want to vary this "
-"depending on your environment, if you are using a dialup connection 'ppp0' "
-"might be more appropiate."
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
+"usually is 'eth0', but you might want to vary this depending on your "
+"environment, if you are using a dialup connection 'ppp0' might be more "
+"appropiate."
 msgstr ""
 "Por favor, informe o nome da interface na qual o snort deverá ouvir. O nome "
 "das interfaces disponíveis podem ser visualizados executando-se o comando "
@@ -562,19 +561,6 @@ msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
 msgstr ""
-
-#~ msgid ""
-#~ "Please enter the interface name which snort should listen on. The name of "
-#~ "the available interfaces are provided by running 'ip link show'. This "
-#~ "value usually is 'eth0', but you might want to vary this depending on "
-#~ "your environment, if you are using a dialup connection 'ppp0' might be "
-#~ "more appropiate."
-#~ msgstr ""
-#~ "Por favor, informe o nome da interface na qual o snort deverá ouvir. O "
-#~ "nome das interfaces disponíveis podem ser visualizados executando-se o "
-#~ "comando 'ip link show'. Esse valor geralmente é 'eth0', mas você pode "
-#~ "querer variar isso dependendo de seu ambiente, caso você esteja usando "
-#~ "uma conexão discada, 'ppp0' pode ser mais apropriado."
 
 #~ msgid "On which interface Snort should listen? (only one!)"
 #~ msgstr "Em qual interface de rede o Snort deve ouvir ? (somente uma !)"
