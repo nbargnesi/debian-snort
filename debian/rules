@@ -40,7 +40,7 @@ build-mysql-stamp:
 		--without-postgresql
 	$(MAKE) 
 	mv src/snort src/snort-mysql
-	$(MAKE) clean
+	$(MAKE) distclean
 	touch build-mysql-stamp
 
 build-pgsql: build-pgsql-stamp
@@ -53,7 +53,7 @@ build-pgsql-stamp:
 		--with-pgsql-includes=`pg_config --includedir`
 	$(MAKE) 
 	mv src/snort src/snort-pgsql
-	$(MAKE) clean
+	$(MAKE) distclean
 	touch build-pgsql-stamp
 
 build-inline: build-inline-stamp
@@ -69,10 +69,10 @@ build-inline-stamp:
 	# Add here commands to compile the package.
 	$(MAKE) 
 	mv src/snort src/snort-inline
-	$(MAKE) clean
+	$(MAKE) distclean
 	touch build-inline-stamp
 
-build: build-stamp build-pgsql build-mysql
+build: build-pgsql build-mysql build-stamp
 build-stamp: 
 	dh_testdir
 
@@ -82,7 +82,6 @@ build-stamp:
 		--without-postgresql \
 		--enable-prelude 
 	$(MAKE) 
-	$(MAKE) clean
 
 	# Build the documentation
 	cd doc && $(MAKE) faq.pdf
@@ -95,13 +94,15 @@ clean:
 	rm -f build*stamp install-stamp
 
 	# Add here commands to clean up after the build process.
-	-(cd doc && $(MAKE) distclean)
 	-$(MAKE) distclean
-	-(cd src &&  [-e Makefile] && $(MAKE) distclean)
+	-(cd doc && $(MAKE) distclean)
+	-(cd src &&  test -e Makefile && $(MAKE) distclean)
 	rm -f src/snort-mysql
 	rm -f src/snort-pgsql
 	rm -f src/snort-inline
+	rm -f src/snort
 	rm -f doc/snort_manual.{pdf,ps,aux,log,toc}
+	rm -f doc/faq.{idx,out,log,toc,aux,pdf,ps}
 
 	dh_clean
 
