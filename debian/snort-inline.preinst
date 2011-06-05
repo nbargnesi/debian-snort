@@ -11,6 +11,11 @@ set -e
 DEFAULT=/etc/default/snort
 PARAMETERS=/etc/snort/snort.common.parameters
 
+# Initialise variables
+SNORTUSER=""
+SNORTGROUP=""
+LOGDIR=""
+
 check_parameters() {
 # Check if the old parameters file is there and this is
 # an upgrade (default is not)
