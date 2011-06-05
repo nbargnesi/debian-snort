@@ -1,3 +1,17 @@
+snort (2.7.0-6) unstable; urgency=low
+
+  * Create a separate snort-libraries package and move all the libraries that
+    were previously (wrongly) included in the snort-common package there
+    (Closes: #439642)
+  * Add proper LSB headers, license and copyright to the init.d file
+  * Also add proper messages to the init script and proper checks to generate
+    the correct errors when non-root users try to run the script. Exit status
+    of the script should now reflect better the problems found.
+  * Removed dependencies on essential packages (coreutils)
+  * Recode Debian changelog to UTF-8
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 01 Oct 2007 01:24:32 +0200
+
 snort (2.7.0-5) unstable; urgency=low
 
   * Initialise variables in preinst to prevent collisions with predefined
@@ -154,17 +168,17 @@ snort (2.3.3-8) unstable; urgency=medium
     From upstream (snort.org webpage, News item "Possible Evasion in
     http_inspect"): 
 
-     �The Apache web server supports special characters in HTTP requests that
+     «The Apache web server supports special characters in HTTP requests that
      do not affect the processing of the particular request. The current
      target-based profiles for Apache in the http_inspect preprocessor do not
      properly handle these requests, resulting in the possibility that an
      attacker can bypass detection of rules that use the "uricontent" keyword
-     by embedding special characters in a HTTP request.�
+     by embedding special characters in a HTTP request.»
 
-     �It is important to note that this is an evasion and not a vulnerability.
+     «It is important to note that this is an evasion and not a vulnerability.
      This means that while it is possible for an attacker to bypass detection,
      Snort sensors and the networks they protect are not at a heightened risk
-     of other attacks.�
+     of other attacks.»
 
   * Backport fix of another (different) potential evasion in Stream4 (also in
     the Snort 2.4.5 release, no CVE name)
@@ -693,7 +707,7 @@ snort (2.1.1-1) unstable; urgency=low
   + Added catalan debconf templates (debian/po/ca.po)
     Closes: #236644
   + Fixed packaging bugs.
-  + Applied following changes by Javier Fernández-Sanguino Peña. Thanks!!
+  + Applied following changes by Javier FernÃ¡ndez-Sanguino PeÃ±a. Thanks!!
       * Snort group is now created using --system in all packages
         Closes: #231580
       * Both the cron.daily script and the postinst scripts set a default
