@@ -49,7 +49,8 @@ build-stamp:
 
 	./configure $(CONFFLAGS) \
 		--without-mysql \
-		--with-postgresql
+		--with-postgresql \
+		--with-pgsql-includes=`pg_config --includedir`
 
 	# Add here commands to compile the package.
 	$(MAKE) 
