@@ -1,3 +1,26 @@
+snort (2.7.0-11) unstable; urgency=low
+
+  * Make the init.d script not depend on the availability of iproute.
+    (Closes: #463020, #466674) 
+  * Added a Recommends on iproute, as it can be used to improve the
+    behaviour of the initd script.
+  * Modify the init.d script to remove also the lockfiles for PIDFILEs
+  * Move snort-doc to Suggests in the snort package and add it to snort-pgsl
+    and snort-mysql too.
+  * Fix FTBFS on GNU/kFreeBSD (due to unsatisfied Build-Depends on
+    iptables-dev), thanks to Petr Salinger for the fix (Closes: #466073)
+  * Modify src/snort.c to prevent it from showing a message when it tries to
+    remove the PIDFILE. This fails in Debian since Snort is not running 
+    as the root user and the daemon cannot modify /var/run. The code is 
+    changed so that the error message related to not being able to remove the
+    PIDFILE is only presented if running as root or writing the PIDFILE to a
+    directory that is not /var/run. (Closes: #462423)
+  * Po-debconf translation updates:
+      - Fix error in Italian translation (Closes: #462865)
+      - Japanese translation update, provided by Hideki Yamane (Closes: #463650)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 24 Feb 2008 22:21:09 +0100
+
 snort (2.7.0-10) unstable; urgency=low
 
   * Add a new ALLOW_UNAVAILABLE definition in /etc/default/snort which
