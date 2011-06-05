@@ -1,3 +1,13 @@
+snort (2.3.2-7) unstable; urgency=low
+
+  * Fix lintian warnings
+  * Fix error in database config scripts (when not upgrading, the
+    wait_for_db_config key does not exist) (Closes: #325223)
+  * Updated debconf translations:
+     - French provided by Christian Perrier
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 25 Aug 2005 21:52:19 +0200
+
 snort (2.3.2-6) unstable; urgency=low
 
   * Add Dependency on "debconf | debconf-2.0" as requested by Joey Hess
@@ -401,6 +411,8 @@ snort (2.1.0-4) unstable; urgency=low
   + Restart target in init.d script requires a sleep on slow systems.
     Thanks Marco Gaiarin.
   + Updated the ja.po templates 
+
+ -- Sander Smeenk <ssmeenk@debian.org>  Wed, 1 Mar 2004 00:00:00 +0100
   
 snort (2.1.0-3) unstable; urgency=low
 
