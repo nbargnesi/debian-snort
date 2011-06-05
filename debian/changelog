@@ -1,3 +1,15 @@
+snort (2.3.0-5) unstable; urgency=low
+
+  * Upload of the experimental package to unstable
+    Even though I don't get to fix #205683 and friends (and I would
+    like to, before the release)
+    This release Closes #283816, #241995, #289405, #247603
+  * Do not rotate log files if empty (Closes: #193299)
+  * Added dutch translation (Closes: #247603)
+  * Added yet another TODO item
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 22 Feb 2005 21:36:40 +0100
+
 snort (2.3.0-4) experimental; urgency=low
 
   * Call dh_installdocs with -i or -a depending on target, rename
