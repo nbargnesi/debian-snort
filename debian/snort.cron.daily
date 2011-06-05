@@ -21,8 +21,15 @@ find /var/log/snort -name "tcpdump.log.*" -mtime +15 | xargs --no-run-if-empty r
 find /var/log/snort -name "snort.log.*" -mtime +15 | xargs --no-run-if-empty rm
 
 # Mail snort stats
-if [ -s $LOGFILE ]; then
-	(echo "To: $DEBIAN_SNORT_STATS_RCPT"; snort-stat -a -t $DEBIAN_SNORT_STATS_THRESHOLD < $LOGFILE) | sendmail -t
+if [ -s "$LOGFILE" ]; then
+# Create a tempfile or die
+	tmpfile=`tempfile` || { echo "Cannot create temporary file" >&2; exit 1 ; }
+	trap " [ -f \"$tmpfile\" ] && /bin/rm -f -- \"$tmpfile\"" 0 1 2 3 13 15
+	snort-stat -a -t $DEBIAN_SNORT_STATS_THRESHOLD <$LOGFILE >$tmpfile
+# Mail the file if it is not empty
+	if [ -s "$tmpfile" ]; then
+		(echo "To: $DEBIAN_SNORT_STATS_RCPT"; cat $tmpfile) | sendmail -t
+	fi
 fi
 
 # Restarting snort is now handled by the logrotate configuration.
