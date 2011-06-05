@@ -1,3 +1,15 @@
+snort (2.8.5.2-7) unstable; urgency=low
+
+  * debian/snort{,-mysql,-pgsql}.config: Remove the '-p' from
+    DEBIAN_SNORT_OPTIONS that is prepended by the postinst script (if disable
+    promiscuous is set) before adding it to the debconf value to prevent this
+    option from being readded again and again on reinstall.  (Closes:  #608635)
+  * debian/snort{,-mysql,-pgsql}.postinst: Remove the temporary file used to
+    test if the configuration files has not been modified when upgrading to
+    a new version.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 02 Jan 2011 20:47:26 +0100
+
 snort (2.8.5.2-6) unstable; urgency=high
 
   * debian/snort{,-mysql,-pgsql}.postinst: Introduce code to be able to manage
