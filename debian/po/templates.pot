@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-03-21 15:10+0100\n"
+"POT-Creation-Date: 2004-10-02 16:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,8 +56,8 @@ msgstr ""
 #: ../snort.templates:12 ../snort-mysql.templates:12
 #: ../snort-pgsql.templates:12
 msgid ""
-"Please enter the interface name wich snort should listen on. The name of the "
-"available interfaces are provided by running 'ip link show'. This value "
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
 "usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
@@ -354,4 +354,29 @@ msgstr ""
 #. Description
 #: ../snort-pgsql.templates:103
 msgid "Please enter the hostname of the pgsql database server to use."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid "Your configuration file is deprecated"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid ""
+"Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
+"options no longer available for this Snort release.  Snort will not be able "
+"to start unless you provide a correct configuration file. You can substitute "
+"your configuration file with the one provided  in this package or fix it "
+"manually by removing deprecated options."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid ""
+"The following deprecated options were found in your configuration file: "
+"${DEP_CONFIG}"
 msgstr ""

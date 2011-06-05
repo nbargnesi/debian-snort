@@ -29,8 +29,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort debconf 2.1.0-4.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-03-21 15:10+0100\n"
-"PO-Revision-Date: 2004-03-17 09:17+0100\n"
+"POT-Creation-Date: 2004-10-02 16:15+0200\n"
+"PO-Revision-Date: 2004-10-02 16:16+0200\n"
 "Last-Translator: Javier Fernandez-Sanguino Peña <jfs@debian.org>\n"
 "Language-Team: Debian Spanish <debian-l10n-spanish@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -72,8 +72,8 @@ msgstr "¿En qué interfaz debería escuchar Snort?"
 #: ../snort.templates:12 ../snort-mysql.templates:12
 #: ../snort-pgsql.templates:12
 msgid ""
-"Please enter the interface name wich snort should listen on. The name of the "
-"available interfaces are provided by running 'ip link show'. This value "
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
 "usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
@@ -105,7 +105,6 @@ msgstr ""
 #. Description
 #: ../snort.templates:12 ../snort-mysql.templates:12
 #: ../snort-pgsql.templates:12
-#, fuzzy
 msgid ""
 "It is also not uncommon to run Snort on an interface with no IP and "
 "configured in promiscuous mode, if this is your case, select the interface "
@@ -117,7 +116,7 @@ msgstr ""
 "Tampoco es infrecuente ejecutar Snort en una interfaz sin dirección IP que "
 "esté configurada en modo promiscuo. Si este es su caso, seleccione el "
 "interfaz en el sistema que está físicamente conectado a la red que quiere "
-"inspeccionar, active el modo promíscuo más adelante y asegurese que el "
+"inspeccionar, active el modo promíscuo más adelante y asegúrese que el "
 "tráfico de dicha red se está enviado a esa interfaz (bien conectándola a un "
 "puerto del switch en modo «port mirroring/spanning», bien conectado a un hub "
 "o a un tup)"
@@ -156,7 +155,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../snort.templates:45 ../snort-mysql.templates:45
-#, fuzzy
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "¿Debería Snort deshabilitar el modo promíscuo en la interfaz?"
 
@@ -179,13 +177,12 @@ msgstr ""
 #. Description
 #: ../snort.templates:45 ../snort-mysql.templates:45
 #: ../snort-pgsql.templates:45
-#, fuzzy
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
 msgstr ""
-"Si está configurando Snort en una interfaz sin direcciones IP, aquí debería "
-"decir «no»."
+"Debería deshabilitar el modo promíscuo si está configurando Snort en una "
+"interfaz sin direcciones IP."
 
 #. Type: boolean
 #. Description
@@ -275,7 +272,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort-mysql.templates:12
-#, fuzzy
 msgid ""
 "Notice that Snort is usually configured to inspect all traffic coming from "
 "the Internet, so the interface you add here is usually the same the 'default "
@@ -285,9 +281,9 @@ msgstr ""
 "Tenga en cuenta que generalmente se configura a Snort para que analice todo "
 "el tráfico que viene de Internet, así que la interfaz que se añade aquí es "
 "generalmente la misma que tiene definida la ruta por omisión. Para "
-"determinar qué interfaz se está utilizando para esto, ejecute bien «/sbin/ip "
-"ro sh» o bien «/sbin/route -n» (busque aquellos valores asociados a "
-"«default» o «0.0.0.0»)."
+"determinar qué interfaz se está utilizando para esto, ejecute bien «ip route "
+"show» o bien «/sbin/route -n» (busque aquellos valores asociados a «default» "
+"o «0.0.0.0»)."
 
 #. Type: boolean
 #. Description
@@ -471,6 +467,39 @@ msgstr ""
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr ""
 "Introduzca el nombre de servidor de la base de datos psql que va a utilizar."
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid "Your configuration file is deprecated"
+msgstr "Su fichero de configuración es obsoleto"
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+#, fuzzy
+msgid ""
+"Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
+"options no longer available for this Snort release.  Snort will not be able "
+"to start unless you provide a correct configuration file. You can substitute "
+"your configuration file with the one provided  in this package or fix it "
+"manually by removing deprecated options."
+msgstr "Su fichero de configuración de Snort (/etc/snort/snort.conf) utiliza opciones obsoletas que ya no están disponibles en esta versión de Snort. Snort no podrá arrancar a menos que tenga un fichero de configuración correcto. Puede sustituir este fichero de configuración por el que ofrece este paquete o arreglarlo manualmente eliminando las opciones obsoletas."
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid ""
+"The following deprecated options were found in your configuration file: "
+"${DEP_CONFIG}"
+msgstr "Se encontraron las siguientes opciones obsoletas en el fichero de configuración: ${DEP_CONFIG}"
+
+#~ msgid ""
+#~ "The configuration file found the following deprecated content:  "
+#~ "${DEP_CONFIG}"
+#~ msgstr ""
+#~ "Se encontraron las siguientes opciones obsoletas en el fichero de "
+#~ "configuración: ${DEP_CONFIG}"
 
 #~ msgid ""
 #~ "Please enter the interface name wich snort should listen on. F.e. eth0 "

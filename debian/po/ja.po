@@ -14,10 +14,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: snort 2.2.0-1\n"
+"Project-Id-Version: snort 2.2.0-2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-03-21 15:10+0100\n"
-"PO-Revision-Date: 2004-09-04 00:32+0900\n"
+"POT-Creation-Date: 2004-10-02 16:15+0200\n"
+"PO-Revision-Date: 2004-09-18 00:32+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -58,8 +58,8 @@ msgstr "Snort はどのインターフェイスで listen しますか?"
 #: ../snort.templates:12 ../snort-mysql.templates:12
 #: ../snort-pgsql.templates:12
 msgid ""
-"Please enter the interface name which snort should listen on. The name of the "
-"available interfaces are provided by running 'ip link show'. This value "
+"Please enter the interface name which snort should listen on. The name of "
+"the available interfaces are provided by running 'ip link show'. This value "
 "usually is 'eth0', but you might want to vary this depending on your "
 "environment, if you are using a dialup connection 'ppp0' might be more "
 "appropiate."
@@ -122,8 +122,8 @@ msgid ""
 "separated by ',' (comma characters), no spaces allowed!"
 msgstr ""
 "CIDR 形式での記述が必要です。例えば 192.168.1.0/24 は 256 個の IP ブロック"
-"で、192.168.1.42/32 は IP 1個となります。複数のアドレスは1行で ',' (カンマ) "
-"で区切って記述します。スペース (空白) は使えません!"
+"で、192.168.1.42/32 は IP 1 個となります。複数のアドレスは 1 行で ',' (カン"
+"マ) で区切って記述します。スペース (空白) は使えません!"
 
 #. Type: string
 #. Description
@@ -207,10 +207,10 @@ msgid ""
 "redirected to a user that actually reads those mails."
 msgstr ""
 "毎日実行される cronjob は 'snort-stat' と呼ばれるスクリプトを使い、Snort に"
-"よって生成されるログの情報を要約します。ここでこれらのメールを受け取り人を紹"
-"介してください。標準の値はシステム管理者です。もしこの値のままにしたい場合"
-"は、管理者のメールが実際にこれらのメールを読むユーザに転送されているを確認し"
-"てください。"
+"よって生成されるログの情報を要約します。ここで、これらのメールを受け取り人を"
+"指定してください。標準の値はシステム管理者です。この値のままにしておきたい場"
+"合は、管理者のメールがこれらのメールを読むユーザに実際に転送されているのを確"
+"認してください。"
 
 #. Type: string
 #. Description
@@ -228,7 +228,7 @@ msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
 msgstr ""
-"日時統計へ反映される為には、この回数よりもアラートが多く表れる必要がありま"
+"日時統計へ反映される為には、この回数よりもアラートが多く現れる必要がありま"
 "す。"
 
 #. Type: note
@@ -433,6 +433,31 @@ msgstr ""
 #: ../snort-pgsql.templates:103
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr "PostgreSQL サーバのホスト名を入力してください。"
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid "Your configuration file is deprecated"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid ""
+"Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
+"options no longer available for this Snort release.  Snort will not be able "
+"to start unless you provide a correct configuration file. You can substitute "
+"your configuration file with the one provided  in this package or fix it "
+"manually by removing deprecated options."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3
+msgid ""
+"The following deprecated options were found in your configuration file: "
+"${DEP_CONFIG}"
+msgstr ""
 
 #~ msgid "On which interface Snort should listen? (only one!)"
 #~ msgstr ""
