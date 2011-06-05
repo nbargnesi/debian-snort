@@ -2318,6 +2318,25 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/generators.h
++++ snort-2.3.3/src/generators.h
+@@ -91,6 +91,8 @@
+ #define     STREAM4_MULTIPLE_ACKED              18
+ #define     STREAM4_EMERGENCY                   19
+ #define     STREAM4_SUSPEND                     20
++/* Some missing here which were introduced in 2.4.0 */
++#define     STREAM4_EVASIVE_FIN                 24
+ 
+ #define GENERATOR_SPP_ARPSPOOF      112
+ #define     ARPSPOOF_UNICAST_ARP_REQUEST         1
+@@ -306,6 +308,7 @@
+ "(spp_stream4) TCP TOO FAST RETRANSMISSION WITH DIFFERENT DATA SIZE (possible fragroute) detection"
+ #define STREAM4_EMERGENCY_STR "(spp_stream4) Shifting to Emergency Session Mode"
+ #define STREAM4_SUSPEND_STR "(spp_stream4) Shifting to Suspend Mode"
++#define STREAM4_EVASIVE_FIN_STR "(spp_stream4) possible EVASIVE FIN detection"
+ 
+ 
+ #define DECODE_NOT_IPV4_DGRAM_STR "(snort_decoder) WARNING: Not IPv4 datagram!"
 --- snort-2.3.3.orig/src/preprocessors/HttpInspect/session_inspection/Makefile.in
 +++ snort-2.3.3/src/preprocessors/HttpInspect/session_inspection/Makefile.in
 @@ -1,8 +1,8 @@
@@ -4680,6 +4699,35 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/preprocessors/HttpInspect/client/hi_client.c
++++ snort-2.3.3/src/preprocessors/HttpInspect/client/hi_client.c
+@@ -82,6 +82,8 @@
+ */
+ static LOOKUP_FCN lookup_table[256];
+ static int hex_lookup[256];
++static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
++        u_char *end, u_char **ptr, URI_PTR *uri_ptr);
+ 
+ /*
+ **  NAME
+@@ -452,7 +454,7 @@
+         return URI_END;
+     }
+ 
+-    return NO_URI;
++    return NextNonWhiteSpace(Session, start, end, ptr, uri_ptr);
+ }
+ 
+ /*
+@@ -663,7 +665,7 @@
+             (*ptr)++;
+             continue;
+         }
+-        else if((**ptr == '\t'))
++        else if((**ptr == '\t') || (**ptr == '\r'))
+         {
+             if(ServerConf->apache_whitespace.on)
+             {
 --- snort-2.3.3.orig/src/preprocessors/HttpInspect/client/Makefile.in
 +++ snort-2.3.3/src/preprocessors/HttpInspect/client/Makefile.in
 @@ -1,8 +1,8 @@
@@ -5575,6 +5623,19 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/preprocessors/HttpInspect/event_output/hi_eo_log.c
++++ snort-2.3.3/src/preprocessors/HttpInspect/event_output/hi_eo_log.c
+@@ -64,7 +64,9 @@
+     {HI_EO_CLIENT_PROXY_USE, HI_EO_LOW_PRIORITY,
+         HI_EO_CLIENT_PROXY_USE_STR },
+     {HI_EO_CLIENT_WEBROOT_DIR, HI_EO_HIGH_PRIORITY,
+-        HI_EO_CLIENT_WEBROOT_DIR_STR }
++        HI_EO_CLIENT_WEBROOT_DIR_STR },
++    { HI_EO_CLIENT_CR_IN_URI, HI_EO_MED_PRIORITY,
++        HI_EO_CLIENT_CR_IN_URI_STR },
+ };
+ 
+ static HI_EVENT_INFO anom_server_event_info[HI_EO_ANOM_SERVER_EVENT_NUM] = {
 --- snort-2.3.3.orig/src/preprocessors/HttpInspect/event_output/Makefile.in
 +++ snort-2.3.3/src/preprocessors/HttpInspect/event_output/Makefile.in
 @@ -1,8 +1,8 @@
@@ -6356,6 +6417,33 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/preprocessors/HttpInspect/include/hi_eo_events.h
++++ snort-2.3.3/src/preprocessors/HttpInspect/include/hi_eo_events.h
+@@ -24,13 +24,14 @@
+ #define HI_EO_CLIENT_LARGE_CHUNK    15  /* done */
+ #define HI_EO_CLIENT_PROXY_USE      16  /* done */
+ #define HI_EO_CLIENT_WEBROOT_DIR    17  /* done */
++#define HI_EO_CLIENT_CR_IN_URI      18  /* done */
+ 
+ /*
+ **  IMPORTANT:
+ **  Every time you add a client event, this number must be
+ **  incremented.
+ */
+-#define HI_EO_CLIENT_EVENT_NUM      18
++#define HI_EO_CLIENT_EVENT_NUM      19
+ 
+ /*
+ **  These defines are the alert names for each event
+@@ -71,6 +72,8 @@
+     "(http_inspect) UNAUTHORIZED PROXY USE DETECTED"
+ #define HI_EO_CLIENT_WEBROOT_DIR_STR                    \
+     "(http_inspect) WEBROOT DIRECTORY TRAVERSAL"
++#define HI_EO_CLIENT_CR_IN_URI_STR                       \
++    "(http_inspect) NON-STD CARRIAGE RETURN IN URI"
+ 
+ /*
+ **  Anomalous Server Events
 --- snort-2.3.3.orig/src/preprocessors/HttpInspect/user_interface/Makefile.in
 +++ snort-2.3.3/src/preprocessors/HttpInspect/user_interface/Makefile.in
 @@ -1,8 +1,8 @@
@@ -7252,6 +7340,186 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/preprocessors/spp_stream4.c
++++ snort-2.3.3/src/preprocessors/spp_stream4.c
+@@ -337,7 +337,7 @@
+ void PreprocCleanExitFunction(int);
+ static INLINE int isBetween(u_int32_t low, u_int32_t high, u_int32_t cur);
+ static INLINE int NotForStream4(Packet *p);
+-static INLINE int SetFinSent(Packet *p, Session *ssn, int direction);
++static INLINE int SetFinSent(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p);
+ static INLINE int WithinSessionLimits(Packet *p, Stream *stream);
+ 
+  /* helpers for dealing with session byte_counters */
+@@ -1445,32 +1445,115 @@
+     }
+ }
+ 
++/**
++ * Check a FIN is valid within the window
++ *
++ * @param s stream to set the next_seq on 
++ * @param direction direction of the packet
++ * @param pkt_seq sequence number for the packet
++ * @param p packet to grab the session from
++ * 
++ * @return 0 if everything went ok
++ */
++static INLINE int CheckFin(Stream *s, int direction, u_int32_t pkt_seq, Packet *p)
++{
++    DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "CheckFin() called for %s\n",
++                            direction ? "FROM_CLIENT":"FROM_SERVER"););
++
++    /* If not tracking state ignore it */
++    if( !s4data.stateful_inspection_flag )
++        return 0;
++
++    /*
++     *  We want to make sure the FIN has the next valid sequence that 
++     *  this side should be sending 
++     *  If the pkt_seq < next_seq it's essentially a duplicate 
++     *  sequence, and is probably going to be discarded, it certainly 
++     *  should be. Also, the base sequence includes the SYN sequence count.
++     *  If the packet seq is after the next seq than we should queue the 
++     *  packet for later, in case an out of order packet arrives. We 
++     *  should also honor the FIN-ACK requirements.
++     *
++     *  Ignoring a FIN implies we won't shutdown this session due to it.
++     *  
++     *  This is a standard TCP/IP stack 'in the window' check, but it's 
++     *  not always the way stacks handle FIN's:
++     *  
++     *  if(SEQ_LT(pkt_seq,s->base_seq+s->bytes_tracked) || 
++     *     SEQ_GEQ(pkt_seq,(s->last_ack+s->win_size))) 
++     *  
++     */
++    if(SEQ_LT(pkt_seq,s->base_seq+s->bytes_tracked) || 
++       SEQ_GEQ(pkt_seq,(s->last_ack+s->win_size))) 
++    {
++        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
++                    "Bad FIN packet, bad sequence!\n"
++                    "pkt seq: 0x%X   last_ack: 0x%X  win: 0x%X\n",
++                    pkt_seq, s->last_ack, s->win_size););
++
++        /* we should probably alert here */
++        if(s4data.evasion_alerts)
++        {
++            SnortEventqAdd(GENERATOR_SPP_STREAM4, /* GID */
++                    STREAM4_EVASIVE_FIN, /* SID */
++                    1,                      /* Rev */
++                    0,                      /* classification */
++                    3,                      /* priority (low) */
++                    STREAM4_EVASIVE_FIN_STR, /* msg string */
++                    0);
++        }
++        return 1;
++    }
++    return 0;
++}
++
++
+ /** 
+  * Set that this side of the session has sent a fin.
+  *
+  * This overloads the next_seq variable to also be used to tell how
+  * far forward we can acknowledge data.
+  * 
+- * @param p packet to grab the session from
+  * @param s stream to set the next_seq on 
++ * @param direction direction of the packet
++ * @param pkt_seq sequence number for the packet
++ * @param p packet to grab the session from
+  * 
+  * @return 0 if everything went ok
+  */
+-static INLINE int SetFinSent(Packet *p, Session *ssn, int direction)
++static INLINE int SetFinSent(Session *ssn, int direction, u_int32_t pkt_seq, Packet *p)
+ {
+     Stream *stream;
+ 
+     DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "SetFinSet() called for %s\n",
+                             direction ? "FROM_CLIENT":"FROM_SERVER"););
+ 
++    /* If not tracking state ignore it */
++    if( !s4data.stateful_inspection_flag )
++        return 0;
++
+     if(direction == FROM_SERVER)
+-    {
++    {        
+         stream = &ssn->server;
++        DEBUG_WRAP(DebugMessage(DEBUG_STREAM,"--RST From Server!\n"););
++    }
++    else
++    {        
++        stream = &ssn->client;
++        DEBUG_WRAP(DebugMessage(DEBUG_STREAM,"--RST From Client!\n"););
++    }
++
++    if (CheckFin(stream, direction, pkt_seq, p))
++    {
++        return 0;
++    }
++
++    if(direction == FROM_SERVER)
++    {
+         ssn->session_flags |= SSNFLAG_SERVER_FIN;
+     }
+     else
+     {
+-        stream = &ssn->client;
+         ssn->session_flags |= SSNFLAG_CLIENT_FIN;
+     }
+     
+@@ -2188,14 +2271,6 @@
+ 
+     direction = GetDirection(ssn, p);
+ 
+-    if(p->tcph->th_flags & TH_FIN)
+-    {
+-        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
+-                    "Marking that a fin was was sent %s\n",
+-                    (direction ? "FROM_CLIENT" : "FROM_SERVER")););
+-        SetFinSent(p, ssn, direction);
+-    }
+-
+     if(direction == FROM_SERVER)
+     {
+         ssn->session_flags |= SSNFLAG_SEEN_SERVER;
+@@ -2230,6 +2305,15 @@
+                     "   %s state: %s\n", l, state_names[listener->state]););
+     }
+ 
++    if(p->tcph->th_flags & TH_FIN)
++    {
++        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, 
++                    "Marking that a fin was was sent %s\n",
++                    (direction ? "FROM_CLIENT" : "FROM_SERVER")););
++
++        SetFinSent(ssn, direction, pkt_seq, p);
++    }
++
+     StreamSegmentAdd(talker, p->dsize); 
+ 
+     if(talker->state == ESTABLISHED)
+@@ -2332,10 +2416,13 @@
+ 
+             if((p->tcph->th_flags & TH_FIN) == TH_FIN)
+             {
+-                talker->state = FIN_WAIT_1;
+-                DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,  
+-                            "   %s Transition: FIN_WAIT_1\n", t););
+-                QueueState(CLOSE_WAIT, listener, TH_ACK, pkt_seq, CHK_SEQ);
++                if (!CheckFin(talker, direction, pkt_seq, p))
++                {
++                    talker->state = FIN_WAIT_1;
++                    DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,  
++                                "   %s Transition: FIN_WAIT_1\n", t););
++                    QueueState(CLOSE_WAIT, listener, TH_ACK, pkt_seq, CHK_SEQ);
++                }
+             }
+ 
+             break;
 --- snort-2.3.3.orig/src/preprocessors/Makefile.in
 +++ snort-2.3.3/src/preprocessors/Makefile.in
 @@ -1,8 +1,8 @@
@@ -9321,6 +9589,27 @@
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+--- snort-2.3.3.orig/src/preprocessors/xlink2state.c
++++ snort-2.3.3/src/preprocessors/xlink2state.c
+@@ -41,7 +41,7 @@
+ 
+ /* Pointer to current session data */
+ XLINK2STATE *_xlink;
+-static u_int       _xlink2state_ports[65535];
++static u_int       _xlink2state_ports[65536];
+ static u_int       _xlink2state_disabled = 0;
+ static u_int       _xlink2state_drop = 0;
+ static Packet      *_xlink2state_pkt = NULL;
+@@ -70,9 +70,6 @@
+     /*  Set up commands we will watch for */
+     SearchInit(1);
+     
+-    /*  Set up commands we will watch for */
+-    SearchInit(1);
+-    
+     SearchAdd(0, "X-LINK2STATE", 0);
+     
+     SearchPrepPatterns(0);
 --- snort-2.3.3.orig/src/parser/Makefile.in
 +++ snort-2.3.3/src/parser/Makefile.in
 @@ -1,8 +1,8 @@
@@ -13613,6 +13902,17 @@
  
  \section{Background}
  
+--- snort-2.3.3.orig/doc/README.http_inspect
++++ snort-2.3.3/doc/README.http_inspect
+@@ -247,7 +247,7 @@
+ since some web sites refer to files using directory traversals.
+ 
+ * apache_whitespace [yes/no] *
+-This option deals with non-RFC standard of tab for a space delimiter.  Apache
++This option deals with non-RFC standard of tab or carriage return for a space delimiter.  Apache
+ uses this, so if the emulated web server is Apache you need to enable this
+ option.  Alerts on this option may be interesting, but may also be false
+ positive prone.
 --- snort-2.3.3.orig/doc/Makefile.in
 +++ snort-2.3.3/doc/Makefile.in
 @@ -1,8 +1,8 @@
