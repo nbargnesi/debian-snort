@@ -1,3 +1,15 @@
+snort (2.8.4.1-2) unstable; urgency=low
+
+  * Rebuild and upload to unstable. (Closes: 528496)
+  * As acknowledged by upstream and confirmed by users, this release fixes a
+    segfault in snort-mysql (Closes: 536144)
+  * Updated Russian po-debconf translation provided by Yuri Kozlov (Closes: 528677)
+  * Change syslogd dependency in snort, snort-pgsql and snort-mysql to rsyslog since 
+    that is the default syslog daemon now. (Closes: 526916)
+  * Remove the syslog dependency from snort-common and snort-rules-default
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 01 Aug 2009 17:50:30 +0200
+
 snort (2.8.4.1-1) experimental; urgency=low
 
   * New upstream release. 
