@@ -1,3 +1,15 @@
+snort (2.3.2-2) unstable; urgency=low
+
+  * Have snort-common Conflict on versions prior to the Source-Version to
+    prevent users upgrading snort-common without upgrading snort.
+    (Closes: #300785
+  * Fixed homepage location of Snort (Closes: #300727)
+  * Fixed snort-stat so it can be used when the -y option is used with Snort,
+    thanks to the patch provided by Chirik (Closes: #200276)
+  * Updated German translation courtesy of Erik Schanze 
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 22 Mar 2005 01:26:55 +0100
+
 snort (2.3.2-1) unstable; urgency=low
 
   * New upstream release. 
