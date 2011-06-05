@@ -103,23 +103,6 @@ EOF
 esac
 
 if [ "$STARTUP" = "dialup" ]; then
-	PPPENV=/var/tmp/snort.ppp.startup.env
-
-	if [ -f "$PPPENV" ]; then
-		. "$PPPENV"
-
-		ENVFILE=/var/run/snort_$SNORT_PPP_IFACE.env
-
-		if [ ! -f "$ENVFILE" ]; then
-			echo "Converting old $PPPENV to new $ENVFILE"
-			echo "PPPD_PID=$SNORT_PPP_PID"     > "$ENVFILE"
-			echo "PPP_IFACE=$SNORT_PPP_IFACE" >> "$ENVFILE"
-			echo "PPP_LOCAL=$SNORT_PPP_LOCAL" >> "$ENVFILE"
-		fi
-
-		echo "Removing old $PPPENV"
-		rm -f "$PPPENV"
-	fi
 
 	# Try to guess environments for all pppds we have no .env for...
 	for PPPD_PID in $(pidof pppd ipppd); do
