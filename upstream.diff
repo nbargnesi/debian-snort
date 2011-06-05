@@ -13879,15 +13879,18 @@
 +\BOOKMARK [2][-]{subsection.8.1}{What's this about a Snort drinking game?}{section.8}
 --- snort-2.3.3.orig/doc/faq.tex
 +++ snort-2.3.3/doc/faq.tex
-@@ -2,7 +2,7 @@
+@@ -2,9 +2,9 @@
  
  %latex2html -info 0 -local_icons -show_section_numbers -link 2 -split +1 faq.tex
  \documentclass{article}
 -\usepackage{html}
 +\usepackage{hyperref}
  \usepackage{graphicx}
- \usepackage{fancyheadings}
+-\usepackage{fancyheadings}
++\usepackage{fancyhdr}
  \usepackage{makeidx}
+ 
+ %% Margins
 @@ -99,11 +99,11 @@
  
  \newpage
