@@ -1,3 +1,16 @@
+snort (2.3.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Use upstream's FAQ in PDF format instead of debian/my/FAQ.txt, also
+    have the FAQ available only in the snort-doc package (after fixing 
+    the Makefile so that the faq.tex file does not get removed on distclean)
+  * Fix typo in snort.8 manpage (Closes: #326538)
+  * Fixed address of the FSF in debian/copyright
+  * Updated debconf translations:
+    - Vietnamese provided by Clytie Siddall
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 31 Aug 2005 19:47:16 +0200
+
 snort (2.3.2-8) unstable; urgency=low
 
   * _Really_ use debhelper compat version 4 now
