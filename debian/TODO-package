@@ -1,6 +1,9 @@
 
 TODO
 
+- Move to dpkg format v3. We have only a few changes in the source
+  package so that should be easy to do.
+
 - Make it easier to do changes in maintainer's config files. Currently snort,
   snort-pgsql and snort-mysql config files share a lot of code which makes it
   unmaintainable and leads to bugs like #502084 which was fixed in Snort
