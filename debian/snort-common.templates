@@ -9,3 +9,13 @@ _Description: Deprecated configuration file
  .
  The following deprecated options were found in the configuration file:
  ${DEP_CONFIG}
+
+Template: snort/config_error
+Type: error
+_Description: Configuration error
+ The current Snort configuration is invalid and will prevent Snort
+ starting up normally. Please review and correct it.
+ .
+ To diagnose an error in a Snort configuration file, use
+ '/usr/sbin/snort -T -c <file>'.
+
