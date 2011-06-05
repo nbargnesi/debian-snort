@@ -1,3 +1,38 @@
+snort (2.3.3-8) unstable; urgency=medium
+
+  * Fix security issue CVE-2006-2769, potential evasion in URI content
+    buffers. This evasion only applies to Apache protected servers since
+    that server supports some characters. The patch used is from 2.4.5
+    and is *not* the one provided by Demarc (which is not fully
+    comprehensive and is much more intrusive).
+    Since this is an evasion issue and not a real security issue 
+    thus the 'medium' urgency even though it fixes security bug (Closes:
+    #381726)
+
+    From upstream (snort.org webpage, News item "Possible Evasion in
+    http_inspect"): 
+
+     «The Apache web server supports special characters in HTTP requests that
+     do not affect the processing of the particular request. The current
+     target-based profiles for Apache in the http_inspect preprocessor do not
+     properly handle these requests, resulting in the possibility that an
+     attacker can bypass detection of rules that use the "uricontent" keyword
+     by embedding special characters in a HTTP request.»
+
+     «It is important to note that this is an evasion and not a vulnerability.
+     This means that while it is possible for an attacker to bypass detection,
+     Snort sensors and the networks they protect are not at a heightened risk
+     of other attacks.»
+
+  * Backport fix of another (different) potential evasion in Stream4 (also in
+    the Snort 2.4.5 release, no CVE name)
+  * Relocate Czech translation, it was not under debian/po
+  * Add a warning in /etc/default/snort that the SNORT_USER will be 
+    modified (with usermod) every time you reinstall the package
+    (don't change it to 'root'!)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 10 Aug 2006 00:44:36 +0200
+
 snort (2.3.3-7) unstable; urgency=low
 
   * *Really* recompile to use latest libmysqlclient libraries (Closes:
