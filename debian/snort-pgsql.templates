@@ -74,6 +74,16 @@ Type: string
 Default: 1
 _Description: An alert needs to appear more times than this number to be included in the daily statistics.
 
+Template: snort-pgsql/config_parameters
+Type: note
+_Description: This system uses an obsolete configuration file
+ Your system has an obsolete configuration file (/etc/snort/common.parameters)
+ which has been automatically converted into the new configuration
+ file format (at /etc/default/snort). Please review the new configuration
+ and remove the obsolete one. Until you do this, the init.d script
+ will not use the new configuration and you will not take advantage
+ of the benefits introduced in newer releases.
+
 Template: snort-pgsql/configure_db
 Type: boolean
 Default: true
@@ -91,7 +101,7 @@ Template: snort-pgsql/wait_for_db_config
 Type: note
 _Description: Snort needs a configured database to log to.
  Please create the database structure now, using the following command:
-  cd /usr/share/doc/snort-pgsql/contrib
+  cd /usr/share/doc/snort-pgsql/
   zcat create_pgsql.gz | psql -U <user> -h <host> -W <databasename>
  Fill in the correct values for the user, host, and database names.
  PostgreSQL will prompt you for the password.

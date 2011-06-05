@@ -1,3 +1,33 @@
+snort (2.3.0-1) experimental; urgency=low
+
+  (First attempt at experimental, to avoid breaking installations running sid)
+  * New upstream release 
+  * This version now uses libnet1, changed Build-Depends (Closes: #241995)
+  * Introduced /etc/default/snort and removed /etc/snort/common.parameters
+    this makes it easier to check for common situations (parsing the parameter
+    file is quite complicated). The old common.parameters file is moved
+    over to /etc/default/snort automatically, but retained in case
+    the parsing has not been done properly (and will not be used until
+    the common.parameters file is removed). This is described in the
+    NEWS.Debian file.
+  * Fixed the postint call so that the passwd and group are checked before
+    they are created. Also fix chown call (still used '.' instead of ':')
+  * Introduce a check for the status of Snort's logdirectory, it checks if
+    it belongs to Snort (Closes: #247603)
+  * This release provides debconf support for snort sensors in 
+    multiple interfaces (Closes: #283816)
+  * Run update-debconf, seems I had not done this when I last made changes
+    in the templates in 2.2.0-8
+  * Included the documentation available, including signatures. Also
+    added the LaTeX manual included as well as the additional Build-Depends
+    on tetex-bin and gs-common
+  * Updated the FAQ (was about time!) from http://www.snort.org/docs/FAQ.txt
+  * Added a README.docs file (pointing people to more documents)
+  * Updated translations:
+    - German, provided by Erik Schanze (Closes: #289405)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 26 Jan 2005 09:18:53 +0100
+
 snort (2.2.0-9) unstable; urgency=low
 
   * Removed old (obsolete) converstion of PPPENV in /var/tmp in postinst
