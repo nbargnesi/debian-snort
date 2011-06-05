@@ -1,3 +1,11 @@
+snort (2.3.0-6) unstable; urgency=low
+
+  * Added tetex-extra to Build-Depends (Closes: #296814)
+  * Refer to the proper file in debconf template (Closes: #296809)
+  * Updated the spanish debconf translation.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri, 25 Feb 2005 00:43:19 +0100
+
 snort (2.3.0-5) unstable; urgency=low
 
   * Upload of the experimental package to unstable
