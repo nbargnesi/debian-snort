@@ -1,3 +1,13 @@
+snort (2.8.4.1-1) experimental; urgency=low
+
+  * New upstream release. 
+  * Only provided the latest release notes at debian/snort-common.docs, move
+    older RELEASE notes to docs/
+  * Update the doc list at debian/snort-doc.docs with the contents from
+    doc/ (new READMEs). Add also the old RELEASE notes for reference.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 09 Jun 2009 02:33:43 +0200
+
 snort (2.7.0-26) unstable; urgency=low
 
   * Fix bug in snort-pgsql and snort-mysql's configuration script introduced in
