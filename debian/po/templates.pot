@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: jfs@computer.org\n"
-"POT-Creation-Date: 2006-03-22 09:15+0100\n"
+"POT-Creation-Date: 2006-12-28 23:00+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,19 +18,22 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:3 ../snort-mysql.templates:3 ../snort-pgsql.templates:3
+#: ../snort.templates:1001 ../snort-mysql.templates:1001
+#: ../snort-pgsql.templates:1001
 msgid "boot, dialup, manual"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:5 ../snort-mysql.templates:5 ../snort-pgsql.templates:5
+#: ../snort.templates:1002 ../snort-mysql.templates:1002
+#: ../snort-pgsql.templates:1002
 msgid "When should Snort be started?"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:5 ../snort-mysql.templates:5 ../snort-pgsql.templates:5
+#: ../snort.templates:1002 ../snort-mysql.templates:1002
+#: ../snort-pgsql.templates:1002
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only when you manually start it via /usr/sbin/snort."
@@ -38,15 +41,15 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid "On which interface(s) should Snort listen?"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "Please enter the name(s) of the interface(s) which Snort should listen on.  "
 "The names of the available interfaces are provided by either running  'ip "
@@ -57,8 +60,8 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "Notice that Snort is usually configured to inspect all traffic coming from "
 "the Internet, so the interface you add here is usually the same the 'default "
@@ -69,8 +72,8 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "It is also not uncommon to run Snort on an interface with no IP and "
 "configured in promiscuous mode, if this is your case, select the interface "
@@ -82,8 +85,8 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-mysql.templates:12
-#: ../snort-pgsql.templates:12
+#: ../snort.templates:2001 ../snort-mysql.templates:2001
+#: ../snort-pgsql.templates:2001
 msgid ""
 "You can configure multiple interfaces here, just by adding more than one "
 "interface name separated by spaces. Each interface can have its specific "
@@ -92,15 +95,15 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid "Please enter the address range that Snort will listen on."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
@@ -109,16 +112,16 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:40 ../snort-mysql.templates:40
-#: ../snort-pgsql.templates:40
+#: ../snort.templates:3001 ../snort-mysql.templates:3001
+#: ../snort-pgsql.templates:3001
 msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
@@ -126,15 +129,15 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to it's own interface. Enabling it allows Snort to check  every packet that "
@@ -144,8 +147,8 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:53 ../snort-mysql.templates:53
-#: ../snort-pgsql.templates:53
+#: ../snort.templates:4001 ../snort-mysql.templates:4001
+#: ../snort-pgsql.templates:4001
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
@@ -153,13 +156,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:64
+#: ../snort.templates:5001
 msgid "Invalid interface"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:64
+#: ../snort.templates:5001
 msgid ""
 "One of the interfaces you specified is not valid (it might not exist on the "
 "system or be down). Please introduce a valid interface when answering the "
@@ -168,7 +171,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:64
+#: ../snort.templates:5001
 msgid ""
 "If you did not configure an interface then the package is trying to use the "
 "default ('eth0') which does not seem to be valid in your system."
@@ -176,15 +179,15 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:75 ../snort-mysql.templates:65
-#: ../snort-pgsql.templates:65
+#: ../snort.templates:6001 ../snort-mysql.templates:5001
+#: ../snort-pgsql.templates:5001
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:75 ../snort-mysql.templates:65
-#: ../snort-pgsql.templates:65
+#: ../snort.templates:6001 ../snort-mysql.templates:5001
+#: ../snort-pgsql.templates:5001
 msgid ""
 "If you change Snort's rules testing order to Pass|Alert|Log, they will be "
 "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
@@ -194,15 +197,15 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:84 ../snort-mysql.templates:74
-#: ../snort-pgsql.templates:74
+#: ../snort.templates:7001 ../snort-mysql.templates:6001
+#: ../snort-pgsql.templates:6001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:84 ../snort-mysql.templates:74
-#: ../snort-pgsql.templates:74
+#: ../snort.templates:7001 ../snort-mysql.templates:6001
+#: ../snort-pgsql.templates:6001
 msgid ""
 "This Snort installation provides a cron job that runs daily and summarises "
 "the information of Snort logs to a selected email address. If you want to "
@@ -211,15 +214,15 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:82
-#: ../snort-pgsql.templates:82
+#: ../snort.templates:8001 ../snort-mysql.templates:7001
+#: ../snort-pgsql.templates:7001
 msgid "Who should receive the daily statistics mails?"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:82
-#: ../snort-pgsql.templates:82
+#: ../snort.templates:8001 ../snort-mysql.templates:7001
+#: ../snort-pgsql.templates:7001
 msgid ""
 "A cron job running daily will summarise the information of the logs "
 "generated by Snort using a script called 'snort-stat'. Introduce here the "
@@ -230,16 +233,16 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:102 ../snort-mysql.templates:93
-#: ../snort-pgsql.templates:92
+#: ../snort.templates:9001 ../snort-mysql.templates:8001
+#: ../snort-pgsql.templates:8001
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:107 ../snort-mysql.templates:98
-#: ../snort-pgsql.templates:97
+#: ../snort.templates:10001 ../snort-mysql.templates:9001
+#: ../snort-pgsql.templates:9001
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
@@ -247,15 +250,15 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:111 ../snort-mysql.templates:162
-#: ../snort-pgsql.templates:161
+#: ../snort.templates:11001 ../snort-mysql.templates:17001
+#: ../snort-pgsql.templates:17001
 msgid "You are running Snort manually."
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:111 ../snort-mysql.templates:162
-#: ../snort-pgsql.templates:161
+#: ../snort.templates:11001 ../snort-mysql.templates:17001
+#: ../snort-pgsql.templates:17001
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
@@ -264,15 +267,15 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:118 ../snort-mysql.templates:169
-#: ../snort-pgsql.templates:168
+#: ../snort.templates:12001 ../snort-mysql.templates:18001
+#: ../snort-pgsql.templates:18001
 msgid "There is an error in your configuration"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:118 ../snort-mysql.templates:169
-#: ../snort-pgsql.templates:168
+#: ../snort.templates:12001 ../snort-mysql.templates:18001
+#: ../snort-pgsql.templates:18001
 msgid ""
 "Your Snort configuration is not correct and Snort will not be able to start "
 "up normally. Please review your configuration and fix it. If you do not do "
@@ -284,15 +287,25 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:128 ../snort-mysql.templates:179
-#: ../snort-pgsql.templates:178
+#. Type: note
+#. Description
+#. Type: note
+#. Description
+#: ../snort.templates:13001 ../snort-mysql.templates:10001
+#: ../snort-mysql.templates:19001 ../snort-pgsql.templates:10001
+#: ../snort-pgsql.templates:19001
 msgid "This system uses an obsolete configuration file"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:128 ../snort-mysql.templates:179
-#: ../snort-pgsql.templates:178
+#. Type: note
+#. Description
+#. Type: note
+#. Description
+#: ../snort.templates:13001 ../snort-mysql.templates:10001
+#: ../snort-mysql.templates:19001 ../snort-pgsql.templates:10001
+#: ../snort-pgsql.templates:19001
 msgid ""
 "Your system has an obsolete configuration file (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -302,27 +315,15 @@ msgid ""
 "the benefits introduced in newer releases."
 msgstr ""
 
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:102
-msgid ""
-"Your system has an obsolete configuration file  (/etc/snort/snort.common."
-"parameters) which has been automatically converted into the new "
-"configuration file format (at /etc/default/snort). Please review the new "
-"configuration and remove the obsolete one. Until you do this, the init.d "
-"script will not use the new configuration and you will not take advantage of "
-"the benefits introduced in newer releases."
-msgstr ""
-
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:114
+#: ../snort-mysql.templates:11001
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:114
+#: ../snort-mysql.templates:11001
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a mysql "
@@ -336,13 +337,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:125
+#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
 msgid "Snort needs a configured database to log to before it starts."
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:126
+#: ../snort-mysql.templates:12001
 msgid ""
 "Snort needs a configured database before it can successfully start up. In "
 "order to create the structure you need to run the following commands AFTER "
@@ -355,7 +356,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:125
+#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
 msgid ""
 "After you created the database structure, you will need to start Snort "
 "manually."
@@ -363,13 +364,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:140
+#: ../snort-mysql.templates:13001
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:140 ../snort-pgsql.templates:139
+#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
@@ -377,13 +378,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:146 ../snort-pgsql.templates:145
+#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
 msgid "Please enter the name of the database to use."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:146 ../snort-pgsql.templates:145
+#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
@@ -391,37 +392,37 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:152 ../snort-pgsql.templates:151
+#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Please enter the name of the database user you want to use."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:152 ../snort-pgsql.templates:151
+#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
 msgid "Make sure this user has been created and has write access."
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:157 ../snort-pgsql.templates:156
+#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Please enter the password for the database connection."
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:157 ../snort-pgsql.templates:156
+#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:113
+#: ../snort-pgsql.templates:11001
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:113
+#: ../snort-pgsql.templates:11001
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a pgsql "
@@ -435,7 +436,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:125
+#: ../snort-pgsql.templates:12001
 msgid ""
 "Snort needs a configured database before it can successfully start up. In "
 "order to create the structure you need to run the following commands AFTER "
@@ -448,19 +449,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:139
+#: ../snort-pgsql.templates:13001
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid "Your configuration file is deprecated"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid ""
 "Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
 "options no longer available for this Snort release.  Snort will not be able "
@@ -471,7 +472,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3
+#: ../snort-common.templates:1001
 msgid ""
 "The following deprecated options were found in your configuration file: "
 "${DEP_CONFIG}"
