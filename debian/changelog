@@ -1,3 +1,21 @@
+snort (2.3.0-10) unstable; urgency=low
+
+  * Fixed grammar problems in the templates as suggested by Justin B Rye in #306269
+  * Updated German po-debconf file with patch provided by Jens Seidel (Closes: #313906)
+  * Updated Japanese po-debconf file with patch provided by Hideki Yamane 
+    (Closes: #310096)
+  * Fix threshold user definition for daily alerts:
+    * [my/snort-stat] Do not generate a report if the total count is lower than
+      the threshold.
+    * [cron-daily] Create a tempfile with the snort-stat result and do not mail
+      it if there are no results.
+  * Improved the snort-stat manpage to document the command line options.
+  * Modified my/snort_rules_update so that it can be used with the new
+    'oinkcode' registration required to download Snort VRT rules. Add a
+    comment in the script to point users to oinkmaster, however (Closes: #314483)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 22 Jun 2005 23:30:35 +0200
+
 snort (2.3.0-9) unstable; urgency=low
 
   * Fixed format of NEWS file (Closes: #299334) 
