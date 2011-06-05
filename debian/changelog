@@ -1,3 +1,58 @@
+snort (2.9.0.1-2) experimental; urgency=low
+
+  * [ The Merry Xmas for experimental users Release ! ]
+  * Forward port the changes introduced in the unstable package
+    to experimental tool to make for smoother upgrades to the
+    upstream release.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 24 Dec 2010 19:52:48 +0100
+
+snort (2.8.5.2-4) unstable; urgency=high
+
+  * [ The Merry Xmas and Merry RC bug fixing Release! ]
+  * debian/snort-common.preinst: 
+      - Fix how the files are generated and use Perl instead of bash's echo
+        as the latter will interpret content in the configuration file
+        and will botch it
+      - Fix typo in the configuration file which moved the configuration
+        file to database.conf instead of just the database configuration.
+      - Only generate content in database.conf if the default configuration
+        file contains the DBSTART line from previous versions.
+      - Be cautious, if an empty configuration file is generated then
+        abort.
+    (Closes: 607951)
+  * debian/snort.preinst: Do not output information from usermod as this is
+    not needed
+  * Disable an error in rules/comunity-smtp.rules  that prevents snort from
+    loading due to the use of !any (Closes: 607751)
+  * debian/snort-{pgsql,mysql}.postinst: Fix syntax error in postinst scripts
+    (Closes: 607678)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 24 Dec 2010 19:39:51 +0100
+
+
+snort (2.8.5.2-3) unstable; urgency=low
+
+  * Move the database configuration code for the -mysql and -pgsql packages
+    into an independent file (/etc/snort/database.conf). This prevents the
+    debconf script from modifying /etc/snort/snort.conf, which is a conffile.
+    And, consequentely, prevents upgrade prompts for users as well as some
+    other issues when upgrading (Closes: #603428, #566308)
+    * Adding snort-common-preinst to split off exiting config or touch the
+      new database config file on new installations to ensure it exists.
+    * Modify etc/snort.conf to include the new database configuration file.
+    * Modify snort-{mysql,pgsql}.postinst to use new configuration file.
+    * Modify snort-{mysql,pgsql,common}.postrm to purge new configuration file if
+      it exists.
+    Thanks to Alexander Reichle-Schmehl for the initial patch used to fix this issue
+  * debian/NEWS: describe the new change on database handling
+  * debian/snort{,-inline,-mysql,-pgsql}.prerm: Move the code in charge of killing
+    snort astray children over to the proper location and also ignore errors 
+    if there are (process might appear spurously in the process table due to
+    race conditions) (Closes: 557729)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 20 Dec 2010 15:25:49 +0100
+
 snort (2.9.0.1-1) experimental; urgency=low
 
   * New upstream release. 
