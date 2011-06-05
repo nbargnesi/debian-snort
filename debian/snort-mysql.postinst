@@ -128,7 +128,7 @@ EOF
 		# Ensure the config file is readable by root.root and mode 600
 		if ! dpkg-statoverride --list /etc/snort/snort.conf >/dev/null
 		then
-			chown root.snort /etc/snort/snort.conf
+			chown root:snort /etc/snort/snort.conf
 			chmod 640 /etc/snort/snort.conf
 		fi
 	fi
@@ -233,7 +233,7 @@ if [ "$STARTUP" = "dialup" ]; then
 	done
 fi
 
-if [ "$STARTUP" = "boot" -o "$STARTUP" = "dialup" ]; then
+if [ "$STARTUP" = "boot" ] || [ "$STARTUP" = "dialup" ]; then
 	if [ -x /usr/sbin/invoke-rc.d ]; then
 		invoke-rc.d snort start || true
 	else
