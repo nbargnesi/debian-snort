@@ -24,8 +24,8 @@
 #
 ### BEGIN INIT INFO
 # Provides:          snort
-# Required-Start:    $time $network $local_fs
-# Required-Stop:     
+# Required-Start:    $time $network $local_fs $remote_fs
+# Required-Stop:     $network $remote_fs
 # Should-Start:      $syslog
 # Should-Stop:       
 # Default-Start:     2 3 4 5
@@ -294,7 +294,7 @@ case "$1" in
 	done
 
 	if [ "$got_instance" = 0 ]; then
-		log_warning_msg "No running snort instance found"
+		log_warning_msg " - No running snort instance found"
                 exit 0 # LSB demands we don't exit with error here
 	fi
         if  [ $myret -eq 0 ] ; then

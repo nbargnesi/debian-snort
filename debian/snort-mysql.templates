@@ -91,15 +91,6 @@ _Description: Snort restart required
  As Snort is manually launched, you need to run '/etc/init.d/snort' for
  the changes to take place.
 
-Template: snort-mysql/config_error
-Type: error
-_Description: Configuration error
- The current Snort configuration is invalid and will prevent Snort
- starting up normally. Please review and correct it.
- .
- To diagnose an error in a Snort configuration file, use
- '/usr/sbin/snort -T -c <file>'.
-
 Template: snort-mysql/config_parameters
 Type: error
 _Description: Obsolete configuration file
