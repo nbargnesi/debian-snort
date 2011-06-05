@@ -1,3 +1,17 @@
+snort (2.3.3-10) unstable; urgency=low
+
+  * Fix snort-mysql template to prevent translators from duplicating work
+    (two templates were nearly identical except for a double space)
+  [ Translations update ]
+  * Updated Spanish translation
+  * Updated Japanese translation, courtesy of Hideki Yamane (Closes: #391894)
+  * Updated German translation, courtesy of Erik Schanze (Closes: #397017)
+  * Updated Dutch translation, courtesy of Peter Vandenabeele.
+  * Updated Vietnamese translation, courtesy of Clytie Siddall
+  * Fix error in Catalan translation (which made msgstat fail)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 21 Dec 2006 19:52:38 +0100
+
 snort (2.3.3-9) unstable; urgency=low
 
   * Do not try to remove /etc/snort in postrm if it does not exist anymore
