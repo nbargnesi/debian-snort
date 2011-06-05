@@ -1,3 +1,20 @@
+snort (2.3.2-3) unstable; urgency=high
+
+  * Pre-Depend on adduser since we use it on preinst
+  * Changed debian/TODO
+  * Snort-common now Replaces old snort versions (1.8.4beta1-1) since
+    the configuration files where moved there from snort. 
+    Save for the ppp configuration file which was moved from snort-common to
+    snort. Snort now Replaces snort-common versions previous to 2.0.2-3, 
+    that introduced the change, cannot conflict since we will end up with
+    circular dependencies. (Closes: #311257)
+  * Check MD5sums before rule files are moved from the old location to the
+    new one in snort-rules-default's preinst when upgrading.
+    If the files have not been changed from the ones provided
+    by the woody version then remove them (Closes: #311263)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed,  1 Jun 2005 09:47:04 +0200
+
 snort (2.3.2-2) unstable; urgency=low
 
   * Have snort-common Conflict on versions prior to the Source-Version to
