@@ -7,5 +7,5 @@ Abstract: Frequently Asked Questions for the Snort NIDS
  intrusion detection system.
 Section: Apps/Net
 
-Format: text
-Files: /usr/share/doc/snort-doc/FAQ.txt
+Format: pdf
+Files: /usr/share/doc/snort-doc/faq.pdf

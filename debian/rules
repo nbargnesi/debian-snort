@@ -63,6 +63,7 @@ build-stamp:
 
 	# Add here commands to compile the package.
 	$(MAKE) 
+	cd doc && $(MAKE) faq.pdf
 	$(MAKE) clean
 
 	touch build-stamp
