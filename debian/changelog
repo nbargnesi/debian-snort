@@ -1,3 +1,41 @@
+snort (2.7.0-1) experimental; urgency=low
+
+  * New upstream release (Closes: #435417, #404991, #320920, #323985)
+     - Fixes DOS attack: CVE-2006-6931 - "Backtracking Algorithmic Complexity"
+       DoS against IDS engine (Closes: #407421)
+  * Introduce all the rules available from the 2.4 release which are GPL and
+    are non-VRT certified, that is, all rules which are outside of the range
+    [3,465-1,000,000]. This amounts to a total of 3935 rules (820 of which are
+    Community released).
+  * In order to handle rulesets with mixed GPL and non-GPL rules two scripts
+    have been made available in the source rules/ subdirectory:
+        - remove-non-gpl.pl - Given a rules file removes all rules outside
+          the above range
+        - purge-non-gpl.sh - Given a directory dumps on the local directory
+          only rules outside this range.
+    In order to limit maintainer overhead the header for modified rulesets has
+    not been changed.
+  * Include the VRT license file. This file is kept for reference under the
+    rules/ dir, although *no* rule in this package is under that non-free license.
+  * Include a NEWS.Debian item describing the license change and the rules
+    distributed within this package.
+    not in the database packages (Closes: #320920)
+  * As a consequence of the above Build-Depend on libprelude-dev, iptables-dev
+  * Provide support for Prelude in both snort and snort-inline packages but
+  * The examples are now included in the -common package instead of having
+    them  in all the binary packages
+
+  This package provides support to make an experimental separate binary
+  package for inline support: snort-inline, which most of the configuration is
+  shared with the snort binary package but the PPP related options have been
+  removed. However, snort-inline does not support libnet 1.1 so we cannot
+  provide it yet. This has been changed in Snort's code but it's far from
+  complete:
+       - Make the configure script work with libnet 1.1. 
+       - Port parts of the API (some declarations) to 1.1
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 31 Jul 2007 23:35:06 +0200
+
 snort (2.3.3-15) unstable; urgency=low
 
   * Include all the community signatures available as of today into the
