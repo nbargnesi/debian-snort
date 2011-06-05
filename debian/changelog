@@ -1,3 +1,21 @@
+snort (2.3.2-5) unstable; urgency=medium
+
+  * Medium priority since it seems some buildds are not auto building
+    snort ok and this changes fix it.
+  * Use PostgreSQL 8.0 now as requested by Martin Pitt. Basicly just
+    changed the build-depends and use 'pg_config --includedir' when
+    setting the location of the PostgreSQL location. 
+  * Changes to configure.in: (Closes: #313499)
+    * Fixed configure.in so that it uses the --with dir directly first
+      (intead of looking for $i/include and stuff like that). 
+    * Fixed configure.in so that it outputs the PostgreSQL directories 
+      it tested by fixing a typo.
+    * Have all ERROR messages abort with an exit 1 so that the Makefile breaks
+      and we will notice the error if doing an automatic build.
+
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 14 Jun 2005 19:33:49 +0200
+
 snort (2.3.2-4) unstable; urgency=low
 
   * Snort, snort-pgsql and snort-mysql now depend on either coreutils
