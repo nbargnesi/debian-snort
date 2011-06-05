@@ -14,10 +14,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: snort 2.2.0-7\n"
+"Project-Id-Version: snort 2.3.2-2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-02-25 01:01+0100\n"
-"PO-Revision-Date: 2004-11-26 00:32+0900\n"
+"POT-Creation-Date: 2005-08-25 17:23+0200\n"
+"PO-Revision-Date: 2005-05-14 08:32+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -48,21 +48,22 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12
-#, fuzzy
+#: ../snort.templates:12 ../snort-mysql.templates:12
+#: ../snort-pgsql.templates:12
 msgid "On which interface(s) should Snort listen?"
 msgstr "Snort はどのインターフェイスで listen しますか?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:12
+#: ../snort.templates:12 ../snort-mysql.templates:12
+#: ../snort-pgsql.templates:12
 #, fuzzy
 msgid ""
-"Please enter the interface(s) name(s) which snort should listen on. The name "
-"of the available interfaces are provided by running 'ip link show'. This "
-"value usually is 'eth0', but you might want to vary this depending on your "
-"environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate."
+"Please enter the name(s) of the interface(s) which Snort should listen on.  "
+"The names of the available interfaces are provided by either running  'ip "
+"link show' of 'ifconfig'. This value usually is 'eth0', but you might want "
+"to vary this depending on your environment, if you are using a dialup "
+"connection 'ppp0' might be more appropiate."
 msgstr ""
 "Snort が listen すべきインターフェイス名を入力してください。指定可能なイン"
 "ターフェイスは 'ip link show' を実行すると確認できます。この値は大抵の場合 "
@@ -71,7 +72,8 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12 ../snort-pgsql.templates:12
+#: ../snort.templates:12 ../snort-mysql.templates:12
+#: ../snort-pgsql.templates:12
 msgid ""
 "Notice that Snort is usually configured to inspect all traffic coming from "
 "the Internet, so the interface you add here is usually the same the 'default "
@@ -107,24 +109,27 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:12
+#: ../snort.templates:12 ../snort-mysql.templates:12
+#: ../snort-pgsql.templates:12
 msgid ""
 "You can configure multiple interfaces here, just by adding more than one "
 "interface name separated by spaces. Each interface can have its specific "
 "configuration."
 msgstr ""
+"ここでは単に一つ以上のインターフェイス名を空白で区切ることで、複数のインター"
+"フェイスを設定できます。インターフェイスごとに固有の設定が可能です。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:39 ../snort-mysql.templates:35
-#: ../snort-pgsql.templates:35
+#: ../snort.templates:40 ../snort-mysql.templates:40
+#: ../snort-pgsql.templates:40
 msgid "Please enter the address range that Snort will listen on."
 msgstr "Snort が listen するアドレスの範囲を入力してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:39 ../snort-mysql.templates:35
-#: ../snort-pgsql.templates:35
+#: ../snort.templates:40 ../snort-mysql.templates:40
+#: ../snort-pgsql.templates:40
 msgid ""
 "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
 "192.168.1.42/32 for just one. Specify multiple addresses on a single line "
@@ -136,8 +141,8 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:39 ../snort-mysql.templates:35
-#: ../snort-pgsql.templates:35
+#: ../snort.templates:40 ../snort-mysql.templates:40
+#: ../snort-pgsql.templates:40
 msgid ""
 "If you want you can specify 'any', to not trust any side of the network."
 msgstr ""
@@ -146,22 +151,26 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:39
+#: ../snort.templates:40 ../snort-mysql.templates:40
+#: ../snort-pgsql.templates:40
 msgid ""
 "Notice that if you are using multiple interfaces this definition will be "
 "used as the HOME_NET definition of all of them."
 msgstr ""
+"複数のインターフェイスを使っている場合、この定義は全てのインターフェイスの "
+"HOME_NET 定義として利用されることに注意してください。"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:52 ../snort-mysql.templates:45
+#: ../snort.templates:53 ../snort-mysql.templates:53
+#: ../snort-pgsql.templates:53
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "Snort は、このインターフェイスで promiscous モードを無効にしますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:52 ../snort-mysql.templates:45
-#: ../snort-pgsql.templates:45
+#: ../snort.templates:53 ../snort-mysql.templates:53
+#: ../snort-pgsql.templates:53
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to it's own interface. Enabling it allows Snort to check  every packet that "
@@ -175,8 +184,8 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:52 ../snort-mysql.templates:45
-#: ../snort-pgsql.templates:45
+#: ../snort.templates:53 ../snort-mysql.templates:53
+#: ../snort-pgsql.templates:53
 msgid ""
 "Disable promiscuous mode if you are configuring Snort on an interface "
 "without a configured IP address."
@@ -186,15 +195,15 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:64 ../snort-mysql.templates:57
-#: ../snort-pgsql.templates:57
+#: ../snort.templates:65 ../snort-mysql.templates:65
+#: ../snort-pgsql.templates:65
 msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"
 msgstr "Snort のルールセットのテスト順を Pass|Alert|Log に変更しますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:64 ../snort-mysql.templates:57
-#: ../snort-pgsql.templates:57
+#: ../snort.templates:65 ../snort-mysql.templates:65
+#: ../snort-pgsql.templates:65
 msgid ""
 "If you change Snort's rules testing order to Pass|Alert|Log, they will be "
 "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
@@ -208,14 +217,15 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:73 ../snort-mysql.templates:66
-#: ../snort-pgsql.templates:66
+#: ../snort.templates:74 ../snort-mysql.templates:74
+#: ../snort-pgsql.templates:74
 msgid "Who should receive the daily statistics mails?"
 msgstr "誰が日次統計のメールを受け取りますか?"
 
 #. Type: string
 #. Description
-#: ../snort.templates:73
+#: ../snort.templates:74 ../snort-mysql.templates:74
+#: ../snort-pgsql.templates:74
 msgid ""
 "A cron job running daily will summarise the information of the logs "
 "generated by Snort using a script called 'snort-stat'. Introduce here the "
@@ -231,16 +241,16 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:83 ../snort-mysql.templates:70
-#: ../snort-pgsql.templates:70
+#: ../snort.templates:84 ../snort-mysql.templates:85
+#: ../snort-pgsql.templates:84
 msgid ""
 "If you want to specify custom options to Snort, please specify them here."
 msgstr "Snort にオプションを指定したい場合、ここで入力してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:88 ../snort-mysql.templates:75
-#: ../snort-pgsql.templates:75
+#: ../snort.templates:89 ../snort-mysql.templates:90
+#: ../snort-pgsql.templates:89
 msgid ""
 "An alert needs to appear more times than this number to be included in the "
 "daily statistics."
@@ -250,15 +260,15 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:136
-#: ../snort-pgsql.templates:136
+#: ../snort.templates:93 ../snort-mysql.templates:154
+#: ../snort-pgsql.templates:153
 msgid "You are running Snort manually."
 msgstr "手動で Snort を動作させています。"
 
 #. Type: note
 #. Description
-#: ../snort.templates:92 ../snort-mysql.templates:136
-#: ../snort-pgsql.templates:136
+#: ../snort.templates:93 ../snort-mysql.templates:154
+#: ../snort-pgsql.templates:153
 msgid ""
 "Please restart Snort using:\n"
 " /etc/init.d/snort start\n"
@@ -270,13 +280,15 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:99
+#: ../snort.templates:100 ../snort-mysql.templates:161
+#: ../snort-pgsql.templates:160
 msgid "There is an error in your configuration"
 msgstr "設定にエラーがあります"
 
 #. Type: note
 #. Description
-#: ../snort.templates:99
+#: ../snort.templates:100 ../snort-mysql.templates:161
+#: ../snort-pgsql.templates:160
 msgid ""
 "Your Snort configuration is not correct and Snort will not be able to start "
 "up normally. Please review your configuration and fix it. If you do not do "
@@ -294,15 +306,32 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:109 ../snort-mysql.templates:79
-#: ../snort-pgsql.templates:79
+#: ../snort.templates:110 ../snort-mysql.templates:171
+#: ../snort-pgsql.templates:170
 msgid "This system uses an obsolete configuration file"
-msgstr ""
+msgstr "古い設定ファイルがこのシステムでは使われています。"
 
 #. Type: note
 #. Description
-#: ../snort.templates:109 ../snort-mysql.templates:79
-#: ../snort-pgsql.templates:79
+#: ../snort.templates:110 ../snort-mysql.templates:171
+#: ../snort-pgsql.templates:170
+#, fuzzy
+msgid ""
+"Your system has an obsolete configuration file (/etc/snort/snort.common."
+"parameters) which has been automatically converted into the new "
+"configuration file format (at /etc/default/snort). Please review the new "
+"configuration and remove the obsolete one. Until you do this, the init.d "
+"script will not use the new configuration and you will not take advantage of "
+"the benefits introduced in newer releases."
+msgstr ""
+" (/etc/snort/snort.common.parameters) 。これは自動的に新しい設定ファイル形式 "
+"(/etc/default/snort にあります) に変換されています。新しい設定を確認して、古"
+"い設定を削除してください。削除するまで、init.d スクリプトは新しい設定を使おう"
+"とはしないので新しいリリースで導入された "
+
+#. Type: note
+#. Description
+#: ../snort-mysql.templates:94
 msgid ""
 "Your system has an obsolete configuration file  (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -311,52 +340,20 @@ msgid ""
 "script will not use the new configuration and you will not take advantage of "
 "the benefits introduced in newer releases."
 msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
-msgid "On which interface should Snort listen?"
-msgstr "Snort はどのインターフェイスで listen しますか?"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:12 ../snort-pgsql.templates:12
-msgid ""
-"Please enter the interface name which snort should listen on. The name of "
-"the available interfaces are provided by running 'ip link show'. This value "
-"usually is 'eth0', but you might want to vary this depending on your "
-"environment, if you are using a dialup connection 'ppp0' might be more "
-"appropiate."
-msgstr ""
-"Snort が listen すべきインターフェイス名を入力してください。指定可能なイン"
-"ターフェイスは 'ip link show' を実行すると確認できます。この値は大抵の場合 "
-"'eth0' ですが、これは環境にとても依存するので、ダイヤルアップ接続を利用してい"
-"る場合は 'ppp0' のほうがより適切かもしれません 。"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:12
-msgid ""
-"Notice that Snort is usually configured to inspect all traffic coming from "
-"the Internet, so the interface you add here is usually the same the 'default "
-"route' is on.  You can determine which interface is used for this running "
-"either 'ip route show' or '/sbin/route -n' (look for 'default' or '0.0.0.0')."
-msgstr ""
-"通常、Snort はインターネットからやって来るすべてのトラフィックを受け取るよう"
-"に設定されるので、ここで追加したインターフェイスは大抵 'default route' が存在"
-"するものと同じということに注意してください。'ip route show' または '/sbin/"
-"route -n' を実行し ('default' または '0.0.0.0' を探して)、どのインターフェイ"
-"スを使うかを決めることができます。"
+" (/etc/snort/snort.common.parameters) 。これは自動的に新しい設定ファイル形式 "
+"(/etc/default/snort にあります) に変換されています。新しい設定を確認して、古"
+"い設定を削除してください。削除するまで、init.d スクリプトは新しい設定を使おう"
+"とはしないので新しいリリースで導入された "
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:91
+#: ../snort-mysql.templates:106
 msgid "Do you want to set up a database for snort-mysql to log to?"
 msgstr "snort-mysql を利用してログに記録するため、データベースを設定しますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort-mysql.templates:91
+#: ../snort-mysql.templates:106
 msgid ""
 "You only need to do this the first time you install snort-mysql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a mysql "
@@ -377,15 +374,19 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
-msgid "Snort needs a configured database to log to."
+#: ../snort-mysql.templates:118 ../snort-pgsql.templates:117
+#, fuzzy
+msgid "Snort needs a configured database to log to before it starts."
 msgstr "Snort ではログを記録するのにデータベースの設定が必要です。"
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103
+#: ../snort-mysql.templates:118
+#, fuzzy
 msgid ""
-"Please create the database structure now, using the following command:\n"
+"Snort needs a configured database before it can successfully start up. In "
+"order to create the structure you need to run the following commands AFTER "
+"the package is installed:\n"
 " cd /usr/share/doc/snort-mysql/\n"
 " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>\n"
 "Fill in the correct values for the user, host, and database names. MySQL "
@@ -399,19 +400,22 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-mysql.templates:103 ../snort-pgsql.templates:103
-msgid "After you created the database structure, press 'ok' to continue."
+#: ../snort-mysql.templates:118 ../snort-pgsql.templates:117
+#, fuzzy
+msgid ""
+"After you created the database structure, you will need to start Snort "
+"manually."
 msgstr "データベース作成後、'ok' を押して続行してください。"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:114
+#: ../snort-mysql.templates:132
 msgid "Please enter the hostname of the mysql database server to use."
 msgstr "mysql サーバのホスト名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:114 ../snort-pgsql.templates:114
+#: ../snort-mysql.templates:132 ../snort-pgsql.templates:131
 msgid ""
 "Make sure it has been set up correctly to allow incoming connections from "
 "this host!"
@@ -420,13 +424,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:138 ../snort-pgsql.templates:137
 msgid "Please enter the name of the database to use."
 msgstr "使用するデータベース名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:120 ../snort-pgsql.templates:120
+#: ../snort-mysql.templates:138 ../snort-pgsql.templates:137
 msgid ""
 "Make sure this database has been created and your database user has write "
 "access to this database."
@@ -436,26 +440,26 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
+#: ../snort-mysql.templates:144 ../snort-pgsql.templates:143
 msgid "Please enter the name of the database user you want to use."
 msgstr "使用するデータベースのユーザ名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../snort-mysql.templates:126 ../snort-pgsql.templates:126
+#: ../snort-mysql.templates:144 ../snort-pgsql.templates:143
 msgid "Make sure this user has been created and has write access."
 msgstr ""
 "ユーザが既に作られており、書き込み権限をもっていることを確認してください。"
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
+#: ../snort-mysql.templates:149 ../snort-pgsql.templates:148
 msgid "Please enter the password for the database connection."
 msgstr "データベース接続に使用するパスワードを入力してください。"
 
 #. Type: password
 #. Description
-#: ../snort-mysql.templates:131 ../snort-pgsql.templates:131
+#: ../snort-mysql.templates:149 ../snort-pgsql.templates:148
 msgid "Please enter a password to connect to the Snort Alert database."
 msgstr ""
 "Snort アラートデータベース に接続する際に使用するパスワードを入力してくださ"
@@ -463,19 +467,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:45
-msgid "Should Snort disable promiscous mode on the interface?"
-msgstr "このインターフェイスで promiscous モードを無効にしますか?"
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:91
+#: ../snort-pgsql.templates:105
 msgid "Do you want to set up a database for snort-pgsql to log to?"
 msgstr "snort-pqsql を利用してログに記録するため、データベースを設定しますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort-pgsql.templates:91
+#: ../snort-pgsql.templates:105
 msgid ""
 "You only need to do this the first time you install snort-pgsql. Before you "
 "go on, make sure you have (1) the hostname of a machine running a pgsql "
@@ -496,11 +494,14 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-pgsql.templates:103
+#: ../snort-pgsql.templates:117
+#, fuzzy
 msgid ""
-"Please create the database structure now, using the following command:\n"
+"Snort needs a configured database before it can successfully start up. In "
+"order to create the structure you need to run the following commands AFTER "
+"the package is installed:\n"
 " cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_pgsql.gz | psql -U <user> -h <host> -W <databasename>\n"
+" zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>\n"
 "Fill in the correct values for the user, host, and database names. "
 "PostgreSQL will prompt you for the password."
 msgstr ""
@@ -512,7 +513,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort-pgsql.templates:114
+#: ../snort-pgsql.templates:131
 msgid "Please enter the hostname of the pgsql database server to use."
 msgstr "PostgreSQL サーバのホスト名を入力してください。"
 
@@ -545,125 +546,33 @@ msgid ""
 "${DEP_CONFIG}"
 msgstr "設定ファイルで以下の無効なオプションが見つかりました: ${DEP_CONFIG}"
 
-#~ msgid "On which interface Snort should listen? (only one!)"
-#~ msgstr ""
-#~ "Snort がパケットを listen するのは、どのインターフェイスですか? (1つだけで"
-#~ "す!)"
-
-#~ msgid "What address range should Snort consider to be local?"
-#~ msgstr ""
-#~ "Snort では、どの IP アドレス範囲をローカルネットワークとして取り扱います"
-#~ "か?"
+#~ msgid "On which interface should Snort listen?"
+#~ msgstr "Snort はどのインターフェイスで listen しますか?"
 
 #~ msgid ""
-#~ "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
-#~ "192.168.1.42/32 for just one.  Specify multiple addresses on a single "
-#~ "line, seperated by ',' (comma characters). No spaces allowed!"
+#~ "Please enter the interface name which snort should listen on. The name of "
+#~ "the available interfaces are provided by running 'ip link show'. This "
+#~ "value usually is 'eth0', but you might want to vary this depending on "
+#~ "your environment, if you are using a dialup connection 'ppp0' might be "
+#~ "more appropiate."
 #~ msgstr ""
-#~ "CIDR 形式での記述が必要です。例えば 192.168.1.0/24 は 256 個の IP ブロック"
-#~ "で、192.168.1.42/32 は IP 1個となります。複数のアドレスは1行で ',' (カン"
-#~ "マ) で区切って記述します。スペース (空白) は使えません!"
+#~ "Snort が listen すべきインターフェイス名を入力してください。指定可能なイン"
+#~ "ターフェイスは 'ip link show' を実行すると確認できます。この値は大抵の場"
+#~ "合 'eth0' ですが、これは環境にとても依存するので、ダイヤルアップ接続を利用"
+#~ "している場合は 'ppp0' のほうがより適切かもしれません 。"
 
 #~ msgid ""
-#~ "Disabling the promiscuous mode means that Snort will only see packets "
-#~ "addressed to its own interface. Enabling allows it to check every packet "
-#~ "that passes the ethernet even if it's a connection between two other "
-#~ "computers"
+#~ "Notice that Snort is usually configured to inspect all traffic coming "
+#~ "from the Internet, so the interface you add here is usually the same the "
+#~ "'default route' is on.  You can determine which interface is used for "
+#~ "this running either 'ip route show' or '/sbin/route -n' (look for "
+#~ "'default' or '0.0.0.0')."
 #~ msgstr ""
-#~ "promiscuous モードを無効にすることによって Snort は自身の持つインターフェ"
-#~ "イスへ向けられたパケットのみを監視します。有効にすると、他のコンピュータ間"
-#~ "のやり取りを含めたイーサネット上の全てのパケットをチェックするようになりま"
-#~ "す。"
+#~ "通常、Snort はインターネットからやって来るすべてのトラフィックを受け取るよ"
+#~ "うに設定されるので、ここで追加したインターフェイスは大抵 'default route' "
+#~ "が存在するものと同じということに注意してください。'ip route show' または "
+#~ "'/sbin/route -n' を実行し ('default' または '0.0.0.0' を探して)、どのイン"
+#~ "ターフェイスを使うかを決めることができます。"
 
-#~ msgid "When should snort be started?"
-#~ msgstr "いつ Snort を起動しますか?"
-
-#~ msgid "Please enter the address range that snort will listen on."
-#~ msgstr "Snort が listen するアドレスの範囲を入力してください。"
-
-#~ msgid ""
-#~ "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
-#~ "192.168.1.42/32 for just one. Specify multiple addresses on a single "
-#~ "line, separated by ',' (comma characters). No spaces allowed!"
-#~ msgstr ""
-#~ "CIDR 形式での記述が必要です。例えば 192.168.1.0/24 は 256 個の IP ブロック"
-#~ "で、192.168.1.42/32 は IP 1個となります。複数のアドレスは1行で ',' (カン"
-#~ "マ) で区切って記述します。スペース (空白) は使えません!"
-
-#~ msgid ""
-#~ "Disabling the promiscuous mode means that snort will only see packets "
-#~ "addressed to it's own interface. Enabling allows it to check every packet "
-#~ "that passes the ethernet even if it's a connection between two other "
-#~ "computers"
-#~ msgstr ""
-#~ "promiscuous モードを無効にすることによって Snort は自身の持つインターフェ"
-#~ "イスへ向けられたパケットのみを監視します。有効にすると、他のコンピュータ間"
-#~ "のやり取りを含めたイーサネット上の全てのパケットをチェックするようになりま"
-#~ "す。"
-
-#~ msgid "Should snort's rules testing order be changed to Pass|Alert|Log?"
-#~ msgstr "Snort のルールセットのテスト順を Pass|Alert|Log に変更しますか?"
-
-#~ msgid ""
-#~ "If you change snort's rules testing order to Pass|Alert|Log, they will be "
-#~ "applied in Pass->Alert->Log order, instead of standard Alert->Pass->Log. "
-#~ "This will prevent people from having to make huge BPF command line "
-#~ "arguments to filter their alert rules."
-#~ msgstr ""
-#~ "Snort のルールセットのテスト順を Pass|Alert|Log に変更した場合、ルールセッ"
-#~ "トは 通常の Alert->Pass->Log ではなく Pass->Alert->Log の順番で適用されま"
-#~ "す。こうすることで alert ルールのフィルタするために長大な BPF コマンドライ"
-#~ "ンを指定しなくともよくなります。"
-
-#~ msgid ""
-#~ "You only need to do this the first time you install snort-pgsql. Before "
-#~ "you go on, make sure you have the following things at hand: - The "
-#~ "hostname of a machine running a pgsql server, set up to allow TCP\n"
-#~ "  connections to the database (from this host).\n"
-#~ "- A database on the database server - A username and password for a user "
-#~ "that has write access to this database. If you don't have _all_ of these, "
-#~ "either select 'no' and run with regular file logging support, or fix this "
-#~ "first. You can always configure database logging later, by reconfiguring "
-#~ "the snort-pgsql package."
-#~ msgstr ""
-#~ "初めて snort-pgsql をインストールした時のみ、この設定を行う必要がありま"
-#~ "す。続行の前に以下を手動で設定する必要があります: \n"
-#~ " (このホストからの) TCP 接続が許可されている PostgreSQL サーバのホスト名\n"
-#~ " そのサーバでのデータベース名、データベースの書き込み権限を持つユーザ名と"
-#~ "パスワード\n"
-#~ " これらが「すべて」そろっていない場合、 'no' を選択して通常のログ記録を行"
-#~ "うか、これを修正してください。後ほど snort-pgsql パッケージを再設定して、"
-#~ "データベースでのログ記録設定を変更することがいつでも可能です。"
-
-#~ msgid ""
-#~ "Please create the database structure now, using the following command:\n"
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -u <user> -h <host> <databasename>\n"
-#~ "Filling in the correct values for the user, host, and database names. The "
-#~ "pgsql tool will prompt you for the password."
-#~ msgstr ""
-#~ "ここで以下のコマンドを入力して、データベースを作成してください: \n"
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -u <user> -h <host> <databasename>\n"
-#~ " ユーザ名、ホスト名、データベース名は適当なものを当てはめて入力してくださ"
-#~ "い。 pgsql ツールはパスワードを要求します。"
-
-#~ msgid "Please enter the password for the database connection"
-#~ msgstr "データベース接続に使用するパスワードを入力してください"
-
-#~ msgid "Please enter a password to connect to the SNORT Alert database"
-#~ msgstr ""
-#~ "SNORT アラートデータベースに接続する際に使用するパスワードを入力してくださ"
-#~ "い。"
-
-#~ msgid "You are running snort manually."
-#~ msgstr "Snort を手動で起動しています。"
-
-#~ msgid ""
-#~ "Please restart snort using:\n"
-#~ " /etc/init.d/snort restart\n"
-#~ "to let the settings take effect."
-#~ msgstr ""
-#~ "設定変更を反映するために\n"
-#~ " /etc/init.d/snort restart\n"
-#~ " として Snort を再起動してください。"
+#~ msgid "Should Snort disable promiscous mode on the interface?"
+#~ msgstr "このインターフェイスで promiscous モードを無効にしますか?"
