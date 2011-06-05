@@ -1,3 +1,20 @@
+snort (2.7.0-10) unstable; urgency=low
+
+  * Add a new ALLOW_UNAVAILABLE definition in /etc/default/snort which
+    makes the init.d not complain if a configured interface is not available.
+    Also make the init.d script not break if no instances are configured
+    through debconf (to make it possible to use snort using just if-up.d
+    by providing a given interface instance as a 'start' parameter)
+    (Closes: #458823)
+  * Fix typo in templates, unfuzzy translations I can "understand" and
+    which seem to have fixed the typo themselves.
+  * Po-debconf updates:
+    - Update German translation provided by Erik Schanze (Closes: #462674)
+    - Updated Italian translation provided by Gianluca Cotr (Closes: #462865)
+    - Romanian translation provided by Eddy Petrisor (Closes: #460344)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 27 Jan 2008 11:12:05 +0100
+
 snort (2.7.0-9) unstable; urgency=low
 
   * Modify debian/rules to prevent autobuilders from building 
