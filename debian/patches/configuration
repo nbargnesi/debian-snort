@@ -1,0 +1,79 @@
+Index: snort-2.9.0.1/etc/snort.conf
+===================================================================
+--- snort-2.9.0.1.orig/etc/snort.conf	2011-05-24 15:22:34.727787088 -0700
++++ snort-2.9.0.1/etc/snort.conf	2011-05-24 15:23:41.127781811 -0700
+@@ -38,6 +38,7 @@
+ 
+ # Set up the external network addresses. Leave as "any" in most situations
+ var EXTERNAL_NET any
++#var EXTERNAL_NET !$HOME_NET
+ 
+ # List of DNS servers on your network 
+ var DNS_SERVERS $HOME_NET
+@@ -75,9 +76,9 @@
+ # Path to your rules files (this can be a relative path)
+ # Note for Windows users:  You are advised to make this an absolute path,
+ # such as:  c:\snort\rules
+-var RULE_PATH ../rules
+-var SO_RULE_PATH ../so_rules
+-var PREPROC_RULE_PATH ../preproc_rules
++var RULE_PATH /etc/snort/rules
++var SO_RULE_PATH /etc/snort/so_rules
++var PREPROC_RULE_PATH /etc/snort/preproc_rules
+ 
+ ###################################################
+ # Step #2: Configure the decoder.  For more information, see README.decode
+@@ -158,13 +159,13 @@
+ ###################################################
+ 
+ # path to dynamic preprocessor libraries
+-dynamicpreprocessor directory /usr/local/lib/snort_dynamicpreprocessor/
++dynamicpreprocessor directory /usr/lib/snort_dynamicpreprocessor/
+ 
+ # path to base preprocessor engine
+-dynamicengine /usr/local/lib/snort_dynamicengine/libsf_engine.so
++dynamicengine /usr/lib/snort_dynamicengine/libsf_engine.so
+ 
+ # path to dynamic rules libraries
+-# dynamicdetection directory /usr/local/lib/snort_dynamicrules
++# dynamicdetection directory /usr/lib/snort_dynamicrules
+ 
+ ###################################################
+ # Step #5: Configure preprocessors
+@@ -345,11 +346,19 @@
+ # output alert_syslog: LOG_AUTH LOG_ALERT
+ 
+ # pcap
+-# output log_tcpdump: tcpdump.log
++output log_tcpdump: tcpdump.log
+ 
+ # database
+ # output database: alert, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
+ # output database: log, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
++# 
++# On Debian Systems, the database configuration is kept in a separate file:
++# /etc/snort/database.conf.
++# This file can be empty, if you are not using any database information
++# If you are using databases, please edit that file instead of this one, to
++# ensure smoother upgrades to future versions of this package.
++include database.conf
++#
+ 
+ # prelude
+ # output alert_prelude
+@@ -399,6 +408,7 @@
+ include $RULE_PATH/rservices.rules
+ # include $RULE_PATH/scada.rules
+ include $RULE_PATH/scan.rules
++# Note: this rule is extremely chatty, enable with care
+ include $RULE_PATH/shellcode.rules
+ include $RULE_PATH/smtp.rules
+ include $RULE_PATH/snmp.rules
+@@ -409,6 +419,7 @@
+ include $RULE_PATH/tftp.rules
+ include $RULE_PATH/virus.rules
+ include $RULE_PATH/voip.rules
++# Specific web server rules:
+ # include $RULE_PATH/web-activex.rules
+ include $RULE_PATH/web-attacks.rules
+ include $RULE_PATH/web-cgi.rules
