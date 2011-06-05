@@ -1,3 +1,37 @@
+snort (2.3.2-6) unstable; urgency=low
+
+  * Add Dependency on "debconf | debconf-2.0" as requested by Joey Hess
+  * Use Debhelper compatibility version 4
+  * New mechanism for database packages:
+    - Introduce a mechanism to create /etc/snort/db-pending-config on
+      initial installation of the database packages.
+    - Have the init.d script abort the start attempt if the 
+      /etc/snort/db-pending-config file exists.
+    - Describe how to setup the database support in README-database.Debian
+      and install this document in the database packages.
+      (Closes: #205683, #219696, #265735, #265878, #290104, #291616)
+  * po-debconf changes:
+    (still waiting a little bit before switching to dbconfig-common)
+    - Sinchronise all the debconf templates of the different snort 
+      variants.
+    - Change the wait_for_db_config message, now called 'needs_db_config'
+      and provides slightly different information.
+    - Fixed typos in German debconf translation courtesy of Jens Seidel
+      (Closes: #313906)
+    - Added Japanese translation contributed by Hideki Yamane
+      (Closes: #310096)
+    - Added Vietnamese translation contributed by Clytie Siddall 
+      (Closes: #318695)
+    - Added Czech translation contributed by Jan Outrata (Closes: #321738)
+    - Updated the Spanish translation.
+    - Improve the debconf dialog with suggestions from Justin B Rye
+      (Closes: #306269)
+    - Fix the templates so that all the files use the same strings, that
+      should reduce the workload of translating almost identical lines.
+      (but also fuzzies more of the translations above)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 25 Aug 2005 14:59:29 +0200
+
 snort (2.3.2-5) unstable; urgency=medium
 
   * Medium priority since it seems some buildds are not auto building
