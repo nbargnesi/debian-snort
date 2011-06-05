@@ -7061,6 +7061,194 @@
  .IP -y
  Include the year in alert and log files
  .IP -z
+--- snort-2.3.3.orig/src/log.c
++++ snort-2.3.3/src/log.c
+@@ -1478,8 +1478,10 @@
+                 {
+                     for(j = 0; j < p->ip_options[i].len; j++)
+                     {
+-                        fprintf(fp, "%02X", p->ip_options[i].data[j]);
+-                        
++			if (p->ip_options[i].data)
++				fprintf(fp, "%02X", p->ip_options[i].data[j]);
++			else
++				fprintf(fp, "%02X", 0);
+                         if((j % 2) == 0)
+                             fprintf(fp, " ");
+                     }
+@@ -1522,7 +1524,8 @@
+             case TCPOPT_MAXSEG:
+                 bzero((char *) tmp, 5);
+                 fwrite("MSS: ", 5, 1, fp);
+-                memcpy(tmp, p->tcp_options[i].data, 2);
++                if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 2);
+                 fprintf(fp, "%u ", EXTRACT_16BITS(tmp));
+                 break;
+ 
+@@ -1535,15 +1538,20 @@
+                 break;
+ 
+             case TCPOPT_WSCALE:
+-                fprintf(fp, "WS: %u ", p->tcp_options[i].data[0]);
++                if (p->tcp_options[i].data)
++			fprintf(fp, "WS: %u ", p->tcp_options[i].data[0]);
++                else
++			fprintf(fp, "WS: %u ", 0);
+                 break;
+ 
+             case TCPOPT_SACK:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 2);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 2);
+                 fprintf(fp, "Sack: %u@", EXTRACT_16BITS(tmp));
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, (p->tcp_options[i].data) + 2, 2);
++		if (p->tcp_options[i].data)
++                	memcpy(tmp, (p->tcp_options[i].data) + 2, 2);
+                 fprintf(fp, "%u ", EXTRACT_16BITS(tmp));
+                 break;
+ 
+@@ -1553,40 +1561,47 @@
+ 
+             case TCPOPT_ECHO:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "Echo: %u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+             case TCPOPT_ECHOREPLY:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "Echo Rep: %u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+             case TCPOPT_TIMESTAMP:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "TS: %u ", EXTRACT_32BITS(tmp));
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, (p->tcp_options[i].data) + 4, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, (p->tcp_options[i].data) + 4, 4);
+                 fprintf(fp, "%u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+             case TCPOPT_CC:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "CC %u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+             case TCPOPT_CCNEW:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "CCNEW: %u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+             case TCPOPT_CCECHO:
+                 bzero((char *) tmp, 5);
+-                memcpy(tmp, p->tcp_options[i].data, 4);
++		if (p->tcp_options[i].data)
++			memcpy(tmp, p->tcp_options[i].data, 4);
+                 fprintf(fp, "CCECHO: %u ", EXTRACT_32BITS(tmp));
+                 break;
+ 
+@@ -1598,7 +1613,10 @@
+ 
+                     for(j = 0; j < p->tcp_options[i].len; j++)
+                     {
+-                        fprintf(fp, "%02X", p->tcp_options[i].data[j]);
++			if (p->tcp_options[i].data)
++				fprintf(fp, "%02X", p->tcp_options[i].data[j]);
++			else
++				fprintf(fp, "%02X", 0);
+                         
+                         if((j % 2) == 0)
+                             fprintf(fp, " ");
+--- snort-2.3.3.orig/src/output-plugins/spo_alert_fast.c
++++ snort-2.3.3/src/output-plugins/spo_alert_fast.c
+@@ -243,14 +243,14 @@
+ 
+     data = (SpoAlertFastData *)SnortAlloc(sizeof(SpoAlertFastData));
+ 
+-    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "ParseAlertFastArgs: %s\n", args););
+-
+     if(args == NULL)
+     {
+         data->file = OpenAlertFile(NULL);
+         return data;
+     }
+ 
++    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "ParseAlertFastArgs: %s\n", args););
++
+     toks = mSplit(args, " ", 2, &num_toks, 0);
+     if(strcasecmp("stdout", toks[0]) == 0)
+         data->file = stdout;
+--- snort-2.3.3.orig/src/output-plugins/spo_alert_full.c
++++ snort-2.3.3/src/output-plugins/spo_alert_full.c
+@@ -236,12 +236,12 @@
+     SpoAlertFullData *data;
+ 
+     data = (SpoAlertFullData *)SnortAlloc(sizeof(SpoAlertFullData));
+-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"ParseAlertFullArgs: %s\n", args););
+     if(args == NULL)
+     {
+         data->file = OpenAlertFile(NULL);
+         return data;
+     }
++    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"ParseAlertFullArgs: %s\n", args););
+ 
+     toks = mSplit(args, " ", 2, &num_toks, 0);
+     if(strcasecmp("stdout", toks[0]) == 0)
+--- snort-2.3.3.orig/src/output-plugins/spo_database.c
++++ snort-2.3.3/src/output-plugins/spo_database.c
+@@ -1896,8 +1896,8 @@
+ 
+    select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
+ 
+-#if defined(ENABLE_MSSQL) || defined(ENABLE_ODBC)
+-   if ( data->shared->dbtype_id == DB_MSSQL ||
++#if defined(ENABLE_MSSQL) || defined(ENABLE_ODBC) 
++   if ( data->shared->dbtype_id == DB_MSSQL || 
+         (data->shared->dbtype_id==DB_ODBC && data->u_underlying_dbtype_id==DB_MSSQL) )
+    {
+       /* "schema" is a keyword in SQL Server, so use square brackets
+@@ -1910,9 +1910,23 @@
+    else
+ #endif
+    {
++#if defined(ENABLE_MYSQL)
++      if (data->shared->dbtype_id == DB_MYSQL)
++      {
++         /* "schema" is a keyword in MYSQL, so use `schema`
++          *  to indicate that we are referring to the table
++          */
++         snprintf(select0, MAX_QUERY_LENGTH,
++               "SELECT vseq "
++               "FROM `schema`");
++     }
++     else
++#endif
++      {
+       snprintf(select0, MAX_QUERY_LENGTH,
+                "SELECT vseq "
+                "FROM schema");
++      }
+    }
+ 
+    schema_version = Select(select0,data);
 --- snort-2.3.3.orig/doc/Makefile.am
 +++ snort-2.3.3/doc/Makefile.am
 @@ -24,7 +24,7 @@
@@ -11077,3 +11265,18 @@
 +"/scripts/"
 +"/comps/"
 +"/cgi-bin-sdb/"
+--- snort-2.3.3.orig/schemas/create_mysql
++++ snort-2.3.3/schemas/create_mysql
+@@ -20,10 +20,10 @@
+ # along with this program; if not, write to the Free Software
+ # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ 
+-CREATE TABLE schema ( vseq        INT      UNSIGNED NOT NULL,
++CREATE TABLE `schema` ( vseq        INT      UNSIGNED NOT NULL,
+                       ctime       DATETIME NOT NULL,
+                       PRIMARY KEY (vseq));
+-INSERT INTO schema  (vseq, ctime) VALUES ('106', now());       
++INSERT INTO `schema`  (vseq, ctime) VALUES ('106', now());       
+ 
+ CREATE TABLE event  ( sid 	  INT 	   UNSIGNED NOT NULL,
+                       cid 	  INT 	   UNSIGNED NOT NULL,
