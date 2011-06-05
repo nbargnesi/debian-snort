@@ -104,7 +104,8 @@ Description: Flexible Network Intrusion Detection System [PostgreSQL]
 Package: snort-rules-default
 Provides: snort-rules
 Architecture: all
-Depends: debconf (>= 0.2.80), adduser (>= 3.11), syslogd | system-log-daemon, ${shlibs:Depends}, snort (>= 2.2.0) | snort-pgsql (>= 2.2.0) | snort-mysql (>= 2.2.0)
+Depends: debconf (>= 0.2.80), adduser (>= 3.11), syslogd | system-log-daemon, ${shlibs:Depends}
+Suggests: snort (>= 2.2.0) | snort-pgsql (>= 2.2.0) | snort-mysql (>= 2.2.0)
 Recommends: oinkmaster
 Description: Flexible Network Intrusion Detection System ruleset
  Snort default ruleset which provides a common set of accepted and test
