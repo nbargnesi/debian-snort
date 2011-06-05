@@ -1,16 +1,23 @@
 
-TODO
+TODO for Snort's packaging
+--------------------------
 
 - Make it easier to do changes in maintainer's config files. Currently snort,
   snort-pgsql and snort-mysql config files share a lot of code which makes it
   unmaintainable and leads to bugs like #502084 which was fixed in Snort
   (non-DB package) but not in the DB packages.
 
+  --> Maybe the generation of the /etc/snort/snort.debian.conf configuration
+  file and its handling should be moved over to snort-common (along with
+  all of the questions and templates)
+
 - Share information between package installations. If a user installs
   'snort' (no DB support) and later on snort-pgsql (with DB support) he
   will be asked the same questions (interface, IP range) twice. Maybe
   use snort-common as a placeholder for shared information. Also simplifies
   code sharing between config files
+
+  --> Fixes the above.
 
 - Consider the use of dbconfig-common to make database creation and update a
   breeze. Asking users to follow manual steps to configure the database before
@@ -27,5 +34,5 @@ TODO
 ----
 
 Javier Fernandez-Sanguino
-Mon, 04 May 2009 00:34:15 +0200
+Sun, 02 Jan 2011 00:35:14 +0100
 
