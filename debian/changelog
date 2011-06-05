@@ -1,3 +1,10 @@
+snort (2.2.0-4) unstable; urgency=medium
+
+  * Fix typo introduced in previous upload that prevents
+    ppp init script from loading properly common.parameters (Closes: #275439)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri,  8 Oct 2004 09:50:06 +0200
+
 snort (2.2.0-3) unstable; urgency=high
 
   * Added config-file discovery to ppp init.scripts so that Snort is
