@@ -42,14 +42,12 @@ case "$1" in
 	db_get snort-pgsql/interface || true; 	INTERFACE="$RET"
 	db_get snort-pgsql/address_range || true;	ADDRESS_RANGE="$RET"
 	db_get snort-pgsql/disable_promiscuous || true; DISABLE_PROMISCUOUS=$RET
-	db_get snort-pgsql/reverse_order || true;	REVERSE_ORDER=$RET
         db_get snort-pgsql/send_stats || true;        STATS_SEND="$RET"
 	db_get snort-pgsql/stats_rcpt || true;	STATS_RCPT="$RET"
 	db_get snort-pgsql/stats_treshold || true;	STATS_THRESHOLD="$RET"
 	db_get snort-pgsql/options || true;		OPTIONS="$RET"
 
 	test "$DISABLE_PROMISCUOUS" = "true" && OPTIONS="$OPTIONS -p"
-	test "$REVERSE_ORDER" = "true" && OPTIONS="$OPTIONS -o"
 	# Failsafe in case the values above are blank (jfs)
 	[ -z "$STATS_RCPT" ] && STATS_RCPT=root
 	[ -z "$STATS_THRESHOLD" ] && STATS_THRESHOLD=1
