@@ -1,3 +1,34 @@
+snort (2.3.3-5) unstable; urgency=low
+
+  * Updated Build-Dependencies to use libmysqlclient15-dev instead of the 
+    old libmysqlclient10 library (Closes: #356706)
+  * Add a 'DEBIAN_SNORT_SEND_STATS' option (controlled by debconf) to allow
+    users to define if snort should send daily stats. Users that want to
+    change the frequency should manually move over the cron.daily script
+    to other cron.XXX locations (Closes: #353035)
+  * Updated debconf translations:
+    - Dutch translation with patch provided by Peter Vandenabeele
+    - Spanish Debconf translation ('send_stats' template)
+  * Do not indent '@' in the e-mail of users that receive the stats (Closes: #335803)
+  * Preliminary code (only in snort.config) to detect if the default interface
+    is up when configuring Snort, the Debconf question priority is raised if
+    the interface is not up or it does not exist and the user is pestered
+    if he still provides an invalid answer (unless he doesn't see the
+    question, which is the case if running with debconf priority set to
+    'high', in this case, we bail out)
+    Note: will introduce this in the DB packages after it gets some testing
+    out there.
+  * Change the Debconf priority of the note that warns that  the configuration
+    is not working to 'critical' (was 'high')
+  * Acknowledge NMU made by Margarita:
+    * Drop automake1.6 dependency in Build-Depends (Closes: #335143)
+    * Updated config.guess and config.sub with the latest versions available
+      to prevent FTBFS on GNU/k*BSD (Closes: #342446)
+    * Updated german debconf translation with patch provided by Erik Schanze 
+      (Closes: #345855)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Wed, 22 Mar 2006 02:09:01 +0100
+
 snort (2.3.3-4) unstable; urgency=low
 
   * Build-Depend on newer automake version: 1.7 (Closes: #335143)
@@ -9,6 +40,14 @@ snort (2.3.3-3) unstable; urgency=low
   * Properly remove the snort user on purge.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Thu, 20 Oct 2005 01:13:47 +0200
+
+snort (2.3.3-2.1) unstable; urgency=low
+
+  * NMU to drop automake1.6 dependency (Closes: #335143)
+  * Updated config.guess and config.sub (Closes: #342446)
+  * Updated german debconf translation (Closes: #345855)
+
+ -- Margarita Manterola <marga@debian.org>  Sun, 22 Jan 2006 21:54:43 -0300
 
 snort (2.3.3-2) unstable; urgency=high
 
