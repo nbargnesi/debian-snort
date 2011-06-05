@@ -1,3 +1,11 @@
+snort (2.3.3-9) unstable; urgency=low
+
+  * Do not try to remove /etc/snort in postrm if it does not exist anymore
+    when purging (Closes: #389766)
+  * Simplify coreutils dependencies (Closes: #381836)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Sun,  1 Oct 2006 23:29:20 +0200
+
 snort (2.3.3-8) unstable; urgency=medium
 
   * Fix security issue CVE-2006-2769, potential evasion in URI content
