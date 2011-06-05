@@ -4,8 +4,17 @@
   config file provided, this is related to bug #247665 which is partially
   fixed by the snort-common Source-Version depends introduced in 2.2.0-2
 
+- Provide support to avoid specifying the address range for multiple
+  interfaces (or skip this if you have more than once and substitute
+  by a note telling the admin to configure this in the snort.$IFACE.conf 
+  file). 
+
+- Rewrite the "address range" question. It actually does not explain what
+  it is actually used for (HOME_NET)
+
 - Determine, if the interface is configured and up and has an assigned
   IP address, the address range for the sensor in an automatic way
+  This should also handle multiple interfaces.
   (see bug #248000)
 
 - Provide an update script, as required in #191105, snort-rules-default
