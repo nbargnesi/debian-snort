@@ -1,3 +1,13 @@
+snort (2.8.5.2-1) unstable; urgency=low
+
+  * New upstream release 
+     - Fixes CVE-2009-3641: possible DoS due to crafted IPv6 packet when
+       then -v option is enabled
+  * Fix src/snort.c since it is not buildable, it seems that the distributed
+    source code has a bug.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 11 Jan 2010 23:53:05 +0100
+
 snort (2.8.4.1-6) unstable; urgency=low
 
   * Package rebuild to fix libmysql depedency (Closes: #548831)
