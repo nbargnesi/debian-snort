@@ -1,5 +1,5 @@
---- snort-2.3.2.orig/configure
-+++ snort-2.3.2/configure
+--- snort-2.3.3.orig/configure
++++ snort-2.3.3/configure
 @@ -1,19 +1,10 @@
  #! /bin/sh
  # Guess values for system-dependent variables and create Makefiles.
@@ -6859,8 +6859,8 @@
    exec 5>>config.log
    # Use ||, not &&, to avoid exiting from the if with $? = 1, which
    # would make configure fail if this is the last instruction.
---- snort-2.3.2.orig/configure.in
-+++ snort-2.3.2/configure.in
+--- snort-2.3.3.orig/configure.in
++++ snort-2.3.3/configure.in
 @@ -288,7 +288,7 @@
    echo "   http://www.tcpdump.org"
    echo "   or use the --with-libpcap-* options, if you have it installed"
@@ -7050,8 +7050,41 @@
    fi
  
  fi
---- snort-2.3.2.orig/etc/snort.conf
-+++ snort-2.3.2/etc/snort.conf
+--- snort-2.3.3.orig/snort.8
++++ snort-2.3.3/snort.8
+@@ -247,7 +247,7 @@
+ Show the version number and exit.
+ .IP -X
+ Dump the raw packet data starting at the link layer.  This switch overrides the
+-'-d' switch.
++\&'-d' switch.
+ .IP -y
+ Include the year in alert and log files
+ .IP -z
+--- snort-2.3.3.orig/doc/Makefile.am
++++ snort-2.3.3/doc/Makefile.am
+@@ -24,7 +24,7 @@
+ snort_schema_v106.pdf \
+ README.wireless PROBLEMS RULES.todo WISHLIST faq.pdf faq.tex
+ 
+-DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux faq.pdf faq.tex snort_manual.pdf
++DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux faq.pdf snort_manual.pdf faq.log faq.toc faq.aux
+ 
+ doc_DIR = $(prefix)/doc
+ 
+--- snort-2.3.3.orig/doc/Makefile.in
++++ snort-2.3.3/doc/Makefile.in
+@@ -105,7 +105,7 @@
+ README.wireless PROBLEMS RULES.todo WISHLIST faq.pdf faq.tex
+ 
+ 
+-DISTCLEANFILES = snort_manual.log snort_manual.toc snort_manual.aux faq.pdf faq.tex snort_manual.pdf
++DISTCLEANFILES = snort_manual.log snort_manual.toc snort_manual.aux faq.pdf snort_manual.pdf faq.log faq.toc faq.aux
+ 
+ doc_DIR = $(prefix)/doc
+ 
+--- snort-2.3.3.orig/etc/snort.conf
++++ snort-2.3.3/etc/snort.conf
 @@ -44,7 +44,7 @@
  var HOME_NET any
  
@@ -7093,7 +7126,7 @@
  
  #
  #  Example unique server configuration
-@@ -511,13 +509,23 @@
+@@ -527,13 +525,23 @@
  # -------------------------------------------------
  # The only argument is the output file name.
  #
@@ -7118,7 +7151,7 @@
  # output database: log, mysql, user=root password=test dbname=db host=localhost
  # output database: alert, postgresql, user=snort dbname=snort
  # output database: log, odbc, user=snort dbname=snort
-@@ -684,7 +692,7 @@
+@@ -700,7 +708,7 @@
  # include $RULE_PATH/porn.rules
  # include $RULE_PATH/info.rules
  # include $RULE_PATH/icmp-info.rules
@@ -7127,14 +7160,14 @@
  # include $RULE_PATH/chat.rules
  # include $RULE_PATH/multimedia.rules
  # include $RULE_PATH/p2p.rules
-@@ -696,4 +704,4 @@
+@@ -712,4 +720,4 @@
  # Note for Windows users:  You are advised to make this an absolute path,
  # such as:  c:\snort\etc\threshold.conf
  # Uncomment if needed.
 -# include threshold.conf
 +include threshold.conf
---- snort-2.3.2.orig/rules/classification.config
-+++ snort-2.3.2/rules/classification.config
+--- snort-2.3.3.orig/rules/classification.config
++++ snort-2.3.3/rules/classification.config
 @@ -0,0 +1,66 @@
 +# $Id: classification.config,v 1.11 2003/10/20 15:03:03 chrisgreen Exp $
 +# The following includes information for prioritizing rules
@@ -7202,8 +7235,8 @@
 +config classification: kickass-porn,SCORE! Get the lotion!,1
 +config classification: policy-violation,Potential Corporate Privacy Violation,1
 +config classification: default-login-attempt,Attempt to login by a default username and password,2
---- snort-2.3.2.orig/rules/generators
-+++ snort-2.3.2/rules/generators
+--- snort-2.3.3.orig/rules/generators
++++ snort-2.3.3/rules/generators
 @@ -0,0 +1,37 @@
 +# Master Registry of Snort Generator Ids
 +#
@@ -7242,8 +7275,8 @@
 +reserved                   119 # TBA
 +reserved                   120 # TBA
 +snmp                       121 # Andrew Baker's newer SNMP decoder
---- snort-2.3.2.orig/rules/gen-msg.map
-+++ snort-2.3.2/rules/gen-msg.map
+--- snort-2.3.3.orig/rules/gen-msg.map
++++ snort-2.3.3/rules/gen-msg.map
 @@ -0,0 +1,131 @@
 +# $Id: gen-msg.map,v 1.13.4.1 2004/09/14 21:09:08 bmc Exp $
 +# GENERATORS -> msg map
@@ -7376,8 +7409,8 @@
 +121 || 2 || flow-portscan: Sliding Scale Scanner Limit Exceeded
 +121 || 3 || flow-portscan: Fixed Scale Talker Limit Exceeded
 +121 || 4 || flow-portscan: Sliding Scale Talker Limit Exceeded
---- snort-2.3.2.orig/rules/reference.config
-+++ snort-2.3.2/rules/reference.config
+--- snort-2.3.3.orig/rules/reference.config
++++ snort-2.3.3/rules/reference.config
 @@ -0,0 +1,14 @@
 +# $Id: reference.config,v 1.4 2003/10/20 15:03:04 chrisgreen Exp $
 +# The following defines URLs for the references found in the rules
@@ -7393,13 +7426,13 @@
 +config reference: nessus    http://cgi.nessus.org/plugins/dump.php3?id=
 +config reference: url       http://
 +
---- snort-2.3.2.orig/rules/sid
-+++ snort-2.3.2/rules/sid
+--- snort-2.3.3.orig/rules/sid
++++ snort-2.3.3/rules/sid
 @@ -0,0 +1,2 @@
 +# $Id: sid,v 1.129.2.8 2004/11/11 20:23:50 bmc Exp $
 +3005
---- snort-2.3.2.orig/rules/sid-msg.map
-+++ snort-2.3.2/rules/sid-msg.map
+--- snort-2.3.3.orig/rules/sid-msg.map
++++ snort-2.3.3/rules/sid-msg.map
 @@ -0,0 +1,2825 @@
 +# $Id: sid-msg.map,v 1.147.2.8 2004/11/11 20:23:50 bmc Exp $
 +# Format: SID || MSG || Optional References || Optional References ...
@@ -10226,8 +10259,8 @@
 +2997 || NETBIOS SMB-DS InitiateSystemShutdown little endian andx attempt
 +2998 || NETBIOS SMB-DS InitiateSystemShutdown unicode andx attempt
 +2999 || NETBIOS SMB-DS InitiateSystemShutdown unicode little endian andx attempt
---- snort-2.3.2.orig/rules/snort.conf
-+++ snort-2.3.2/rules/snort.conf
+--- snort-2.3.3.orig/rules/snort.conf
++++ snort-2.3.3/rules/snort.conf
 @@ -0,0 +1,625 @@
 +#--------------------------------------------------
 +#   http://www.snort.org     Snort 2.2.0 Ruleset
@@ -10854,8 +10887,8 @@
 +# such as:  c:\snort\etc\threshold.conf
 +# Uncomment if needed.
 +# include threshold.conf
---- snort-2.3.2.orig/rules/threshold.conf
-+++ snort-2.3.2/rules/threshold.conf
+--- snort-2.3.3.orig/rules/threshold.conf
++++ snort-2.3.3/rules/threshold.conf
 @@ -0,0 +1,61 @@
 +# Configure Thresholding and Suppression
 +# ======================================
@@ -10918,8 +10951,8 @@
 +#
 +# suppress gen_id 1, sig_id 1852, track by_dst, ip 10.1.1.0/24
 +
---- snort-2.3.2.orig/rules/unicode.map
-+++ snort-2.3.2/rules/unicode.map
+--- snort-2.3.3.orig/rules/unicode.map
++++ snort-2.3.3/rules/unicode.map
 @@ -0,0 +1,104 @@
 +# Windows Version: 5.00.2195
 +# OEM codepage: 437
@@ -11025,8 +11058,8 @@
 +65001 (UTF-8)
 +
 +
---- snort-2.3.2.orig/rules/cgi-bin.list
-+++ snort-2.3.2/rules/cgi-bin.list
+--- snort-2.3.3.orig/rules/cgi-bin.list
++++ snort-2.3.3/rules/cgi-bin.list
 @@ -0,0 +1,16 @@
 +# (C) Copyright 2001,2002 Brian Caswell, et al.  All rights reserved.
 +# $Id: cgi-bin.list,v 1.3 2002/08/18 20:28:43 cazz Exp $
