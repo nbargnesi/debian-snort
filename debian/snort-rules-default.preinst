@@ -25,7 +25,7 @@ check_md5() {
 if [ ! -d /etc/snort/rules ]
 then
 	mkdir -p /etc/snort/rules
-	chown root.root /etc/snort/rules
+	chown root:root /etc/snort/rules
 	chmod 755 /etc/snort/rules
 fi
 
