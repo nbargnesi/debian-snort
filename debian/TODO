@@ -2,6 +2,34 @@
 TODO things for Snort in Debian
 -------------------------------
 
+- Offer the user an option to automatically create the database since
+  the schemas (at /usr/share/doc/snort*) stuff is not available on installation.
+  Review what other packages (gnudip? horde? imp? sitebar? openwebmail?)
+  have done and consider the use of the generic user for database
+  administration.  Note that database permissions for the 'snort' 
+  user need to be properly setup!
+  Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
+  http://lists.debian.org/debian-devel/2004/10/msg00340.html
+  and
+  http://lists.debian.org/debian-devel/2004/10/msg00962.html
+
+  I probably need to take a look at how wwwconfig-common or use the
+  new dbconfig-common information does it...
+
+- Include Rpm improvements to the init.d file suchas :
+
+   * The init.d file could use separate LOGDIR files per interface instead of
+     one for all instances (bound to break) just like it's done in the RedHat
+     init script. The check_logdir function should be called per possible LOGDIR
+     definition. If the LOGDIR did not exist it should be created with proper
+     permissions.
+
+     Note: logrotate definitions will need to be changed if this is changed
+
+   * stats option in the init.d file
+   * Additional /etc/default/snort parameters similar to the RPM ones for
+     compatibility
+
 - Use ucf to integrate changes by the maintainer when upgrading
 
 - Break up the init.d script into reusable functions 
@@ -14,19 +42,6 @@ TODO things for Snort in Debian
   it would be able to remove its own logs)
 
 - Check if --enable-flexresp works with libnet 1.1.x
-
-- Offer the user an option to automatically create the database since
-  the schemas (at /usr/share/doc/snort*) stuff is not available on installation.
-  Review what other packages (gnudip? horde? imp? sitebar? openwebmail?)
-  have done and consider the use of the generic user for database
-  administration.  Note that database permissions for the 'snort' 
-  user need to be properly setup!
-  Also see: http://lists.debian.org/debian-devel/2004/08/msg01104.html
-  http://lists.debian.org/debian-devel/2004/10/msg00340.html
-  and
-  http://lists.debian.org/debian-devel/2004/10/msg00962.html
-
-  I probably need to take a look at how wwwconfig-common does it...
 
 - The snort-common package currently does not check if you _accepted_ the
   config file provided, this is related to bug #247665 which is partially
