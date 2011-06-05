@@ -1,3 +1,11 @@
+snort (2.3.3-13) unstable; urgency=low
+
+  * Translations added:
+    - Tamil translation, provided by Tirumurti Vasudevan (Closes: #413830)
+    - Russian translation, provided by Yuriy Talakan' (Closes: #411822)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue, 13 Mar 2007 16:30:52 +0100
+
 snort (2.3.3-12) unstable; urgency=low
 
   * Translations updated:
