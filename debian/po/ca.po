@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort_2.0.1-2_templates\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-10-25 23:35+0200\n"
+"POT-Creation-Date: 2004-11-13 15:49+0100\n"
 "PO-Revision-Date: 2004-01-31 19:41GMT\n"
 "Last-Translator: Aleix Badia i Bosch <abadia@ica.es>\n"
 "Language-Team: Debian L10n Catalan <debian-l10n-catalan@lists.debian.org>\n"
@@ -226,6 +226,24 @@ msgid ""
 msgstr ""
 "Per l'efectivitat dels canvis reinicieu el Snort utilitzant:\n"
 " /etc/init.d/snort start\n"
+
+#. Type: note
+#. Description
+#: ../snort.templates:92
+msgid "There is an error in your configuration"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort.templates:92
+msgid ""
+"Your Snort configuration is not correct and Snort will not be able to start "
+"up normally. Please review your configuration and fix it. If you do not do "
+"this, Snort package upgrades will probably break. To check which error is "
+"being generated run '/usr/sbin/snort -T -c /etc/snort/snort.conf' (or point "
+"to an alternate configuration file if you are using different files for "
+"different interfaces)"
+msgstr ""
 
 #. Type: string
 #. Description
