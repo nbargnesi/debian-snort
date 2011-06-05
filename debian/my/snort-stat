@@ -71,8 +71,9 @@ while (<>) {
         $alert->{CLASS} = $1; $alert->{CONTENT} = $2; $alert->{PRIORITY} = $3;
 	$line=<>;
       }
-      if ( $line =~ m/^(\d+)\/(\d+)\-(\d+)\:(\d+)\:(\d+)\.(\d+)\s
+      if ( $line =~ m/^(\d+)\/(\d+)(?:\/\d+)?\-(\d+)\:(\d+)\:(\d+)\.(\d+)\s
 	   ([\d\.]+)[\:]*([\d]*)\s[\-\>]+\s([\d\.]+)[\:]*([\d]*)/ox) {
+
 	   	next if (!$opt_a && $line =~ /^$yesterday_date_string/);
         $alert->{MON} = $1;   $alert->{DAY} = $2;   $alert->{HOUR} = $3; 
         $alert->{MIN} = $4;   $alert->{SEC} = $5;   $alert->{SADDR} = $7; 
