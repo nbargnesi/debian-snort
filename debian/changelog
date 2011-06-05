@@ -1,3 +1,27 @@
+snort (2.8.5.2-5) unstable; urgency=high
+
+  * Final RC bug fix:
+  * snort-common: Create the database.conf file on package's configuration not
+    on the preinstallation script (Closes: #607801)
+  * Lintian fixes:
+     * debian/control: Upgrade standards version, no changes required
+     * debian/snort.init.d: add $remote_fs to Required-Start and Required-Stop
+     * debian/snort.templates: Move the config_error template over to  
+        debian/snort-common.templates as it is used there
+     * debian/snort-{mysql,pgsql}.templates: remove the config_error template
+        there as it is not used
+     * debian/control: Upgrade the Build-Depends on debhelper
+     * src/parser.c: Typo fix argu*e*ment -> argument
+     * src/preprocessors/spp_perfmonitor.c,
+       src/dynamic-preprocessors/dns/spp_dns.c: 
+         Typo fix: sep*e*rated --> separated
+  * rules/web-misc.rules: Limit the depth when searching for an HTTP version 
+    to prevent false positives from apt-get User-Agent string (LP: #258155)
+  * debian/snort.init.d: Separate warning message from main messages.
+  * debian/TODO: review contents and update
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 26 Dec 2010 13:20:25 +0100
+
 snort (2.8.5.2-4) unstable; urgency=high
 
   * [ The Merry Xmas and Merry RC bug fixing Release! ]
@@ -93,7 +117,7 @@ snort (2.8.4.1-4) unstable; urgency=low
     if 'start' was executed. (Closes: #540450)
   * Add information on how the init.d script works (Closes: #512810)
   * Fix name of file in README-database.Debian, remove the database
-    information from the main README.Debian file.
+    information from the main README.Debian file. (LP: #302218)
   * Fix bug in debian/clean-sources.sh script (Closes: #547316)
   * Use a patch provided by Dave Walker <DaveWalker_AT_ubuntu.com>
     to prevent starting snort-mysql|pgsql if the database is not configured 
