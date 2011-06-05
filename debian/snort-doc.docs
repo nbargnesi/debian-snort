@@ -16,7 +16,6 @@ doc/README.PLUGINS
 doc/README.sfportscan
 doc/README.thresholding
 doc/README.UNSOCK
-doc/README.WIN32
 doc/README.wireless
 doc/RULES.todo
 doc/snort_schema_v106.pdf
