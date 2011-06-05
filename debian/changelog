@@ -1,3 +1,38 @@
+snort (2.3.3-2) unstable; urgency=high
+
+  * Backport the following changes introduced in 2.4.1. Upstream changelog:
+      * src/log.c:
+        Fix problem in sniffer mode when incomplete TCP option data is received.
+        Thanks A Hernandez for the find.
+    (Closes: #328134)
+    Note: This is a "security" bug but no CVE is assigned, it is actually
+    something that can happen only if a Snort user willingly shoots himself
+    on the foot (uses ASCII logging mode) or if he uses the fast output
+    mode with some non-default options.
+    For a detailed view see:
+    Martin Roesch's mail "Snort DoS Fallacies" to snort-users and bugtraq:
+    http://marc.theaimsgroup.com/?l=bugtraq&m=112665341207363&w=2
+    http://marc.theaimsgroup.com/?l=snort-users&m=112657845119746&w=2
+    http://marc.theaimsgroup.com/?l=snort-users&m=112667020331513&w=2
+    http://marc.theaimsgroup.com/?l=snort-devel&m=112672013010948&w=2
+    and also
+    http://www.snort.org/pub-bin/snortnews.cgi#58
+    To summarise: The only recommended alert methods in a production sensor
+    are unified, syslog or database. And unified is The Right Way to run
+    a sensor (others have important performance issues under high load )
+    NOTE to Debian Security teams: I don't believe this bug merits a DSA 
+    (or a DTSA for that matter)
+    (Closes: #328134)
+  * Backport the following changes introduced in 2.4.2. Upstream changelog:
+      * src/output-plugins/spo_log_database.c:
+      * schemas/create_mysql:
+        Fixes to address schema being a keyword in MySQL 5.0.  Thanks Wes Young,
+        Adolfo Gomez, and Aleem Mawji for the updates.
+    (Closes: #327791)
+  * Added Swedish translation provided by Daniel Nylander (Closes: #330834)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Fri, 30 Sep 2005 21:21:43 +0200
+
 snort (2.3.3-1) unstable; urgency=low
 
   * New upstream release.
