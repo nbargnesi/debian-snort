@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Javier Fernandez-Sanguino Pen~a <jfs@computer.org>
 Uploaders: Pascal Hakim <pasc@debian.org>
-Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 4.1.13), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), texlive, texlive-latex-base, gs-common
+Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 4.1.13), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), texlive, texlive-latex-base, gs-common, libprelude-dev, iptables-dev
 Standards-Version: 3.5.6
 
 Package: snort
@@ -24,7 +24,7 @@ Description: Flexible Network Intrusion Detection System
  via Samba.
  .
  This package provides the plain-vanilla snort distribution and does not
- provide database support (available in snort-pgsql and snort-mysql).
+ provide database (available in snort-pgsql and snort-mysql) support.
  .
  Homepage: http://www.snort.org
 
