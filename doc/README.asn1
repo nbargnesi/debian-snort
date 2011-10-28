@@ -68,3 +68,92 @@ alert udp any any -> any 161 (msg:"Oversize SNMP Length"; \
     
 alert tcp any any -> any 80 (msg:"ASN1 Relative Foo"; content:"foo"; \
     asn1: bitstring_overflow, print, relative_offset, 0;)
+
+
+Background on ASN.1
+-------------------
+
+The following comments were compiled by Chris Reid circa Feb 2003.
+
+ASN.1 - Abstract Syntax Notation number One 
+
+* * * * * *
+
+An interesting site about ASN.1 (and its primary author Professor John
+Larmouth) can be found here:  http://www.oss.com/asn1/larmouth.html
+including an electronic copy of Professor Larmouth's book titled
+"ASN.1 Complete".
+
+* * * * * *
+
+The following descriptions are copied from the website:
+"http://asn1.elibel.tm.fr/".  I have no affiliation with this website,
+but reference it here because they provide a large amount of useful
+information about ASN.1.
+
+"Abstract Syntax Notation number One (ASN.1) is an international standard
+ that aims at specifying data used in communication protocols. It is a
+ powerful and complex language: its features are designed to describe
+ accurately and efficiently communications between homogeneous or
+ heterogeneous systems."
+
+"ASN.1 is a formal notation used for describing data transmitted by
+ telecommunications protocols, regardless of language implementation and
+ physical representation of these data, whatever the application, whether
+ complex or very simple.
+ 
+    "-------------------------------------------
+     Abstract Syntax Notation number One
+     is a standard that defines a formalism
+     for the specification of abstract data types. 
+     -------------------------------------------
+
+"The notation provides a certain number of pre-defined basic types such as:
+ -  integers (INTEGER), 
+ -  booleans (BOOLEAN), 
+ -  character strings (IA5String, UniversalString...), 
+ -  bit strings (BIT STRING), 
+ -  etc., 
+
+"and makes it possible to define constructed types such as:  
+ -  structures (SEQUENCE), 
+ -  lists (SEQUENCE OF), 
+ -  choice between types (CHOICE), 
+ -  etc. "
+
+* * * * * *
+
+My own notes about ASN.1, as understood from skimming through Section 3
+("Encodings") of the book "ASN.1 Complete"...
+
+ - Data in ASN.1 is represented by groupings composed of T-L-V (Type,
+   Length, and Value)
+
+ - Datatypes are identified by the bottom six bits of a single byte.
+   Datatypes values 0 through 30 are represented in a single byte.
+   Value "31" (0x1f) is an escape marker to indicate the datatype
+   value continues in the following bytes -- as long as successive
+   bytes have the high bit set.
+
+ - The length of a given datatype can be represented in any of three
+   ways:  Short Length, Long Length, and Indefinite Length.
+
+ - Short Lengths are stored in one byte, and can indicate data lengths
+   of up to 127 bytes.  Note that Short Lengths are identified by an
+   upper bit of zero.
+
+ - Long Lengths are stored in multiple bytes.  The first byte indicates
+   how many bytes are required to contain the Long Length, and the
+   successive bytes contain the value of the Long Length.  Note that
+   the first byte of Long Lengths are identified by an upper bit of one,
+   and that only the bottom seven bits of the first byte are used to
+   represent how many bytes are required to contain the Long Length.
+   Also, note that the maximum allowed value of the bottom seven bits
+   is 126 (0x7e), and that 127 (0x7f) is reserved for future use.
+
+ - Indefinite Lengths are conceptually like BLOB data.  The upper bit of
+   the first byte is set to one, and the bottom seven bits are zero.  The
+   data value follows immediately, and continues until two zero-bytes
+   are encountered.
+
+

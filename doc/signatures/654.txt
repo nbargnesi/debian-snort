@@ -60,3 +60,5 @@ Additional References:
 http://www.securiteam.com/exploits/6C00O1F00Y.html
 http://www.synnergy.net/downloads/advisories/SLA-2000-01.pakmail.txt
 http://online.securityfocus.com/bid/748
+
+--

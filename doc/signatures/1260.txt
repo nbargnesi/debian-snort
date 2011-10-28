@@ -1,54 +1,61 @@
-# This is a template for submitting snort signature descriptions to
-# the snort.org website
-#
-# Ensure that your descriptions are your own
-# and not the work of others.  References in the rules themselves
-# should be used for linking to other's work. 
-#
-# If you are unsure of some part of a rule, use that as a commentary
-# and someone else perhaps will be able to fix it.
-# 
-# $Id: 1260.txt,v 1.2.2.2 2004/08/10 13:52:03 bmc Exp $
-#
-# 
-
-Rule: alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS 80 (msg:"WEB-MISC long basic authorization string"; flow:to_server; flags:A+; content:"Authorization\: Basic "; nocase; dsize:>1000; classtype:attempted-dos; reference:bugtraq,3230; sid:1260; rev:3;) 
+Rule:
 
 --
-Sid: 1260
+Sid:
+1260
 
 --
-Summary: AOLServer Long Authentication String Buffer Overflow Vulnerability
+Summary:
+This event is generated when an attempt is made to exploit a known
+vulnerability in AOLServer.
 
 --
-Impact: Crash AOLServer, run code of attackers choice
+Impact:
+Possible Denial of Service (DoS) and execution of arbitrary code.
 
 --
-Detailed Information: AOLServer is a freely available, open source web server. It was originally written by AOL, and is currently developed and maintained by AOL and public domain. 
+Detailed Information:
+A vulnerability exists in versions of AOL Server that may allow an
+attacker to overflow a fixed length buffer and execute code of their
+choosing on a vulnerable host.
 
-A problem has been discovered that can allow remote users to crash an AOLServer, denying service to legitimate users of the system. The problem is due to the handling of passwords. It is possible for a remote user to overflow a buffer within the AOLServer process by sending a password of 2048 bytes. This could result in the overwriting of stack variables, including the return address. 
-
-This makes it possible for a remote user to execute arbitrary code with the privileges of the AOLServer process, and potentially gain local access.
-
---
-Attack Scenarios: A attacker sends a specially crafted Basic Authorisation string to overflow the interal buffer.  She may then gain access with the same privileges as AOLServer
-
---
-Ease of Attack: Exploits are available.
+The problem lies in the processing of user supplied passwords used in
+basic authentication to the host. A long password may exceed a fixed
+length buffer and allow an attacker to overwrite portions of memory and
+execute code of their choosing.
 
 --
-False Positives: Any Basic Authorisation request with data > 1000 will trigger this alert.  If the autorisation is preceded by a long url this rule will be triggered.
+Affected Systems:
+	AOL AOLServer 3.0 and 3.2
 
 --
-False Negatives: Not known
+Attack Scenarios:
+An attacker needs to supply a password 2048 bytes in length to trigger
+the overflow.
 
 --
-Corrective Action: Upgrade to AOLServer 3.4.
+Ease of Attack:
+Simple. Exploits are available.
 
 --
-Contributors: Detailed Information obtained from SecurityFocus.
-False Positive information by John Berkers
+False Positives:
+None known.
+
+--
+False Negatives:
+None known.
+
+--
+Corrective Action:
+Upgrade to the latest non-vulnerable version of the software.
+
+--
+Contributors:
+Sourcefire Vulnerability Research Team
+Brian Caswell <bmc@sourcefire.com>
+Nigel Houghton <nigel.houghton@sourcefire.com>
 
 -- 
 Additional References:
-Bugtraq, 3230
+
+--

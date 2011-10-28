@@ -1,55 +1,59 @@
 Rule:
---
-Sid: 257
 
 --
-Summary: A remote machine attempted to determine the version of your DNS
-server.
+Sid:
+257
 
 --
-Impact: Could indicate an impending attack, or maybe an innocent
-reconnaissance attempt. 
+Summary:
+This event is generated when an attempt is made to determine the version
+of BIND being used on a DNS server.
 
 --
-Detailed Information: A remote machine attempted to determine the version
-of your BIND DNS server.
+Impact:
+Information gathering. This activity may indicate reconnaisance before 
+an impending attack.
+
+--
+Detailed Information: 
+A remote machine attempted to determine the version of BIND running on a
+nameserver.
 
 --
 Affected Systems:
+	All DNS nameservers
  
 --
 Attack Scenarios:
 As part of reconnaissance leading upto a potential intrusion attempt, an
-attacker may attempt to determine the BIND version that you are running in
-hopes of finding an unpatched version.
+attacker may attempt to determine the BIND version that is in use so
+that a vulnerable version can be used as an attack vector.
 
 --
 Ease of Attack:
-Simple
+Simple.
+
 --
 False Positives:
 None Known
-None.
 
 --
 False Negatives:
 None Known
-None.
 
 --
 Corrective Action:
-Disable the ability for untrusted (remote) machines to determine your named
-version.  
+Disable the ability for untrusted (remote) machines to determine the named
+version.
 
 --
 Contributors:
 Original rule writer unknown
-Original document author unkown
+Snort documentation contributed by Jon Hart <warchild@spoofed.org>
 Sourcefire Vulnerability Research Team
 Nigel Houghton <nigel.houghton@sourcefire.com>
-Jon Hart <warchild@spoofed.org>
 
 -- 
 Additional References:
 
-
+--

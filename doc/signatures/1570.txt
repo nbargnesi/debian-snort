@@ -6,8 +6,8 @@ Sid:
 
 --
 Summary:
-This event is generated when an attempt is made to exploit a known 
-vulnerability in a CGI web application running on a server.
+This event is generated when an attempt is made to access the file
+loadpage.cgi.
 
 --
 Impact:
@@ -17,13 +17,14 @@ of arbitrary code of the attackers choosing in some cases.
 
 --
 Detailed Information:
-This event is generated when an attempt is made to gain unauthorized
-access to a CGI application running ona web server. Some applications do
-not perform stringent checks when validating the credentials of a client
-host connecting to the services offered on a host server. This can lead
-to unauthorized access and possibly escalated privileges to that of the
-administrator. Data stored on the machine can be compromised and trust
-relationships between the victim server and other hosts can be exploited by the attacker.
+This event is generated when an attempt is made to gain access to the
+script loadpage.cgi, part of the CGI application AHG EZshopper running
+on a web server. Some applications do not perform stringent checks when
+validating the credentials of a client host connecting to the services
+offered on a host server. This can lead to unauthorized access and
+possibly escalated privileges to that of the administrator. Data stored
+on the machine can be compromised and trust relationships between the
+victim server and other hosts can be exploited by the attacker.
 
 If stringent input checks are not performed by the CGI application, it
 may also be possible for an attacker to execute system binaries or
@@ -31,7 +32,8 @@ malicious code of the attackers choosing.
 
 --
 Affected Systems:
-	All systems running CGI applications
+
+	AHG EZshopper v3.0 and v2.0 for UNIX
 
 --
 Attack Scenarios:
@@ -65,3 +67,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+NSFocus:
+http://www.nsfocus.com/english/homepage/research/0009.htm
+
+--

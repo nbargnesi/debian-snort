@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: policy.rules,v 1.35.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: policy.rules,v 1.38.2.1 2004/10/13 20:25:57 bmc Exp $
 #-------------
 # POLICY RULES
 #-------------
@@ -19,7 +19,7 @@ alert udp $EXTERNAL_NET any -> $HOME_NET 5632 (msg:"POLICY PCAnywhere server res
 alert tcp $SMTP_SERVERS 25 -> $EXTERNAL_NET any (msg:"POLICY SMTP relaying denied"; flow:established,from_server; content:"550 5.7.1"; depth:70; reference:arachnids,249; reference:url,mail-abuse.org/tsi/ar-fix.html; classtype:misc-activity; sid:567; rev:11;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 9100 (msg:"POLICY HP JetDirect LCD modification attempt"; flow:to_server,established; content:"@PJL RDYMSG DISPLAY ="; reference:arachnids,302; reference:bugtraq,2245; classtype:misc-activity; sid:568; rev:7;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 9000:9002 (msg:"POLICY HP JetDirect LCD modification attempt"; flow:to_server,established; content:"@PJL RDYMSG DISPLAY ="; reference:arachnids,302; reference:bugtraq,2245; classtype:misc-activity; sid:510; rev:8;)
-alert ip 63.251.224.177 any -> $HOME_NET any (msg:"POLICY poll.gotomypc.com access"; reference:url,www.gotomypc.com/help2.tmpl; classtype:misc-activity; sid:1429; rev:2;)
+alert ip 66.151.158.177 any -> $HOME_NET any (msg:"POLICY poll.gotomypc.com access"; reference:url,www.gotomypc.com/help2.tmpl; classtype:misc-activity; sid:1429; rev:3;)
 
 # NOTES: This signature would be better off using uricontent, and having the
 # http decoder looking at 5800 and 5802, but that is on by default

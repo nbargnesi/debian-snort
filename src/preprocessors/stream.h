@@ -77,5 +77,57 @@ typedef struct _StreamPacketData
                         */
 } StreamPacketData;
 
+typedef struct _Stream4Data
+{
+    char stream4_active;
+
+    char stateful_inspection_flag;
+    u_int32_t timeout;
+    char state_alerts;
+    char evasion_alerts;
+    u_int32_t memcap;
+
+    char log_flushed_streams;
+
+    char ps_alerts;
+
+    char track_stats_flag;
+    char *stats_file;
+    
+    u_int32_t last_prune_time;
+
+    char reassemble_client;
+    char reassemble_server;
+    char reassembly_alerts;
+    char state_protection;
+    char zero_flushed_packets;
+    
+    u_int8_t assemble_ports[65536];
+    u_int8_t emergency_ports[65536];  /* alternate port set for self-preservation mode */
+
+    u_int32_t sp_threshold;
+    u_int32_t sp_period;
+
+    u_int32_t suspend_threshold;
+    u_int32_t suspend_period;
+    
+    
+    u_int8_t  stop_traverse;
+    u_int32_t stop_seq;
+    
+    u_int8_t  min_ttl;   /* min TTL we'll accept to insert a packet */
+    u_int8_t  ttl_limit; /* the largest difference we'll accept in the
+                            course of a TTL conversation */
+    u_int16_t path_mtu;  /* max segment size we'll accept */
+    u_int8_t  reassy_method;
+    u_int32_t ps_memcap;
+    int flush_data_diff_size;
+    
+
+    char asynchronous_link; /* used when you can only see part of the conversation
+                               it can't be anywhere NEAR as robust */
+    char enforce_state;
+    char ms_inline_alerts;
+} Stream4Data;
 
 #endif  // __STREAM_H__

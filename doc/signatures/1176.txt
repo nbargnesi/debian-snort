@@ -66,3 +66,5 @@ Additional References:
 
 Attrition:
 http://www.attrition.org/security/advisory/misc/ecom-990420
+
+--

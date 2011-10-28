@@ -58,3 +58,5 @@ Additional References:
 
 Symantec
 http://securityresponse.symantec.com/avcenter/venc/data/freebsd.scalper.worm.html
+
+--

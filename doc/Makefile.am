@@ -1,8 +1,8 @@
-## $Id: Makefile.am,v 1.19.2.1 2004/08/06 15:47:59 jhewlett Exp $
+## $Id: Makefile.am,v 1.21.2.2 2005/01/24 19:16:50 bmc Exp $
 AUTOMAKE_OPTIONS=foreign no-dependencies
 
 EXTRA_DIST = AUTHORS NEWS BUGS README \
-CREDITS FAQ \
+CREDITS \
 snort_manual.pdf snort_manual.tex INSTALL USAGE \
 signatures \
 README.alert_order \
@@ -19,11 +19,12 @@ README.UNSOCK \
 README.WIN32 \
 README.flowbits \
 README.asn1 \
+README.INLINE \
+README.sfportscan \
 snort_schema_v106.pdf \
-README.wireless PROBLEMS RULES.todo WISHLIST
+README.wireless PROBLEMS RULES.todo WISHLIST faq.pdf faq.tex
 
-
-DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux snort_manual.pdf
+DISTCLEANFILES= snort_manual.log snort_manual.toc snort_manual.aux faq.pdf faq.tex snort_manual.pdf
 
 doc_DIR = $(prefix)/doc
 

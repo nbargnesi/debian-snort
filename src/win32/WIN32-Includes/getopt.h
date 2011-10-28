@@ -1,4 +1,4 @@
-/* $Id: getopt.h,v 1.4 2003/10/20 15:03:43 chrisgreen Exp $ */
+/* $Id: getopt.h,v 1.4.6.1 2004/11/17 15:54:23 jhewlett Exp $ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -17,13 +17,15 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-
+#ifndef __GETOPT_H__
+#define __GETOPT_H__
 
 #define _next_char(string)  (char)(*(string+1))
 
 extern char * optarg; 
 extern int    optind; 
 
-int getopt(int, char**, char*);
+int getopt(int, char**, const char*);
 
 
+#endif

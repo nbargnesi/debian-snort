@@ -1,5 +1,5 @@
 /*
-**  $Id: fpdetect.c,v 1.16 2004/06/03 20:11:05 jhewlett Exp $
+**  $Id: fpdetect.c,v 1.17.2.1 2004/09/21 14:47:00 jhewlett Exp $
 **
 **  fpdetect.c
 **
@@ -42,6 +42,7 @@
 #include "perf-event.h"
 #include "sfthreshold.h"
 #include "event_queue.h"
+#include "inline.h"
 
 #include "sp_pattern_match.h"
 
@@ -222,9 +223,45 @@ int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p)
                                p->iph->ip_dst.s_addr,
                                p->pkth->ts.tv_sec) )
         {
+            /*
+            **  If InlineMode is on, then we still want to drop packets
+            **  that are drop rules.  We just don't want to see the alert.
+            */
+            if(InlineMode())
+            {
+                if(rtn->type == RULE_DROP || rtn->type == RULE_SDROP)
+                    InlineDrop();
+            }
+            
             return 1; /* Don't log it ! */
         }
     }
+    else
+    {
+        if( !sfthreshold_test( otn->event_data.sig_generator,
+                               otn->event_data.sig_id,
+                               0,
+                               0,
+                               p->pkth->ts.tv_sec ) )
+        {
+            /*
+            **  If InlineMode is on, then we still want to drop packets
+            **  that are drop rules.  We just don't want to see the alert.
+            */
+            if(InlineMode())
+            {
+                if(rtn->type == RULE_DROP || rtn->type == RULE_SDROP)
+                    InlineDrop();
+            }
+
+            return 1; /* Don't log it ! */
+        }
+    }
+
+    /*
+    **  Set the ref_time to 0 so we make the logging work right.
+    */
+    otn->event_data.ref_time.tv_sec = 0;
     
     /*
     **  Set otn_tmp because log.c uses it to log details
@@ -259,6 +296,20 @@ int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p)
         case RULE_LOG:
             LogAction(p, otn, &otn->event_data);
             break;
+
+#ifdef GIDS
+        case RULE_DROP:
+            DropAction(p, otn, &otn->event_data);
+            break;
+				
+        case RULE_SDROP:
+            SDropAction(p, otn, &otn->event_data);
+            break;
+
+        case RULE_REJECT:
+            RejectAction(p, otn, &otn->event_data);
+            break;
+#endif /* GIDS */
     }
 
     SetTags(p, otn, event_id);
@@ -395,6 +446,8 @@ static INLINE int fpAddMatch(OTNX_MATCH_DATA *omd, OTNX *otnx, int pLen )
 */
 static INLINE int fpEvalOTN(OptTreeNode *List, Packet *p)
 {
+    Session *ssn;
+
     if(List == NULL)
         return 0;
 
@@ -412,27 +465,63 @@ static INLINE int fpEvalOTN(OptTreeNode *List, Packet *p)
                 List->chain_node_number);
     }
 
-    if((snort_runtime.capabilities.stateful_inspection == 1) && 
-            (List->established == 1) && 
-            ((p->packet_flags & PKT_STREAM_EST) == 0))
+    if(snort_runtime.capabilities.stateful_inspection == 1)
     {
-        /* this OTN requires an established connection and it isn't
-         * in that state yet, so continue to the next OTN
-         */
-        return 0;
+        if((List->established == 1) && !(p->packet_flags & PKT_STREAM_EST))
+        {
+            /*
+            **  We check to see if this packet may have been picked up in
+            **  midstream by stream4 on a timed out session.  If it was, then
+            **  we'll go ahead and inspect it anyway because it might be a 
+            **  packet that we dropped but the attacker has retransmitted after
+            **  the stream4 session timed out.
+            */
+            if(InlineMode())
+            {
+                switch(List->rtn->type)
+                {
+                    case RULE_DROP:
+                    case RULE_SDROP:
+                        
+                        ssn = (Session *)p->ssnptr;
+                        if(ssn && !(ssn->session_flags & SSNFLAG_MIDSTREAM))
+                        {
+                            return 0;
+                        }
+                        break;
+
+                    default:
+                        return 0;
+                }
+            }
+            else
+            {
+                /* 
+                ** This OTN requires an established connection and it isn't
+                ** in that state yet, so continue to the next OTN
+                */
+                return 0;
+            }
+        }
+        else if((List->unestablished == 1) && (p->packet_flags & PKT_STREAM_EST))
+        {
+            /*
+            **  We're looking for an unestablished stream, and this is
+            **  established, so don't continue processing.
+            */
+            return 0;
+        }
     }
 
     if(!List->opt_func->OptTestFunc(p, List, List->opt_func))
     {
         return 0;
     }
-    else
-    {
-        /* rule match actions are called from EvalHeader */
-        return 1;
-    }
 
-    return 0;
+    /* 
+    ** Rule match actions are called from EvalHeader. 
+    */
+    return 1;
 }
 
 /*

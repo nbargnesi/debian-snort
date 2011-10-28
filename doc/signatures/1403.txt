@@ -31,6 +31,9 @@ privileges to that of the administrator. Data stored on the machine can
 be compromised and trust relationships between the victim server and 
 other hosts can be exploited by the attacker.
 
+Viewcode can be used to vew the source code for your server's asp files.
+These files could contain login names and other sensitive information.
+
 --
 Affected Systems:
 	All systems using a web server.
@@ -64,6 +67,9 @@ Contributors:
 Sourcefire Research Team
 Brian Caswell <bmc@sourcefire.com>
 Nigel Houghton <nigel.houghton@sourcefire.com>
+Ricky McAtee <rmcatee@sourcefire.com>
 
 --
 Additional References:
+
+--

@@ -103,6 +103,9 @@ static void HttpInspect(Packet *p)
         return;
     }
 
+    if(!(p->preprocessors & PP_HTTPINSPECT))
+        return;
+
     /*
     **  Pass in the configuration and the packet.
     */

@@ -155,12 +155,14 @@ static int LogSnortEvents(void *event, void *user)
     Packet    *p;
     EventNode *en;
     OTNX      *otnx;
+    SNORT_EVENTQ_USER *snort_user;
 
-    if(!event)
+    if(!event || !user)
         return 0;
 
-    en = (EventNode *)event;
-    p  = (Packet *)user;
+    en         = (EventNode *)event;
+    snort_user = (SNORT_EVENTQ_USER *)user;
+    p  = (Packet *)snort_user->pkt;
 
     /*
     **  Log rule events differently because we have to.
@@ -170,6 +172,8 @@ static int LogSnortEvents(void *event, void *user)
         otnx = (OTNX *)en->rule_info;
         if(!otnx->rtn || !otnx->otn)
             return 0;
+
+        snort_user->rule_alert = 1;
 
         fpLogEvent(otnx->rtn, otnx->otn, p);
     }
@@ -189,15 +193,27 @@ static int LogSnortEvents(void *event, void *user)
 **    SnortEventqLog::
 */
 /**
-**  We return whether we logged events or not.
+**  We return whether we logged events or not.  We've add a eventq user
+**  structure so we can track whether the events logged we're rule events
+**  or preprocessor/decoder events.  The reason being that we don't want
+**  to flush a TCP stream for preprocessor/decoder events, and cause
+**  early flushing of the stream.
 **
 **  @return 1 logged events
-**  @return 0 did not log events
+**  @return 0 did not log events or logged only decoder/preprocessor events
 */
 int SnortEventqLog(Packet *p)
 {
-    if(sfeventq_action(LogSnortEvents, (void *)p) > 0)
-        return 1;
+    static SNORT_EVENTQ_USER user;
+
+    user.rule_alert = 0x00;
+    user.pkt = (void *)p;
+
+    if(sfeventq_action(LogSnortEvents, (void *)&user) > 0)
+    {
+        if(user.rule_alert)
+            return 1;
+    }
 
     return 0;
 }

@@ -66,3 +66,5 @@ Snort documentation contributed by Jeremy Stashewsky <jstash@omitthis.uvic.ca>
 Additional References:
 CVE CVE-1999-0082
 RFC 959: File Transfer Protocol http://www.ietf.org/rfc/rfc959.txt
+
+--

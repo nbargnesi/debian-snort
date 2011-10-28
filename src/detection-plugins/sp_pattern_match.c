@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_pattern_match.c,v 1.60 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id: sp_pattern_match.c,v 1.61.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
 #include <errno.h>
 
 #ifdef HAVE_CONFIG_H
@@ -40,6 +40,10 @@
 #include "util.h" 
 #include "parser.h"  /* why does parser.h define Add functions.. */
 #include "plugin_enum.h"
+#ifdef GIDS
+#include "checksum.h"
+#include "inline.h"
+#endif /* GIDS */
 
 
 static void PayloadSearchInit(char *, OptTreeNode *, int);
@@ -57,6 +61,12 @@ static void PayloadSearchRegex(char *, OptTreeNode *, int);
 static void PayloadSearchDistance(char *, OptTreeNode *, int);
 static void PayloadSearchWithin(char *, OptTreeNode *, int);
 static void PayloadSearchRawbytes(char *, OptTreeNode *, int);
+#ifdef GIDS
+static void PayloadReplaceInit(char *, OptTreeNode *, int);
+static PatternMatchData * ParseReplacePattern(char *, OptTreeNode *);
+int PayloadReplace(Packet *, struct _OptTreeNode *, OptFpList *, int
+                         depth);
+#endif /* GIDS */
 static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase);
 
 static PatternMatchData * NewNode(OptTreeNode *, int);
@@ -65,6 +75,10 @@ void PayloadSearchCompile();
 int list_file_line;     /* current line being processed in the list file */
 int lastType = PLUGIN_PATTERN_MATCH;
 u_int8_t *doe_ptr;
+
+#ifdef GIDS
+int detect_depth;       /* depth to the first char of the match */
+#endif /* GIDS */
 
 extern HttpUri UriBufs[URI_COUNT]; /* the set of buffers that we are using to match against
 				      set in decode.c */
@@ -86,11 +100,409 @@ void SetupPatternMatch()
     RegisterPlugin("uricontent", PayloadSearchUri);
     RegisterPlugin("distance", PayloadSearchDistance);
     RegisterPlugin("within", PayloadSearchWithin);
+#ifdef GIDS
+    RegisterPlugin("replace", PayloadReplaceInit);
+#endif /* GIDS */
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                 "Plugin: PatternMatch Initialized!\n"););
 }
 
+#ifdef GIDS
+void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
+{
+    PatternMatchData *idx;
+    PatternMatchData *test_idx;
+
+    if(!InlineMode())
+        return;
+    
+    idx = (PatternMatchData *) otn->ds_list[PLUGIN_PATTERN_MATCH];
+
+    if(idx == NULL)
+    {
+        FatalError("ERROR %s Line %d => Please place \"content\" rules "
+                   "before depth, nocase, replace or offset modifiers.\n",
+                   file_name, file_line);
+    }
+
+    test_idx = ParseReplacePattern(data, otn);
+#ifdef DEBUG
+    printf("idx (%p) pattern_size (%d) replace_size (%d)\n", test_idx, 
+		    test_idx->pattern_size, test_idx->replace_size);
+#endif
+    if (test_idx && test_idx->pattern_size != test_idx->replace_size)
+    {
+        FatalError("ERROR %s Line %d => The length of the replacement "
+                   "string must be the same length as the content string.\n",
+                   file_name, file_line);
+    }
+
+#ifdef DEBUG
+    printf("PayLoadReplaceInit Added to rule!\n");
+#endif
+}
+
+/*************************************************************************/
+/*                                                                       */
+/*  Sigh.... this should be part of ParsePattern, but that can wait      */
+/*                                                                       */
+/*************************************************************************/
+
+PatternMatchData * ParseReplacePattern(char *rule, OptTreeNode * otn)
+{
+    unsigned char tmp_buf[2048];
+
+    /* got enough ptrs for you? */
+    char *start_ptr;
+    char *end_ptr;
+    char *idx;
+    char *dummy_idx;
+    char *dummy_end;
+    char hex_buf[3];
+    u_int dummy_size = 0;
+    int size;
+    int hexmode = 0;
+    int hexsize = 0;
+    int pending = 0;
+    int cnt = 0;
+    int literal = 0;
+    int exception_flag = 0;
+    PatternMatchData *ds_idx;
+
+    /* clear out the temp buffer */
+    bzero(tmp_buf, 2048);
+
+    while(isspace((int)*rule))
+        rule++;
+
+    if(*rule == '!')
+    {
+        exception_flag = 1;
+    }
+
+    /* find the start of the data */
+    start_ptr = index(rule, '"');
+
+    if(start_ptr == NULL)
+    {
+        FatalError("ERROR %s Line %d => Content data needs to be "
+                   "enclosed in quotation marks (\")!\n",
+                   file_name, file_line);
+    }
+
+    /* move the start up from the beggining quotes */
+    start_ptr++;
+
+    /* find the end of the data */
+    end_ptr = strrchr(start_ptr, '"');
+
+    if(end_ptr == NULL)
+    {
+        FatalError("ERROR %s Line %d => Content data needs to be enclosed "
+                   "in quotation marks (\")!\n", file_name, file_line);
+    }
+
+    /* set the end to be NULL */
+    *end_ptr = '\0';
+
+    /* how big is it?? */
+    size = end_ptr - start_ptr;
+
+    /* uh, this shouldn't happen */
+    if(size <= 0)
+    {
+        FatalError("ERROR %s Line %d => Bad pattern length!\n",
+                   file_name, file_line);
+    }
+    /* set all the pointers to the appropriate places... */
+    idx = start_ptr;
+
+    /* set the indexes into the temp buffer */
+    dummy_idx = tmp_buf;
+    dummy_end = (dummy_idx + size);
+
+    /* why is this buffer so small? */
+    bzero(hex_buf, 3);
+    memset(hex_buf, '0', 2);
+
+    /* BEGIN BAD JUJU..... */
+    while(idx < end_ptr)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_PARSER, "processing char: %c\n", *idx););
+
+        switch(*idx)
+        {
+            case '|':
+		    
+                DEBUG_WRAP(DebugMessage(DEBUG_PARSER, "Got bar... "););
+		
+                if(!literal)
+                {
+			
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
+					    "not in literal mode... "););
+		    
+                    if(!hexmode)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+						"Entering hexmode\n"););
+
+                        hexmode = 1;
+                    }
+                    else
+                    {
+			    
+                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+						"Exiting hexmode\n"););
+			
+                        hexmode = 0;
+                        pending = 0;
+                    }
+
+                    if(hexmode)
+                        hexsize = 0;
+                }
+                else
+                {
+
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+					    "literal set, Clearing\n"););
+
+                    literal = 0;
+                    tmp_buf[dummy_size] = start_ptr[cnt];
+                    dummy_size++;
+                }
+
+                break;
+
+            case '\\':
+		
+                DEBUG_WRAP(DebugMessage(DEBUG_PARSER, "Got literal char... "););
+
+                if(!literal)
+                {
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+					    "Setting literal\n"););
+		    
+                    literal = 1;
+                }
+                else
+                {
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+					    "Clearing literal\n"););
+		    
+                    tmp_buf[dummy_size] = start_ptr[cnt];
+                    literal = 0;
+                    dummy_size++;
+                }
+                break;
+
+            default:
+                if(hexmode)
+                {
+                    if(isxdigit((int) *idx))
+                    {
+                        hexsize++;
+
+                        if(!pending)
+                        {
+                            hex_buf[0] = *idx;
+                            pending++;
+                        }
+                        else
+                        {
+                            hex_buf[1] = *idx;
+                            pending--;
+
+                            if(dummy_idx < dummy_end)
+                            {
+                                tmp_buf[dummy_size] = (u_char)
+                                    strtol(hex_buf, (char **) NULL, 16)&0xFF;
+
+                                dummy_size++;
+                                bzero(hex_buf, 3);
+                                memset(hex_buf, '0', 2);
+                            }
+                            else
+                            {
+                                FatalError("ERROR => ParsePattern() dummy "
+                                           "buffer overflow, make a smaller "
+                                           "pattern please! (Max size = 2048)\n");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if(*idx != ' ')
+                        {
+                            FatalError("ERROR Line %d => What is this "
+                                       "\"%c\"(0x%X) doing in your binary "
+                                       "buffer? Valid hex values only please! "
+                                       "(0x0 -0xF) Position: %d\n",
+                                       file_line, (char) *idx, (char) *idx, cnt);
+                        }
+                    }
+                }
+                else
+                {
+                    if(*idx >= 0x1F && *idx <= 0x7e)
+                    {
+                        if(dummy_idx < dummy_end)
+                        {
+                            tmp_buf[dummy_size] = start_ptr[cnt];
+                            dummy_size++;
+                        }
+                        else
+                        {
+                            FatalError("ERROR Line %d=> ParsePattern() dummy "
+                                       "buffer overflow!\n", file_line);
+                        }
+
+                        if(literal)
+                        {
+                            literal = 0;
+                        }
+                    }
+                    else
+                    {
+                        if(literal)
+                        {
+                            tmp_buf[dummy_size] = start_ptr[cnt];
+                            dummy_size++;
+			    
+                            DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+						    "Clearing literal\n"););
+			    
+                            literal = 0;
+                        }
+                        else
+                        {
+                            FatalError("%s(%d)=> character value out "
+                                       "of range, only hex characters allowed in binary content buffers\n",
+                                       file_name, file_line);
+                        }
+                    }
+                }
+
+                break;				
+
+        } /* end switch */
+
+        dummy_idx++;
+        idx++;
+        cnt++;
+    }
+    /* ...END BAD JUJU */
+
+    /* error prunning */
+
+    if (literal) {
+        FatalError("%s(%d)=> backslash escape is not "
+		   "completed\n", file_name, file_line);
+    }
+    if (hexmode) {
+        FatalError("%s(%d)=> hexmode is not "
+		   "completed\n", file_name, file_line);
+    }
+    ds_idx = (PatternMatchData *) otn->ds_list[PLUGIN_PATTERN_MATCH];
+
+    while(ds_idx->next != NULL)
+        ds_idx = ds_idx->next;
+
+    if((ds_idx->replace_buf = (char *) calloc(dummy_size+1,
+                                                  sizeof(char))) == NULL)
+    {
+        FatalError("ERROR => ParsePattern() pattern_buf malloc filed!\n");
+    }
+
+    //memcpy(ds_idx->replace_buf, tmp_buf, dummy_size);
+    SafeMemcpy(ds_idx->replace_buf, tmp_buf, dummy_size, 
+               ds_idx->replace_buf, (ds_idx->replace_buf+dummy_size+1));
+
+    ds_idx->replace_size = dummy_size;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+			    "ds_idx (%p) replace_size(%d) replace_buf(%s)\n", ds_idx,
+			    ds_idx->replace_size, ds_idx->replace_buf););
+
+    return ds_idx;
+}
+
+int PayloadReplace(Packet *p, struct _OptTreeNode *otn,
+                         OptFpList *fp_list, int depth)
+{
+    struct pseudoheader
+    {
+        u_int32_t sip, dip;
+        u_int8_t zero;
+        u_int8_t protocol;
+        u_int16_t len;
+    };
+
+    PatternMatchData *idx;
+    struct pseudoheader ph;
+    unsigned int ip_len;
+    unsigned int hlen;
+
+    //idx = (PatternMatchData *)otn->ds_list[PLUGIN_PATTERN_MATCH];
+    idx = (PatternMatchData *)fp_list->context;
+
+    if (depth >= 0)
+    {
+        //memcpy(p->data+depth, idx->replace_buf, strlen(idx->replace_buf));
+	SafeMemcpy( (p->data + depth), idx->replace_buf, strlen(idx->replace_buf), 
+        p->data, (p->data + p->dsize + 1) );
+        InlineReplace();
+
+        /* calculate new checksum */
+        p->iph->ip_csum=0;
+        hlen = IP_HLEN(p->iph) << 2;
+        ip_len=ntohs(p->iph->ip_len);
+        ip_len -= hlen;
+        p->iph->ip_csum = in_chksum_ip((u_short *)p->iph, hlen);
+
+        if (p->tcph)
+        {
+            p->tcph->th_sum = 0;
+            ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
+            ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
+            ph.zero = 0;
+            ph.protocol = p->iph->ip_proto;
+            ph.len = htons((u_short)ip_len);
+            p->tcph->th_sum = in_chksum_tcp((u_short *)&ph,
+                                            (u_short *)(p->tcph), ip_len);
+        }
+        else if (p->udph)
+        {
+            p->udph->uh_chk = 0;
+            ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
+            ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
+            ph.zero = 0;
+            ph.protocol = p->iph->ip_proto;
+            ph.len = htons((u_short)ip_len);
+            p->udph->uh_chk = in_chksum_udp((u_short *)&ph,
+                                            (u_short *)(p->udph), ip_len);
+        }
+	else if (p->icmph)
+        {
+            p->icmph->csum = 0;
+	    ph.sip = (u_int32_t)(p->iph->ip_src.s_addr);
+	    ph.dip = (u_int32_t)(p->iph->ip_dst.s_addr);
+	    ph.zero = 0;
+	    ph.protocol = p->iph->ip_proto;
+	    ph.len = htons((u_short)ip_len);
+	    p->icmph->csum = in_chksum_icmp((u_int16_t *)(p->icmph), ip_len);
+							    
+        }
+    }
+
+    return 1;
+
+}
+
+#endif /* GIDS */
+			
 static inline int computeDepth(int dlen, PatternMatchData * pmd) 
 {
     /* do some tests to make sure we stay in bounds */
@@ -319,7 +731,7 @@ static int uniSearchReal(char *data, int dlen, PatternMatchData *pmd, int nocase
     if((pmd->depth > 0) && (depth > pmd->depth))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Setting new depth to %d from %d",
+                                "Setting new depth to %d from %d\n",
                                 pmd->depth, depth););
 
         depth = pmd->depth;
@@ -515,7 +927,7 @@ void PayloadSearchOffset(char *data, OptTreeNode * otn, int protocol)
                 file_name, file_line);
     }
 
-    if(idx->offset > 65535)
+    if(idx->offset > 65535 || idx->offset < -65535)
     {
         FatalError("ERROR %s Line %d => Offset greater than max Ipv4 "
                 "packet size\n", file_name, file_line);
@@ -558,7 +970,7 @@ void PayloadSearchDepth(char *data, OptTreeNode * otn, int protocol)
                 file_name, file_line);
     }
 
-    if(idx->depth > 65535)
+    if(idx->depth > 65535 || idx->depth < -65535)
     {
         FatalError("ERROR %s Line %d => Depth greater than max Ipv4 "
                 "packet size\n", file_name, file_line);
@@ -661,7 +1073,7 @@ void PayloadSearchDistance(char *data, OptTreeNode *otn, int protocol)
                 file_name, file_line);
     }
 
-    if(idx->offset > 65530)
+    if(idx->distance > 65535 || idx->distance < -65535)
     {
         FatalError("ERROR %s Line %d => Distance greater than max Ipv4 "
                 "packet size\n", file_name, file_line);
@@ -710,7 +1122,7 @@ void PayloadSearchWithin(char *data, OptTreeNode *otn, int protocol)
                 file_name, file_line);
     }
 
-    if(idx->offset > 65530)
+    if(idx->within > 65535 || idx->within < -65535)
     {
         FatalError("ERROR %s Line %d => Within greater than max Ipv4 "
                 "packet size\n", file_name, file_line);
@@ -1085,7 +1497,7 @@ static void ParsePattern(char *rule, OptTreeNode * otn, int type)
                         else
                         {
                             FatalError("%s(%d)=> character value out "
-                                    "of range, try a binary buffer dude\n", 
+                                    "of range, try a binary buffer\n", 
                                     file_name, file_line);
                         }
                     }
@@ -1246,6 +1658,15 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
     /* this now takes care of all the special cases where we'd run
      * over the buffer */
     found = (idx->search(dp, dsize, idx) ^ idx->exception_flag);
+
+#ifdef GIDS
+    if (found && idx->replace_buf)
+    {
+        //fix the packet buffer to have the new string
+        PayloadReplace(p, otn_idx, fp_list, detect_depth);
+    }
+#endif /* GIDS */
+
     while (found)
     {
         /* save where we last did the pattern match */
@@ -1253,7 +1674,6 @@ static int CheckANDPatternMatch(Packet *p, struct _OptTreeNode *otn_idx,
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Pattern Match successful!\n"););      
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Check next functions!\n"););
 
-        
         /* Try evaluating the rest of the rules chain */
         next_found= fp_list->next->OptTestFunc(p, otn_idx, fp_list->next);
 

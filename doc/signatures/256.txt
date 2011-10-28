@@ -1,18 +1,18 @@
 Rule:  
-attempt"; content:"|07|authors"; offset:12; content:"|04|bind";
-nocase; offset: 12; reference:arachnids,480;
-classtype:attempted-recon; sid:256; rev:1;) 
+
 --
 Sid:
 256
 
 --
 Summary:
-An attempt was made to query authors.bind chaos record on your DNS server.  
+This event is generated when an attempt is made to query authors.bind chaos 
+record on a DNS server.  
+
 --
 Impact:
-Allows a remote attacker to possibly determine the version of bind
-you are running.
+Information gathering. This activity may indicate reconnaisance before 
+an impending attack.
 
 --
 Detailed Information:
@@ -22,57 +22,40 @@ retrieve this file indicates that the machine is running at least a
 
 --
 Affected Systems:
+	All DNS Servers using Bind
  
 --
 Attack Scenarios:
-As part of a reconnaissance mission, an attacker may attempt to gleen
-important information about your infrastructure by determining your
-bind version.  If authors.bind is retrievable, this indicates that you
-are running Bind 9.x.  If not, it means nothing.  This, in addition to
-possibly retrieving version.bind, allows attackers to craft attacks
-specially suited for your environment.
+As part of a reconnaissance mission, an attacker may attempt to glean
+important information about network infrastructure by determining the
+bind version on a nameserver. If authors.bind is retrievable, this
+indicates that Bind 9.x is in use.
 
 --
 Ease of Attack:
-Trivial:
-
-warchild@cuba
-[~]$ dig +short @testhost.com txt chaos authors.bind
-
-"Bob Halley"
-"Mark Andrews"
-"James Brister"
-"Michael Graff"
-"David Lawrence"
-"Michael Sawyer"
-"Brian Wellington"
-"Andreas Gustafsson"
-
+Simple.
 
 --
 False Positives:
 None Known
-None.
 
 --
 False Negatives:
 None Known
-None.
 
 --
 Corrective Action:
-Remove the ability to retrieve the authors.bind chaos record by either
-applying the patch from ISC or tweaking your configs accordingly.
+Remove the ability to retrieve the authors.bind chaos record by changing 
+the DNS configuration accordingly.
 
 --
 Contributors:
 Original rule writer unknown
-Original document author unkown
+Snort documentation contributed by Jon Hart <warchild@spoofed.org>
 Sourcefire Vulnerability Research Team
 Nigel Houghton <nigel.houghton@sourcefire.com>
-Jon Hart <warchild@spoofed.org>
 
 -- 
 Additional References:
 
-
+--

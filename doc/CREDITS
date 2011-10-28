@@ -1,4 +1,27 @@
-$Id: CREDITS,v 1.29 2004/03/04 04:57:52 roesch Exp $
+$Id: CREDITS,v 1.30 2004/09/13 17:44:49 jhewlett Exp $
+
+Marc Norton     <mnorton@idsresearch.org>
+    * Snort 2.0 detection engine
+    * Aho-Corasick pattern matchers
+    * Wu-Manber pattern matchers
+    * sfxhash, sflsq, ipobj libraries
+    * Thresholding/suppression
+    * Performance monitoring preprocessor
+
+Daniel Roelker  <djr@idsresearch.org>
+    * Snort 2.0 detection engine
+    * HttpInspect detection engine
+    * ASN.1 decoder and detection plugin
+    * Multi-event queuing, prioritizing, and logging
+    * sfPortscan detection engine
+    * Snort-inline integration from snort-inline project
+    * Performance monitoring preprocessor
+
+Jeremy Hewlett <jh@sourcefire.com>
+    * CVS and release manager
+    * Snort testing 
+    * Bug triage
+    * Documentation
 
 Sebastian    <scut@nb.in-berlin.de>
     * Added TOS decoding and logging
@@ -208,7 +231,6 @@ Maciek Szarpak <M.Szarpak@elka.pw.edu.pl>
 Paul Ritchey <pritchey@jasi.com>
     * Provided the -y year printout command line switch code
 
- 
 Eugene Tsyrklevich <eugene@securityarchitects.com>
     * Added smalloc.h and fatal.h
     * patches for stupidity in various files
@@ -229,7 +251,11 @@ Tomtom <tomtommister@gmx.de>
     * Added PPPoE decoder
 
 Chris Green <cmg@uab.edu>
-    * docs for 1.8, testing on #snort
+    * documentation
+    * testing on #snort
+    * code maintenance
+    * flow-portscan
+    * flow
 
 Bill Gercken <william.c.gercken@census.gov>
     * lots of patches and testing on his busy network

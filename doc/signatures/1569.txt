@@ -27,6 +27,8 @@ be used by an attacker to further compromise the system.
 --
 Affected Systems:
 
+	AHG EZshopper v3.0 and v2.0 for UNIX
+
 --
 Attack Scenarios:
 An authorized user or anonymous user can use the directory traversal 
@@ -60,3 +62,7 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 -- 
 Additional References:
 
+NSFocus:
+http://www.nsfocus.com/english/homepage/research/0009.htm
+
+--

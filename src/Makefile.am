@@ -1,4 +1,4 @@
-## $Id: Makefile.am,v 1.29 2004/06/16 18:49:24 jhewlett Exp $
+## $Id: Makefile.am,v 1.30 2004/09/13 17:44:49 jhewlett Exp $
 AUTOMAKE_OPTIONS=foreign no-dependencies
 
 bin_PROGRAMS = snort
@@ -44,7 +44,8 @@ packet_time.c packet_time.h \
 event_wrapper.c event_wrapper.h \
 smalloc.h \
 snort_packet_header.h \
-event_queue.c event_queue.h
+event_queue.c event_queue.h \
+inline.c inline.h
 
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \

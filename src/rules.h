@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: rules.h,v 1.39 2003/10/20 15:03:23 chrisgreen Exp $ */
+/* $Id: rules.h,v 1.40.2.1 2004/10/05 18:55:18 jhewlett Exp $ */
 #ifndef __RULES_H__
 #define __RULES_H__
 
@@ -53,6 +53,9 @@
 #define RULE_THRESHOLD   11
 #define RULE_SUPPRESS    12
 #define RULE_UNKNOWN     13
+#define RULE_DROP        14
+#define RULE_SDROP       15
+#define RULE_REJECT      16
 
 #define EXCEPT_SRC_IP  0x01
 #define EXCEPT_DST_IP  0x02
@@ -184,8 +187,9 @@ typedef struct _OptTreeNode
     SigInfo sigInfo;
 
     u_int8_t stateless;  /* this rule can fire regardless of session state */
-    u_int8_t established; /* this rule can only fire if it has been marked 
-                             as established */
+    u_int8_t established; /* this rule can only fire if it is established */
+    u_int8_t unestablished;
+
     Event event_data;
 
     TagData *tag;

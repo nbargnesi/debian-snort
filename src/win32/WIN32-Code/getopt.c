@@ -1,4 +1,4 @@
-/* $Id: getopt.c,v 1.4 2003/10/20 15:03:42 chrisgreen Exp $ */
+/* $Id: getopt.c,v 1.4.6.1 2004/11/17 15:54:23 jhewlett Exp $ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -26,10 +26,11 @@
 /* static (global) variables that are specified as exported by getopt() */ 
 char *optarg = NULL;    /* pointer to the start of the option argument  */ 
 int   optind = 1;       /* number of the next argv[] to be evaluated    */ 
+int   optopt = 0;       
 int   opterr = 1;       /* non-zero if a question mark should be returned 
                            when a non-valid option character is detected */
 
-int getopt(int argc, char *argv[], char *opstring) 
+int getopt(int argc, char *argv[], const char *opstring) 
 { 
     static char *pIndexPosition = NULL; /* place inside current argv string */ 
     char *pArgString = NULL;        /* where to start from next */ 

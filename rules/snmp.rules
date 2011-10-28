@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: snmp.rules,v 1.14.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: snmp.rules,v 1.17 2004/07/23 20:15:44 bmc Exp $
 # ---------------
 # SNMP RULES
 # ---------------

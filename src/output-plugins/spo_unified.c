@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_unified.c,v 1.43 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id: spo_unified.c,v 1.44.2.1 2004/11/08 20:30:28 jhewlett Exp $ */
 
 /* spo_unified 
  * 
@@ -63,14 +63,21 @@
 #include "generators.h"
 #include "snort_packet_header.h"
 
-
 #include "snort.h"
+
+#ifdef GIDS
+#include "inline.h"
+#endif
 
 #define SNORT_MAGIC     0xa1b2c3d4
 #define ALERT_MAGIC     0xDEAD4137  /* alert magic, just accept it */
 #define LOG_MAGIC       0xDEAD1080  /* log magic, what's 31337-speak for G? */
 #define SNORT_VERSION_MAJOR   1
 #define SNORT_VERSION_MINOR   2
+
+/* From fpdetect.c, for logging reassembled packets */
+extern u_int32_t   event_id;
+
 
 /* file header for snort unified format log files
  *
@@ -132,6 +139,12 @@ typedef struct _UnifiedAlert
 extern OptTreeNode *otn_tmp;
 extern int thiszone;
 
+#ifdef GIDS
+#ifndef IPFW
+extern ipq_packet_msg_t *g_m;
+#endif
+#endif
+
 /* ------------------ Data structures --------------------------*/
 typedef struct _UnifiedConfig
 {
@@ -157,6 +170,11 @@ typedef struct _DataHeader
 
 #define UNIFIED_TYPE_ALERT          0x1
 #define UNIFIED_TYPE_PACKET_ALERT   0x2
+
+/* -------------------- Global Variables ----------------------*/
+#ifdef GIDS
+EtherHdr g_ethernet;
+#endif
 
 /* -------------------- Local Functions -----------------------*/
 static UnifiedConfig *UnifiedParseArgs(char *, char *);
@@ -286,7 +304,7 @@ static void UnifiedInitFile(UnifiedConfig *data)
 
     //printf("Opening %s\n", logdir);
 
-    if((data->stream = fopen(logdir, "w")) == NULL)
+    if((data->stream = fopen(logdir, "wb")) == NULL)
         FatalError("UnifiedInitLogFile(%s): %s\n", logdir, strerror(errno));
 
     /* write the log file header */
@@ -531,7 +549,7 @@ void RealUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event,
     {
         if(fwrite((char*)p->pkt, p->pkth->caplen, 1, data->stream) != 1)
             FatalError("SpoUnified: write failed: %s\n", strerror(errno));
-        data->current += logheader.pkth.caplen;
+        data->current += p->pkth->caplen;
     }
 
     fflush(data->stream);
@@ -562,6 +580,8 @@ void RealUnifiedLogStreamAlert(Packet *p, char *msg, void *arg, Event *event,
         logheader.event.priority = event->priority;
         logheader.event.event_id = event->event_id;
         logheader.event.event_reference = event->event_reference;
+        /* Note that ref_time is probably incorrect.  
+         * See OldUnifiedLogPacketAlert() for details. */
         logheader.event.ref_time.tv_sec = event->ref_time.tv_sec;
         logheader.event.ref_time.tv_usec = event->ref_time.tv_usec;
 
@@ -651,6 +671,8 @@ void RealUnifiedLogStreamAlert(Packet *p, char *msg, void *arg, Event *event,
                     logheader.event.sig_rev = 1;
                     logheader.event.classification = 0;
                     logheader.event.priority = event->priority;
+                    /* Note that event_id is now incorrect. 
+                     * See OldUnifiedLogPacketAlert() for details. */
                 }
             }
 
@@ -859,7 +881,7 @@ void UnifiedInitAlertFile(UnifiedConfig *data)
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG, "Opening %s\n", logdir););
 
-    if((data->stream = fopen(logdir, "w+")) == NULL)
+    if((data->stream = fopen(logdir, "wb+")) == NULL)
     {
         FatalError("UnifiedInitAlertFile(%s): %s\n", logdir, strerror(errno));
     }
@@ -957,7 +979,7 @@ void UnifiedInitLogFile(UnifiedConfig *data)
                    "too long, aborting!\n");
     }
 
-    if((data->stream = fopen(logdir, "w")) == NULL)
+    if((data->stream = fopen(logdir, "wb")) == NULL)
     {
         FatalError("UnifiedInitLogFile(%s): %s\n", logdir, strerror(errno));
     }
@@ -970,6 +992,10 @@ void UnifiedInitLogFile(UnifiedConfig *data)
     hdr.snaplen = snaplen;
     hdr.sigfigs = 0;
     hdr.linktype = datalink;
+
+#ifdef GIDS
+    hdr.linktype = DLT_EN10MB;
+#endif
 
     if(fwrite((char *)&hdr, sizeof(hdr), 1, data->stream) != 1)
     {
@@ -997,7 +1023,7 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
 {
     Stream *s = NULL;
     StreamPacketData *spd = NULL;
-    int once = 0;
+    int first_time = 1;
     UnifiedLog logheader;
     UnifiedConfig *data = (UnifiedConfig *)arg;
 
@@ -1010,8 +1036,6 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
         logheader.event.priority = event->priority;
         logheader.event.event_id = event->event_id;
         logheader.event.event_reference = event->event_reference;
-        logheader.event.ref_time.tv_sec = event->ref_time.tv_sec;
-        logheader.event.ref_time.tv_usec = event->ref_time.tv_usec;
 
         DEBUG_WRAP(DebugMessage(DEBUG_LOG, "------------\n"););
         DEBUG_WRAP(DebugMessage(DEBUG_LOG, "gen: %u\n", 
@@ -1028,10 +1052,6 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
                     logheader.event.event_id););
         DEBUG_WRAP(DebugMessage(DEBUG_LOG, "erf: %u\n", 
                     logheader.event.event_reference););
-        DEBUG_WRAP(DebugMessage(DEBUG_LOG, "sec: %lu\n", 
-                    logheader.event.ref_time.tv_sec););
-        DEBUG_WRAP(DebugMessage(DEBUG_LOG, "usc: %lu\n", 
-                    logheader.event.ref_time.tv_usec););
     }
 
     if(p->packet_flags & PKT_REBUILT_STREAM)
@@ -1042,15 +1062,43 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
         spd = (StreamPacketData *) ubi_btFirst((ubi_btNodePtr)&s->data);
 
         /* loop thru all the packets in the stream */
-        do
+        while (spd != NULL )
         {
             /* packets that are part of the currently reassembled stream
              * should be marked with the chuck flag
              */
             if(spd->chuck != SEG_UNASSEMBLED)
             {
+                logheader.flags = p->packet_flags;
+
                 /* copy it's pktheader data into the logheader */
                 memcpy(&logheader.pkth, &spd->pkth, sizeof(SnortPktHeader));
+
+#ifdef GIDS
+                /*
+                **  Add the ethernet header size to the total pktlen.
+                **  If the ethernet hdr is already set, then this means
+                **  that it's a portscan packet and we don't add the
+                **  ethernet header.
+                */
+                if(!p->eh)
+                {
+                    logheader.pkth.caplen += sizeof(EtherHdr);
+                    logheader.pkth.pktlen += sizeof(EtherHdr);
+                }
+#endif
+
+               /*  Set reference time equal to log time for the first packet  */
+                if (first_time)
+                {                    
+                    logheader.event.ref_time.tv_sec = logheader.pkth.ts.tv_sec;
+                    logheader.event.ref_time.tv_usec = logheader.pkth.ts.tv_usec;
+                    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "sec: %lu\n", 
+                                logheader.event.ref_time.tv_sec););
+                    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "usc: %lu\n", 
+                                logheader.event.ref_time.tv_usec););
+
+                }
 
                 if(fwrite((char*)&logheader,sizeof(UnifiedLog),1,data->stream)
                        != 1)
@@ -1061,27 +1109,49 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
 
                 if(spd->pkt)
                 {
-                    if(fwrite((char*)spd->pkt,logheader.pkth.caplen,1
+#ifdef GIDS
+                    if(!p->eh)
+                    {
+#ifndef IPFW
+                        memcpy((u_char *)g_ethernet.ether_src,g_m->hw_addr,6);
+                        memset((u_char *)g_ethernet.ether_dst,0x00,6);
+#else
+                        memset(g_ethernet.ether_dst,0x00,6);
+                        memset(g_ethernet.ether_src,0x00,6);
+#endif
+                        g_ethernet.ether_type = htons(0x0800);
+
+                        if(fwrite((char*)&g_ethernet,sizeof(EtherHdr),1,data->stream) != 1)
+                            FatalError("SpoUnified: write failed: %s\n", strerror(errno));
+                        data->current += sizeof(EtherHdr);
+                    }
+#endif
+        
+                    if(fwrite((char*)spd->pkt,spd->pkth.caplen,1
                                 ,data->stream) != 1)
                         FatalError("SpoUnified: write failed: %s\n", 
                                 strerror(errno));
 
-                    data->current += logheader.pkth.caplen;
+                    data->current += spd->pkth.caplen;
                 }
 
                 /* after the first logged packet modify the event headers */
-                if(!once++)
-                {
+                if (first_time)
+                {                    
                     logheader.event.sig_generator = GENERATOR_TAG;
                     logheader.event.sig_id = TAG_LOG_PKT;
                     logheader.event.sig_rev = 1;
                     logheader.event.classification = 0;
-                    logheader.event.priority = event->priority;
+                    logheader.event.priority = event->priority;    
+                    first_time = 0;
                 }
+
+                /* Update event ID for subsequent logged packets */
+                logheader.event.event_id = ++event_id;                
             }
 
-        } while((spd=(StreamPacketData*)ubi_btNext((ubi_btNodePtr)spd))
-                !=NULL);
+            spd = (StreamPacketData*) ubi_btNext((ubi_btNodePtr)spd);
+        }
     }
     else
     {
@@ -1090,6 +1160,20 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
             logheader.flags = p->packet_flags;
 
             memcpy(&logheader.pkth, p->pkth, sizeof(SnortPktHeader));
+
+#ifdef GIDS
+            /*
+            **  Add the ethernet header size to the total pktlen.
+            **  If the ethernet hdr is already set, then this means
+            **  that it's a portscan packet and we don't add the
+            **  ethernet header.
+            */
+            if(!p->eh)
+            {
+                logheader.pkth.caplen += sizeof(EtherHdr);
+                logheader.pkth.pktlen += sizeof(EtherHdr);
+            }
+#endif
         }
         else
         {
@@ -1108,13 +1192,31 @@ void OldUnifiedLogPacketAlert(Packet *p, char *msg, void *arg, Event *event)
 
         if(p)
         {
+#ifdef GIDS
+            if(!p->eh)
+            {
+#ifndef IPFW
+                memcpy((u_char *)g_ethernet.ether_src,g_m->hw_addr,6);
+                memset((u_char *)g_ethernet.ether_dst,0x00,6);
+#else
+                memset(g_ethernet.ether_dst,0x00,6);
+                memset(g_ethernet.ether_src,0x00,6);
+#endif
+                g_ethernet.ether_type = htons(0x0800);
+
+                if(fwrite((char*)&g_ethernet,sizeof(EtherHdr),1,data->stream) != 1)
+                    FatalError("SpoUnified: write failed: %s\n", strerror(errno));
+                data->current += sizeof(EtherHdr);
+            }
+#endif
+        
             fwrite((char*)p->pkt, p->pkth->caplen, 1, data->stream);
         }
     }
 
     fflush(data->stream);
 
-    data->current += sizeof(UnifiedLog) + logheader.pkth.caplen;
+    data->current += sizeof(UnifiedLog) + p->pkth->caplen;
     
 }
 

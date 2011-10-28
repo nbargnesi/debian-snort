@@ -1,4 +1,4 @@
-/* $Id: plugbase.c,v 1.82 2004/06/16 18:49:24 jhewlett Exp $ */
+/* $Id: plugbase.c,v 1.83.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -60,6 +60,7 @@
 #include "preprocessors/spp_perfmonitor.h"
 #include "preprocessors/spp_httpinspect.h"
 #include "preprocessors/spp_flow.h"
+#include "preprocessors/spp_sfportscan.h"
 
 /* built-in detection plugins */
 #include "detection-plugins/sp_pattern_match.h"
@@ -408,6 +409,7 @@ void InitPreprocessors()
     SetupHttpInspect();
     SetupPerfMonitor();
     SetupFlow();
+    SetupPsng();
 }
 
 /****************************************************************************
@@ -969,7 +971,7 @@ char *GetUniqueName(char * iface)
     char * rptr;
     static char uniq_name[256];
 
-    if (iface == NULL) LogMessage("Interface is NULL. Name may not be unique for the host");
+    if (iface == NULL) LogMessage("Interface is NULL. Name may not be unique for the host\n");
 #ifndef WIN32
     rptr = GetIP(iface); 
     if(rptr == NULL || !strcmp(rptr, "unknown"))
@@ -1117,7 +1119,7 @@ int GetLocalTimezone()
     time(&ut);
     ltm = localtime(&ut);
 
-#if defined(WIN32) || defined(SOLARIS)
+#if defined(WIN32) || defined(SOLARIS) || defined(AIX)
     /* localtime() sets the global timezone variable,
        which is defined in <time.h> */
     seconds_away_from_utc = timezone;

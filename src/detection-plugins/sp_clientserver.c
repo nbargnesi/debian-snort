@@ -1,4 +1,4 @@
-/* $Id: sp_clientserver.c,v 1.20 2004/01/27 17:18:59 jh8 Exp $ */
+/* $Id: sp_clientserver.c,v 1.21 2004/09/13 17:44:49 jhewlett Exp $ */
 
 /* sp_clientserver 
  * 
@@ -186,6 +186,10 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
         {
             otn->established = 1;
         }
+        else if(!strcasecmp(token, "not_established"))
+        {
+            otn->unestablished = 1;
+        }
         else if(!strcasecmp(token, "no_stream"))
         {
             csd->ignore_reassembled = 1;
@@ -226,6 +230,18 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
     if(otn->stateless && otn->established)
     {
         FatalError("%s:%d: Can't specify established and stateless "
+                   "options in same rule\n", file_name, file_line);
+    }
+
+    if(otn->stateless && otn->unestablished)
+    {
+        FatalError("%s:%d: Can't specify unestablished and stateless "
+                   "options in same rule\n", file_name, file_line);
+    }
+
+    if(otn->established && otn->unestablished)
+    {
+        FatalError("%s:%d: Can't specify unestablished and established "
                    "options in same rule\n", file_name, file_line);
     }
 

@@ -1,13 +1,13 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: web-php.rules,v 1.16.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: web-php.rules,v 1.21.2.1 2004/10/13 20:25:58 bmc Exp $
 #--------------
 # WEB-PHP RULES
 #--------------
 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP bb_smilies.php access"; flow:to_server,established; uricontent:"/bb_smilies.php"; nocase; reference:url,www.securiteam.com/securitynews/Serious_security_hole_in_PHP-Nuke__bb_smilies_.html; classtype:web-application-activity; sid:1774; rev:3;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP content-disposition memchr overflow"; flow:to_server,established; content:"Content-Disposition|3A|"; nocase; content:"name=|22 CC CC CC CC CC|"; reference:bugtraq,4183; reference:cve,2002-0081; classtype:web-application-attack; reference:nessus,10867; sid:1423; rev:13;)
-# alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP content-disposition"; flow:to_server,established; content:"Content-Disposition|3A|"; nocase; content:"form-data|3B|"; reference:bugtraq,4183; reference:cve,2002-0081; classtype:web-application-attack; reference:nessus,10867; sid:1425; rev:12;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP content-disposition memchr overflow"; flow:to_server,established; content:"Content-Disposition|3A|"; nocase; content:"name=|22 CC CC CC CC CC|"; reference:bugtraq,4183; reference:cve,2002-0081; reference:nessus,10867; classtype:web-application-attack; sid:1423; rev:14;)
+# alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP content-disposition"; flow:to_server,established; content:"Content-Disposition|3A|"; nocase; content:"form-data|3B|"; reference:bugtraq,4183; reference:cve,2002-0081; reference:nessus,10867; classtype:web-application-attack; sid:1425; rev:13;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP squirrel mail spell-check arbitrary command attempt"; flow:to_server,established; uricontent:"/squirrelspell/modules/check_me.mod.php"; nocase; content:"SQSPELL_APP["; nocase; reference:bugtraq,3952; classtype:web-application-attack; sid:1736; rev:6;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP squirrel mail theme arbitrary command attempt"; flow:to_server,established; uricontent:"/left_main.php"; nocase; content:"cmdd="; reference:bugtraq,4385; reference:cve,2002-0516; classtype:web-application-attack; sid:1737; rev:6;)
 
@@ -28,7 +28,7 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP phpbb qui
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP read_body.php access attempt"; flow:established,to_server; uricontent:"/read_body.php"; reference:bugtraq,6302; reference:cve,2002-1341; classtype:web-application-activity; sid:1997; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP calendar.php access"; flow:established,to_server; uricontent:"/calendar.php"; reference:bugtraq,5820; reference:bugtraq,9353; reference:nessus,11179; classtype:web-application-activity; sid:1998; rev:4;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP edit_image.php access"; flow:established,to_server; uricontent:"/edit_image.php"; reference:bugtraq,3288; reference:cve,2001-1020; reference:nessus,11104; classtype:web-application-activity; sid:1999; rev:4;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP readmsg.php access"; flow:established,to_server; uricontent:"/readmsg.php"; reference:nessus,11073; classtype:web-application-activity; reference:cve,CAN-2001-1408; sid:2000; rev:2;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP readmsg.php access"; flow:established,to_server; uricontent:"/readmsg.php"; reference:cve,2001-1408; reference:nessus,11073; classtype:web-application-activity; sid:2000; rev:3;)
 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP remote include path"; flow:established,to_server; uricontent:".php"; content:"path="; pcre:"/path=(http|https|ftp)/i"; classtype:web-application-attack; sid:2002; rev:5;)
 
@@ -41,8 +41,8 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP admin.php
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP admin.php access"; flow:to_server,established; uricontent:"/admin.php"; nocase; reference:bugtraq,3361; reference:bugtraq,7532; reference:bugtraq,9270; reference:cve,2001-1032; classtype:attempted-recon; sid:1301; rev:11;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP smssend.php access"; flow:to_server,established; uricontent:"/smssend.php"; reference:bugtraq,3982; reference:cve,2002-0220; classtype:web-application-activity; sid:1407; rev:8;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PHP-Nuke remote file include attempt"; flow:to_server,established; uricontent:"/index.php"; nocase; content:"file="; pcre:"/file=(http|https|ftp)/i"; reference:bugtraq,3889; reference:cve,2002-0206; classtype:web-application-attack; sid:1399; rev:11;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Phorum /support/common.php attempt"; flow:to_server,established; uricontent:"/support/common.php"; content:"ForumLang=../"; classtype:web-application-attack; reference:bugtraq,1997; sid:1490; rev:7;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Phorum /support/common.php access"; flow:to_server,established; uricontent:"/support/common.php"; classtype:web-application-attack; reference:bugtraq,9361; reference:bugtraq,1997; sid:1491; rev:8;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Phorum /support/common.php attempt"; flow:to_server,established; uricontent:"/support/common.php"; content:"ForumLang=../"; reference:bugtraq,1997; classtype:web-application-attack; sid:1490; rev:8;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Phorum /support/common.php access"; flow:to_server,established; uricontent:"/support/common.php"; reference:bugtraq,1997; reference:bugtraq,9361; classtype:web-application-attack; sid:1491; rev:9;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Phorum authentication access"; flow:to_server,established; content:"PHP_AUTH_USER=boogieman"; nocase; reference:arachnids,206; reference:bugtraq,2274; classtype:attempted-recon; sid:1137; rev:9;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP strings overflow"; flow:to_server,established; content:"|BA|I|FE FF FF F7 D2 B9 BF FF FF FF F7 D1|"; reference:arachnids,431; reference:bugtraq,802; classtype:web-application-attack; sid:1085; rev:8;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP strings overflow"; flow:to_server,established; uricontent:"?STRENGUR"; reference:arachnids,430; reference:bugtraq,1786; reference:cve,2000-0967; classtype:web-application-attack; sid:1086; rev:12;)
@@ -101,7 +101,7 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Advanced 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP files.inc.php access"; flow:to_server,established; uricontent:"/files.inc.php"; nocase; reference:bugtraq,8910; classtype:web-application-activity; sid:2304; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP chatbox.php access"; flow:to_server,established; uricontent:"/chatbox.php"; nocase; reference:bugtraq,8930; classtype:web-application-activity; sid:2305; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP gallery remote file include attempt"; flow:to_server,established; uricontent:"/setup/"; content:"GALLERY_BASEDIR="; pcre:"/GALLERY_BASEDIR=(http|https|ftp)/i"; reference:bugtraq,8814; reference:nessus,11876; classtype:web-application-attack; sid:2306; rev:4;)
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PayPal Storefront remote file include attemtp"; flow:to_server,established; content:"do=ext"; content:"page="; pcre:"/page=(http|https|ftp)/i"; reference:bugtraq,8791; reference:nessus,11873; classtype:web-application-attack; sid:2307; rev:5;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PayPal Storefront remote file include attempt"; flow:to_server,established; content:"do=ext"; content:"page="; pcre:"/page=(http|https|ftp)/i"; reference:bugtraq,8791; reference:nessus,11873; classtype:web-application-attack; sid:2307; rev:6;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP authentication_index.php access"; flow:to_server,established; uricontent:"/authentication_index.php"; nocase; reference:cve,2004-0032; reference:nessus,11982; classtype:web-application-activity; sid:2328; rev:3;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP MatrikzGB privilege escalation attempt"; flow:to_server,established; content:"new_rights=admin"; nocase; reference:bugtraq,8430; classtype:web-application-activity; sid:2331; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP DCP-Portal remote file include attempt"; flow:to_server,established; uricontent:"/library/editor/editor.php"; nocase; content:"root="; reference:bugtraq,6525; classtype:web-application-attack; sid:2341; rev:1;)
@@ -137,10 +137,11 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP modules.p
 
 
 
-alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PHPBB viewforum.php access"; flow:to_server,established; uricontent:"/viewforum.php"; nocase; reference:bugtraq,9866; classtype:web-application-activity; reference:nessus,12093; reference:bugtraq,9865; sid:2566; rev:3;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PHPBB viewforum.php access"; flow:to_server,established; uricontent:"/viewforum.php"; nocase; reference:bugtraq,9865; reference:bugtraq,9866; reference:nessus,12093; classtype:web-application-activity; sid:2566; rev:4;)
 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP Opt-X header.php remote file include attempt"; flow:to_server,established; uricontent:"/header.php"; nocase; content:"systempath="; pcre:"/systempath=(http|https|ftp)/i"; reference:bugtraq,9732; classtype:web-application-attack; sid:2575; rev:1;)
 
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP TUTOS path disclosure attempt"; flow:to_server,established; uricontent:"/note_overview.php"; content:"id="; reference:bugtraq,10129; reference:url,www.securiteam.com/unixfocus/5FP0J15CKE.html; classtype:web-application-activity; sid:2588; rev:1;)
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"WEB-PHP PHPNuke Forum viewtopic SQL insertion attempt"; flow:to_server,established; uricontent:"/modules.php"; nocase; content:"name=Forums"; content:"file=viewtopic"; pcre:"/forum=.*'/"; reference:bugtraq,7193; classtype:web-application-attack; sid:2654; rev:2;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-PHP PhpGedView PGV base directory manipulation"; flow:to_server,established; uricontent:"_conf.php"; nocase; content:"PGV_BASE_DIRECTORY"; nocase; reference:bugtraq,9368; classtype:web-application-attack; sid:2926; rev:1;)

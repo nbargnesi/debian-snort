@@ -53,3 +53,8 @@ Ricky Macatee <ricky.macatee@sourcefire.com>
 
 --
 Additional References:
+
+RFC 937:
+http://www.faqs.org/rfc/rfc937.txt
+
+--

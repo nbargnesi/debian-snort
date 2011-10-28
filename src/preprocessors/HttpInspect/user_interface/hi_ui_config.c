@@ -241,6 +241,8 @@ int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *ServerConf,
 
     ServerConf->flow_depth = 300;
 
+    ServerConf->chunk_length = 500000; 
+
     ServerConf->iis_unicode_map = iis_unicode_map;
 
     ServerConf->ascii.on = 1;
@@ -268,7 +270,7 @@ int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *ServerConf,
 
     ServerConf->iis_delimiter.on      = 1;
 
-    ServerConf->apache_whitespace.on     = 1;
+    ServerConf->apache_whitespace.on  = 1;
 
     ServerConf->non_strict = 1;
 
@@ -335,10 +337,8 @@ int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *ServerConf,
     ServerConf->iis_backslash.on      = 1;
 
     ServerConf->iis_delimiter.on      = 1;
-    ServerConf->iis_delimiter.alert   = 1;
 
     ServerConf->apache_whitespace.on     = 1;
-    ServerConf->apache_whitespace.alert  = 1;
 
     ServerConf->non_strict = 1;
 

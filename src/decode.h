@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: decode.h,v 1.79 2004/03/11 22:25:52 jh8 Exp $ */
+/* $Id: decode.h,v 1.80.2.2 2005/01/13 20:36:20 jhewlett Exp $ */
 
 
 #ifndef __DECODE_H__
@@ -549,6 +549,8 @@ struct ppp_header {
 #define PKT_ALT_DECODE       0x00000800  /* this packet has been normalized by telnet
                                              (only set when we must look at an alernative buffer)
                                          */
+#define PKT_STREAM_TWH       0x00001000
+#define PKT_INLINE_DROP      0x20000000
 #define PKT_OBFUSCATED       0x40000000  /* this packet has been obfuscated */
 #define PKT_LOGGED           0x80000000  /* this packet has been logged */
 /*  D A T A  S T R U C T U R E S  *********************************************/
@@ -556,7 +558,7 @@ struct ppp_header {
 /* Start Token Ring Data Structures */
 
 
-#ifdef WIN32
+#ifdef _MSC_VER
     /* Visual C++ pragma to disable warning messages about nonstandard bit field type */
     #pragma warning( disable : 4214 )  
 #endif
@@ -576,7 +578,7 @@ typedef struct _Trh_llc
  * a bit more split up
  */
 
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to disable warning messages about nonstandard bit field type */
   #pragma warning( disable : 4214 )  
 #endif
@@ -608,7 +610,7 @@ typedef struct _Trh_mr
     u_int16_t bcast_len_dir_lf_res; /* broadcast/res/framesize/direction */
     u_int16_t rseg[8];
 }       Trh_mr;
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to enable warning messages about nonstandard bit field type */
   #pragma warning( default : 4214 )
 #endif
@@ -720,7 +722,7 @@ typedef struct _Pflog_hdr
 #define LINUX_SLL_P_802_2       0x0004  /* 802.2 frames (not D/I/X Ethernet) */
 
 
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to disable warning messages 
    * about nonstandard bit field type 
    */
@@ -736,7 +738,7 @@ typedef struct _VlanTagHdr
     u_int16_t vth_pri_cfi_vlan;
     u_int16_t vth_proto;  /* protocol field... */
 } VlanTagHdr;
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to enable warning messages about nonstandard bit field type */
   #pragma warning( default : 4214 )
 #endif
@@ -786,7 +788,7 @@ typedef struct _WifiHdr
 
 /* Can't add any fields not in the real header here 
    because of how the decoder uses structure overlaying */
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to disable warning messages 
    * about nonstandard bit field type 
    */
@@ -814,7 +816,7 @@ typedef struct _IPHdr
     struct in_addr ip_src;  /* source IP */
     struct in_addr ip_dst;  /* dest IP */
 }      IPHdr;
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to enable warning messages about nonstandard bit field type */
   #pragma warning( default : 4214 )
 #endif
@@ -822,7 +824,7 @@ typedef struct _IPHdr
 
 /* Can't add any fields not in the real header here 
    because of how the decoder uses structure overlaying */
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to disable warning 
    * messages about nonstandard bit field type 
    */
@@ -851,7 +853,7 @@ typedef struct _TCPHdr
     u_int16_t th_urp;       /* urgent pointer */
 
 }       TCPHdr;
-#ifdef WIN32
+#ifdef _MSC_VER
   /* Visual C++ pragma to enable warning messages 
    * about nonstandard bit field type 
    */
@@ -1091,8 +1093,9 @@ typedef struct _Packet
 
     u_int8_t *data;         /* packet payload pointer */
     u_int16_t dsize;        /* packet payload size */
-    u_int16_t alt_dsize;    /* the dsize of a packet before munging
-                            (used for log)*/
+    u_int16_t alt_dsize;    /* the dsize of a packet before munging (used for log)*/
+
+    u_int16_t actual_ip_len;/* for logging truncated packets (usually by a small snaplen) */
 
     u_int8_t frag_flag;     /* flag to indicate a fragmented packet */
     u_int16_t frag_offset;  /* fragment offset number */
@@ -1126,17 +1129,32 @@ typedef struct _Packet
     int preprocessors;          /* flags for preprocessors to check */
 } Packet;
 
+typedef struct s_pseudoheader
+{
+    u_int32_t sip, dip; 
+    u_int8_t  zero;     
+    u_int8_t  protocol; 
+    u_int16_t len; 
+
+} PSEUDO_HDR;
+
 /* Default classification for decoder alerts */
 #define DECODE_CLASS 25 
 
 typedef struct _DecoderFlags
 {
     char decode_alerts;   /* if decode.c alerts are going to be enabled */
+    char drop_alerts;     /* drop alerts from decoder */
     char tcpopt_experiment;  /* TcpOptions Decoder */
+    char drop_tcpopt_experiment; /* Drop alerts from TcpOptions Decoder */
     char tcpopt_obsolete;    /* Alert on obsolete TCP options */
+    char drop_tcpopt_obsolete; /* Drop on alerts from obsolete TCP options */
     char tcpopt_ttcp;        /* Alert on T/TCP options */
+    char drop_tcpopt_ttcp;   /* Drop on alerts from T/TCP options */
     char tcpopt_decode;      /* alert on decoder inconsistencies */
+    char drop_tcpopt_decode; /* Drop on alerts from decoder inconsistencies */
     char ipopt_decode;      /* alert on decoder inconsistencies */
+    char drop_ipopt_decode; /* Drop on alerts from decoder inconsistencies */
 } DecoderFlags;
 
 #define        ALERTMSG_LENGTH 256
@@ -1174,6 +1192,14 @@ void DecodeIPOptions(u_int8_t *, u_int32_t, Packet *);
 void DecodeTCPOptions(u_int8_t *, u_int32_t, Packet *);
 void DecodeIPOptions(u_int8_t *, u_int32_t, Packet *);
 void DecodePPPoEPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+#ifdef GIDS
+#ifndef IPFW
+void DecodeIptablesPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+#else
+void DecodeIpfwPkt(Packet *, struct pcap_pkthdr *, u_int8_t *);
+#endif /* IPFW */
+#endif /* GIDS */
+
 #if defined(WORDS_MUSTALIGN) && !defined(__GNUC__)
 u_int32_t EXTRACT_32BITS (u_char *);
 #endif /* WORDS_MUSTALIGN && !__GNUC__ */

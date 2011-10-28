@@ -98,7 +98,8 @@ int LogTagData(Packet *p,
 
     event.ref_time.tv_sec = ref_sec;
     
-    CallLogFuncs(p, msg, NULL, &event);
+    if(p)
+        CallLogFuncs(p, msg, NULL, &event);
 
     return 1;
 }

@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: p2p.rules,v 1.14.2.2 2004/08/10 13:52:06 bmc Exp $
+# $Id: p2p.rules,v 1.17.2.1 2004/10/13 20:25:57 bmc Exp $
 #-------------
 # P2P RULES
 #-------------
@@ -24,4 +24,4 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"P2P Fastrack kazaa/morpheus t
 alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"P2P BitTorrent announce request"; flow:to_server,established; content:"GET"; depth:4; content:"/announce"; distance:1; content:"info_hash="; offset:4; content:"event=started"; offset:4; classtype:policy-violation; sid:2180; rev:2;)
 alert tcp $HOME_NET any -> $EXTERNAL_NET 6881:6889 (msg:"P2P BitTorrent transfer"; flow:to_server,established; content:"|13|BitTorrent protocol"; depth:20; classtype:policy-violation; sid:2181; rev:2;)
 alert tcp $HOME_NET 4242 <> $EXTERNAL_NET any (msg:"P2P eDonkey transfer"; flow:established; content:"|E3|"; depth:1; reference:url,www.kom.e-technik.tu-darmstadt.de/publications/abstracts/HB02-1.html; classtype:policy-violation; sid:2586; rev:1;)
-alert tcp $HOME_NET 4711 -> $EXTERNAL_NET any (msg:"P2P eDonkey server response"; flow:established,from_server; content:"Server|3a| eMule"; reference:url,www.emule-project.net; classtype:policy-violation; sid:2587; rev:1;)
+alert tcp $HOME_NET 4711 -> $EXTERNAL_NET any (msg:"P2P eDonkey server response"; flow:established,from_server; content:"Server|3A| eMule"; reference:url,www.emule-project.net; classtype:policy-violation; sid:2587; rev:2;)

@@ -34,7 +34,7 @@ The attacker can use one of the publicly available exploit scripts.
 
 --
 Ease of Attack:
-Simple. Exploit code exitst.
+Simple. Exploit code exists.
 
 --
 False Positives:
@@ -66,3 +66,5 @@ http://www.securityfocus.com/bid/2225
 
 CVE:
 http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0218
+
+--

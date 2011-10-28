@@ -1,4 +1,4 @@
-/* $Id: detect.c,v 1.45 2004/06/16 18:49:24 jhewlett Exp $ */
+/* $Id: detect.c,v 1.46.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2002, Sourcefire, Inc.
@@ -48,6 +48,11 @@
 #include "sfthreshold.h"
 #include "event_wrapper.h"
 #include "event_queue.h"
+#include "stream.h"
+
+#ifdef GIDS
+#include "inline.h"
+#endif /* GIDS */
 
 /* XXX modularization violation */
 #include "preprocessors/spp_stream4.h"
@@ -61,6 +66,11 @@ extern ListHead Log;           /* Log Block Header */
 extern ListHead Pass;          /* Pass Block Header */
 extern ListHead Activation;    /* Activation Block Header */
 extern ListHead Dynamic;       /* Dynamic Block Header */
+#ifdef GIDS
+extern ListHead Drop;
+extern ListHead SDrop;
+extern ListHead Reject;
+#endif /* GIDS */
 
 extern RuleTreeNode *rtn_tmp;      /* temp data holder */
 extern OptTreeNode *otn_tmp;       /* OptTreeNode temp ptr */
@@ -80,11 +90,14 @@ extern OutputFuncNode *LogList; /* log function list */
 */
 extern HttpUri UriBufs[URI_COUNT];
 
+extern Stream4Data s4data;
+
 int do_detect;
 u_int32_t event_id;
 char check_tags_flag;
 
 void printRuleListOrder(RuleListNode * node);
+static int CheckTagging(Packet *p);
 static RuleListNode *addNodeToOrderedList(RuleListNode *ordered_list, 
         RuleListNode *node, int evalIndex);
 
@@ -125,9 +138,16 @@ int Preprocess(Packet * p)
         idx = idx->next;
     }
 
-
+    check_tags_flag = 1;
+    
     if(do_detect)
         Detect(p);
+
+    /*
+    ** By checking tagging here, we make sure that we log the
+    ** tagged packet whether it generates an alert or not.
+    */
+    CheckTagging(p);
 
     retval = SnortEventqLog(p);
     SnortEventqReset();
@@ -151,16 +171,54 @@ int Preprocess(Packet * p)
     return retval;
 }
 
+/*
+**  NAME
+**    CheckTagging::
+*/
+/**
+**  This is where we check to see if we tag the packet.  We only do
+**  this if we've alerted on a non-pass rule and the packet is not
+**  rebuilt.
+**
+**  We don't log rebuilt packets because the output plugins log the
+**  individual packets of a rebuilt stream, so we don't want to dup
+**  tagged packets for rebuilt streams.
+**
+**  @return integer
+*/
+static int CheckTagging(Packet *p)
+{
+    Event event;
+
+    if(check_tags_flag == 1 && !(p->packet_flags & PKT_REBUILT_STREAM)) 
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "calling CheckTagList\n"););
+
+        if(CheckTagList(p, &event))
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "Matching tag node found, "
+                        "calling log functions\n"););
+
+            /* if we find a match, we want to send the packet to the
+             * logging mechanism
+             */
+            CallLogFuncs(p, "Tagged Packet", NULL, &event);
+        } 
+    }
+
+    return 0;
+}
+
 void CallLogFuncs(Packet *p, char *message, ListHead *head, Event *event)
 {
     OutputFuncNode *idx = NULL;
 
-    
-    if(p)
+    /*
+    **  Don't do thresholding on tagged packets.  The tv_sec check
+    **  makes sure that we don't.
+    */
+    if(p && event->ref_time.tv_sec == 0)
     {
-        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
-        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
-        
         /*
          *  Perform Thresholding Tests 
          */
@@ -170,11 +228,28 @@ void CallLogFuncs(Packet *p, char *message, ListHead *head, Event *event)
                                    event->sig_id,
                                    p->iph->ip_src.s_addr,
                                    p->iph->ip_dst.s_addr,
-                                   event->ref_time.tv_sec ) )
+                                   p->pkth->ts.tv_sec ) )
             {
                 return; /* Don't log it ! */
             }
         }
+        else
+        {
+            if( !sfthreshold_test( event->sig_generator,
+                                   event->sig_id,
+                                   0,
+                                   0,
+                                   p->pkth->ts.tv_sec ) )
+            {
+                return; /* Don't log it ! */
+            }
+        }
+
+        /*
+        **  Set the ref time after we check thresholding.
+        */
+        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
+        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
     }
 
     /* set the event number */
@@ -252,11 +327,12 @@ void CallAlertFuncs(Packet * p, char *message, ListHead * head, Event *event)
 {
     OutputFuncNode *idx = NULL;
 
-    if(p)
+    /*
+    **  Don't do thresholding on tagged packets.  The tv_sec check
+    **  makes sure that we don't.
+    */
+    if(p && event->ref_time.tv_sec == 0)
     {
-        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
-        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
-        
         /*
          *  Perform Thresholding Tests 
          */
@@ -266,21 +342,32 @@ void CallAlertFuncs(Packet * p, char *message, ListHead * head, Event *event)
                                    event->sig_id,
                                    p->iph->ip_src.s_addr,
                                    p->iph->ip_dst.s_addr,
-                                   event->ref_time.tv_sec ) )
+                                   p->pkth->ts.tv_sec ) )
             {
                 return; /* Don't log it ! */
             }
         }
+        else
+        {
+            if( !sfthreshold_test( event->sig_generator,
+                                   event->sig_id,
+                                   0,
+                                   0,
+                                   p->pkth->ts.tv_sec ) )
+            {
+                return; /* Don't log it ! */
+            }
+        }
+
+        /*
+        **  Set the ref time after we check thresholding.
+        */
+        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
+        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
     }
 
     /* set the event number */
-    event->event_id = ++event_id;
-    /* set the event reference info */
-    event->event_reference = event->event_id;
-
-
-    /* set the event number */
-    event->event_id = ++event_id;
+    event->event_id = event_id;
     /* set the event reference info */
     event->event_reference = event->event_id;
 
@@ -346,13 +433,10 @@ void CallAlertPlugins(Packet * p, char *message, void *args, Event *event)
 int Detect(Packet * p)
 {
     int detected = 0;
-    Event event;
 
     RuleListNode *rule;
 
     rule = RuleLists;
-
-    check_tags_flag = 1;
 
     if(p && p->iph == NULL)
         return 0;
@@ -362,28 +446,6 @@ int Detect(Packet * p)
     **  that we can do IP checks.
     */
     detected = fpEvalPacket(p);
-
-    DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "Checking tags list (if "
-                "check_tags_flag = 1)\n"););
-
-    /* if we didn't match on any rules, check the tag list */
-    if(check_tags_flag == 1) 
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "calling CheckTagList\n"););
-
-        if(CheckTagList(p, &event))
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "Matching tag node found, "
-                        "calling log functions\n"););
-
-            /* if we find a match, we want to send the packet to the
-             * logging mechanism
-             */
-            CallLogFuncs(p, "Tagged Packet", NULL, &event);
-
-            return 1;
-        } 
-    }
 
     return detected;
 }
@@ -1157,6 +1219,11 @@ void CreateDefaultRules()
 {
     CreateRuleType("activation", RULE_ACTIVATE, 1, &Activation);
     CreateRuleType("dynamic", RULE_DYNAMIC, 1, &Dynamic);
+#ifdef GIDS
+    CreateRuleType("drop", RULE_DROP, 1, &Drop);
+    CreateRuleType("sdrop", RULE_SDROP, 0, &SDrop);
+    CreateRuleType("reject", RULE_REJECT, 1, &Reject);
+#endif /* GIDS */
     CreateRuleType("alert", RULE_ALERT, 1, &Alert);
     CreateRuleType("pass", RULE_PASS, 0, &Pass);
     CreateRuleType("log", RULE_LOG, 1, &Log);
@@ -1164,7 +1231,6 @@ void CreateDefaultRules()
 
 void printRuleOrder()
 {
-    LogMessage("Rule application order: ");
     printRuleListOrder(RuleLists);
 }
 
@@ -1350,13 +1416,17 @@ static RuleListNode *addNodeToOrderedList(RuleListNode *ordered_list,
 
 void printRuleListOrder(RuleListNode * node)
 {
+    char buf[STD_BUF+1];
+
+    snprintf(buf, STD_BUF, "Rule application order: ");
+
     while( node != NULL )
     {
-        LogMessage("->%s", node->name);
+        sfsnprintfappend(buf, STD_BUF, "->%s", node->name);
         node = node->next;
     }
 
-    LogMessage("\n");
+    LogMessage("%s\n", buf);
 }
 
 /* Rule Match Action Functions */
@@ -1435,6 +1505,109 @@ int AlertAction(Packet * p, OptTreeNode * otn, Event *event)
 
     return 1;
 }
+
+#ifdef GIDS
+int DropAction(Packet * p, OptTreeNode * otn, Event *event)
+{
+    Session *ssnptr;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+               "        <!!> Generating Alert and dropping! \"%s\"\n",
+               otn->sigInfo.message););
+    
+    if(!s4data.ms_inline_alerts)
+    {
+        ssnptr = (Session *)p->ssnptr;
+
+        if(ssnptr && ssnptr->session_flags & SSNFLAG_MIDSTREAM) 
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+                " <!!> Alert Came From Midstream Session Silently Drop! "
+                "\"%s\"\n", otn->sigInfo.message);); 
+
+            InlineDrop();
+            return 1;
+        }
+    }
+
+    /*
+    **  Set packet flag so output plugins will know we dropped the
+    **  packet we just logged.
+    */
+    p->packet_flags |= PKT_INLINE_DROP;
+
+    CallAlertFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+
+    CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+
+    /*
+    if(p->ssnptr != NULL)
+    {
+        if(AlertFlushStream(p) == 0)
+        {
+            CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+        }
+    }
+    else
+    {
+        CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+    }
+
+    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+                            "   => Alert packet finished, returning!\n"););
+    */
+
+    InlineDrop();
+
+    return 1;
+}
+
+
+int SDropAction(Packet * p, OptTreeNode * otn, Event *event)
+{
+    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+               "        <!!> Dropping without Alerting! \"%s\"\n",
+               otn->sigInfo.message););
+
+    // Let's silently drop the packet
+    InlineDrop();
+    return 1;
+}
+
+int RejectAction(Packet * p, OptTreeNode * otn, Event *event)
+{
+    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+               "        <!!>Ignoring! \"%s\"\n",
+               otn->sigInfo.message););
+
+    // Let's log/alert, drop the packet, and mark it for reset.
+    CallAlertFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+
+    CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+
+    /*
+    if(p->ssnptr != NULL)
+    {
+        if(AlertFlushStream(p) == 0)
+        {
+            CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+        }
+    }
+    else
+    {
+        CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
+    }
+
+    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+               "   => Alert packet finished, returning!\n"););
+    */
+
+    InlineReject(p);
+
+    return 1;
+}
+#endif /* GIDS */
+
 
 int DynamicAction(Packet * p, OptTreeNode * otn, Event *event)
 {

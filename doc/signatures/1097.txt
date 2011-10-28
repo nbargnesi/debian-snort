@@ -65,3 +65,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+Talentsoft knowledge base:
+http://www.webplus.com/Issues/
+
+--

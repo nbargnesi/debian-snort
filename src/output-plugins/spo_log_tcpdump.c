@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_log_tcpdump.c,v 1.36.2.1 2004/08/04 14:28:25 jhewlett Exp $ */
+/* $Id: spo_log_tcpdump.c,v 1.38 2004/09/13 17:44:49 jhewlett Exp $ */
 
 /* spo_log_tcpdump 
  * 
@@ -248,9 +248,9 @@ void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
 
     s = (Stream *) p->streamptr;
 
-    spd = (StreamPacketData *) ubi_btFirst((ubi_btNodePtr)&s->data);
-
-    do
+    for(spd = (StreamPacketData *)ubi_btFirst((ubi_btNodePtr)&s->data);
+        spd;
+        spd = (StreamPacketData*)ubi_btNext((ubi_btNodePtr)spd))
     {
         if(spd->chuck != SEG_UNASSEMBLED)
         {
@@ -258,9 +258,7 @@ void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
                       (struct pcap_pkthdr *) &spd->pkth, 
                       (u_char *) spd->pkt);
         }
-
-    } while((spd=(StreamPacketData*)ubi_btNext((ubi_btNodePtr)spd))!=NULL);
-
+    }
 
     if(!pv.line_buffer_flag)
     { 

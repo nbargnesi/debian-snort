@@ -81,7 +81,7 @@ am__quote = @am__quote@
 extra_incl = @extra_incl@
 install_sh = @install_sh@
 AUTOMAKE_OPTIONS = foreign no-dependencies
-SUBDIRS = src doc etc rules templates contrib
+SUBDIRS = src doc etc rules templates contrib schemas rpm
 
 EXTRA_DIST = ChangeLog snort.8 LICENSE verstuff.pl RELEASE.NOTES
 

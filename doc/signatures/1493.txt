@@ -31,6 +31,10 @@ privileges to that of the administrator. Data stored on the machine can
 be compromised and trust relationships between the victim server and 
 other hosts can be exploited by the attacker.
 
+Access to the newuser directory on a host running RBS ISP may indicate
+that an attempt to exploit a well known directory traversal
+vulnerability is being made by appending a ../ to the image variable.
+
 --
 Affected Systems:
 	All systems using a web server.
@@ -64,6 +68,9 @@ Contributors:
 Sourcefire Research Team
 Brian Caswell <bmc@sourcefire.com>
 Nigel Houghton <nigel.houghton@sourcefire.com>
+Ricky McAtee <rmcatee@sourcefire.com>
 
 --
 Additional References:
+
+--

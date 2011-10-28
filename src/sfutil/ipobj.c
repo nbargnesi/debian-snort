@@ -421,16 +421,16 @@ int ipset_contains( IPSET * ipc, void * ip, int family )
         CIDRBLOCK * p;
         unsigned  * ipu = (unsigned*)ip;
 
-        for(p =(CIDRBLOCK*)sflist_first( &ipc->cidr_list );
-	    p!=0;
+        for(p =(CIDRBLOCK*)sflist_first( &ipc->cidr_list ); 
+            p!=0;
             p =(CIDRBLOCK*)sflist_next( &ipc->cidr_list ) )
-	{
-	   if( (p->mask & (*ipu)) == p->ip )
-	   {
+        {
+            if( (p->mask & (*ipu)) == p->ip )
+            {
                 if( p->notflag ) return 0;
-		return 1;
-	   }
-	}
+                return 1;
+            }
+        }
     }
     else if( ipc->family == IPV6_FAMILY )
     {
@@ -611,7 +611,7 @@ int ip4_parse(char *ipstr, int network_order, int *not_flag, unsigned *host, uns
         }
         else
         {
-            memcpy(host, &addrstuff.s_addr, sizeof(unsigned));
+            *host = ntohl(addrstuff.s_addr);
         }            
         
         if(maskptr)
@@ -666,7 +666,7 @@ int ip4_parse(char *ipstr, int network_order, int *not_flag, unsigned *host, uns
                     *mask = 0;
                     for(i=0;i<blocksize;i++)
                     {
-                        (*mask) |= 1 << i;
+                        (*mask) |= (1 << 31) >> i;
                     }
                 }
             }
@@ -674,7 +674,7 @@ int ip4_parse(char *ipstr, int network_order, int *not_flag, unsigned *host, uns
     }
 
     /* convert the arguments by default */
-    if(!network_order)
+    if(network_order)
     {
         *mask = htonl(*mask);
         *host = htonl(*host);	

@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: snort.h,v 1.367.2.1 2004/08/04 14:28:25 jhewlett Exp $ */
+/* $Id: snort.h,v 1.370.2.9 2005/01/13 20:36:20 jhewlett Exp $ */
 
 #ifndef __SNORT_H__
 #define __SNORT_H__
@@ -31,7 +31,12 @@
 
 #include "decode.h"
 #include "perf.h"
-SFPERF sfPerf;
+
+#ifdef GIDS
+#include "inline.h"
+#endif /* GIDS */
+
+extern SFPERF sfPerf;
 
 /* Mark this as a modern version of snort */
 #define SNORT_20
@@ -47,7 +52,7 @@ SFPERF sfPerf;
 #endif
 
 /*  D E F I N E S  ************************************************************/
-#define BUILD "30"
+#define BUILD "10"
 
 #define STD_BUF  1024
 
@@ -59,12 +64,8 @@ SFPERF sfPerf;
 
 #define MAX_PIDFILE_SUFFIX 11 /* uniqueness extension to PID file, see '-R' */
 
-/*
- * you may need to ajust this on the systems which don't have standard
- * paths defined
- */
 #ifndef _PATH_VARRUN
-char _PATH_VARRUN[STD_BUF];
+extern char _PATH_VARRUN[STD_BUF];
 #endif
 
 #ifndef WIN32
@@ -167,6 +168,16 @@ typedef struct _progvars
     int readmode_flag;
     int show2hdr_flag;
     int showwifimgmt_flag;
+#ifdef GIDS
+    int inline_flag;
+#ifndef IPFW
+    char layer2_resets;
+    u_char enet_src[6];
+#endif
+#ifdef IPFW
+    int divert_port;
+#endif /* USE IPFW DIVERT socket instead of IPtables */
+#endif /* GIDS */
 #ifdef WIN32
     int syslog_remote_flag;
     char syslog_server[STD_BUF];

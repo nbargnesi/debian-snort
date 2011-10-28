@@ -101,7 +101,8 @@ libsfutil_a_SOURCES = sfghash.c sfghash.h \
                       util_net.c util_net.h \
                       util_str.c util_str.h \
                       asn1.c asn1.h \
-                      sfeventq.c sfeventq.h
+                      sfeventq.c sfeventq.h \
+                      sfsnprintfappend.c sfsnprintfappend.h
 
 subdir = src/sfutil
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -116,7 +117,8 @@ am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
 	sfxhash.$(OBJEXT) ipobj.$(OBJEXT) mwm.$(OBJEXT) \
 	sfksearch.$(OBJEXT) acsmx.$(OBJEXT) acsmx2.$(OBJEXT) \
 	mpse.$(OBJEXT) util_math.$(OBJEXT) util_net.$(OBJEXT) \
-	util_str.$(OBJEXT) asn1.$(OBJEXT) sfeventq.$(OBJEXT)
+	util_str.$(OBJEXT) asn1.$(OBJEXT) sfeventq.$(OBJEXT) \
+	sfsnprintfappend.$(OBJEXT)
 libsfutil_a_OBJECTS = $(am_libsfutil_a_OBJECTS)
 
 DEFS = @DEFS@

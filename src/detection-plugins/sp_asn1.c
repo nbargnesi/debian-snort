@@ -1,4 +1,4 @@
-/* $Id: sp_asn1.c,v 1.1 2004/06/16 18:49:24 jhewlett Exp $ */
+/* $Id: sp_asn1.c,v 1.1.4.1 2004/11/17 15:54:23 jhewlett Exp $ */
 
 /**
 **  @file        sp_asn1.c
@@ -29,6 +29,9 @@
 **  alert tcp any any -> any 162 (msg:"foo2"; \
 **      asn1: bitstring_overflow, oversize_length 500, relative_offset 7;)
 **
+**
+**  Note that further general information about ASN.1 can be found in
+**  the file doc/README.asn1.
 */
 
 #ifdef HAVE_CONFIG_H

@@ -1,6 +1,6 @@
-## $Id: Makefile.am,v 1.70 2004/06/24 15:08:37 jhewlett Exp $
+## $Id: Makefile.am,v 1.70.4.1 2004/11/10 23:20:31 jhewlett Exp $
 AUTOMAKE_OPTIONS=foreign no-dependencies
-SUBDIRS = src doc etc rules templates contrib
+SUBDIRS = src doc etc rules templates contrib schemas rpm
 
 INCLUDES = @INCLUDES@
 

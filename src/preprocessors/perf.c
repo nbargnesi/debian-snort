@@ -1,5 +1,5 @@
 /*
-**  $Id: perf.c,v 1.4 2004/06/03 20:11:06 jhewlett Exp $
+**  $Id: perf.c,v 1.4.4.1 2004/11/02 22:07:18 jhewlett Exp $
 **
 **  perf.c
 **
@@ -67,6 +67,15 @@ int sfSetPerformanceSampleTime(SFPERF *sfPerf, int iSeconds)
 
     return 0;
 }
+
+
+int sfSetPerformanceAccounting(SFPERF *sfPerf, int iReset)
+{
+    sfPerf->sfBase.iReset = iReset;
+    
+    return 0;
+}
+
 
 int sfSetPerformanceStatistics(SFPERF *sfPerf, int iFlag)
 {

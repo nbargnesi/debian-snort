@@ -24,6 +24,9 @@ running Microsoft FrontPage Server Extensions. Many known
 vulnerabilities exist for this platform and the attack scenarios are
 legion.
 
+In this case an attempt is being made to access the executable file
+fpsvradm.exe from resources external to the protected network.
+
 --
 Affected Systems:
 	All systems running Microsoft FrontPage Server Extensions
@@ -58,3 +61,8 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
+
+Microsoft:
+http://www.microsoft.com/resources/documentation/office/2000/all/reskit/en-us/75t4_3.mspx
+
+--

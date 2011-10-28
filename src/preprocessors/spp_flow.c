@@ -257,8 +257,12 @@ static void FlowPreprocessor(Packet *p)
             flow_printf("***ERROR: "); flowkey_print(&search_key); flow_printf("\n");
         }
 
+        direction = FROM_INITIATOR;
+
         flow_callbacks(FLOW_NEW, fp, FROM_INITIATOR, pkt);
     }
+
+    fp->stats.direction = direction;
 
     /* printout some verbose statistics */
     if(s_config.stats_interval  &&

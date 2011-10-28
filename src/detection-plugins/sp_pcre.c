@@ -1,4 +1,4 @@
-/* $Id: sp_pcre.c,v 1.4 2004/01/27 17:19:00 jh8 Exp $ */
+/* $Id: sp_pcre.c,v 1.4.4.1 2004/12/09 17:38:47 jhewlett Exp $ */
 /*
 ** Copyright (C) 2003 Brian Caswell <bmc@snort.org>
 ** Copyright (C) 2003 Michael J. Pomraning <mjp@securepipe.com>
@@ -409,7 +409,7 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     /* set the doe_ptr if we have a valid offset */
     if(found_offset > 0)
     {
-        doe_ptr = (u_int8_t *) start_ptr + found_offset;
+        doe_ptr = (u_int8_t *) base_ptr + found_offset;
     }
     
     while(matched)
@@ -423,7 +423,7 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                return the next iteration */
             /* set the doe_ptr for stateful pattern matching later */
 
-            doe_ptr = (u_int8_t *) start_ptr + found_offset;
+            doe_ptr = (u_int8_t *) base_ptr + found_offset;
 
             return 1;
         }
@@ -441,7 +441,7 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         /* set the doe_ptr if we have a valid offset */
         if(found_offset > 0)
         {
-            doe_ptr = (u_int8_t *) start_ptr + found_offset;
+            doe_ptr = (u_int8_t *) base_ptr + found_offset;
         }
         
         if(matched)

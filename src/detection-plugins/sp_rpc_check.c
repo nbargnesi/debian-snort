@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_rpc_check.c,v 1.15 2003/10/20 15:03:32 chrisgreen Exp $ */
+/* $Id: sp_rpc_check.c,v 1.15.6.1 2004/11/02 22:07:18 jhewlett Exp $ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -37,6 +37,15 @@
 #include "util.h"
 #include "plugin_enum.h"
 
+/*
+ * This is driven by 64-bit Solaris which doesn't
+ * define _LONG
+ * 
+ */
+
+#ifndef IXDR_GET_LONG
+    #define IXDR_GET_LONG IXDR_GET_INT32
+#endif
 
 typedef struct _RpcCheckData
 {

@@ -1,4 +1,4 @@
-/* $Id: decode.c,v 1.105 2004/06/03 20:11:05 jhewlett Exp $ */
+/* $Id: decode.c,v 1.106.2.4 2005/01/13 20:36:20 jhewlett Exp $ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
@@ -38,6 +38,7 @@
 #include "log.h"
 #include "generators.h"
 #include "event_queue.h"
+#include "inline.h"
 
 /* No great place to put this right now */
 HttpUri UriBufs[URI_COUNT];
@@ -250,6 +251,12 @@ void DecodeIEEE80211Pkt(Packet * p, struct pcap_pkthdr * pkthdr,
                     SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                             DECODE_BAD_80211_ETHLLC, 1, DECODE_CLASS, 3, 
                             DECODE_BAD_80211_ETHLLC_STR, 0);
+
+                    if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                    {
+                       DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                       InlineDrop();
+                    }
                 }
                 
                 return;
@@ -281,6 +288,11 @@ void DecodeIEEE80211Pkt(Packet * p, struct pcap_pkthdr * pkthdr,
                         SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                                 DECODE_BAD_80211_ETHLLC, 1, DECODE_CLASS, 3, 
                                 DECODE_BAD_80211_ETHLLC_STR, 0);
+                        if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                        {
+                           DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n");); 
+                           InlineDrop();
+                        }
                     }
                     
                     return;
@@ -350,6 +362,12 @@ void DecodeVlan(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_VLAN, 1, 
                     DECODE_CLASS, 3, DECODE_BAD_VLAN_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n");); 
+               InlineDrop();
+            }
+ 
         }
         
         return;
@@ -383,6 +401,12 @@ void DecodeVlan(u_int8_t * pkt, const u_int32_t len, Packet * p)
             {
                 SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_VLAN_ETHLLC,
                       1, DECODE_CLASS, 3, DECODE_BAD_VLAN_ETHLLC_STR, 0);
+                 if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                 {
+                    DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                    InlineDrop();
+                 }
+ 
             }
             return;            
         }
@@ -409,6 +433,12 @@ void DecodeVlan(u_int8_t * pkt, const u_int32_t len, Packet * p)
                     SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                             DECODE_BAD_VLAN_OTHER, 1, DECODE_CLASS, 3, 
                             DECODE_BAD_VLAN_OTHER_STR, 0);
+                    if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                    {
+                      DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                      InlineDrop();
+                    }
+
                 }
                 
                 return;            
@@ -467,6 +497,64 @@ void DecodeVlan(u_int8_t * pkt, const u_int32_t len, Packet * p)
         }
     }
 }
+
+#ifdef GIDS
+#ifndef IPFW
+/*
+ * Function: DecodeIptablesPkt(Packet *, char *, struct pcap_pkthdr*, u_int8_t*)
+ *
+ * Purpose: Decoding iptables.
+ * 
+ * Arguments: p => pointer to decoded packet struct
+ *            user => Utility pointer, unused
+ *            pkthdr => ptr to the packet header
+ *            pkt => pointer to the real live packet data
+ * 
+ */
+void DecodeIptablesPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
+{
+    u_int32_t len;
+    u_int32_t cap_len;
+	
+    bzero((char *) p, sizeof(Packet));
+    p->pkth = pkthdr;
+    p->pkt = pkt;
+
+    len = pkthdr->len;
+    cap_len = pkthdr->caplen;
+
+    DecodeIP(p->pkt, cap_len, p);
+}
+#else
+/*
+ * Function: DecodeIpfwPkt(Packet *, char *, struct pcap_pkthdr*, u_int8_t*)
+ *
+ * Purpose: Decoding ipfw divert socket
+ * 
+ * Arguments: p => pointer to decoded packet struct
+ *            user => Utility pointer, unused
+ *            pkthdr => ptr to the packet header
+ *            pkt => pointer to the real live packet data
+ * 
+ */
+void DecodeIpfwPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
+{
+    u_int32_t len;
+    u_int32_t cap_len;
+        
+    bzero((char *) p, sizeof(Packet));
+    p->pkth = pkthdr;
+    p->pkt = pkt;
+
+    len = pkthdr->len;
+    cap_len = pkthdr->caplen;
+
+    DecodeIP(p->pkt, cap_len, p);
+
+}
+#endif
+#endif /* GIDS */
+
 
 /*
  * Function: DecodeNullPkt(Packet *, char *, struct pcap_pkthdr*, u_int8_t*)
@@ -556,6 +644,12 @@ void DecodeTRPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_TRH, 1, 
                     DECODE_CLASS, 3, DECODE_BAD_TRH_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+
         }
 
         return;
@@ -592,6 +686,12 @@ void DecodeTRPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_TR_ETHLLC, 1, 
                     DECODE_CLASS, 3, DECODE_BAD_TR_ETHLLC_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+              InlineDrop();
+            }
+
         }
         return;
     }
@@ -618,6 +718,12 @@ void DecodeTRPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
             {
                 SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_TRHMR, 1, 
                         DECODE_CLASS, 3, DECODE_BAD_TRHMR_STR, 0);
+                if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                {
+                   DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                   InlineDrop();
+                }
+
             }
             
             return;
@@ -639,6 +745,12 @@ void DecodeTRPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
             {
                 SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_TR_MR_LEN, 1, 
                         DECODE_CLASS, 3, DECODE_BAD_TR_MR_LEN_STR, 0);
+                if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                {
+                   DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                   InlineDrop();
+                }
+ 
             }
             
             return;
@@ -1098,6 +1210,12 @@ void DecodePPPoEPkt(Packet * p, struct pcap_pkthdr * pkthdr, u_int8_t * pkt)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_BAD_PPPOE, 1, 
                     DECODE_CLASS, 3, DECODE_BAD_PPPOE_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+              InlineDrop();
+            }
+
         }
         
         return;
@@ -1383,7 +1501,7 @@ void DecodePppPktEncapsulated(Packet * p, const u_int32_t len, u_int8_t * pkt)
     }
     else
     {
-        protocol = ntohs(pkt[0] | pkt[1] << 8);
+        protocol = ntohs(*((u_int16_t *)pkt));
         hlen = 2;
     }
     
@@ -1754,6 +1872,12 @@ void DecodeIP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_NOT_IPV4_DGRAM, 1,
                     DECODE_CLASS, 3, DECODE_NOT_IPV4_DGRAM_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+ 
         }
         p->iph = NULL;
         pc.discards++;
@@ -1781,6 +1905,12 @@ void DecodeIP(u_int8_t * pkt, const u_int32_t len, Packet * p)
             SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                     DECODE_IPV4_INVALID_HEADER_LEN, 1, DECODE_CLASS, 3, 
                     DECODE_IPV4_INVALID_HEADER_LEN_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+
         }
 
 
@@ -1827,6 +1957,12 @@ void DecodeIP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_IPV4_DGRAM_LT_IPHDR, 
                     1, DECODE_CLASS, 3, DECODE_IPV4_DGRAM_LT_IPHDR_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            { 
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+ 
         }
 
         p->iph = NULL;
@@ -1847,6 +1983,13 @@ void DecodeIP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             p->csum_flags |= CSE_IP;
             DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Bad IP checksum\n"););
+ 
+            if(InlineMode())
+            {
+                DEBUG_WRAP(DebugMessage(DEBUG_DECODE, 
+                            "Dropping packet with Bad IP checksum\n"););
+                InlineDrop();
+            }
         }
 #ifdef DEBUG
         else
@@ -1868,6 +2011,9 @@ void DecodeIP(u_int8_t * pkt, const u_int32_t len, Packet * p)
     {
         p->ip_option_count = 0;
     }
+
+    /* set the real IP length for logging */
+    p->actual_ip_len = ip_len;
 
     /* set the remaining packet length */
     ip_len -= hlen;
@@ -2118,6 +2264,12 @@ void DecodeTCP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCP_DGRAM_LT_TCPHDR, 
                     1, DECODE_CLASS, 3, DECODE_TCP_DGRAM_LT_TCPHDR_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {  
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+ 
         }
 
         p->tcph = NULL;
@@ -2146,6 +2298,12 @@ void DecodeTCP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCP_INVALID_OFFSET, 
                     1, DECODE_CLASS, 3, DECODE_TCP_INVALID_OFFSET_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {  
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+
         }
 
         p->tcph = NULL;
@@ -2166,6 +2324,12 @@ void DecodeTCP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCP_LARGE_OFFSET, 1, 
                     DECODE_CLASS, 3, DECODE_TCP_LARGE_OFFSET_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {  
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n");); 
+               InlineDrop();
+            }
+ 
         }
 
         p->tcph = NULL;
@@ -2173,9 +2337,6 @@ void DecodeTCP(u_int8_t * pkt, const u_int32_t len, Packet * p)
 
         return;
     }
-
-    
-    
 
     if(pv.checksums_mode & DO_TCP_CHECKSUMS)
     {
@@ -2197,6 +2358,12 @@ void DecodeTCP(u_int8_t * pkt, const u_int32_t len, Packet * p)
             DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Bad TCP checksum\n",
                                     "0x%x versus 0x%x\n", csum,
                                     ntohs(p->tcph->th_sum)););
+            if(InlineMode())
+            {     
+                DEBUG_WRAP(DebugMessage(DEBUG_DECODE, 
+                            "Dropping packet with Bad TCP checksum\n"););
+                InlineDrop();
+            }
         }
         else
         {
@@ -2276,6 +2443,12 @@ void DecodeUDP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_UDP_DGRAM_LT_UDPHDR, 
                     1, DECODE_CLASS, 3, DECODE_UDP_DGRAM_LT_UDPHDR_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+ 
         }
 
         p->udph = NULL;
@@ -2302,6 +2475,12 @@ void DecodeUDP(u_int8_t * pkt, const u_int32_t len, Packet * p)
             SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                     DECODE_UDP_DGRAM_INVALID_LENGTH, 1, DECODE_CLASS, 3, 
                     DECODE_UDP_DGRAM_INVALID_LENGTH_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+               InlineDrop();
+            }
+
         }
         p->udph = NULL;
         pc.discards++;
@@ -2322,6 +2501,12 @@ void DecodeUDP(u_int8_t * pkt, const u_int32_t len, Packet * p)
             SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                     DECODE_UDP_DGRAM_SHORT_PACKET, 1, DECODE_CLASS, 3, 
                     DECODE_UDP_DGRAM_SHORT_PACKET_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {  
+               DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n");); 
+               InlineDrop();
+            }
+ 
         }
 
         p->udph = NULL;
@@ -2352,6 +2537,13 @@ void DecodeUDP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             p->csum_flags |= CSE_UDP;
             DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Bad UDP Checksum\n"););
+
+            if(InlineMode())
+            {     
+                DEBUG_WRAP(DebugMessage(DEBUG_DECODE, 
+                            "Dropping packet with Bad UDP checksum\n"););
+                InlineDrop();
+            }
         }
         else
         {
@@ -2433,6 +2625,12 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
                     SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                             DECODE_ICMP_DGRAM_LT_ICMPHDR, 1, DECODE_CLASS, 3, 
                             DECODE_ICMP_DGRAM_LT_ICMPHDR_STR, 0);
+                    if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                    { 
+                      DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                      InlineDrop();
+                    }
+ 
                 }
 
                 p->icmph = NULL;
@@ -2457,6 +2655,12 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
                     SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                             DECODE_ICMP_DGRAM_LT_TIMESTAMPHDR, 1, DECODE_CLASS,
                             3, DECODE_ICMP_DGRAM_LT_TIMESTAMPHDR_STR, 0);
+                    if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                    { 
+                      DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                      InlineDrop();
+                    }
+
                 }
 
                 p->icmph = NULL;
@@ -2482,6 +2686,12 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
                     SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                             DECODE_ICMP_DGRAM_LT_ADDRHDR, 1, DECODE_CLASS, 3, 
                             DECODE_ICMP_DGRAM_LT_ADDRHDR_STR, 0);
+                    if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                    {
+                      DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                      InlineDrop();
+                    }
+ 
                 }
 
                 p->icmph = NULL;
@@ -2503,6 +2713,13 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
             p->csum_flags |= CSE_ICMP;
 
             DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Bad ICMP Checksum\n"););
+ 
+            if(InlineMode())
+            {     
+                DEBUG_WRAP(DebugMessage(DEBUG_DECODE, 
+                            "Dropping packet with Bad ICMP checksum\n"););
+                InlineDrop();
+            }
         }
         else
         {
@@ -2558,6 +2775,12 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
                         SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                                 DECODE_IPV4_DGRAM_UNKNOWN, 1, DECODE_CLASS, 3,
                                 DECODE_IPV4_DGRAM_UNKNOWN_STR, 0);
+                         if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                        { 
+                          DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                          InlineDrop();
+                        }
+ 
                     }
                 }
             }
@@ -2589,6 +2812,12 @@ void DecodeICMP(u_int8_t * pkt, const u_int32_t len, Packet * p)
                         SnortEventqAdd(GENERATOR_SNORT_DECODE, 
                                 DECODE_IPV4_DGRAM_UNKNOWN, 1, DECODE_CLASS, 3, 
                                 DECODE_IPV4_DGRAM_UNKNOWN_STR, 0);
+                        if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+                        { 
+                          DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                          InlineDrop();
+                        }
+ 
                     }
                 }
             }
@@ -2627,6 +2856,11 @@ void DecodeARP(u_int8_t * pkt, u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_ARP_TRUNCATED, 1, 
                     DECODE_CLASS, 3, DECODE_ARP_TRUNCATED_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n");); 
+              InlineDrop();
+            }
         }
 
         pc.discards++;
@@ -2660,6 +2894,12 @@ void DecodeEapol(u_int8_t * pkt, u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_EAPOL_TRUNCATED, 1, 
                     DECODE_CLASS, 3, DECODE_EAPOL_TRUNCATED_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+              InlineDrop();
+            } 
+
         }
 
         pc.discards++;
@@ -2697,6 +2937,12 @@ void DecodeEapolKey(u_int8_t * pkt, u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_EAPKEY_TRUNCATED, 1, 
                     DECODE_CLASS, 3, DECODE_EAPKEY_TRUNCATED_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+              InlineDrop();
+            } 
+
         }
 
         pc.discards++;
@@ -2729,6 +2975,12 @@ void DecodeEAP(u_int8_t * pkt, const u_int32_t len, Packet * p)
         {
             SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_EAP_TRUNCATED, 1, 
                     DECODE_CLASS, 3, DECODE_EAP_TRUNCATED_STR, 0);
+            if ((InlineMode()) && pv.decoder_flags.drop_alerts)
+            {
+              DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+              InlineDrop();
+            } 
+
         }
 
         pc.discards++;
@@ -3031,29 +3283,40 @@ void DecodeTCPOptions(u_int8_t *start, u_int32_t o_len, Packet *p)
                                   &p->tcp_options[opt_count], &byte_skip);
             break;
         }
-        
-        opt_count++;
-        
-        if(code < 0 && runMode == MODE_IDS)
+
+        if(code < 0)
         {
-            if(code == TCP_OPT_BADLEN && pv.decoder_flags.tcpopt_decode)
+            if(runMode == MODE_IDS)
             {
-                SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCPOPT_BADLEN, 1, 
-                        DECODE_CLASS, 3, DECODE_TCPOPT_BADLEN_STR, 0);
-                return;
+                if(code == TCP_OPT_BADLEN && pv.decoder_flags.tcpopt_decode)
+                {
+                    SnortEventqAdd(GENERATOR_SNORT_DECODE, 
+                            DECODE_TCPOPT_BADLEN, 1, DECODE_CLASS, 3, 
+                            DECODE_TCPOPT_BADLEN_STR, 0);
+
+                    if ((InlineMode()) && pv.decoder_flags.drop_tcpopt_decode)
+                    {
+                        DEBUG_WRAP( DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                        InlineDrop();
+                    }
+                }
+                else if(code == TCP_OPT_TRUNC && pv.decoder_flags.tcpopt_decode)
+                {
+                    SnortEventqAdd(GENERATOR_SNORT_DECODE, 
+                            DECODE_TCPOPT_TRUNCATED, 1, DECODE_CLASS, 3, 
+                            DECODE_TCPOPT_TRUNCATED_STR, 0);
+                    if ((InlineMode()) && pv.decoder_flags.drop_tcpopt_decode)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                        InlineDrop();
+                    }
+                }
             }
-            else if(code == TCP_OPT_TRUNC && pv.decoder_flags.tcpopt_decode)
-            {
-                SnortEventqAdd(GENERATOR_SNORT_DECODE, 
-                        DECODE_TCPOPT_TRUNCATED, 1, DECODE_CLASS, 3, 
-                        DECODE_TCPOPT_TRUNCATED_STR, 0);
-                return;
-            }
-            else
-            {
-                return;
-            }
+
+            return;
         }
+
+        opt_count++;
 
         option_ptr += byte_skip;
     }
@@ -3065,18 +3328,36 @@ void DecodeTCPOptions(u_int8_t *start, u_int32_t o_len, Packet *p)
     {
         SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCPOPT_EXPERIMENT, 1, 
                 DECODE_CLASS, 3, DECODE_TCPOPT_EXPERIMENT_STR, 0);
+        if ((InlineMode()) && pv.decoder_flags.drop_tcpopt_experiment)
+        {
+          DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+          InlineDrop();
+        }
+
     }
     else if(runMode == MODE_IDS &&
             obsolete_option_found && pv.decoder_flags.tcpopt_obsolete)
     {
         SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCPOPT_OBSOLETE, 1, 
                 DECODE_CLASS, 3, DECODE_TCPOPT_OBSOLETE_STR, 0);
+        if ((InlineMode()) && pv.decoder_flags.drop_tcpopt_obsolete)
+        {
+          DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+          InlineDrop();
+        }
+
     }
     else if(runMode == MODE_IDS &&
             ttcp_found && pv.decoder_flags.tcpopt_ttcp)
     {
         SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_TCPOPT_TTCP, 1, 
                 DECODE_CLASS, 3, DECODE_TCPOPT_TTCP_STR, 0);
+        if ((InlineMode()) && pv.decoder_flags.drop_tcpopt_ttcp)
+        {
+          DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+          InlineDrop();
+        }
+
     }
     
     return;
@@ -3140,20 +3421,36 @@ void DecodeIPOptions(u_int8_t *start, u_int32_t o_len, Packet *p)
                                   &p->ip_options[opt_count], &byte_skip);
         }
 
-        if(runMode == MODE_IDS && code < 0)
+        if(code < 0)
         {
-            /* Yes, we use TCP_OPT_* for the IP option decoder.
-             */
-            if(code == TCP_OPT_BADLEN && pv.decoder_flags.ipopt_decode)
+            if(runMode == MODE_IDS)
             {
-                SnortEventqAdd(GENERATOR_SNORT_DECODE, DECODE_IPV4OPT_BADLEN, 
-                        1, DECODE_CLASS, 3, DECODE_IPV4OPT_BADLEN_STR, 0);
-            }
-            else if(code == TCP_OPT_TRUNC && pv.decoder_flags.ipopt_decode)
-            {
-                SnortEventqAdd(GENERATOR_SNORT_DECODE, 
-                        DECODE_IPV4OPT_TRUNCATED, 1, DECODE_CLASS, 3, 
-                        DECODE_IPV4OPT_TRUNCATED_STR, 0);
+                /* Yes, we use TCP_OPT_* for the IP option decoder.
+                */
+                if(code == TCP_OPT_BADLEN && pv.decoder_flags.ipopt_decode)
+                {
+                    SnortEventqAdd(GENERATOR_SNORT_DECODE, 
+                            DECODE_IPV4OPT_BADLEN, 1, DECODE_CLASS, 3, 
+                            DECODE_IPV4OPT_BADLEN_STR, 0);
+
+                    if ((InlineMode()) && pv.decoder_flags.drop_ipopt_decode)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                        InlineDrop();
+                    }
+                }
+                else if(code == TCP_OPT_TRUNC && pv.decoder_flags.ipopt_decode)
+                {
+                    SnortEventqAdd(GENERATOR_SNORT_DECODE, 
+                            DECODE_IPV4OPT_TRUNCATED, 1, DECODE_CLASS, 3, 
+                            DECODE_IPV4OPT_TRUNCATED_STR, 0);
+                    
+                    if ((InlineMode()) && pv.decoder_flags.drop_ipopt_decode)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_DECODE, "Dropping bad packet\n"););
+                        InlineDrop();
+                    }
+                }
             }
 
             return;
@@ -3177,12 +3474,18 @@ void DecodeIPOptions(u_int8_t *start, u_int32_t o_len, Packet *p)
 void InitDecoderFlags(void)
 {
     /* turn on decoder alerts by default -- useful for bug reports.. */
-    pv.decoder_flags.decode_alerts     = 1;
-    pv.decoder_flags.tcpopt_experiment = 1;
-    pv.decoder_flags.tcpopt_obsolete   = 1;
-    pv.decoder_flags.tcpopt_ttcp       = 1;
-    pv.decoder_flags.tcpopt_decode     = 1;
-    pv.decoder_flags.ipopt_decode     = 1;
+    pv.decoder_flags.decode_alerts          = 1;
+    pv.decoder_flags.drop_alerts            = 1;
+    pv.decoder_flags.tcpopt_experiment      = 1;
+    pv.decoder_flags.drop_tcpopt_experiment = 1;
+    pv.decoder_flags.tcpopt_obsolete        = 1;
+    pv.decoder_flags.drop_tcpopt_obsolete   = 1;
+    pv.decoder_flags.tcpopt_ttcp            = 1;
+    pv.decoder_flags.drop_tcpopt_ttcp       = 1;
+    pv.decoder_flags.tcpopt_decode          = 1;
+    pv.decoder_flags.drop_tcpopt_decode     = 1;
+    pv.decoder_flags.ipopt_decode           = 1;
+    pv.decoder_flags.drop_ipopt_decode      = 1;
 }
 
 #if defined(WORDS_MUSTALIGN) && !defined(__GNUC__)

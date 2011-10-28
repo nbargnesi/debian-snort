@@ -72,3 +72,5 @@ http://www.securityfocus.com/bid/2347
 
 Analysis by David Dittrich:
 http://staff.washington.edu/dittrich/misc/ssh-analysis.txt
+
+--

@@ -1,4 +1,4 @@
-/* $Id: spp_perfmonitor.c,v 1.5 2003/10/20 15:03:37 chrisgreen Exp $ 
+/* $Id: spp_perfmonitor.c,v 1.5.6.1 2004/11/02 22:07:18 jhewlett Exp $ 
 **
 **  spp_perfmonitor.c
 **
@@ -80,7 +80,7 @@ static void PerfMonitorInit(u_char *args)
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Preprocessor: PerfMonitor Initialized\n"););
 
     /* parse the argument list from the rules file */
-    ParsePerfMonitorArgs(args);
+    ParsePerfMonitorArgs((char*)args);
 
     /* Set the preprocessor function into the function list */
     AddFuncToPreprocList(ProcessPerfMonitor);
@@ -102,12 +102,12 @@ static void PerfMonitorInit(u_char *args)
  * Returns: void function
  *
  */
-static void ParsePerfMonitorArgs(char *args)
+static void ParsePerfMonitorArgs( char *args)
 {
     char **Tokens=NULL;
     int   iTokenNum=0;
     int   i, iTime=60, iFlow=0, iEvents=0, iMaxPerfStats=0;
-    int   iFile=0, iSnortFile=0, iConsole=0, iPkts=10000;
+    int   iFile=0, iSnortFile=0, iConsole=0, iPkts=10000, iReset=0;
     char  file[1024];
     char  snortfile[1024];
     int   iRet;
@@ -146,6 +146,14 @@ static void ParsePerfMonitorArgs(char *args)
             */
             iFlow = 1;
         }       
+        else if( strcmp( Tokens[i],"accumulate")==0)
+	{
+		iReset=0;
+	}
+        else if( strcmp( Tokens[i],"reset")==0 )
+	{
+		iReset=1;
+	}
         else if( strcmp( Tokens[i],"events")==0 )
         {
             /*
@@ -228,7 +236,6 @@ static void ParsePerfMonitorArgs(char *args)
 
     mSplitFree(&Tokens, iTokenNum);
 
-
     /*
     *  Initialize the performance system and set flags
     */
@@ -238,6 +245,8 @@ static void ParsePerfMonitorArgs(char *args)
 
     sfSetPerformanceStatistics( &sfPerf, SFPERF_BASE );
     
+    sfSetPerformanceAccounting( &sfPerf, iReset );
+    
     if( iFlow  ) sfSetPerformanceStatistics( &sfPerf, SFPERF_FLOW );
     
     if( iEvents) sfSetPerformanceStatistics( &sfPerf, SFPERF_EVENT );
@@ -245,6 +254,8 @@ static void ParsePerfMonitorArgs(char *args)
     if( iMaxPerfStats ) sfSetPerformanceStatistics(&sfPerf, SFPERF_BASE_MAX);
      
     if( iConsole ) sfSetPerformanceStatistics( &sfPerf, SFPERF_CONSOLE );
+
+  
     
     if( !(iFile && iSnortFile) ) 
     {

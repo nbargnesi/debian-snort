@@ -1,5 +1,5 @@
 /*
-** $Id: perf-base.h,v 1.2 2003/10/20 15:03:37 chrisgreen Exp $
+** $Id: perf-base.h,v 1.2.6.1 2004/11/02 22:07:18 jhewlett Exp $
 **
 ** perf-base.h
 **
@@ -23,6 +23,8 @@
 ** along with this program; if not, write to the Free Software
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 **
+** 9.1.04  : Added SFBASE iReset (MAN)
+**	     This is set by perfmonitor 'accrure' and 'reset' commands
 */
 #ifndef _PERFBASE_H
 #define _PERFBASE_H
@@ -76,6 +78,8 @@ typedef struct _SFBASE {
     UINT64   iFragFaults;     /* # of times we've run out of memory */    
 
     int      iFlags;
+
+    int      iReset;
 
 #ifdef LINUX_SMP
     SFPROCPIDSTATS sfProcPidStats;

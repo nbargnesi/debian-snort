@@ -1,21 +1,18 @@
 Rule:  
---
 
+--
 Sid:
 1389
 
 --
-
 Summary:
-Someone attempted to access the potentially vulnerable sample script
-viewcode.jse, which ships with Netware 5.1 and Nombas ScriptEase
-WebServer Edition.  This may allow an attacker to view any file on the
-system.
+This event is generated when an attempt is made to access the
+script viewcode.jse.
 
 --
 Impact:
-An attacker may have been able to read the contents of any file on the
-web server.
+Information disclosure. An attacker may have been able to read the
+contents of any file on the web server.
 
 --
 Detailed Information:
@@ -27,6 +24,7 @@ Novell Netware 5.1 before SP3 contains this vulnerability.
 
 --
 Affected Systems:
+	Netware 5.1 and Nombas ScriptEase WebServer Edition
  
 --
 Attack Scenarios:
@@ -35,8 +33,7 @@ http://target/lcgi/sewse.nlm?sys:/novonyx/suitespot/docs/sewse/viewcode.jse+http
 
 --
 Ease of Attack:
-Very simple handcrafted URL.  Attacker must make educated guesses as to
-filesystem layout.
+Simple handcrafted URL.
 
 --
 False Positives:
@@ -64,4 +61,5 @@ Nigel Houghton <nigel.houghton@sourcefire.com>
 
 --
 Additional References:
-Bugtraq:  BID 1389
+
+--

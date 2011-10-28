@@ -51,11 +51,12 @@ void sfmemcap_delete( MEMCAP * p )
 */
 void * sfmemcap_alloc( MEMCAP * mc, unsigned nbytes )
 {
-   int * data;
+   long * data;
 
    //printf("sfmemcap_alloc: %d bytes requested, memcap=%d, used=%d\n",nbytes,mc->memcap,mc->memused);
 
-   nbytes += 4;
+   nbytes += sizeof(long);
+
 
    /* Check if we are limiting memory use */
    if( mc->memcap > 0 )
@@ -67,13 +68,13 @@ void * sfmemcap_alloc( MEMCAP * mc, unsigned nbytes )
       }
    }
 
-   data = (int*) calloc( 1, nbytes );
+   data = (long *) malloc( nbytes );
    if( data == NULL )
    {
         return 0;
    }
 
-   *data++ = nbytes;
+   *data++ = (long)nbytes;
 
    mc->memused += nbytes;
    mc->nblocks++;
@@ -86,11 +87,11 @@ void * sfmemcap_alloc( MEMCAP * mc, unsigned nbytes )
 */
 void sfmemcap_free( MEMCAP * mc, void * p )
 {
-   int * q;
+   long * q;
 
-   q = (int*)p;
+   q = (long*)p;
    q--;
-   mc->memused -= *q;
+   mc->memused -= (unsigned)(*q);
    mc->nblocks--;
 
    free(q);

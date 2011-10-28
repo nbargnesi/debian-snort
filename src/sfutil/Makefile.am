@@ -19,6 +19,7 @@ libsfutil_a_SOURCES = sfghash.c sfghash.h \
                       util_net.c util_net.h \
                       util_str.c util_str.h \
                       asn1.c asn1.h \
-                      sfeventq.c sfeventq.h
+                      sfeventq.c sfeventq.h \
+                      sfsnprintfappend.c sfsnprintfappend.h
 
 INCLUDES = @INCLUDES@

@@ -125,7 +125,8 @@ packet_time.c packet_time.h \
 event_wrapper.c event_wrapper.h \
 smalloc.h \
 snort_packet_header.h \
-event_queue.c event_queue.h
+event_queue.c event_queue.h \
+inline.c inline.h
 
 
 snort_LDADD = output-plugins/libspo.a \
@@ -155,7 +156,7 @@ am_snort_OBJECTS = codes.$(OBJEXT) debug.$(OBJEXT) decode.$(OBJEXT) \
 	sf_sdlist.$(OBJEXT) fpcreate.$(OBJEXT) fpdetect.$(OBJEXT) \
 	pcrm.$(OBJEXT) byte_extract.$(OBJEXT) sfthreshold.$(OBJEXT) \
 	packet_time.$(OBJEXT) event_wrapper.$(OBJEXT) \
-	event_queue.$(OBJEXT)
+	event_queue.$(OBJEXT) inline.$(OBJEXT)
 snort_OBJECTS = $(am_snort_OBJECTS)
 snort_DEPENDENCIES = output-plugins/libspo.a detection-plugins/libspd.a \
 	preprocessors/libspp.a \

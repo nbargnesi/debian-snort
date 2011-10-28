@@ -1,4 +1,4 @@
-/* $Id: snort.c,v 1.208.2.1 2004/08/11 19:50:40 jhewlett Exp $ */
+/* $Id: snort.c,v 1.210.2.4 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -75,6 +75,7 @@
 #include "src/detection-plugins/sp_flowbits.h"
 #include "event_queue.h"
 #include "asn1.h"
+#include "inline.h"
 
 /*  G L O B A L S  ************************************************************/
 extern OutputFuncNode *AlertList;
@@ -115,8 +116,16 @@ u_int snaplen;
 
 grinder_t grinder;
 runtime_config snort_runtime;   /* run-time configuration struct */
-                           
 
+/*
+ * you may need to ajust this on the systems which don't have standard
+ * paths defined
+ */
+#ifndef _PATH_VARRUN
+char _PATH_VARRUN[STD_BUF];
+#endif
+
+SFPERF sfPerf;
 
 /* locally defined functions **************************************************/
 static char *ConfigFileSearch();
@@ -169,9 +178,6 @@ int main(int argc, char* argv[])
 
     return SnortMain(argc,argv);
 }
-
-
-
 
 /*
  *
@@ -320,17 +326,17 @@ int SnortMain(int argc, char *argv[])
             FatalError("Out of memory setting default log dir\n");
     }
     
-    if(!pv.quiet_flag)
+    /*
+    **  Validate the log directory for logging packets
+    */
+    if(runMode == MODE_PACKET_LOG)
     {
-        LogMessage("Log directory = %s\n", pv.log_dir);
-    }
-
-    /* validate the log directory */
-    if(runMode == MODE_IDS || runMode == MODE_PACKET_LOG)
-    {
-        /* SanityChecks only checks the existence of the log directory */
-        /* TODO SanityChecks should be renamed to CheckLogDir() */
-        SanityChecks();
+        CheckLogDir();
+    
+        if(!pv.quiet_flag)
+        {
+            LogMessage("Log directory = %s\n", pv.log_dir);
+        }
     }
 
     /* if we are in packet log mode, make sure we have a logging mode set */
@@ -344,6 +350,23 @@ int SnortMain(int argc, char *argv[])
      * for reading.. (interfaces are being initalized before the config file
      * is read, so some plugins would be able to start up properly.
      */
+#ifdef GIDS
+#ifdef IPFW
+    /* Check to see if we got a Divert port or not */
+    if(!pv.divert_port)
+    {
+        pv.divert_port = 8000;
+    }
+
+#endif /* IPFW */
+
+    if (InlineMode())
+    {
+        InitInline();
+    }
+    else
+#endif /* GIDS */
+
     if(!pv.readmode_flag)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Opening interface: %s\n", 
@@ -421,7 +444,6 @@ int SnortMain(int argc, char *argv[])
         }
     }
 
-
     /*
      * if daemon mode requested, fork daemon first, otherwise on linux
      * interface will be reset.
@@ -443,7 +465,19 @@ int SnortMain(int argc, char *argv[])
         if (!pv.readmode_flag && (pv.daemon_flag || *pv.pidfile_suffix))
         {
 #ifndef WIN32
+#ifdef GIDS
+            if (InlineMode())
+            {
+                CreatePidFile("inline");
+            }
+            else
+            {
+#else
             CreatePidFile(pv.interface);
+#endif /* GIDS */
+#ifdef GIDS
+            }
+#endif /* GIDS */
 #else
             CreatePidFile("WIN32");
 #endif
@@ -459,8 +493,6 @@ int SnortMain(int argc, char *argv[])
     /* if we're using the rules system, it gets initialized here */
     if(runMode == MODE_IDS)
     {
-        SanityChecks();
-
         /* initialize all the plugin modules */
         InitPreprocessors();
         InitPlugIns();
@@ -477,14 +509,20 @@ int SnortMain(int argc, char *argv[])
 
         if(pv.rules_order_flag)
         {
+#ifdef GIDS
+            OrderRuleLists("activation dynamic pass drop sdrop reject alert log");
+#else
             OrderRuleLists("pass activation dynamic alert log");
+#endif /* GIDS */
         }
 
-        if(!pv.quiet_flag)
+        if(!(pv.quiet_flag && !pv.daemon_flag))
             LogMessage("Parsing Rules file %s\n", pv.config_file);
 
         ParseRulesFile(pv.config_file, 0);
     
+        CheckLogDir();
+
         OtnXMatchDataInitialize();
 
         FlowBitsVerify();
@@ -496,11 +534,20 @@ int SnortMain(int argc, char *argv[])
         */
         SnortEventqInit();
         
-        if(!pv.quiet_flag)
+#ifdef GIDS
+#ifndef IPFW
+        if (InlineMode())
+        {
+            InitInlinePostConfig();
+        }
+#endif /* IPFW */
+#endif /* GIDS */
+
+        if(!(pv.quiet_flag && !pv.daemon_flag))
         {
             print_thresholding();
-
             printRuleOrder();
+            LogMessage("Log directory = %s\n", pv.log_dir);
         }
     }
 
@@ -567,12 +614,29 @@ int SnortMain(int argc, char *argv[])
 
     if(pv.daemon_flag)
     {
-        LogMessage("Snort initialization completed successfully\n");
+        LogMessage("Snort initialization completed successfully (pid=%u)\n",getpid());
     }
+
+#ifdef GIDS
+    if (InlineMode())
+    {
+#ifndef IPFW
+        IpqLoop();
+#else
+        IpfwLoop();
+#endif
+    }
+    else
+    {
+#endif /* GIDS */
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Entering pcap loop\n"););
 
     InterfaceThread(NULL);
+
+#ifdef GIDS
+    }
+#endif /* GIDS */
 
     return 0;
 }
@@ -703,6 +767,11 @@ int ShowUsage(char *progname)
     FPUTS_BOTH ("        -h <hn>    Home network = <hn>\n");
     FPUTS_BOTH ("        -i <if>    Listen on interface <if>\n");
     FPUTS_BOTH ("        -I         Add Interface name to alert output\n");
+#ifdef GIDS
+#ifdef IPFW
+    FPUTS_BOTH ("        -J <port>  ipfw divert socket <port> to listen on vice libpcap (FreeBSD only)\n");
+#endif
+#endif
     FPUTS_BOTH ("        -k <mode>  Checksum mode (all,noip,notcp,noudp,noicmp,none)\n");
     FPUTS_BOTH ("        -l <ld>    Log to directory <ld>\n");
     FPUTS_BOTH ("        -L <file>  Log to this tcpdump file\n");
@@ -715,6 +784,11 @@ int ShowUsage(char *progname)
     fprintf(stdout, "        -P <snap>  Set explicit snaplen of packet (default: %d)\n",
                                     SNAPLEN);
     FPUTS_BOTH ("        -q         Quiet. Don't show banner and status report\n");
+#ifdef GIDS
+#ifndef IPFW
+    FPUTS_BOTH ("        -Q         Use ip_queue for input vice libpcap (iptables only)\n");
+#endif
+#endif
     FPUTS_BOTH ("        -r <tf>    Read and process tcpdump file <tf>\n");
     FPUTS_BOTH ("        -R <id>    Include 'id' in snort_intf<id>.pid file name\n");
     FPUTS_BOTH ("        -s         Log alert messages to syslog\n");
@@ -755,7 +829,7 @@ int ShowUsage(char *progname)
  * Returns: 0 => success, 1 => exit on error
  */
 extern char *optarg;                /* for getopt */
-extern int   optind;                /* for getopt */
+extern int   optind,opterr,optopt;  /* for getopt */
 
 int ParseCmdLine(int argc, char *argv[])
 {
@@ -782,9 +856,25 @@ int ParseCmdLine(int argc, char *argv[])
     groupname = NULL;
     pv.pidfile_suffix[0] = 0;
 
+    /*
+    **  Set this so we know whether to return 1 on invalid input.
+    **  Snort uses '?' for help and getopt uses '?' for telling us there
+    **  was an invalid option, so we can't use that to tell invalid input.
+    **  Instead, we check optopt and it will tell us.
+    */
+    optopt = 0;
+
 #ifndef WIN32
+#ifdef GIDS
+#ifndef IPFW
+    valid_options = "?A:bB:c:CdDefF:g:h:i:Ik:l:L:m:n:NoOpP:qQr:R:sS:t:Tu:UvVwXyz";
+#else
+    valid_options = "?A:bB:c:CdDefF:g:h:i:IJ:k:l:L:m:n:NoOpP:qr:R:sS:t:Tu:UvVwXyz";
+#endif /* IPFW */
+#else
     /* Unix does not support an argument to -s <wink marty!> OR -E, -W */
     valid_options = "?A:bB:c:CdDefF:g:h:i:Ik:l:L:m:n:NoOpP:qr:R:sS:t:Tu:UvVwXyz";
+#endif /* GIDS */
 #else
     /* Win32 does not support:  -D, -g, -m, -t, -u */
     /* Win32 no longer supports an argument to -s, either! */
@@ -962,7 +1052,7 @@ int ParseCmdLine(int argc, char *argv[])
                     pv.interface = GetAdapterFromList(devicet, adaplen);
                     if ( pv.interface == NULL )
                     {
-                        LogMessage("Invalid interface '%d'.", atoi(optarg));
+                        LogMessage("Invalid interface '%d'.\n", atoi(optarg));
                         exit(1);
                     }
 
@@ -988,6 +1078,21 @@ int ParseCmdLine(int argc, char *argv[])
             case 'I':       /* add interface name to alert string */
                 pv.alert_interface_flag = 1;
                 break;
+
+#ifdef GIDS
+#ifdef IPFW
+            case 'J':
+                LogMessage("Reading from ipfw divert socket\n");
+                pv.inline_flag = 1;
+                pv.divert_port = atoi(optarg);
+                DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Divert port set to: %d\n", pv.divert_port););
+                LogMessage("IPFW Divert port set to: %d\n", pv.divert_port);
+                pv.promisc_flag = 0;
+                pv.interface = NULL;
+                break;
+#endif
+#endif
+
 
             case 'k':  /* set checksum mode */
                 if(!strcasecmp(optarg, "all"))
@@ -1103,6 +1208,16 @@ int ParseCmdLine(int argc, char *argv[])
             case 'q':  /* no stdout output mode */
                 pv.quiet_flag = 1;
                 break;
+#ifdef GIDS
+#ifndef IPFW
+            case 'Q':
+                LogMessage("Reading from iptables\n");
+                pv.inline_flag = 1;
+                pv.promisc_flag = 0;
+                pv.interface = NULL;
+                break;
+#endif
+#endif /* GIDS */
 
             case 'r':  /* read packets from a TCPdump file instead
                         * of the net */
@@ -1110,7 +1225,7 @@ int ParseCmdLine(int argc, char *argv[])
                 pv.readmode_flag = 1;
                 if(argc == 3)
                 {
-                    printf("No run mode specified, defaulting to verbose mode\n");
+                    LogMessage("No run mode specified, defaulting to verbose mode\n");
                     pv.verbose_flag = 1;
                     pv.data_flag = 1;
                 }
@@ -1273,9 +1388,13 @@ int ParseCmdLine(int argc, char *argv[])
                 pv.assurance_mode = ASSURE_EST;
                 break;
 
-            case '?':  /* show help and exit */
+            case '?':  /* show help and exit with 1 */
                 DisplayBanner();
                 ShowUsage(progname);
+
+                if(optopt)
+                    exit(1);
+
                 exit(0);
         }
     }
@@ -1306,19 +1425,24 @@ int ParseCmdLine(int argc, char *argv[])
 
     if((pv.interface == NULL) && !pv.readmode_flag)
     {
+#ifdef GIDS
+        if (!InlineMode())
+        {
+#endif /* GIDS */
         pv.interface = pcap_lookupdev(errorbuf);
 
         if(pv.interface == NULL)
             FatalError( "Failed to lookup for interface: %s."
                     " Please specify one with -i switch\n", errorbuf);
+#ifdef GIDS
+        }
+#endif /* GIDS */
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "pcap_cmd is %s\n", 
                 pv.pcap_cmd !=NULL ? pv.pcap_cmd : "NULL"););
     return 0;
 }
-
-
 
 /*
  * Function: SetPktProcessor()
@@ -1332,6 +1456,29 @@ int ParseCmdLine(int argc, char *argv[])
  */
 int SetPktProcessor()
 {
+#ifdef GIDS
+    if (InlineMode())
+    {
+
+#ifndef IPFW
+        if(!pv.quiet_flag)
+            LogMessage("Setting the Packet Processor to decode packets "
+                    "from iptables\n");
+
+        grinder = DecodeIptablesPkt;
+#else
+        if(!pv.quiet_flag)
+            LogMessage("Setting the Packet Processor to decode packets "
+                    "from ipfw divert\n");
+
+        grinder = DecodeIpfwPkt;
+#endif /* IPFW */
+
+        return 0;
+
+    }
+#endif /* GIDS */
+
     switch(datalink)
     {
         case DLT_EN10MB:        /* Ethernet */
@@ -2028,6 +2175,20 @@ void CleanExit(int exit_val)
     //if(idx)
     //    LogMessage("WARNING: Deprecated Plugin API still in use\n");
 
+#ifdef GIDS
+#ifndef IPFW
+    if (InlineMode())
+    {
+
+        if (ipqh)
+        {
+            ipq_destroy_handle(ipqh);
+        }
+
+    }
+#endif /* IPFW (may need cleanup code here) */
+#endif /* GIDS */
+
     while(idx)
     {
         idx->func(SIGQUIT, idx->arg);
@@ -2037,7 +2198,7 @@ void CleanExit(int exit_val)
     /* free allocated memory */
 
     /* close pcap */
-    if(pd)
+    if (pd && !InlineMode())
         pcap_close(pd);
 
     LogMessage("Snort exiting\n");
@@ -2093,7 +2254,7 @@ static void Restart()
 #endif
 
     /* only get here if we failed to restart */
-    LogMessage("Restarting %s failed: %s", progname, strerror(errno));
+    LogMessage("Restarting %s failed: %s\n", progname, strerror(errno));
     exit(1);
 }
 

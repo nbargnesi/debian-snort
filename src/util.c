@@ -1,4 +1,4 @@
-/* $Id: util.c,v 1.42.2.1 2004/08/04 14:28:25 jhewlett Exp $ */
+/* $Id: util.c,v 1.44.2.6 2005/01/13 20:36:20 jhewlett Exp $ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -52,6 +52,7 @@
 #include "debug.h"
 #include "util.h"
 #include "parser.h"
+#include "inline.h"
 
 #ifdef WIN32
 #include "win32/WIN32-Code/name.h"
@@ -262,13 +263,14 @@ float CalcPct(float cnt, float total)
  ****************************************************************************/
 int DisplayBanner()
 {
-    fprintf(stderr, "\n-*> Snort! <*-\nVersion %s (Build %s)\n"
-            "By Martin Roesch (roesch@sourcefire.com, www.snort.org)\n"
-#ifdef WIN32
-            "1.7-WIN32 Port By Michael Davis (mike@datanerds.net, www.datanerds.net/~mike)\n"
-            "1.8 - 2.x WIN32 Port By Chris Reid (chris.reid@codecraftconsultants.com)\n"
-#endif
-            , VERSION, BUILD);
+    fprintf(stderr, "\n"
+        "   ,,_     -*> Snort! <*-\n"
+        "  o\"  )~   Version %s (Build %s)\n"
+        "   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/team.html\n"
+        "           (C) Copyright 1998-2004 Sourcefire Inc., et al.\n"   
+        "\n"
+        , VERSION, BUILD);
+
     return 0;
 }
 
@@ -291,6 +293,8 @@ int DisplayBanner()
 void ts_print(register const struct timeval *tvp, char *timebuf)
 {
     register int s;
+    int    localzone;
+    time_t Time;
     struct timeval tv;
     struct timezone tz;
     struct tm *lt;    /* place to stick the adjusted clock data */
@@ -304,16 +308,18 @@ void ts_print(register const struct timeval *tvp, char *timebuf)
         tvp = &tv;
     }
 
-    if(!pv.use_utc)
-    {
-        lt = localtime((time_t *) & tvp->tv_sec);
-    }
-    else
-    {
-        lt = gmtime((time_t *) &tvp->tv_sec);
-    }
+    localzone = thiszone;
+   
+    /*
+    **  If we're doing UTC, then make sure that the timezone is correct.
+    */
+    if(pv.use_utc)
+        localzone = 0;
+        
+    s = (tvp->tv_sec + localzone) % 86400;
+    Time = (tvp->tv_sec + localzone) - s;
 
-    s = (tvp->tv_sec + thiszone) % 86400;
+    lt = gmtime(&Time);
 
     if(pv.include_year)
     {
@@ -789,8 +795,17 @@ void CreatePidFile(char *intf)
 void SetUidGid(void)
 {
 #ifndef WIN32
+
     if(groupname != NULL)
     {
+        if(InlineMode())
+        {
+            ErrorMessage("Cannot set uid and gid when running Snort in "
+                "inline mode.\n");
+
+            return;
+        }
+
         if(setgid(groupid) < 0)
             FatalError("Can not set gid: %lu\n", (u_long) groupid);
 
@@ -798,6 +813,14 @@ void SetUidGid(void)
     }
     if(username != NULL)
     {
+        if(InlineMode())
+        {
+            ErrorMessage("Cannot set uid and gid when running Snort in "
+                "inline mode.\n");
+
+            return;
+        }
+
         if(getuid() == 0 && initgroups(username, groupid) < 0)
             FatalError("Can not initgroups(%s,%lu)",
                     username, (u_long) groupid);
@@ -811,6 +834,8 @@ void SetUidGid(void)
         DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Set gid to %lu\n", groupid););
     }
 #endif  /* WIN32 */
+
+    return;
 }
 
 /* need int parameter here because of function declaration of signal(2) */
@@ -829,7 +854,7 @@ void DropStats(int iParamIgnored)
      * you will hardly run snort in daemon mode and read from file i that is
      * why no `LogMessage()' here
      */
-    if(pv.readmode_flag)
+    if(pv.readmode_flag || InlineMode())
     {
 
         /* this wildass line adjusts for the fragment reassembly packet injector */
@@ -1083,7 +1108,7 @@ char *read_infile(char *fname)
 
  /****************************************************************************
   *
-  * Function: SanityChecks()
+  * Function: CheckLogDir()
   *
   * Purpose: CyberPsychotic sez: basically we only check if logdir exist and
   *          writable, since it might screw the whole thing in the middle. Any
@@ -1094,8 +1119,7 @@ char *read_infile(char *fname)
   * Returns: void function
   *
   ****************************************************************************/
-/* TODO rename this function to reflect what it really does */
-void SanityChecks(void)
+void CheckLogDir(void)
 {
     struct stat st;
     char log_dir[STD_BUF];
