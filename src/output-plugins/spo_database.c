@@ -4,9 +4,10 @@
 ** Portions Copyright (C) 2001 Andrew R. Baker <andrewb@farm9.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,7 +19,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_database.c,v 1.77 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id$ */
 
 /* Snort Database Output Plug-in
  * 
@@ -165,6 +166,7 @@ typedef struct _DatabaseData
 #ifdef ENABLE_ORACLE
     OCIEnv *o_environment;
     OCISvcCtx *o_servicecontext;
+    OCIBind *o_bind;
     OCIError *o_error;
     OCIStmt *o_statement;
     OCIDefine *o_define;
@@ -176,6 +178,7 @@ typedef struct _DatabaseData
     PLOGINREC   ms_login;
     DBINT       ms_col;
 #endif
+    char *args;
 } DatabaseData;
 
 /* list for lookup of shared data information */
@@ -215,12 +218,14 @@ typedef struct _SharedDatabaseDataNode
 #define KEYWORD_IGNOREBPF_ONE  "1"
 
 
-#define LATEST_DB_SCHEMA_VERSION 106
+#define LATEST_DB_SCHEMA_VERSION 107
 
 /******** Prototypes  **************************************************/
 
 void          DatabaseInit(u_char *);
-DatabaseData *ParseDatabaseArgs(char *);
+DatabaseData *InitDatabaseData(char *args);
+void          DatabaseInitFinalize(int unused, void *arg);
+void          ParseDatabaseArgs(DatabaseData *data);
 void          Database(Packet *, char *, void *, Event *);
 char *        snort_escape_string(char *, DatabaseData *);
 void          SpoDatabaseCleanExitFunction(int, void *);
@@ -310,6 +315,19 @@ void DatabaseSetup()
 void DatabaseInit(u_char *args)
 {
     DatabaseData *data = NULL;
+
+    /* parse the argument list from the rules file */
+    data = InitDatabaseData(args);
+    
+    data->tz = GetLocalTimezone();
+
+    AddFuncToPostConfigList(DatabaseInitFinalize, data);
+
+}
+
+void DatabaseInitFinalize(int unused, void *arg)
+{
+    DatabaseData *data = (DatabaseData *)arg;
     char * select_sensor_id = NULL;
     char * select_max_sensor_id = NULL;
     char * insert_into_sensor = NULL;
@@ -317,10 +335,15 @@ void DatabaseInit(u_char *args)
     SharedDatabaseDataNode *current = NULL;
     char * escapedSensorName = NULL;
     char * escapedInterfaceName = NULL;
+    char * escapedBPFFilter = NULL;
+    int ret, bad_query = 0;
 
+    if (!data)
+    {
+        FatalError("database:  data uninitialized\n");
+    }
 
-    /* parse the argument list from the rules file */
-    data = ParseDatabaseArgs(args);
+    ParseDatabaseArgs(data);
 
     /* find a unique name for sensor if one was not supplied as an option */
     if(!data->sensor_name)
@@ -328,19 +351,17 @@ void DatabaseInit(u_char *args)
         data->sensor_name = GetUniqueName((char *)PRINT_INTERFACE(pv.interface));
         if ( data->sensor_name )
         {
-           if( data->sensor_name[strlen(data->sensor_name)-1] == '\n' )
-           {
-              data->sensor_name[strlen(data->sensor_name)-1] = '\0';
-           }
+            if( data->sensor_name[strlen(data->sensor_name)-1] == '\n' )
+            {
+                data->sensor_name[strlen(data->sensor_name)-1] = '\0';
+            }
 
-           if( !pv.quiet_flag )
-           {
-               printf("database:   sensor name = %s\n", data->sensor_name);
-           }
+            if( !pv.quiet_flag )
+            {
+                printf("database:   sensor name = %s\n", data->sensor_name);
+            }
         }
     }
-
-    data->tz = GetLocalTimezone();
 
     /* allocate memory for configuration queries */
     select_sensor_id     = (char *)SnortAlloc(MAX_QUERY_LENGTH);
@@ -348,113 +369,143 @@ void DatabaseInit(u_char *args)
     insert_into_sensor   = (char *)SnortAlloc(MAX_QUERY_LENGTH);
 
     escapedSensorName    = snort_escape_string(data->sensor_name, data);
+
     if(pv.interface != NULL)
     {
-    	escapedInterfaceName = snort_escape_string(PRINT_INTERFACE(pv.interface), data);
+        escapedInterfaceName = snort_escape_string(PRINT_INTERFACE(pv.interface), data);
     }
     else
     {   
-       if(InlineMode())
-       {
-	  escapedInterfaceName = snort_escape_string("inline", data);
-       }
+        if(InlineMode())
+        {
+            escapedInterfaceName = snort_escape_string("inline", data);
+        }
     }
+
     if( data->ignore_bpf == 0 )
     {
         if(pv.pcap_cmd == NULL)
         {
-            snprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
-                     "INSERT INTO sensor (hostname, interface, detail, encoding, last_cid) "
-                     "VALUES ('%s','%s','%u','%u', '0')", 
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     data->detail,
-                     data->encoding);
-            snprintf(select_sensor_id, MAX_QUERY_LENGTH, 
-                     "SELECT sid "
-                     "  FROM sensor "
-                     " WHERE hostname = '%s' "
-                     "   AND interface = '%s' "
-                     "   AND detail = '%u' "
-                     "   AND encoding = '%u' "
-                     "   AND filter IS NULL",
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     data->detail,
-                     data->encoding);
+            ret = SnortSnprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
+                                "INSERT INTO sensor (hostname, interface, detail, encoding, last_cid) "
+                                "VALUES ('%s','%s',%u,%u, 0)", 
+                                escapedSensorName, escapedInterfaceName,
+                                data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
+
+            ret = SnortSnprintf(select_sensor_id, MAX_QUERY_LENGTH, 
+                                "SELECT sid "
+                                "  FROM sensor "
+                                " WHERE hostname = '%s' "
+                                "   AND interface = '%s' "
+                                "   AND detail = %u "
+                                "   AND encoding = %u "
+                                "   AND filter IS NULL",
+                                escapedSensorName, escapedInterfaceName,
+                                data->detail, data->encoding);
+            
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
         }
         else
         {
-            snprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
-                     "INSERT INTO sensor (hostname, interface, filter, detail, encoding, last_cid) "
-                     "VALUES ('%s','%s','%s','%u','%u', '0')", 
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     pv.pcap_cmd,
-                     data->detail,
-                     data->encoding);
-            snprintf(select_sensor_id, MAX_QUERY_LENGTH, 
-                     "SELECT sid "
-                     "  FROM sensor "
-                     " WHERE hostname = '%s' "
-                     "   AND interface = '%s' "
-                     "   AND filter ='%s' "
-                     "   AND detail = '%u' "
-                     "   AND encoding = '%u'",
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     pv.pcap_cmd,
-                     data->detail,
-                     data->encoding);
+            escapedBPFFilter = snort_escape_string(pv.pcap_cmd, data);
+
+            ret = SnortSnprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
+                                "INSERT INTO sensor (hostname, interface, filter, detail, encoding, last_cid) "
+                                "VALUES ('%s','%s','%s',%u,%u, 0)", 
+                                escapedSensorName, escapedInterfaceName,
+                                escapedBPFFilter, data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
+
+            ret = SnortSnprintf(select_sensor_id, MAX_QUERY_LENGTH, 
+                                "SELECT sid "
+                                "  FROM sensor "
+                                " WHERE hostname = '%s' "
+                                "   AND interface = '%s' "
+                                "   AND filter ='%s' "
+                                "   AND detail = %u "
+                                "   AND encoding = %u ",
+                                escapedSensorName, escapedInterfaceName,
+                                escapedBPFFilter, data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
         }
     }
     else /* ( data->ignore_bpf == 1 ) */
     {
         if(pv.pcap_cmd == NULL)
         {
-            snprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
-                     "INSERT INTO sensor (hostname, interface, detail, encoding) "
-                     "VALUES ('%s','%s','%u','%u')", 
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     data->detail,
-                     data->encoding);
-            snprintf(select_sensor_id, MAX_QUERY_LENGTH, 
-                     "SELECT sid "
-                     "  FROM sensor "
-                     " WHERE hostname = '%s' "
-                     "   AND interface = '%s' "
-                     "   AND detail = '%u' "
-                     "   AND encoding = '%u'",
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     data->detail,
-                     data->encoding);
+            ret = SnortSnprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
+                                "INSERT INTO sensor (hostname, interface, detail, encoding) "
+                                "VALUES ('%s','%s',%u,%u)", 
+                                escapedSensorName, escapedInterfaceName,
+                                data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
+
+            ret = SnortSnprintf(select_sensor_id, MAX_QUERY_LENGTH, 
+                                "SELECT sid "
+                                "  FROM sensor "
+                                " WHERE hostname = '%s' "
+                                "   AND interface = '%s' "
+                                "   AND detail = %u "
+                                "   AND encoding = %u",
+                                escapedSensorName, escapedInterfaceName,
+                                data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
         }
         else
         {
-            snprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
-                     "INSERT INTO sensor (hostname, interface, filter, detail, encoding) "
-                     "VALUES ('%s','%s','%s','%u','%u')", 
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     pv.pcap_cmd,
-                     data->detail, data->encoding);
-            snprintf(select_sensor_id, MAX_QUERY_LENGTH, 
-                     "SELECT sid "
-                     "  FROM sensor "
-                     " WHERE hostname = '%s' "
-                     "   AND interface = '%s' "
-                     "   AND detail = '%u' "
-                     "   AND encoding = '%u'",
-                     escapedSensorName,
-                     escapedInterfaceName,
-                     data->detail,
-                     data->encoding);
+            escapedBPFFilter = snort_escape_string(pv.pcap_cmd, data);
+
+            ret = SnortSnprintf(insert_into_sensor, MAX_QUERY_LENGTH, 
+                                "INSERT INTO sensor (hostname, interface, filter, detail, encoding) "
+                                "VALUES ('%s','%s','%s',%u,%u)", 
+                                escapedSensorName, escapedInterfaceName,
+                                escapedBPFFilter, data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
+
+            ret = SnortSnprintf(select_sensor_id, MAX_QUERY_LENGTH, 
+                                "SELECT sid "
+                                "  FROM sensor "
+                                " WHERE hostname = '%s' "
+                                "   AND interface = '%s' "
+                                "   AND detail = %u "
+                                "   AND encoding = %u",
+                                escapedSensorName, escapedInterfaceName,
+                                data->detail, data->encoding);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                bad_query = 1;
         }
     }
 
+    if (bad_query)
+        FatalError("Database: Unable to construct query - output error or truncation\n");
+
     Connect(data);
+
+    /* get password out of memory since we only need it for Connect */
+    if (data->password != NULL)
+    {
+        /* it'll be null terminated */
+        while (*data->password != '\0')
+        {
+            *data->password = '\0';
+            data->password++;
+        }
+    }
 
     data->shared->sid = Select(select_sensor_id,data);
     if(data->shared->sid == 0)
@@ -541,16 +592,27 @@ void DatabaseInit(u_char *args)
          */
         sensor_cid = GetLastCid(data, data->shared->sid);
 
-        snprintf(select_max_sensor_id, MAX_QUERY_LENGTH,
-                 "SELECT MAX(cid) "
-                 "  FROM event "
-                 " WHERE sid = '%u'",
-                 data->shared->sid);
+        if (sensor_cid == -1)
+            FatalError("Database: Unable to construct query - output error or truncation\n");
+
+        ret = SnortSnprintf(select_max_sensor_id, MAX_QUERY_LENGTH,
+                            "SELECT MAX(cid) "
+                            "  FROM event "
+                            " WHERE sid = %u",
+                            data->shared->sid);
+        
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            FatalError("Database: Unable to construct query - output error or truncation\n");
+
         event_cid = Select(select_max_sensor_id, data);
 
         if ( event_cid > sensor_cid )
         {
-           UpdateLastCid(data, data->shared->sid, event_cid);
+           ret = UpdateLastCid(data, data->shared->sid, event_cid);
+
+           if (ret == -1)
+               FatalError("Database: Unable to construct query - output error or truncation\n");
+
            ErrorMessage("database: inconsistent cid information for sid=%u\n", 
                         data->shared->sid);
            ErrorMessage("          Recovering by rolling forward the cid=%u\n", 
@@ -573,10 +635,20 @@ void DatabaseInit(u_char *args)
     free(insert_into_sensor);    insert_into_sensor = NULL;
     free(escapedSensorName);     escapedSensorName = NULL;
     free(escapedInterfaceName);  escapedInterfaceName = NULL;
+    if (escapedBPFFilter != NULL)
+    {
+        free(escapedBPFFilter);
+        escapedBPFFilter = NULL;
+    }
 
     /* Get the versioning information for the DB schema */
     data->DBschema_version = CheckDBVersion(data);
-    if( !pv.quiet_flag ) printf("database: schema version = %d\n", data->DBschema_version);
+
+    if (data->DBschema_version == -1)
+        FatalError("Database: Unable to construct query - output error or truncation\n");
+
+    if( !pv.quiet_flag )
+        printf("database: schema version = %d\n", data->DBschema_version);
 
     if ( data->DBschema_version == 0 )
     {
@@ -632,6 +704,37 @@ void DatabaseInit(u_char *args)
     ++instances;
 }
 
+
+/*******************************************************************************
+ * Function: InitDatabaseData(char *)
+ *
+ * Purpose: Initialize the data structure for connecting to
+ *          this database.
+ *
+ * Arguments: args => argument list
+ *
+ * Returns: Pointer to database structure
+ *
+ ******************************************************************************/
+DatabaseData *InitDatabaseData(char *args)
+{
+    DatabaseData *data;
+
+    data = (DatabaseData *)SnortAlloc(sizeof(DatabaseData));
+    data->shared = (SharedDatabaseData *)SnortAlloc(sizeof(SharedDatabaseData));
+
+    if(args == NULL)
+    {
+        ErrorMessage("database: you must supply arguments for database plugin\n");
+        DatabasePrintUsage();
+        FatalError("");
+    }
+
+    data->args = SnortStrdup(args);
+
+    return data;
+}
+
 /*******************************************************************************
  * Function: ParseDatabaseArgs(char *)
  *
@@ -643,18 +746,15 @@ void DatabaseInit(u_char *args)
  * Returns: void function
  *
  ******************************************************************************/
-DatabaseData *ParseDatabaseArgs(char *args)
+//DatabaseData *ParseDatabaseArgs(char *args)
+void ParseDatabaseArgs(DatabaseData *data)
 {
-    DatabaseData *data;
     char *dbarg;
     char *a1;
     char *type;
     char *facility;
 
-    data = (DatabaseData *)SnortAlloc(sizeof(DatabaseData));
-    data->shared = (SharedDatabaseData *)SnortAlloc(sizeof(SharedDatabaseData));
-
-    if(args == NULL)
+    if(data->args == NULL)
     {
         ErrorMessage("database: you must supply arguments for database plugin\n");
         DatabasePrintUsage();
@@ -668,7 +768,7 @@ DatabaseData *ParseDatabaseArgs(char *args)
     data->detail = DETAIL_FULL;
     data->ignore_bpf = 0;
 
-    facility = strtok(args, ", ");
+    facility = strtok(data->args, ", ");
     if(facility != NULL)
     {
         if((!strncasecmp(facility,"log",3)) || (!strncasecmp(facility,"alert",5)))
@@ -859,7 +959,7 @@ DatabaseData *ParseDatabaseArgs(char *args)
         FatalError("");
     }
 
-    return data;
+    return;
 }
 
 void FreeQueryNode(SQLQuery * node)
@@ -918,30 +1018,36 @@ SQLQuery * NewQueryNode(SQLQuery * parent, int query_size)
 void Database(Packet *p, char *msg, void *arg, Event *event)
 {
     DatabaseData *data = (DatabaseData *)arg;
-    SQLQuery * query;
-    SQLQuery * root;
-    char *timestamp_string
-       , *insert_fields
-       , *insert_values
-       , *sig_name
-       , *sig_class
-       , *ref_system_name
-       , *ref_node_id_string
-       , *ref_tag
-       , *packet_data
-       , *packet_data_not_escaped;
-    int  i
-       , insert_fields_len
-       , insert_values_len
-       , ok_transaction;
-    char *select0 = NULL,
+    SQLQuery *query = NULL,
+             *root = NULL;
+    char *timestamp_string = NULL,
+         *insert_fields = NULL,
+         *insert_values = NULL,
+         *sig_name = NULL,
+         *sig_class = NULL,
+         *ref_system_name = NULL,
+         *ref_node_id_string = NULL,
+         *ref_tag = NULL,
+         *packet_data = NULL,
+         *packet_data_not_escaped = NULL,
+         *select0 = NULL,
          *select1 = NULL,
          *insert0 = NULL;
-    unsigned int sig_id;
-    int ref_system_id;
-    unsigned int ref_id, class_id=0;
+    int i,
+        insert_fields_len,
+        insert_values_len,
+        ok_transaction,
+        ref_system_id,
+        ret;
+    unsigned int sig_id,
+                 ref_id,
+                 class_id = 0;
     ClassType *class_ptr;
     ReferenceNode *refNode;
+
+    char sig_rev[16]="";
+    char sig_sid[16]="";
+    char sig_gid[16]="";
 
     query = NewQueryNode(NULL, 0);
     root = query;
@@ -966,7 +1072,6 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
     {
         timestamp_string = GetCurrentTimestamp();
     }
-
 #ifdef ENABLE_MSSQL
     if(data->shared->dbtype_id == DB_MSSQL)
     {
@@ -998,6 +1103,21 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
          * excess information. (everything beyond a second)
          * Use the Oracle format of:
          *   "1998-01-25 23:59:59"
+         */
+        if ( timestamp_string!=NULL && strlen(timestamp_string)>20 )
+        {
+            timestamp_string[19] = '\0';
+        }
+    }
+#endif
+#ifdef ENABLE_MYSQL
+    if (data->shared->dbtype_id == DB_MYSQL)
+    {
+        /* MySql does not support date information smaller than
+         * 1 second.  This was written to strip out all the
+         * excess information. (everything beyond a second)
+         * Use the MySql format of:
+         *   "2005-12-23 22:37:16"
          */
         if ( timestamp_string!=NULL && strlen(timestamp_string)>20 )
         {
@@ -1057,57 +1177,64 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
      */
     select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
     sig_name = snort_escape_string(msg, data);
-    if ( event->sig_rev == 0 ) 
+
+    if (event->sig_rev == 0)
     {
-        if( event->sig_id == 0) 
-        {
-            snprintf(select0, MAX_QUERY_LENGTH, 
-                    "SELECT sig_id "
-                    "  FROM signature "
-                    " WHERE sig_name = '%s' "
-                    "   AND sig_rev IS NULL "
-                    "   AND sig_sid IS NULL ",
-                    sig_name);
-        }
-        else 
-        {
-            snprintf(select0, MAX_QUERY_LENGTH, 
-                    "SELECT sig_id "
-                    "  FROM signature "
-                    " WHERE sig_name = '%s' "
-                    "   AND sig_rev IS NULL "
-                    "   AND sig_sid = %u ", 
-                    sig_name,
-                    event->sig_id);
-        }
+        ret = SnortSnprintf(sig_rev, sizeof(sig_rev), "IS NULL");
+        
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
     }
     else
     {
-        if( event->sig_id == 0)
-        {
-            snprintf(select0, MAX_QUERY_LENGTH,
-                    "SELECT sig_id "
-                    "  FROM signature "
-                    " WHERE sig_name = '%s' "
-                    "   AND sig_rev = %u "
-                    "   AND sig_sid IS NULL ",
-                    sig_name,
-                    event->sig_rev);
-        }
-        else
-        {
-            snprintf(select0, MAX_QUERY_LENGTH,
-                    "SELECT sig_id "
-                    "  FROM signature "
-                    " WHERE sig_name = '%s' "
-                    "   AND sig_rev = %u "
-                    "   AND sig_sid = %u ",
-                    sig_name,
-                    event->sig_rev,
-                    event->sig_id);
-        }
+        ret = SnortSnprintf(sig_rev, sizeof(sig_rev), "= %u", event->sig_rev);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
     }
-    
+
+    if (event->sig_id == 0)
+    {
+        ret = SnortSnprintf(sig_sid, sizeof(sig_sid), "IS NULL");
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+    }
+    else
+    {
+        ret = SnortSnprintf(sig_sid, sizeof(sig_sid), "= %u", event->sig_id);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+    }
+
+    if (event->sig_generator == 0)
+    {
+        ret = SnortSnprintf(sig_gid, sizeof(sig_gid), "IS NULL");
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+    }
+    else
+    {
+        ret = SnortSnprintf(sig_gid, sizeof(sig_gid), "= %u", event->sig_generator);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+    }
+
+    ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                        "SELECT sig_id "
+                        "  FROM signature "
+                        " WHERE sig_name = '%s' "
+                        "   AND sig_rev %s "
+                        "   AND sig_sid %s "
+                        "   AND sig_gid %s ",
+                        sig_name, sig_rev, sig_sid, sig_gid);
+
+    if (ret != SNORT_SNPRINTF_SUCCESS)
+        goto bad_query;
+
     sig_id = Select(select0, data);
 
     /* If this signature is detected for the first time
@@ -1137,31 +1264,45 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                     select1 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
                     sig_class = snort_escape_string(class_ptr->type, data);
             
-                    snprintf(select1, MAX_QUERY_LENGTH, 
-                            "SELECT sig_class_id "
-                            "  FROM sig_class "
-                            " WHERE sig_class_name = '%s'",
-                            sig_class);
+                    ret = SnortSnprintf(select1, MAX_QUERY_LENGTH, 
+                                        "SELECT sig_class_id "
+                                        "  FROM sig_class "
+                                        " WHERE sig_class_name = '%s'",
+                                        sig_class);
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
+
                     class_id = Select(select1, data);
 
                     if ( !class_id )
                     {
                         insert0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
-                        snprintf(insert0, MAX_QUERY_LENGTH,
-                                "INSERT INTO "
-                                "sig_class (sig_class_name) "
-                                "VALUES ('%s')",
-                                sig_class);
+                        ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                                            "INSERT INTO "
+                                            "sig_class (sig_class_name) "
+                                            "VALUES ('%s')",
+                                            sig_class);
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
+
                         Insert(insert0, data);
-                        free(insert0);    insert0 = NULL;
+
+                        free(insert0);
+                        insert0 = NULL;
+
                         class_id = Select(select1, data);
                         if ( !class_id )
                         {
                             ErrorMessage("database: unable to write classification\n");
                         }
                     }
-                    free(select1);    select1 = NULL;
-                    free(sig_class);  sig_class = NULL;
+
+                    free(select1);
+                    select1 = NULL;
+
+                    free(sig_class);
+                    sig_class = NULL;
                 }
             }
         }
@@ -1172,59 +1313,129 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
         insert_fields_len = 0;
         insert_values_len = 0;
 
-        snprintf(insert_fields, MAX_QUERY_LENGTH-insert_fields_len, "%s", "sig_name");
-        snprintf(insert_values, MAX_QUERY_LENGTH-insert_values_len, "'%s'", sig_name);
+        ret = SnortSnprintf(insert_fields, MAX_QUERY_LENGTH - insert_fields_len, "%s", "sig_name");
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+        
+        ret = SnortSnprintf(insert_values, MAX_QUERY_LENGTH - insert_values_len, "'%s'", sig_name);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+        
         insert_fields_len = strlen(insert_fields);
         insert_values_len = strlen(insert_values);
 
         if ( class_id > 0 )
         {
-            snprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH-insert_fields_len, "%s", ",sig_class_id");
-            snprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH-insert_values_len, ",%u", class_id);
+            ret = SnortSnprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH - insert_fields_len,
+                                "%s", ",sig_class_id");
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
+            ret = SnortSnprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH - insert_values_len,
+                                ",%u", class_id);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
             insert_fields_len = strlen(insert_fields);
             insert_values_len = strlen(insert_values);
         } 
 
         if ( event->priority > 0 )
         {
-            snprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH-insert_fields_len, "%s", ",sig_priority");
-            snprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH-insert_values_len, ",%u", event->priority);
+            ret = SnortSnprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH - insert_fields_len,
+                                "%s", ",sig_priority");
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
+            ret = SnortSnprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH - insert_values_len,
+                                ",%u", event->priority);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
             insert_fields_len = strlen(insert_fields);
             insert_values_len = strlen(insert_values);
         }
 
         if ( event->sig_rev > 0 )
         {
-            snprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH-insert_fields_len, "%s", ",sig_rev");
-            snprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH-insert_values_len, ",%u", event->sig_rev);
+            ret = SnortSnprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH - insert_fields_len,
+                                "%s", ",sig_rev");
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+
+            ret = SnortSnprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH - insert_values_len,
+                                ",%u", event->sig_rev);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
             insert_fields_len = strlen(insert_fields);
             insert_values_len = strlen(insert_values);
         }
 
         if ( event->sig_id > 0 )
         {
-            snprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH-insert_fields_len, "%s", ",sig_sid");
-            snprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH-insert_values_len, ",%u", event->sig_id);
+            ret = SnortSnprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH - insert_fields_len,
+                                "%s", ",sig_sid");
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
+            ret = SnortSnprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH - insert_values_len,
+                                ",%u", event->sig_id);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
             insert_fields_len = strlen(insert_fields);
             insert_values_len = strlen(insert_values);            
         }
 
-        snprintf(insert0, MAX_QUERY_LENGTH,
-                "INSERT INTO signature (%s) VALUES (%s)",
-                insert_fields, insert_values);
+        if ( event->sig_generator > 0 )
+        {
+            ret = SnortSnprintf(&insert_fields[insert_fields_len], MAX_QUERY_LENGTH - insert_fields_len,
+                                "%s", ",sig_gid");
 
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
+            ret = SnortSnprintf(&insert_values[insert_values_len], MAX_QUERY_LENGTH - insert_values_len,
+                                ",%u", event->sig_generator);
+
+            if (ret != SNORT_SNPRINTF_SUCCESS)
+                goto bad_query;
+            
+            insert_fields_len = strlen(insert_fields);
+            insert_values_len = strlen(insert_values);            
+        }
+
+        ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                            "INSERT INTO signature (%s) VALUES (%s)",
+                            insert_fields, insert_values);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
+        
         Insert(insert0,data);
 
-        free(insert0);             insert0 = NULL;
-        free(insert_fields);       insert_fields = NULL;
-        free(insert_values);       insert_values = NULL;
-
         sig_id = Select(select0,data);
+
         if(sig_id == 0)
         {
-            ErrorMessage("database: Problem inserting a new signature '%s'\n", msg);
+            ErrorMessage("database: Problem inserting a new signature '%s': %s\n", msg,insert0);
         }
-        free(select0);    select0 = NULL;
+
+        free(insert0);         insert0 = NULL;
+        free(insert_fields);   insert_fields = NULL;
+        free(insert_values);   insert_values = NULL;
+        free(select0);         select0 = NULL;
 
         /* add the external rule references  */
         if(otn_tmp)
@@ -1242,17 +1453,26 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                 /* Note: There is an underlying assumption that the SELECT
                  *       will do a case-insensitive comparison.
                  */
-                snprintf(select0, MAX_QUERY_LENGTH, 
-                        "SELECT ref_system_id "
-                        "  FROM reference_system "
-                        " WHERE ref_system_name = '%s'",
-                        ref_system_name);
-                snprintf(insert0, MAX_QUERY_LENGTH,
-                        "INSERT INTO "
-                        "reference_system (ref_system_name) "
-                        "VALUES ('%s')",
-                        ref_system_name);
+                ret = SnortSnprintf(select0, MAX_QUERY_LENGTH, 
+                                    "SELECT ref_system_id "
+                                    "  FROM reference_system "
+                                    " WHERE ref_system_name = '%s'",
+                                    ref_system_name);
+                
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                    goto bad_query;
+                
+                ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                                    "INSERT INTO "
+                                    "reference_system (ref_system_name) "
+                                    "VALUES ('%s')",
+                                    ref_system_name);
+
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                    goto bad_query;
+                
                 ref_system_id = Select(select0, data);
+
                 if ( ref_system_id == 0 )
                 {
                     Insert(insert0, data);
@@ -1267,13 +1487,19 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                 {
                     select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
                     ref_tag = snort_escape_string(refNode->id, data);
-                    snprintf(select0, MAX_QUERY_LENGTH,
-                            "SELECT ref_id "
-                            "  FROM reference "
-                            " WHERE ref_system_id = %d "
-                            "   AND ref_tag = '%s'",
-                            ref_system_id, ref_tag);
+
+                    ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                                        "SELECT ref_id "
+                                        "  FROM reference "
+                                        " WHERE ref_system_id = %d "
+                                        "   AND ref_tag = '%s'",
+                                        ref_system_id, ref_tag);
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
+                    
                     ref_id = Select(select0, data);
+
                     free(ref_tag);    ref_tag = NULL;
             
                     /* If this reference is not in the database, write it */
@@ -1281,24 +1507,37 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                     {
                         /* truncate the reference tag as necessary */
                         ref_node_id_string = (char *) SnortAlloc(101);
+
                         if ( data->DBschema_version == 103 )
                         {
-                            snprintf(ref_node_id_string, 20, "%s", refNode->id);
+                            ret = SnortSnprintf(ref_node_id_string, 20, "%s", refNode->id);
+
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
                         }
                         else if ( data->DBschema_version >= 104 )
                         {
-                            snprintf(ref_node_id_string, 100, "%s", refNode->id);
+                            ret = SnortSnprintf(ref_node_id_string, 100, "%s", refNode->id);
+
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
                         }
 
                         insert0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
                         ref_tag = snort_escape_string(ref_node_id_string, data);
-                        snprintf(insert0, MAX_QUERY_LENGTH,
-                                "INSERT INTO "
-                                "reference (ref_system_id, ref_tag) "
-                                "VALUES (%d, '%s')",
-                                ref_system_id, ref_tag);
+
+                        ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                                            "INSERT INTO "
+                                            "reference (ref_system_id, ref_tag) "
+                                            "VALUES (%d, '%s')",
+                                            ref_system_id, ref_tag);
+
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
+
                         Insert(insert0, data);
                         ref_id = Select(select0, data);
+
                         free(insert0);               insert0 = NULL;
                         free(ref_node_id_string);    ref_node_id_string = NULL;
                         free(ref_tag);               ref_tag = NULL;
@@ -1308,17 +1547,24 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                             ErrorMessage("database: Unable to insert the alert reference into the DB\n");
                         }
                     }
+
                     free(select0);    select0 = NULL;
 
                     insert0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
-                    snprintf(insert0, MAX_QUERY_LENGTH,
-                            "INSERT INTO "
-                            "sig_reference (sig_id, ref_seq, ref_id) "
-                            "VALUES (%u, %d, %u)",
-                            sig_id, i, ref_id);
+
+                    ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                                        "INSERT INTO "
+                                        "sig_reference (sig_id, ref_seq, ref_id) "
+                                        "VALUES (%u, %d, %u)",
+                                        sig_id, i, ref_id);
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
+                    
                     Insert(insert0, data);
+
                     free(insert0);    insert0 = NULL;
-                    ++i;
+                    i++;
                 }
                 else
                 {
@@ -1339,27 +1585,36 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
     if ( (data->shared->dbtype_id == DB_ORACLE) &&
          (data->DBschema_version >= 105) )
     {
-        snprintf(query->val, MAX_QUERY_LENGTH,
-                "INSERT INTO "
-                "event (sid,cid,signature,timestamp) "
-                "VALUES ('%u', '%u', '%u', TO_DATE('%s', 'YYYY-MM-DD HH24:MI:SS'))",
-                data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+        ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                            "INSERT INTO "
+                            "event (sid,cid,signature,timestamp) "
+                            "VALUES (%u, %u, %u, TO_DATE('%s', 'YYYY-MM-DD HH24:MI:SS'))",
+                            data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
     }
     else if(data->shared->dbtype_id == DB_ODBC)
     {
-        snprintf(query->val, MAX_QUERY_LENGTH,
-                "INSERT INTO "
-                "event (sid,cid,signature,timestamp) "
-                "VALUES ('%u', '%u', '%u', {ts '%s'})",
-                data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+        ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                            "INSERT INTO "
+                            "event (sid,cid,signature,timestamp) "
+                            "VALUES (%u, %u, %u, {ts '%s'})",
+                            data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
     }
     else
     {
-        snprintf(query->val, MAX_QUERY_LENGTH,
-                "INSERT INTO "
-                "event (sid,cid,signature,timestamp) "
-                "VALUES ('%u', '%u', '%u', '%s')",
-                data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+        ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                            "INSERT INTO "
+                            "event (sid,cid,signature,timestamp) "
+                            "VALUES (%u, %u, %u, '%s')",
+                            data->shared->sid, data->shared->cid, sig_id, timestamp_string);
+
+        if (ret != SNORT_SNPRINTF_SUCCESS)
+            goto bad_query;
     }
 
     free(timestamp_string);    timestamp_string = NULL;
@@ -1378,43 +1633,43 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                 /*** Build a query for the ICMP Header ***/
                 if(data->detail)
                 {
-                    if(p->ext)
+                    if(p->icmph)
                     {
-                        snprintf(query->val, MAX_QUERY_LENGTH, 
-                                "INSERT INTO "
-                                "icmphdr (sid, cid, icmp_type, icmp_code, icmp_csum, icmp_id, icmp_seq) "
-                                "VALUES ('%u','%u','%u','%u','%u','%u','%u')",
-                                data->shared->sid,
-                                data->shared->cid,
-                                p->icmph->type,
-                                p->icmph->code,
-                                ntohs(p->icmph->csum),
-                                ntohs(p->ext->id),
-                                ntohs(p->ext->seqno));
+                        ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                            "INSERT INTO "
+                                            "icmphdr (sid, cid, icmp_type, icmp_code, icmp_csum, icmp_id, icmp_seq) "
+                                            "VALUES (%u,%u,%u,%u,%u,%u,%u)",
+                                            data->shared->sid, data->shared->cid, p->icmph->type,
+                                            p->icmph->code, ntohs(p->icmph->csum),
+                                            ntohs(p->icmph->s_icmp_id), ntohs(p->icmph->s_icmp_seq));
+
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
                     }
                     else
                     {
-                        snprintf(query->val, MAX_QUERY_LENGTH, 
-                                "INSERT INTO "
-                                "icmphdr (sid, cid, icmp_type, icmp_code, icmp_csum) "
-                                "VALUES ('%u','%u','%u','%u','%u')",
-                                data->shared->sid,
-                                data->shared->cid,
-                                p->icmph->type,
-                                p->icmph->code,
-                                ntohs(p->icmph->csum));
+                        ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                            "INSERT INTO "
+                                            "icmphdr (sid, cid, icmp_type, icmp_code, icmp_csum) "
+                                            "VALUES (%u,%u,%u,%u,%u)",
+                                            data->shared->sid, data->shared->cid, p->icmph->type,
+                                            p->icmph->code, ntohs(p->icmph->csum));
+
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
                     }
                 }
                 else
                 {
-                    snprintf(query->val, MAX_QUERY_LENGTH, 
-                            "INSERT INTO "
-                            "icmphdr (sid, cid, icmp_type, icmp_code) "
-                            "VALUES ('%u','%u','%u','%u')",
-                            data->shared->sid,
-                            data->shared->cid,
-                            p->icmph->type,
-                            p->icmph->code);
+                    ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                        "INSERT INTO "
+                                        "icmphdr (sid, cid, icmp_type, icmp_code) "
+                                        "VALUES (%u,%u,%u,%u)",
+                                        data->shared->sid, data->shared->cid,
+                                        p->icmph->type, p->icmph->code);
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
                 }
             }
             else if(p->iph->ip_proto == IPPROTO_TCP && p->tcph)
@@ -1423,38 +1678,43 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                 /*** Build a query for the TCP Header ***/
                 if(data->detail)
                 {
-                    snprintf(query->val, MAX_QUERY_LENGTH, 
-                            "INSERT INTO "
-                            "tcphdr (sid, cid, tcp_sport, tcp_dport, "
-                            "        tcp_seq, tcp_ack, tcp_off, tcp_res, "
-                            "        tcp_flags, tcp_win, tcp_csum, tcp_urp) "
-                            "VALUES ('%u','%u','%u','%u','%lu','%lu','%u','%u','%u','%u','%u','%u')",
-                            data->shared->sid,
-                            data->shared->cid,
-                            ntohs(p->tcph->th_sport), 
-                            ntohs(p->tcph->th_dport),
-                            (u_long)ntohl(p->tcph->th_seq),
-                            (u_long)ntohl(p->tcph->th_ack),
-                            TCP_OFFSET(p->tcph), 
-                            TCP_X2(p->tcph),
-                            p->tcph->th_flags, 
-                            ntohs(p->tcph->th_win),
-                            ntohs(p->tcph->th_sum),
-                            ntohs(p->tcph->th_urp));
+                    ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                        "INSERT INTO "
+                                        "tcphdr (sid, cid, tcp_sport, tcp_dport, "
+                                        "        tcp_seq, tcp_ack, tcp_off, tcp_res, "
+                                        "        tcp_flags, tcp_win, tcp_csum, tcp_urp) "
+                                        "VALUES (%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%u,%u)",
+                                        data->shared->sid,
+                                        data->shared->cid,
+                                        ntohs(p->tcph->th_sport), 
+                                        ntohs(p->tcph->th_dport),
+                                        (u_long)ntohl(p->tcph->th_seq),
+                                        (u_long)ntohl(p->tcph->th_ack),
+                                        TCP_OFFSET(p->tcph), 
+                                        TCP_X2(p->tcph),
+                                        p->tcph->th_flags, 
+                                        ntohs(p->tcph->th_win),
+                                        ntohs(p->tcph->th_sum),
+                                        ntohs(p->tcph->th_urp));
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
                 }
                 else
                 {
-                    snprintf(query->val, MAX_QUERY_LENGTH, 
-                            "INSERT INTO "
-                            "tcphdr (sid,cid,tcp_sport,tcp_dport,tcp_flags) "
-                            "VALUES ('%u','%u','%u','%u','%u')",
-                            data->shared->sid,
-                            data->shared->cid,
-                            ntohs(p->tcph->th_sport), 
-                            ntohs(p->tcph->th_dport),
-                            p->tcph->th_flags);
-                }
+                    ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                        "INSERT INTO "
+                                        "tcphdr (sid,cid,tcp_sport,tcp_dport,tcp_flags) "
+                                        "VALUES (%u,%u,%u,%u,%u)",
+                                        data->shared->sid,
+                                        data->shared->cid,
+                                        ntohs(p->tcph->th_sport), 
+                                        ntohs(p->tcph->th_dport),
+                                        p->tcph->th_flags);
 
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
+                }
 
                 if(data->detail)
                 {
@@ -1470,18 +1730,48 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                         {
                             packet_data = base64(p->tcp_options[i].data, p->tcp_options[i].len);
                         }
-                        snprintf(query->val, MAX_QUERY_LENGTH, 
-                                "INSERT INTO "
-                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
-                                "VALUES ('%u','%u','%u','%u','%u','%u','%s')",
-                                data->shared->sid,
-                                data->shared->cid,
-                                i,
-                                6,
-                                p->tcp_options[i].code,
-                                p->tcp_options[i].len,
-                                packet_data); 
-                        free(packet_data);    packet_data = NULL;
+                        if(data->shared->dbtype_id == DB_ORACLE)
+                        {
+                            /* Oracle field BLOB type case. We append unescaped
+                             * opt_data data after query, which later in Insert()
+                             * will be cut off and uploaded with OCIBindByPos().
+                             */
+                            ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                                "INSERT INTO "
+                                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
+                                                "VALUES (%u,%u,%u,%u,%u,%u,:1)|%s",
+                                                data->shared->sid,
+                                                data->shared->cid,
+                                                i,
+                                                6,
+                                                p->tcp_options[i].code,
+                                                p->tcp_options[i].len,
+                                                packet_data); 
+                            
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
+
+                            free(packet_data);    packet_data = NULL;
+                        }
+                        else
+                        {
+                            ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                                "INSERT INTO "
+                                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
+                                                "VALUES (%u,%u,%u,%u,%u,%u,'%s')",
+                                                data->shared->sid,
+                                                data->shared->cid,
+                                                i,
+                                                6,
+                                                p->tcp_options[i].code,
+                                                p->tcp_options[i].len,
+                                                packet_data); 
+
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
+
+                            free(packet_data);    packet_data = NULL;
+                        }
                     }
                 }
             }
@@ -1491,27 +1781,33 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                 /*** Build the query for the UDP Header ***/
                 if(data->detail)
                 {
-                    snprintf(query->val, MAX_QUERY_LENGTH,
-                            "INSERT INTO "
-                            "udphdr (sid, cid, udp_sport, udp_dport, udp_len, udp_csum) "
-                            "VALUES ('%u', '%u', '%u', '%u', '%u', '%u')",
-                            data->shared->sid,
-                            data->shared->cid,
-                            ntohs(p->udph->uh_sport), 
-                            ntohs(p->udph->uh_dport),
-                            ntohs(p->udph->uh_len),
-                            ntohs(p->udph->uh_chk));
+                    ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                                        "INSERT INTO "
+                                        "udphdr (sid, cid, udp_sport, udp_dport, udp_len, udp_csum) "
+                                        "VALUES (%u, %u, %u, %u, %u, %u)",
+                                        data->shared->sid,
+                                        data->shared->cid,
+                                        ntohs(p->udph->uh_sport), 
+                                        ntohs(p->udph->uh_dport),
+                                        ntohs(p->udph->uh_len),
+                                        ntohs(p->udph->uh_chk));
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
                 }
                 else
                 {
-                    snprintf(query->val, MAX_QUERY_LENGTH,
-                            "INSERT INTO "
-                            "udphdr (sid, cid, udp_sport, udp_dport) "
-                            "VALUES ('%u', '%u', '%u', '%u')",
-                            data->shared->sid,
-                            data->shared->cid,
-                            ntohs(p->udph->uh_sport), 
-                            ntohs(p->udph->uh_dport));
+                    ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                                        "INSERT INTO "
+                                        "udphdr (sid, cid, udp_sport, udp_dport) "
+                                        "VALUES (%u, %u, %u, %u)",
+                                        data->shared->sid,
+                                        data->shared->cid,
+                                        ntohs(p->udph->uh_sport), 
+                                        ntohs(p->udph->uh_dport));
+
+                    if (ret != SNORT_SNPRINTF_SUCCESS)
+                        goto bad_query;
                 }
             }
         }   
@@ -1523,39 +1819,44 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
 
             if(data->detail)
             {
-                snprintf(query->val, MAX_QUERY_LENGTH, 
-                        "INSERT INTO "
-                        "iphdr (sid, cid, ip_src, ip_dst, ip_ver, ip_hlen, "
-                        "       ip_tos, ip_len, ip_id, ip_flags, ip_off,"
-                        "       ip_ttl, ip_proto, ip_csum) "
-                        "VALUES ('%u','%u','%lu','%lu','%u','%u','%u','%u','%u','%u','%u','%u','%u','%u')",
-                        data->shared->sid,
-                        data->shared->cid,
-                        (u_long)ntohl(p->iph->ip_src.s_addr), 
-                        (u_long)ntohl(p->iph->ip_dst.s_addr), 
-                        IP_VER(p->iph),
-                        IP_HLEN(p->iph), 
-                        p->iph->ip_tos,
-                        ntohs(p->iph->ip_len),
-                        ntohs(p->iph->ip_id), 
-                        p->frag_flag,
-                        ntohs(p->frag_offset),
-                        p->iph->ip_ttl, 
-                        p->iph->ip_proto,
-                        ntohs(p->iph->ip_csum));
+                ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                    "INSERT INTO "
+                                    "iphdr (sid, cid, ip_src, ip_dst, ip_ver, ip_hlen, "
+                                    "       ip_tos, ip_len, ip_id, ip_flags, ip_off,"
+                                    "       ip_ttl, ip_proto, ip_csum) "
+                                    "VALUES (%u,%u,%lu,%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u)",
+                                    data->shared->sid,
+                                    data->shared->cid,
+                                    (u_long)ntohl(p->iph->ip_src.s_addr), 
+                                    (u_long)ntohl(p->iph->ip_dst.s_addr), 
+                                    IP_VER(p->iph),
+                                    IP_HLEN(p->iph), 
+                                    p->iph->ip_tos,
+                                    ntohs(p->iph->ip_len),
+                                    ntohs(p->iph->ip_id), 
+                                    p->frag_flag,
+                                    ntohs(p->frag_offset),
+                                    p->iph->ip_ttl, 
+                                    p->iph->ip_proto,
+                                    ntohs(p->iph->ip_csum));
+
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                    goto bad_query;
             }
             else
             {
-                snprintf(query->val, MAX_QUERY_LENGTH, 
+                ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH, 
+                                    "INSERT INTO "
+                                    "iphdr (sid, cid, ip_src, ip_dst, ip_proto) "
+                                    "VALUES (%u,%u,%lu,%lu,%u)",
+                                    data->shared->sid,
+                                    data->shared->cid,
+                                    (u_long)ntohl(p->iph->ip_src.s_addr),
+                                    (u_long)ntohl(p->iph->ip_dst.s_addr),
+                                    p->iph->ip_proto);
 
-                        "INSERT INTO "
-                        "iphdr (sid, cid, ip_src, ip_dst, ip_proto) "
-                        "VALUES ('%u','%u','%lu','%lu','%u')",
-                        data->shared->sid,
-                        data->shared->cid,
-                        (u_long)ntohl(p->iph->ip_src.s_addr),
-                        (u_long)ntohl(p->iph->ip_dst.s_addr),
-                        p->iph->ip_proto);
+                if (ret != SNORT_SNPRINTF_SUCCESS)
+                    goto bad_query;
             }
 
             /*** Build querys for the IP Options ***/
@@ -1575,18 +1876,48 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                             packet_data = base64(p->ip_options[i].data, p->ip_options[i].len); 
                         }
 
-                        snprintf(query->val, MAX_QUERY_LENGTH, 
-                                "INSERT INTO "
-                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
-                                "VALUES ('%u','%u','%u','%u','%u','%u','%s')",
-                                data->shared->sid,
-                                data->shared->cid,
-                                i,
-                                0,
-                                p->ip_options[i].code,
-                                p->ip_options[i].len,
-                                packet_data); 
-                        free(packet_data);    packet_data = NULL;
+                        if(data->shared->dbtype_id == DB_ORACLE)
+                        {
+                            /* Oracle field BLOB type case. We append unescaped
+                             * opt_data data after query, which later in Insert()
+                             * will be cut off and uploaded with OCIBindByPos().
+                             */
+                            ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                                                "INSERT INTO "
+                                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
+                                                "VALUES (%u,%u,%u,%u,%u,%u,:1)|%s",
+                                                data->shared->sid,
+                                                data->shared->cid,
+                                                i,
+                                                0,
+                                                p->ip_options[i].code,
+                                                p->ip_options[i].len,
+                                                packet_data);
+
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
+
+                            free(packet_data);    packet_data = NULL;
+                        }
+                        else
+                        {
+                            ret = SnortSnprintf(query->val, MAX_QUERY_LENGTH,
+                                                "INSERT INTO "
+                                                "opt (sid,cid,optid,opt_proto,opt_code,opt_len,opt_data) "
+                                                "VALUES (%u,%u,%u,%u,%u,%u,'%s')",
+                                                data->shared->sid,
+                                                data->shared->cid,
+                                                i,
+                                                0,
+                                                p->ip_options[i].code,
+                                                p->ip_options[i].len,
+                                                packet_data);
+
+                            if (ret != SNORT_SNPRINTF_SUCCESS)
+                                goto bad_query;
+
+                            free(packet_data);    packet_data = NULL;
+                        }
                     }
                 }
             }
@@ -1616,16 +1947,42 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
 
                     packet_data = snort_escape_string(packet_data_not_escaped, data);
 
-                    snprintf(query->val, (p->dsize * 2) + MAX_QUERY_LENGTH - 3, 
-                            "INSERT INTO "
-                            "data (sid,cid,data_payload) "
-                            "VALUES ('%u','%u','%s",
-                            data->shared->sid,
-                            data->shared->cid,
-                            packet_data);
-                    strcat(query->val, "')");
-                    free (packet_data);                packet_data = NULL;
-                    free (packet_data_not_escaped);    packet_data_not_escaped = NULL;
+                    if(data->shared->dbtype_id == DB_ORACLE)
+                    {
+                        /* Oracle field BLOB type case. We append unescaped 
+                         * packet_payload data after query, which later in Insert() 
+                         * will be cut off and uploaded with OCIBindByPos().
+                         */
+                        ret = SnortSnprintf(query->val, (p->dsize * 2) + MAX_QUERY_LENGTH - 3,
+                                            "INSERT INTO "
+                                            "data (sid,cid,data_payload) "
+                                            "VALUES (%u,%u,:1)|%s",
+                                            data->shared->sid,
+                                            data->shared->cid,
+                                            packet_data_not_escaped);
+
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
+
+                        free (packet_data);                packet_data = NULL;
+                        free (packet_data_not_escaped);    packet_data_not_escaped = NULL;
+                    }
+                    else
+                    {
+                        ret = SnortSnprintf(query->val, (p->dsize * 2) + MAX_QUERY_LENGTH - 3,
+                                            "INSERT INTO "
+                                            "data (sid,cid,data_payload) "
+                                            "VALUES (%u,%u,'%s')",
+                                            data->shared->sid,
+                                            data->shared->cid,
+                                            packet_data);
+
+                        if (ret != SNORT_SNPRINTF_SUCCESS)
+                            goto bad_query;
+
+                        free (packet_data);                packet_data = NULL;
+                        free (packet_data_not_escaped);    packet_data_not_escaped = NULL;
+                    }
                 }
             }
         }
@@ -1669,6 +2026,29 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
         data->shared->cid = 601;
     }
 #endif
+
+    return;
+
+bad_query:
+    ErrorMessage("Database: Unable to construct query - output error or truncation\n");
+
+    if (timestamp_string != NULL)        free(timestamp_string);
+    if (insert_fields != NULL)           free(insert_fields);
+    if (insert_values != NULL)           free(insert_values);
+    if (sig_name != NULL)                free(sig_name);
+    if (sig_class != NULL)               free(sig_class);
+    if (ref_system_name != NULL)         free(ref_system_name);
+    if (ref_node_id_string != NULL)      free(ref_node_id_string);
+    if (ref_tag != NULL)                 free(ref_tag);
+    if (packet_data != NULL)             free(packet_data);
+    if (packet_data_not_escaped != NULL) free(packet_data_not_escaped);
+    if (select0 != NULL)                 free(select0);
+    if (select1 != NULL)                 free(select1);
+    if (insert0 != NULL)                 free(insert0);
+
+    FreeQueryNode(root);
+
+    return;
 }
 
 /* Some of the code in this function is from the 
@@ -1840,11 +2220,17 @@ int UpdateLastCid(DatabaseData *data, int sid, int cid)
     int ret;
 
     insert0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
-    snprintf(insert0, MAX_QUERY_LENGTH,
-             "UPDATE sensor "
-             "   SET last_cid = %u "
-             " WHERE sid = %u",
-             cid, sid);
+    ret = SnortSnprintf(insert0, MAX_QUERY_LENGTH,
+                        "UPDATE sensor "
+                        "   SET last_cid = %u "
+                        " WHERE sid = %u",
+                        cid, sid);
+
+    if (ret != SNORT_SNPRINTF_SUCCESS)
+    {
+        free(insert0);
+        return -1;
+    }
 
     ret = Insert(insert0, data);
     free(insert0);    insert0 = NULL;
@@ -1865,13 +2251,19 @@ int UpdateLastCid(DatabaseData *data, int sid, int cid)
 int GetLastCid(DatabaseData *data, int sid)
 {
     char *select0;
-    int tmp_cid;
+    int tmp_cid, ret;
 
     select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
-    snprintf(select0, MAX_QUERY_LENGTH,
-             "SELECT last_cid "
-             "  FROM sensor "
-             " WHERE sid = '%u'", sid);
+    ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                        "SELECT last_cid "
+                        "  FROM sensor "
+                        " WHERE sid = %u", sid);
+
+    if (ret != SNORT_SNPRINTF_SUCCESS)
+    {
+        free(select0);
+        return -1;
+    }
 
     tmp_cid = Select(select0,data);
     free(select0);    select0 = NULL;
@@ -1893,6 +2285,7 @@ int CheckDBVersion(DatabaseData * data)
 {
    char *select0;
    int schema_version;
+   int ret;
 
    select0 = (char *) SnortAlloc(MAX_QUERY_LENGTH+1);
 
@@ -1903,16 +2296,45 @@ int CheckDBVersion(DatabaseData * data)
       /* "schema" is a keyword in SQL Server, so use square brackets
        *  to indicate that we are referring to the table
        */
-      snprintf(select0, MAX_QUERY_LENGTH,
-               "SELECT vseq "
-               "  FROM [schema]");
+      ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                          "SELECT vseq FROM [schema]");
+
+      if (ret != SNORT_SNPRINTF_SUCCESS)
+      {
+          free(select0);
+          return -1;
+      }
    }
    else
 #endif
    {
-      snprintf(select0, MAX_QUERY_LENGTH,
-               "SELECT vseq "
-               "FROM schema");
+#if defined(ENABLE_MYSQL)
+      if (data->shared->dbtype_id == DB_MYSQL)
+      {
+         /* "schema" is a keyword in MYSQL, so use `schema`
+          *  to indicate that we are referring to the table
+          */
+         ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                             "SELECT vseq FROM `schema`");
+
+         if (ret != SNORT_SNPRINTF_SUCCESS)
+         {
+             free(select0);
+             return -1;
+         }
+      }
+      else
+#endif
+      {
+         ret = SnortSnprintf(select0, MAX_QUERY_LENGTH,
+                             "SELECT vseq FROM schema");
+
+         if (ret != SNORT_SNPRINTF_SUCCESS)
+         {
+             free(select0);
+             return -1;
+         }
+      }
    }
 
    schema_version = Select(select0,data);
@@ -1956,7 +2378,7 @@ void BeginTransaction(DatabaseData * data)
 }
 
 /*******************************************************************************
- * Function: BeginTransaction(DatabaseData * data)
+ * Function: CommitTransaction(DatabaseData * data)
  *
  * Purpose: Database independent SQL to commit a transaction
  * 
@@ -2122,6 +2544,7 @@ int Insert(char * query, DatabaseData * data)
     {
         if(SQLAllocStmt(data->u_connection, &data->u_statement) == SQL_SUCCESS)
             if(SQLPrepare(data->u_statement, query, SQL_NTS) == SQL_SUCCESS)
+            {
                 if(SQLExecute(data->u_statement) == SQL_SUCCESS)
                 {
                     result = 1;
@@ -2149,12 +2572,24 @@ int Insert(char * query, DatabaseData * data)
                         errorIndex++;
                     }
                 }
+            }
     }
 #endif
 
 #ifdef ENABLE_ORACLE
     if(data->shared->dbtype_id == DB_ORACLE)
     {
+        char *blob = NULL;
+
+        /* If BLOB type - split query to actual SQL and blob to BLOB data */  
+        if(strncasecmp(query,"INSERT INTO data",16)==0 || strncasecmp(query,"INSERT INTO opt",15)==0)
+        {
+            if((blob=strchr(query,'|')) != NULL)
+            {
+                *blob='\0'; blob++;
+            }
+        }
+
         if(OCI_SUCCESS == OCIStmtPrepare(data->o_statement
                                        , data->o_error
                                        , query
@@ -2162,6 +2597,23 @@ int Insert(char * query, DatabaseData * data)
                                        , OCI_NTV_SYNTAX
                                        , OCI_DEFAULT))
         {
+            if( blob != NULL )
+            {
+                OCIBindByPos(data->o_statement
+                           , &data->o_bind
+                           , data->o_error
+                           , 1
+                           , (dvoid *)blob
+                           , strlen(blob)
+                           , SQLT_BIN
+                           , 0
+                           , 0
+                           , 0
+                           , 0
+                           , 0
+                           , OCI_DEFAULT);
+            }
+
             if(OCI_SUCCESS == OCIStmtExecute(data->o_servicecontext
                                            , data->o_statement
                                            , data->o_error
@@ -2279,13 +2731,15 @@ int Select(char * query, DatabaseData * data)
         }
         else
         {
-            if(!(data->m_result = mysql_use_result(data->m_sock)))
+            data->m_result = mysql_use_result(data->m_sock);
+            if (!data->m_result)
             {
                 result = 0;
             }
             else
             {
-                if((data->m_row = mysql_fetch_row(data->m_result)))
+                data->m_row = mysql_fetch_row(data->m_result);
+                if (data->m_row)
                 {
                     if(data->m_row[0] != NULL)
                     {
@@ -2695,6 +3149,24 @@ void Disconnect(DatabaseData * data)
         }
 #endif
 
+#ifdef ENABLE_ORACLE
+        if(data->shared->dbtype_id == DB_ORACLE)
+        {
+            if(data->o_servicecontext)
+            {
+                OCILogoff(data->o_servicecontext, data->o_error);
+                if(data->o_error)
+                {
+                    OCIHandleFree((dvoid *)data->o_error, OCI_HTYPE_ERROR);
+                }
+                if(data->o_statement)
+                {
+                    OCIHandleFree((dvoid *)data->o_statement, OCI_HTYPE_STMT);
+                }
+            }
+        }
+#endif
+
 #ifdef ENABLE_MSSQL
         if(data->shared->dbtype_id == DB_MSSQL)
         {
@@ -2765,10 +3237,11 @@ void SpoDatabaseCleanExitFunction(int signal, void *arg)
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"database(debug): entered SpoDatabaseCleanExitFunction\n"););
 
-    UpdateLastCid(data, data->shared->sid, data->shared->cid-1);
-    Disconnect(data); 
     if(data != NULL) 
     {
+       UpdateLastCid(data, data->shared->sid, data->shared->cid-1);
+       Disconnect(data); 
+       free(data->args);
        free(data);
        data = NULL;
     }
@@ -2785,10 +3258,11 @@ void SpoDatabaseRestartFunction(int signal, void *arg)
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"database(debug): entered SpoDatabaseRestartFunction\n"););
 
-    UpdateLastCid(data, data->shared->sid, data->shared->cid-1);
-    Disconnect(data);
     if(data != NULL) 
     {
+       UpdateLastCid(data, data->shared->sid, data->shared->cid-1);
+       Disconnect(data);
+       free(data->args);
        free(data);
        data = NULL;
     }

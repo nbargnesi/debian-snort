@@ -21,8 +21,39 @@ Snort Configure-time switches
 `--enable-debug'
      Enable debugging options (bugreports and developers only).
      
-`--with-snmp'
-     Enable SNMP alerting code.
+`--enable-pthread'
+     Enable pthread support (causes snort to be linked with libpthread).
+
+`--enable-prelude'
+     Enable Prelude Hydrid IDS support.
+
+`--enable-rulestate'
+     Enable rule state configuration feature that seperates the rule
+     state (enabled/disabled) from the action (alert, drop, log, etc)
+     and definition.
+
+`--enable-dynamicplugin'
+     Enable dynamically loadable preprocessors, detection engine
+     and rules libraries.
+
+`--enable-timestats'
+     Enable real-time performance statistics.
+
+`--enable-perfprofiling'
+     Enable performance profiling of individual rules and preprocessors.
+
+`--enable-linux-smp-stats'
+     Enable CPU performance statistics through proc.
+
+`--enable-inline'
+     Use the libipq interface for inline mode.  May require --with-libipq
+     options.
+
+`--enable-ipfw'
+     Use the IPFW divert sockets for inline mode.
+
+`--enable-react'
+     Enable interception and termination of offending HTTP accesses.
 
 `--enable-flexresp'
      Enable the 'Flexible Response' code, that allows you to
@@ -30,10 +61,37 @@ Snort Configure-time switches
      When you enable this feature, you also need the 'libnet'-library
      that can be found at http://www.packetfactory.net/libnet. 
      See README.FLEXRESP for details.
-     This function is still ALPHA, so use with caution.
+
+`--enable-flexresp2'
+     Enable the 'Flexible Response, version 2' code, that allows you to
+     cancel hostile connections on IP-level when a rule matches.
+     When you enable this feature, you also need the 'libnet'-library
+     that can be found at http://www.packetfactory.net/libnet. 
+     See README.FLEXRESP2 for details.
+
+`--enable-aruba'
+     Enable the Aruba output plugin capability that allows you to
+     send information to an Aruba Networks Mobility Controller.  See
+     README.ARUBA for details.
+
+`--enable-gre'
+     Enable GRE decoder. Allows Snort to decode GRE encapsulated traffic.
+     Only supports GRE over IP.  Only one layer of encapsulation will be
+     decoded - packets with multiple GRE headers will be alerted and
+     discarded/blocked.
+
+`--with-snmp'
+     Enable SNMP alerting code.
 
 `--with-mysql=DIR'
     Support for mysql, turn this on if you want to use ACID with MySQL.
+    NOTE: Specifying a directory will be deprecated in the future.
+    
+`--with-mysql-libraries=DIR'
+    Specify location for mysql client library.
+    
+`--with-mysql-includes=DIR'
+    Specify location for mysql header files.
     
 `--with-odbc=DIR'
     Support for ODBC databases, turn this on if you want to use ACID with a
@@ -277,16 +335,77 @@ operates.
 Platform Specific Notes
 =======================
 
+* 64bit platforms:
+------------------
+On some 64bit Linux systems (e.g. with Fedora distributions), when
+configuring snort with MySQL output support, the necessary library may
+not be found automatically by the configure script, giving the
+following error when 'configure' is run:
+
+**********************************************
+  ERROR: unable to find mysqlclient library (libmysqlclient.*)
+  checked in the following places
+        /usr
+        /usr/lib
+        /usr/mysql
+        /usr/mysql/lib
+        /usr/local
+        /usr/local/lib
+        /usr/local/mysql
+        /usr/local/mysql/lib
+**********************************************
+
+In this case, libmysqlclient.* may actually be found in /usr/lib64/mysql,
+and the path will need to be explicitly specified in this manner:
+configure --with-mysql-libraries=/usr/lib64/mysql
+
+Note, you may also specify alternate locations for the mysql header
+files using --with-mysql-includes.  Specifying a directory as part
+of the --with-mysql option to configure will be deprecated in the
+future.
+
+Problems may also be encountered if both the 32bit and 64bit libraries
+are installed on the system, and configuring snort with MySQL support
+may result in a different error:
+
+checking for mysql... yes
+checking for compress in -lz... yes
+checking for dlsym in -ldl... no
+checking for dlsym in -lc... no
+
+   ERROR!  programmatic interface to dynamic link loader
+   not found.  Cannot use dynamic plugin libraries.
+
+Reading through config.log, you may see something like this (the
+numbers are the line number and may differ):
+
+configure:24280: checking for dlsym in -ldl
+configure:24310: gcc -o conftest -g -O2 -Wall  -DDYNAMIC_PLUGIN   -I/usr/include/mysql -DENABLE_MYSQL  -lpcre -L/usr/lib/mysql conftest.c -ldl  -lmysqlclient -lz -lpcre -lpcap -lm -lnsl  >&5
+/usr/bin/ld: skipping incompatible /usr/lib/mysql/libmysqlclient.so when searching for -lmysqlclient
+/usr/bin/ld: skipping incompatible /usr/lib/mysql/libmysqlclient.a when searching for -lmysqlclient
+/usr/bin/ld: cannot find -lmysqlclient
+collect2: ld returned 1 exit status
+configure:24316: $? = 1 
+
+This likely indicates a compability issue between a 32bit library
+from mysql (found in its normal location), and a 64bit library for
+libdl (dynamic loader).  Use the --with-mysql-libraries option to
+specify the location of the 64bit mysql library (e.g. /usr/lib64/mysql).
+
 * Linux:
-  With kernels 2.2.x and higher you may get `snort [pid] uses obsolete (PF_INET, SOCK_PACKET)' warnings. This is because you use some older implementation of 
-libpcap library and you need an upgrade. The recent version of libpcap could be found at www.tcpdump.org page.
-  On linux with kernels 2.2.x and higher you may also get feature to
-  monitor several interfaces down to network level (session + TCP + IP) if you
+--------
+  With kernels 2.2.x and higher you may get `snort [pid] uses obsolete
+  (PF_INET, SOCK_PACKET)' warnings. This is because you use some older
+  implementation of libpcap library and you need an upgrade. The recent
+  version of libpcap could be found at www.tcpdump.org page.  On linux
+  with kernels 2.2.x and higher you may also get feature to monitor
+  several interfaces down to network level (session + TCP + IP) if you
   link your snort with the lattest version of libpcap which incorporates
   Sebastian Krahmer's patch for interface 'any'.
   (Consult http://www.tcpdump.org for details).
 
 * IRIX
+------
 [ noticed by Scott A. McIntyre <scott@whoi.edu>]
  There's problem with GCC on IRIX platform which causes certain missbehaviour
 of snort.
@@ -323,5 +442,78 @@ http://freeware.sgi.com/2000Feb/Installable/gcc-2.8.1-sgipl2.html
 
 
 * SunOS
+-------
  Similar problem with GCC has been noticed on SunOS4.x platforms which causes
 snort to SIGBUS at certain places. Please use naitive C compiler instead.
+
+* MAC OSX
+---------
+On Darwin (maybe others), the configure script shipped as part of the
+source distribution needs to be recreated.  To do this, run the
+following commands:
+
+aclocal -I m4
+autoheader
+automake --add-missing --copy
+autoconf
+
+If you plan to use the dynamic plugin capability (ie,
+configure --enable-dynamicplugin), snort needs to be linked using
+the two level namespace.  To do this, set the LD_TWOLEVEL_NAMESPACE
+environment variable to something prior to running configure.
+An example:
+
+$ export LD_TWOLEVEL_NAMESPACE=1
+$ configure --enable-dynamicplugin
+
+* Open BSD/Free BSD/MAC OSX
+---------------------------
+On certain BSD-based platforms, the make install may not symlink the
+version specific shared libraries to the non-versioned shared library.
+This could cause a failure to load when using dynamic libraries.
+
+Work arounds:
+
+1) Create the symlink's by hand after make install.  The shared libraries
+can be located under /usr/local/lib/snort_dynamicengine and
+/usr/local/lib/snort_dynamicpreprocessor.  
+
+1a) For OpenBSD, the object files ending in .0 will need to be
+symlinked to .so. For example:
+
+ln -s libsf_smtp_preproc.0  libsf_smtp_preproc.so
+
+1b) For MAC OSX, the object files ending in .0 will need to be
+symlinked to .dylib. For example:
+
+ln -s libsf_smtp_preproc.0  libsf_smtp_preproc.dylib
+
+2) Use the --dynamic-preprocessor-lib (rather than
+--dynamic-preprocessor-lib-dir) to load the version specific
+shared library.
+
+3) Use the config directive dynamicpreprocessor file (rather than
+dynamicpreprocessor directory) to load the version specific
+shared library.
+
+* FreeBSD 6.x
+-------------
+
+If you run the auto tools (instead of using the delivered
+configure script), you may need to include -I /usr/local/share/aclocal
+(in addition to -I m4) as arguments to aclocal.  This is required
+to set up the correct info for using LIBTOOL with aclocal
+version 1.9 that ships with FreeBSD.
+
+In this case, the following recommended commands should be used
+to configure snort prior to using make:
+
+libtoolize --automake --copy
+aclocal -I m4 -I /usr/local/share/aclocal
+autoheader
+automake --add-missing --copy
+autoconf
+
+Then run configure with any desired options (--enable-dynamicplugin,
+--enable-inline, etc).
+

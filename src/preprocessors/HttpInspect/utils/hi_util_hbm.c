@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_hbm.c
 **  
@@ -10,6 +31,7 @@
 #include <stdlib.h>
 
 #include "hi_util_hbm.h"
+#include "util.h"
 
 /*
 *
@@ -17,7 +39,7 @@
 *    
 */
 #ifndef WIN32  /* To avoid naming conflict, Win32 will use the hbm_prepx() in mwm.c */
-HBM_STRUCT * hbm_prepx(HBM_STRUCT *p, unsigned char * pat, int m)
+int hbm_prepx(HBM_STRUCT *p, unsigned char * pat, int m)
 {
      int     k;
 
@@ -33,7 +55,7 @@ HBM_STRUCT * hbm_prepx(HBM_STRUCT *p, unsigned char * pat, int m)
      for(k = 0; k < 256; k++) p->bcShift[k] = m;
      for(k = 0; k < m; k++)   p->bcShift[pat[k]] = m - k - 1;
 
-     return p;
+     return 1;
 }
 #endif
 
@@ -45,10 +67,14 @@ HBM_STRUCT * hbm_prep(unsigned char * pat, int m)
 {
      HBM_STRUCT    *p;
 
-     p = (HBM_STRUCT*)malloc( sizeof(HBM_STRUCT) );
-     if( !p ) return 0;
+     p = (HBM_STRUCT*)SnortAlloc(sizeof(HBM_STRUCT));
 
-     return hbm_prepx( p, pat, m );
+     if( !hbm_prepx( p, pat, m ) )
+     {
+          FatalError("Error initializing pattern matching. Check arguments.");
+     }
+
+     return p;
 }
 #endif
 

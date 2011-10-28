@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_ui_config.c
 **
@@ -5,12 +26,14 @@
 **
 **  @brief      This file contains library calls to configure HttpInspect.
 **
+**
 **  This file deals with configuring HttpInspect processing.  It contains
 **  routines to set a default configuration, add server configurations, etc.
 **
 **  NOTES:
 **
 **  - 2.10.03:  Initial Developments.  DJR
+**  - 2.4.05:   Added tab_uri_delimiter config option.  AJM.
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -50,7 +73,8 @@ int hi_ui_config_init_global_conf(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
 
     memset(GlobalConf, 0x00, sizeof(HTTPINSPECT_GLOBAL_CONF));
 
-    if((iRet = hi_ui_server_lookup_init(&GlobalConf->server_lookup)))
+    iRet = hi_ui_server_lookup_init(&GlobalConf->server_lookup);
+    if (iRet)
     {
         return iRet;
     }
@@ -94,6 +118,8 @@ int hi_ui_config_default(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
     GlobalConf->global_server.ports[80] = 1;
 
     GlobalConf->global_server.flow_depth = 300;
+
+    GlobalConf->global_server.post_depth = 0;
     
     GlobalConf->global_server.chunk_length = 500000;
 
@@ -113,6 +139,11 @@ int hi_ui_config_default(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
     GlobalConf->global_server.iis_delimiter.on = 1;
 
     GlobalConf->global_server.non_strict = 1;
+
+    GlobalConf->global_server.whitespace[9] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;   /* horizontal tab */
+    GlobalConf->global_server.whitespace[11] = HI_UI_CONFIG_WS_BEFORE_URI;  /* vertical tab */
+    GlobalConf->global_server.whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
+    GlobalConf->global_server.whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
 
     return HI_SUCCESS;
 }
@@ -204,6 +235,11 @@ int hi_ui_config_set_profile_apache(HTTPINSPECT_CONF *ServerConf)
 
     ServerConf->utf_8.on = 1;
 
+    ServerConf->whitespace[9] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;   /* horizontal tab */
+    ServerConf->whitespace[11] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;  /* vertical tab */
+    ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;  /* form feed */
+    ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;  /* carriage return */
+
     return HI_SUCCESS;
 }
     
@@ -254,8 +290,8 @@ int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *ServerConf,
     ServerConf->webroot.on = 1;
     ServerConf->webroot.alert = 1;
 
-    ServerConf->double_decoding.on    = 1;
-    ServerConf->double_decoding.alert = 1;
+    ServerConf->double_decoding.on    = 0;
+    ServerConf->double_decoding.alert = 0;
 
     ServerConf->u_encoding.on         = 1;
     ServerConf->u_encoding.alert      = 1;
@@ -274,7 +310,37 @@ int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *ServerConf,
 
     ServerConf->non_strict = 1;
 
+    ServerConf->whitespace[9] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;   /* horizontal tab */
+    ServerConf->whitespace[11] = HI_UI_CONFIG_WS_BEFORE_URI;  /* vertical tab */
+    ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
+    ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
+
     return HI_SUCCESS;
+}
+
+/*
+**  NAME
+**    hi_ui_set_profile_iis_4or5::
+*/
+/**
+** Double decoding decoding attacks exist for IIS
+** 4.0 and 5.0, but not 5.1 and beyond.
+**
+** This function uses the general IIS setup, hi_ui_config_set_profile_iis,
+** but set the double_decoding flags.
+**/
+
+int hi_ui_config_set_profile_iis_4or5(HTTPINSPECT_CONF *ServerConf,
+                                 int *iis_unicode_map)
+{
+    int ret;
+    
+    ret = hi_ui_config_set_profile_iis(ServerConf, iis_unicode_map);
+    
+    ServerConf->double_decoding.on = 1;
+    ServerConf->double_decoding.alert = 1;
+    
+    return ret;
 }
 
 /*
@@ -342,6 +408,11 @@ int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *ServerConf,
 
     ServerConf->non_strict = 1;
 
+    ServerConf->whitespace[9] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;   /* horizontal tab */
+    ServerConf->whitespace[11] = HI_UI_CONFIG_WS_BEFORE_URI;  /* vertical tab */
+    ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
+    ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
+
     return HI_SUCCESS;
 }
 
@@ -371,8 +442,8 @@ int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
 {
     int iRet;
 
-    if((iRet = hi_ui_server_lookup_add(GlobalConf->server_lookup, ServerIP, 
-                                       ServerConf)))
+    iRet = hi_ui_server_lookup_add(GlobalConf->server_lookup, ServerIP, ServerConf);
+    if (iRet)
     {
         /*
         **  Already added key will return a generic non-fatal

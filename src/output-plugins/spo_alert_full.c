@@ -3,9 +3,10 @@
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spo_alert_full.c,v 1.18 2003/10/20 15:03:34 chrisgreen Exp $ */
+/* $Id$ */
 
 /* spo_alert_full
  * 
@@ -236,12 +237,12 @@ SpoAlertFullData *ParseAlertFullArgs(char *args)
     SpoAlertFullData *data;
 
     data = (SpoAlertFullData *)SnortAlloc(sizeof(SpoAlertFullData));
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"ParseAlertFullArgs: %s\n", args););
     if(args == NULL)
     {
         data->file = OpenAlertFile(NULL);
         return data;
     }
+    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"ParseAlertFullArgs: %s\n", args););
 
     toks = mSplit(args, " ", 2, &num_toks, 0);
     if(strcasecmp("stdout", toks[0]) == 0)

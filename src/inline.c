@@ -1,4 +1,21 @@
-// $Id: inline.c,v 1.1 2004/09/13 17:44:49 jhewlett Exp $
+/* $Id$ */
+/*
+ ** Portions Copyright (C) 1998-2006 Sourcefire, Inc.
+ **
+ ** This program is free software; you can redistribute it and/or modify
+ ** it under the terms of the GNU General Public License as published by
+ ** the Free Software Foundation; either version 2 of the License, or
+ ** (at your option) any later version.
+ **
+ ** This program is distributed in the hope that it will be useful,
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ ** GNU General Public License for more details.
+ **
+ ** You should have received a copy of the GNU General Public License
+ ** along with this program; if not, write to the Free Software
+ ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 #ifdef GIDS
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +25,8 @@
 #include "decode.h"
 #include "inline.h"
 #include "rules.h"
+#include "stream_api.h"
+#include "snort.h"
 
 #define PKT_BUFSIZE 65536
 
@@ -50,6 +69,13 @@ int InlineMode()
 	return 0;
 }
 
+int InlineModeSetPrivsAllowed()
+{
+	if (pv.inline_flag)
+        return 0;
+
+    return 1;
+}
 
 #ifndef IPFW
 void TranslateToPcap(ipq_packet_msg_t *m, struct pcap_pkthdr *phdr)
@@ -242,10 +268,19 @@ void IpqLoop()
     while(1)
     {
         ResetIV();
-        status = ipq_read(ipqh, buf, PKT_BUFSIZE, 0);
+        status = ipq_read(ipqh, buf, PKT_BUFSIZE, 1000000);
         if (status < 0)
         {
             ipq_perror("IpqLoop: ");
+        }
+        /* man ipq_read tells us that when a timeout is specified
+         * ipq_read will return 0 when it is interupted. */
+        else if(status == 0)
+        {
+            /* Do the signal check. If we don't do this we will
+             * evaluate the signal only when we receive an actual
+             * packet. We don't want to depend on this. */
+            sig_check();
         }
         else
         {
@@ -265,7 +300,7 @@ void IpqLoop()
 #endif              
 
                     TranslateToPcap(m, &PHdr);
-                    ProcessPacket(NULL, &PHdr, (u_char *)m->payload);
+                    PcapProcessPacket(NULL, &PHdr, (u_char *)m->payload);
                     HandlePacket(m);
                     break;
             } /* switch */
@@ -351,7 +386,7 @@ void IpfwLoop()
             hlen = pip->ip_hl << 2;
 
             TranslateToPcap(&PHdr,pktlen);
-            ProcessPacket(NULL, &PHdr, pkt);
+            PcapProcessPacket(NULL, &PHdr, pkt);
             HandlePacket();
 
 	    /* If we don't drop and don't reject, reinject it back into ipfw,
@@ -511,6 +546,8 @@ RejectLayer2(ipq_packet_msg_t *m)
     struct ether_addr *link_addr;
 
     u_char enet_dst[6]; /* mac addr for creating the ethernet packet. */
+    u_char enet_src[6]; /* mac addr for creating the ethernet packet. */
+
     struct libnet_link_int *network = NULL;    /* pointer to link interface struct */
 
     int i = 0;
@@ -551,17 +588,23 @@ RejectLayer2(ipq_packet_msg_t *m)
     }
     /* copy the mac: the src is set the the interface mac
      * but only if the mac wasn't supplied in the configfile */
-    if(pv.enet_src[0] == '\0')
-    { 
+    if(pv.enet_src[0] == 0 && pv.enet_src[1] == 0 && pv.enet_src[2] == 0 && pv.enet_src[3] == 0 && pv.enet_src[4] == 0 && pv.enet_src[5] == 0)
+    {
+        /* either user set mac as 00:00:00:00:00:00 or it is blank */   
         for(i = 0; i < 6; i++)
-            pv.enet_src[i] = link_addr->ether_addr_octet[i];
+            enet_src[i] = link_addr->ether_addr_octet[i];
+    }
+    else
+    {
+      for(i = 0; i < 6; i++)  
+        enet_src[i] = pv.enet_src[i];    
     } 
     /* copy the mac: the old src now becomes dst */
     for(i = 0; i < 6; i++)
         enet_dst[i] = m->hw_addr[i];
 
-    //printf("reset src mac: %02X:%02X:%02X:%02X:%02X:%02X ",  pv.enet_src[0],pv.enet_src[1],pv.enet_src[2],pv.enet_src[3],pv.enet_src[4],pv.enet_src[5]);
-    //rintf("reset dst mac: %02X:%02X:%02X:%02X:%02X:%02X\n", enet_dst[0],enet_dst[1],enet_dst[2],enet_dst[3],enet_dst[4],enet_dst[5]);
+    //printf("reset src mac: %02X:%02X:%02X:%02X:%02X:%02X\n", enet_src[0],enet_src[1],enet_src[2],enet_src[3],enet_src[4],enet_src[5]);
+    //printf("reset dst mac: %02X:%02X:%02X:%02X:%02X:%02X\n", enet_dst[0],enet_dst[1],enet_dst[2],enet_dst[3],enet_dst[4],enet_dst[5]);
 
     switch(proto)
     {
@@ -597,7 +640,7 @@ RejectLayer2(ipq_packet_msg_t *m)
                     return;
                 }
                 /* build the ethernet packet */
-                if (libnet_build_ethernet(enet_dst, pv.enet_src, ETHERTYPE_IP, NULL, 0, l_tcp) == -1)
+                if (libnet_build_ethernet(enet_dst, enet_src, ETHERTYPE_IP, NULL, 0, l_tcp) == -1)
                 {
                     libnet_error(LIBNET_ERR_CRITICAL,
                                  "SendEthTCPRST: libnet_build_ethernet");
@@ -652,7 +695,7 @@ RejectLayer2(ipq_packet_msg_t *m)
                 }
                         
                 /* build the ethernet packet */
-                if (libnet_build_ethernet(enet_dst, pv.enet_src, ETHERTYPE_IP, NULL, 0, l_icmp) == -1)
+                if (libnet_build_ethernet(enet_dst, enet_src, ETHERTYPE_IP, NULL, 0, l_icmp) == -1)
                 {
                     libnet_error(LIBNET_ERR_CRITICAL,
                                 "SendEthICMPRST: libnet_build_ethernet");
@@ -671,6 +714,13 @@ RejectLayer2(ipq_packet_msg_t *m)
             }
             break;
     } /* end switch(proto) */
+
+    /* clean up file-descriptors for the next time we call RejectLayer2 */ 
+    if((libnet_close_link_interface(network)) == -1)
+    {
+      libnet_error(LIBNET_ERR_CRITICAL,
+                   "libnet_close_link_interface error\n");
+    }
 }
 #endif
 
@@ -727,11 +777,27 @@ void HandlePacket()
 #endif
 }
   
+int InlineWasPacketDropped()
+{
+    if (iv.drop)
+        return 1;
+    
+    return 0;
+}
 
-int InlineDrop()
+int InlineDrop(Packet *p)
 {
     //printf("InlineDrop(): dropping\n");
     iv.drop = 1;
+    p->packet_flags |= PKT_INLINE_DROP;
+
+    if (p->ssnptr && stream_api)
+    {
+        stream_api->drop_packet(p);
+
+        if (!(p->packet_flags & PKT_STATELESS))
+            stream_api->drop_traffic(p->ssnptr, SSN_DIR_BOTH);
+    }
     return 0;
 }
 
@@ -758,18 +824,50 @@ int InlineReplace()
 
 #else
 
+#include "snort.h"
+#include "stream_api.h"
+
+extern int g_drop_pkt;
+extern PV  pv;
+
 /*
 **  Let's define these for non-inline use.
 */
 int InlineMode()
 {
+	if (pv.inline_flag)
+		return 1;
+
 	return 0;
 }
 
-int InlineDrop()
+int InlineModeSetPrivsAllowed()
 {
+    return 1;
+}
+
+int InlineWasPacketDropped()
+{
+    if (g_drop_pkt)
+        return 1;
+    
     return 0;
 }
 
+int InlineDrop(Packet *p)
+{
+    g_drop_pkt = 1;
+    
+    p->packet_flags |= PKT_INLINE_DROP;
+
+    if (p->ssnptr && stream_api)
+    {
+        stream_api->drop_packet(p);
+
+        if (!(p->packet_flags & PKT_STATELESS))
+            stream_api->drop_traffic(p->ssnptr, SSN_DIR_BOTH);
+    }
+    return 0;
+}
 #endif /* GIDS */
 

@@ -3,9 +3,10 @@
 ** Copyright (C) 2000-2001 Andrew R. Baker <andrewb@uab.edu>
 **             
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */  
 
-/* $Id: parser.h,v 1.17 2004/01/13 22:54:46 jh8 Exp $ */
+/* $Id$ */
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
@@ -45,9 +46,9 @@ extern char *file_name;
 extern int file_line;
 
 /* rule setup funcs */
-void ParseRulesFile(char *, int);
+void ParseRulesFile(char *, int, int);
 int ContinuationCheck(char *);
-void ParseRule(FILE*, char *, int);
+void ParseRule(FILE*, char *, int, int);
 void ParsePreprocessor(char *);
 void ParseOutputPlugin(char *);
 void ParseRuleOptions(char *, int, int);
@@ -68,6 +69,7 @@ void CreateDefaultRules();
 void OrderRuleLists(char *);
 void printRuleOrder();
 
+#define PARSE_RULE_LINES      1
 
 
 int CheckRule(char *);
@@ -94,7 +96,11 @@ void ParseConfig(char *);
 void ParseRuleTypeDeclaration(FILE*, char *);
 /*void ParseClassificationConfig(char *); */
 char *ReadLine(FILE *);
-int checkKeyowrd(char *);
+int checkKeyword(char *);
+void SetRuleStates();
+#ifdef DYNAMIC_PLUGIN
+void ConfigureDynamicPreprocessors();
+#endif
 
 #endif /* __PARSER_H__ */
 

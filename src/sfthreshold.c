@@ -1,3 +1,22 @@
+/* $Id$ */
+/*
+ ** Copyright (C) 2003-2006 Sourcefire, Inc.
+ **
+ ** This program is free software; you can redistribute it and/or modify
+ ** it under the terms of the GNU General Public License Version 2 as
+ ** published by the Free Software Foundation.  You may not use, modify or
+ ** distribute this program under any other version of the GNU General
+ ** Public License.
+ **
+ ** This program is distributed in the hope that it will be useful,
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ ** GNU General Public License for more details.
+ **
+ ** You should have received a copy of the GNU General Public License
+ ** along with this program; if not, write to the Free Software
+ ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 /*
    sfthreshold.c
 
@@ -25,6 +44,7 @@
 
 #include "mstring.h"
 #include "util.h"
+#include "parser.h"
 
 #include "sfthd.h"
 #include "sfthreshold.h"
@@ -61,7 +81,8 @@ static unsigned xatou( char * s , char * etext)
     while( *s == ' ' ) s++;
 
     if( *s == '-' ) 
-       FatalError("*** %s\n*** Invalid unsigned integer - negative sign found, input: %s\n",etext ,s );
+       FatalError("%s(%d) => *** %s\n*** Invalid unsigned integer - negative sign found, input: %s\n",
+                            file_name, file_line, etext ,s );
 
     errno = 0;
     
@@ -73,10 +94,11 @@ static unsigned xatou( char * s , char * etext)
     
     if(errno || endptr == s)
     {
-       FatalError( "*** %s\n*** Invalid integer input: %s\n",etext,s );
+       FatalError("%s(%d) => *** %s\n*** Invalid integer input: %s\n",
+                            file_name, file_line, etext, s );
     } 
 
-    return val;		
+    return val;
 }
 
 /*
@@ -113,7 +135,8 @@ void ParseThreshold2( THDX_STRUCT * thdx, char * s )
       if( argc != 8 )
       {
           /* Fatal incorrect argument count */ 
-          FatalError("Threshold-RuleOptionParse: incorrect argument count, should be 4 pairs\n");
+          FatalError("%s(%d) => Threshold-RuleOptionParse: incorrect argument count, should be 4 pairs\n",
+                            file_name, file_line);
       }
 
       for(i=0;i<argc;i++)
@@ -148,7 +171,8 @@ void ParseThreshold2( THDX_STRUCT * thdx, char * s )
             else
             {
                 /* Fatal incorrect threshold type */
-                 FatalError("Threshold-RuleOptionParse: incorrect 'type' argument \n");
+                 FatalError("%s(%d) => Threshold-RuleOptionParse: incorrect 'type' argument \n",
+                                file_name, file_line);
             }
             type_flag++;
          }
@@ -166,21 +190,24 @@ void ParseThreshold2( THDX_STRUCT * thdx, char * s )
             else
             {
                 /* Fatal incorrect threshold type */
-                 FatalError("Threshold-RuleOptionParse: incorrect tracking type\n");
+                 FatalError("%s(%d) => Threshold-RuleOptionParse: incorrect tracking type\n",
+                                file_name, file_line);
             }
             tracking_flag++;
          }
         else
          {
             /* Fatal Out Here - Unknow Option */
-            FatalError("Threshold-RuleOptionParse: unknown argument \n");
+            FatalError("%s(%d) => Threshold-RuleOptionParse: unknown argument \n",
+                            file_name, file_line);
          }
      }
 
      if( (count_flag + tracking_flag + type_flag + seconds_flag ) != 4 )
      {
          /* Fatal - incorrect argument count */
-         FatalError("Threshold-RuleOptionParse: incorrect argument count\n");
+         FatalError("%s(%d) => Threshold-RuleOptionParse: incorrect argument count\n",
+                        file_name, file_line);
      }
 }
 
@@ -213,11 +240,11 @@ void ProcessThresholdOptions(char *options)
           }
           else
           {
-             FatalError("Threshold-RuleOptionParse: unknown argument\n");
+             FatalError("%s(%d) => Threshold-RuleOptionParse: unknown argument\n",file_name, file_line);
           }
+          mSplitFree(&oargs, noargs);
      }
      mSplitFree(&args, nargs);
-     mSplitFree(&oargs, noargs);
 }
 
 /*
@@ -226,18 +253,15 @@ void ProcessThresholdOptions(char *options)
    8/25/03 - added support for a global threshold, uses sid = 0, and is applied after all other thresholding so 
    a sid specific threshold or suppress command has precedence...
 */
-void ParseSFThreshold( FILE * fp, char * rule )
+void ParseSFThreshold( char * rule )
 {
      char        **args, **oargs;
-     int         nargs, noargs;
+     int         nargs, noargs=0;
      THDX_STRUCT thdx;
      int         count_flag=0;
      int         seconds_flag=0;
      int         type_flag=0;
      int         tracking_flag=0;
-/*     
-     int         priority_flag=0;
-*/
      int         genid_flag=0;
      int         sigid_flag=0;
      int         i;
@@ -253,9 +277,9 @@ void ParseSFThreshold( FILE * fp, char * rule )
      {
          oargs = mSplit(args[i]," ",2,&noargs,0);  /* get rule option pairs */
          
-	 if( noargs != 2 )
+         if( noargs != 2 )
          {
-             FatalError("Threshold Parse: argument pairing error\n");
+             FatalError("%s(%d) => Threshold Parse: argument pairing error\n", file_name, file_line);
          }
 
          if( strcmp(oargs[0],"type")==0 )
@@ -275,7 +299,7 @@ void ParseSFThreshold( FILE * fp, char * rule )
             else
             {
                 /* Fatal incorrect threshold type */
-                 FatalError("Threshold-Parse: incorrect 'type' argument \n");
+                 FatalError("%s(%d) => Threshold-Parse: incorrect 'type' argument \n", file_name, file_line);
             }
             type_flag++;
          }
@@ -293,12 +317,12 @@ void ParseSFThreshold( FILE * fp, char * rule )
             else
             {
                 /* Fatal incorrect threshold type */
-                 FatalError("Threshold-Parse: incorrect tracking type\n");
+                 FatalError("%s(%d) => Threshold-Parse: incorrect tracking type\n", file_name, file_line);
             }
             tracking_flag++;
          }
 
-	 else if( strcmp(oargs[0],"count")==0 )
+         else if( strcmp(oargs[0],"count")==0 )
          {
             thdx.count = xatou(oargs[1],"threshold: count");
             count_flag++;
@@ -315,50 +339,61 @@ void ParseSFThreshold( FILE * fp, char * rule )
             thdx.gen_id =  xatou(oargs[1],"threshold: gen_id");
             genid_flag++;
 
-	    if( oargs[1][0]== '-' ) 
-                FatalError("Threshold-Parse: gen_id < 0 not supported  '%s %s'\n",oargs[0],oargs[1]);
+            if( oargs[1][0]== '-' ) 
+                FatalError("%s(%d) => Threshold-Parse: gen_id < 0 not supported  '%s %s'\n",
+                                    file_name, file_line, oargs[0],oargs[1]);
          }
 
          else if( strcmp(oargs[0],"sig_id")==0 )
          {
             thdx.sig_id = xatou(oargs[1],"threshold: sig_id");
             sigid_flag++;
-	    if( oargs[1][0]== '-' ) 
-                FatalError("Threshold-Parse: sig_id < 0 not supported  '%s %s'\n",oargs[0],oargs[1]);
+            if( oargs[1][0]== '-' ) 
+                FatalError("%s(%d) => Threshold-Parse: sig_id < 0 not supported  '%s %s'\n",
+                                    file_name, file_line, oargs[0],oargs[1]);
          }
          else
          {
              /* Fatal incorrect threshold type */
-             FatalError("Threshold-Parse: unsupported option : %s %s\n",oargs[0],oargs[1]);
+             FatalError("%s(%d) => Threshold-Parse: unsupported option : %s %s\n",
+                                file_name, file_line, oargs[0],oargs[1]);
          }
+
+         mSplitFree(&oargs, noargs);
      }
 
      if( (count_flag + tracking_flag + type_flag + seconds_flag + genid_flag + sigid_flag) != 6 )
      {
-	/* Fatal - incorrect argument count */
-	FatalError("Threshold-Parse: incorrect argument count\n");
+        /* Fatal - incorrect argument count */
+        FatalError("%s(%d) => Threshold-Parse: incorrect argument count\n",file_name, file_line);
      }
 
      if( sfthreshold_create( &thdx  ) )
      {
-	if( thdx.sig_id == 0 )
-	{
-	   FatalError("Global Threshold-Parse: could not create a threshold object -- only one per gen_id=%u!\n",thdx.gen_id);
-	}
-	else
-	{
-	   if( thdx.gen_id ==  0 )
-	   {
-	      FatalError("Global Threshold-Parse: could not create a threshold object -- a gen_id < 0 requires a sig_id < 0, sig_id=%u !\n",thdx.sig_id);
-	   }
-	   else
-	   {
-	      FatalError("Threshold-Parse: could not create a threshold object -- only one per sig_id=%u!\n",thdx.sig_id);
-	   }
-	}
+        if( thdx.sig_id == 0 )
+        {
+           FatalError("%s(%d) => Global Threshold-Parse: could not create a threshold object "
+                            "-- only one per gen_id=%u!\n",
+                                file_name, file_line,thdx.gen_id);
+        }
+        else
+        {
+           if( thdx.gen_id ==  0 )
+           {
+              FatalError("%s(%d) => Global Threshold-Parse: could not create a threshold object "
+                            "-- a gen_id < 0 requires a sig_id < 0, sig_id=%u !\n",
+                                    file_name, file_line, thdx.sig_id);
+           }
+           else
+           {
+              FatalError("%s(%d) => Threshold-Parse: could not create a threshold object -- only one per sig_id=%u!\n",
+                                    file_name, file_line, thdx.sig_id);
+           }
+        }
      }
 
      mSplitFree(&args, nargs);
+     if( noargs )
      mSplitFree(&oargs, noargs);
 }
 
@@ -383,7 +418,7 @@ static void parseCIDR( THDX_STRUCT * thdx, char * s )
 
    if( !nargs || nargs > 2  )
    {
-       FatalError("Suppress-Parse: argument pairing error\n");
+       FatalError("%s(%d) => Suppress-Parse: argument pairing error\n", file_name, file_line);
    }
 
    /*
@@ -393,9 +428,9 @@ static void parseCIDR( THDX_STRUCT * thdx, char * s )
 
    if( nargs == 2 )
    {
-       int      i;
-       int      nbits;
-       unsigned mask;
+       int i;
+       int nbits;
+       int mask;
 
        nbits = xatou( args[1],"suppress: cidr mask bits" );
        mask  = 1 << 31;
@@ -427,7 +462,7 @@ static void parseCIDR( THDX_STRUCT * thdx, char * s )
    suppress gen_id #, sig_id #, track by_src|by_dst, ip cidr'
 
 */
-void ParseSFSuppress( FILE * fp, char * rule )
+void ParseSFSuppress( char * rule )
 {
 
      char        **args, **oargs;
@@ -455,7 +490,7 @@ void ParseSFSuppress( FILE * fp, char * rule )
          oargs = mSplit(args[i]," ",2,&noargs,0);  /* get rule option pairs */
          if( noargs != 2 )
          {
-             FatalError("Suppress-Parse: argument pairing error\n");
+             FatalError("%s(%d) => Suppress-Parse: argument pairing error\n", file_name, file_line);
          }
 
          if( strcmp(oargs[0],"track")==0 )
@@ -471,47 +506,49 @@ void ParseSFSuppress( FILE * fp, char * rule )
             else
             {
                 /* Fatal incorrect threshold type */
-                 FatalError("Suppress-Parse: incorrect tracking type\n");
+                 FatalError("%s(%d) => Suppress-Parse: incorrect tracking type\n", file_name, file_line);
             }
          }
 
          else if( strcmp(oargs[0],"gen_id")==0 )
          {
-	    char * endptr;
+            char * endptr;
             thdx.gen_id = strtoul(oargs[1],&endptr,10);
             genid_flag++;
-	    if( oargs[1][0]=='-' )
-                FatalError("Suppress-Parse: gen_id < 0 is not supported, '%s %s' \n",oargs[0],oargs[1]);
+            if( oargs[1][0]=='-' )
+                FatalError("%s(%d) => Suppress-Parse: gen_id < 0 is not supported, '%s %s' \n",
+                                file_name, file_line, oargs[0],oargs[1]);
          }
 
          else if( strcmp(oargs[0],"sig_id")==0 )
          {
-	    char * endptr;
+            char * endptr;
             thdx.sig_id = strtoul(oargs[1],&endptr,10);
             sigid_flag++;
-	    if( oargs[1][0]=='-' )
-                FatalError("Suppress-Parse: sig_id < 0 is not supported, '%s %s' \n",oargs[0],oargs[1]);
+            if( oargs[1][0]=='-' )
+                FatalError("%s(%d) => Suppress-Parse: sig_id < 0 is not supported, '%s %s' \n",
+                                file_name, file_line, oargs[0],oargs[1]);
          }
 
          else if( strcmp(oargs[0],"ip")==0 )
          {
             parseCIDR( &thdx, oargs[1] );
          }
+         mSplitFree(&oargs, noargs);
      }
 
      if( ( genid_flag + sigid_flag) != 2 )
      {
          /* Fatal - incorrect argument count */
-         FatalError("Suppress-Parse: incorrect argument count\n");
+         FatalError("%s(%d) => Suppress-Parse: incorrect argument count\n", file_name, file_line);
      }
 
      if( sfthreshold_create( &thdx  ) )
      {
-         FatalError("Suppress-Parse: could not create a threshold object\n");
+         FatalError("%s(%d) => Suppress-Parse: could not create a threshold object\n", file_name, file_line);
      }
 
      mSplitFree(&args, nargs);
-     mSplitFree(&oargs, noargs);
 }
 
 /*
@@ -591,7 +628,7 @@ void print_thdx( THDX_STRUCT * thdx )
 static 
 void ntoa( char * buff, int blen, unsigned ip )
 {
-   snprintf(buff,blen,"%d.%d.%d.%d", ip&0xff,(ip>>8)&0xff,(ip>>16)&0xff,(ip>>24)&0xff );
+   SnortSnprintf(buff,blen,"%d.%d.%d.%d", ip&0xff,(ip>>8)&0xff,(ip>>16)&0xff,(ip>>24)&0xff );
 }
 
 #define PRINT_GLOBAL   0
@@ -600,7 +637,7 @@ void ntoa( char * buff, int blen, unsigned ip )
 /*
  *   type = 0 : global
  *          1 : local
- *          2 : suppres   	
+ *          2 : suppres
  */
 int print_thd_node( THD_NODE *p , int type )
 {
@@ -612,72 +649,72 @@ int print_thd_node( THD_NODE *p , int type )
     switch( type )
     {
     case 0: /* global */
-	       if(p->type == THD_TYPE_SUPPRESS ) return 0;
+           if(p->type == THD_TYPE_SUPPRESS ) return 0;
            if(p->sig_id != 0 ) return 0;
            break;
            
     case 1: /* local */
-	       if(p->type == THD_TYPE_SUPPRESS ) return 0;
+           if(p->type == THD_TYPE_SUPPRESS ) return 0;
            if(p->sig_id == 0 || p->gen_id == 0 ) return 0;
            break;
            
     case 2: /*suppress  */
-	       if(p->type != THD_TYPE_SUPPRESS ) return 0;
+           if(p->type != THD_TYPE_SUPPRESS ) return 0;
            break;
     }
     
-    /*     sfsnprintfappend(buf, STD_BUF, "| thd-id=%d", p->thd_id ); */
+    /*     SnortSnprintfAppend(buf, STD_BUF, "| thd-id=%d", p->thd_id ); */
 
     
     if( p->gen_id == 0 )
     {
-        sfsnprintfappend(buf, STD_BUF, "| gen-id=global");
+        SnortSnprintfAppend(buf, STD_BUF, "| gen-id=global");
     }
     else
     {
-        sfsnprintfappend(buf, STD_BUF, "| gen-id=%-6d", p->gen_id );
+        SnortSnprintfAppend(buf, STD_BUF, "| gen-id=%-6d", p->gen_id );
     }
     if( p->sig_id == 0 )
     {
-        sfsnprintfappend(buf, STD_BUF, " sig-id=global" );
+        SnortSnprintfAppend(buf, STD_BUF, " sig-id=global" );
     }
     else
     {
-        sfsnprintfappend(buf, STD_BUF, " sig-id=%-10d", p->sig_id );
+        SnortSnprintfAppend(buf, STD_BUF, " sig-id=%-10d", p->sig_id );
     }
     
     /*               
     if( p->type == THD_TYPE_SUPPRESS )
-    sfsnprintfappend(buf, STD_BUF, " type=Suppress ");
+    SnortSnprintfAppend(buf, STD_BUF, " type=Suppress ");
     */      
     if( p->type != THD_TYPE_SUPPRESS )
     {
         if( p->type == THD_TYPE_LIMIT )
-            sfsnprintfappend(buf, STD_BUF, " type=Limit    ");
+            SnortSnprintfAppend(buf, STD_BUF, " type=Limit    ");
         
         if( p->type == THD_TYPE_THRESHOLD )
-            sfsnprintfappend(buf, STD_BUF, " type=Threshold");
+            SnortSnprintfAppend(buf, STD_BUF, " type=Threshold");
         
         if( p->type == THD_TYPE_BOTH )
-            sfsnprintfappend(buf, STD_BUF, " type=Both     ");
+            SnortSnprintfAppend(buf, STD_BUF, " type=Both     ");
     }
     
-    sfsnprintfappend(buf, STD_BUF, " tracking=%s", (!p->tracking) ? "src" : "dst" );
-		  
+    SnortSnprintfAppend(buf, STD_BUF, " tracking=%s", (!p->tracking) ? "src" : "dst" );
+
     if( p->type == THD_TYPE_SUPPRESS )
     {
         ntoa(buffer,80,p->ip_address);
         if (p->not_flag)
-            sfsnprintfappend(buf, STD_BUF, "ip=!%-16s", buffer);
+            SnortSnprintfAppend(buf, STD_BUF, "ip=!%-16s", buffer);
         else
-            sfsnprintfappend(buf, STD_BUF, "ip=%-17s", buffer);
+            SnortSnprintfAppend(buf, STD_BUF, "ip=%-17s", buffer);
         ntoa(buffer,80,p->ip_mask);
-        sfsnprintfappend(buf, STD_BUF, " mask=%-15s", buffer );
+        SnortSnprintfAppend(buf, STD_BUF, " mask=%-15s", buffer );
     }
     else
     {
-        sfsnprintfappend(buf, STD_BUF, " count=%-3d", p->count);
-        sfsnprintfappend(buf, STD_BUF, " seconds=%-3d", p->seconds);
+        SnortSnprintfAppend(buf, STD_BUF, " count=%-3d", p->count);
+        SnortSnprintfAppend(buf, STD_BUF, " seconds=%-3d", p->seconds);
     }
     
     LogMessage("%s\n", buf);
@@ -736,81 +773,80 @@ int print_thd_local( THD_STRUCT * thd, int type )
  */
 void print_thresholding()
 {
-	int i, gcnt=0;
-        THD_NODE * thd;
-       	
-	LogMessage("\n");
-	LogMessage("+-----------------------[thresholding-config]----------------------------------\n");
-	LogMessage("| memory-cap : %d bytes\n",s_memcap);
+    int i, gcnt=0;
+    THD_NODE * thd;
 
-	
-	LogMessage("+-----------------------[thresholding-global]----------------------------------\n");
-	if( !s_thd ) 
-	{
-	     LogMessage("| none\n");
-	}
-	else
-	{
-  	  for(i=0;i<THD_MAX_GENID;i++)
-	  {
-		thd = s_thd->sfthd_garray[i];
-		if( !thd ) continue;
-  	        gcnt++;
-	  }
-	  
-	  if( !gcnt ) 
-	     LogMessage("| none\n");
-	  
-	  /* display gen_id=global  and sig_id=global rules */
-	  if( gcnt )
-  	  for(i=0;i<THD_MAX_GENID;i++)
-	  {
-		thd = s_thd->sfthd_garray[i];
-		if( !thd ) continue;
-	
-		if( thd->gen_id == 0 && thd->sig_id == 0 )
-		{
-                      print_thd_node( thd, PRINT_GLOBAL );
-		      break;
-		}
-	  }
+    LogMessage("\n");
+    LogMessage("+-----------------------[thresholding-config]----------------------------------\n");
+    LogMessage("| memory-cap : %d bytes\n",s_memcap);
 
-	  /* display gen_id!=global and sig_id=global rules */
-	  if( gcnt )
-  	  for(i=0;i<THD_MAX_GENID;i++)
-	  {
-		thd = s_thd->sfthd_garray[i];
-		if( !thd ) continue;
-		
-		if( thd->gen_id !=0 ||  thd->sig_id != 0 )
-		{
-                  print_thd_node( thd, PRINT_GLOBAL );
-		}
-	  }
-	}
+    LogMessage("+-----------------------[thresholding-global]----------------------------------\n");
+    if( !s_thd ) 
+    {
+        LogMessage("| none\n");
+    }
+    else
+    {
+        for(i=0;i<THD_MAX_GENID;i++)
+        {
+            thd = s_thd->sfthd_garray[i];
+            if( !thd ) continue;
+            gcnt++;
+        }
 
-	LogMessage("+-----------------------[thresholding-local]-----------------------------------\n");
-	if( !s_thd )
-	{
-	     LogMessage("| none\n");
-	}
-	else
-	{
-          print_thd_local(s_thd, PRINT_LOCAL );
-	}
-	
-	LogMessage("+-----------------------[suppression]------------------------------------------\n");
-        if( !s_thd )
-	{
-	   LogMessage("| none\n");
-	}
-	else
-	{
-	   print_thd_local(s_thd, PRINT_SUPPRESS );
-	}
-	
-	LogMessage("+------------------------------------------------------------------------------\n");
-	
+        if( !gcnt ) 
+            LogMessage("| none\n");
+
+        /* display gen_id=global  and sig_id=global rules */
+        if( gcnt )
+            for(i=0;i<THD_MAX_GENID;i++)
+            {
+                thd = s_thd->sfthd_garray[i];
+                if( !thd ) continue;
+
+                if( thd->gen_id == 0 && thd->sig_id == 0 )
+                {
+                    print_thd_node( thd, PRINT_GLOBAL );
+                    break;
+                }
+            }
+
+        /* display gen_id!=global and sig_id=global rules */
+        if( gcnt )
+            for(i=0;i<THD_MAX_GENID;i++)
+            {
+                thd = s_thd->sfthd_garray[i];
+                if( !thd ) continue;
+
+                if( thd->gen_id !=0 ||  thd->sig_id != 0 )
+                {
+                    print_thd_node( thd, PRINT_GLOBAL );
+                }
+            }
+    }
+
+    LogMessage("+-----------------------[thresholding-local]-----------------------------------\n");
+    if( !s_thd )
+    {
+        LogMessage("| none\n");
+    }
+    else
+    {
+        print_thd_local(s_thd, PRINT_LOCAL );
+    }
+
+    LogMessage("+-----------------------[suppression]------------------------------------------\n");
+    if( !s_thd )
+    {
+        LogMessage("| none\n");
+    }
+    else
+    {
+        print_thd_local(s_thd, PRINT_SUPPRESS );
+    }
+
+    LogMessage("-------------------------------------------------------------------------------\n");
+
 }
 
 /*
@@ -820,21 +856,21 @@ void print_thresholding()
 */
 int sfthreshold_create( THDX_STRUCT * thdx  )
 {
-	if( !s_enabled )
-		return 0;
+    if( !s_enabled )
+        return 0;
 
-	if( !s_thd )  /* Auto init - memcap must be set 1st, which is not really a problem */
-	{
-		sfthreshold_init();
+    if( !s_thd )  /* Auto init - memcap must be set 1st, which is not really a problem */
+    {
+        sfthreshold_init();
 
-		if( !s_thd )
-			return -1;
-	}
+        if( !s_thd )
+            return -1;
+    }
 
-	/* print_thdx( thdx ); */
+    /* print_thdx( thdx ); */
 
-	/* Add the object to the table - */
-	return sfthd_create_threshold( s_thd,
+    /* Add the object to the table - */
+    return sfthd_create_threshold( s_thd,
                        thdx->gen_id,
                        thdx->sig_id,
                        thdx->tracking,
@@ -855,11 +891,11 @@ int sfthreshold_create( THDX_STRUCT * thdx  )
     It will always return the same answer until sfthreshold_reset is
     called
 
-	gen_id:
-	sig_id: 
-	sip:    host ordered sip
-	dip:	host ordered dip
-	curtime: 
+    gen_id:
+    sig_id: 
+    sip:    host ordered sip
+    dip:    host ordered dip
+    curtime: 
 
     2003-05-29 cmg:
 
@@ -870,7 +906,7 @@ int sfthreshold_create( THDX_STRUCT * thdx  )
     returns 1 - log
             0 - don't log
 
-	    
+
 */
 int sfthreshold_test( unsigned gen_id, unsigned  sig_id, unsigned sip, unsigned dip, long curtime )
 {

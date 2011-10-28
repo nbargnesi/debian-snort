@@ -1,4 +1,25 @@
-/* $Id: */
+/* $Id$ */
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -150,6 +171,9 @@ int flowps_server_stats_enabled(PS_TRACKER *trackerp)
 int flowps_server_watch(PS_TRACKER *trackerp, u_int32_t address)
 {
     FLOWASSERT(trackerp != NULL);
+
+    if (trackerp == NULL)
+        return FLOW_DISABLED;
         
     if(trackerp->config.server_watchnet_ipv4 == NULL)
         return FLOW_DISABLED;
@@ -804,7 +828,7 @@ int flowps_sliding_winadj(PS_SCORE *pscp, time_t current_time,
         else
         {
             pscp->start = current_time;
-            adjustment = diff_SE + (diff_SE * scale);
+            adjustment = diff_SE + (diff_SE * ((int) scale));
             
             if((adjustment + pscp->ends) > pscp->ends)
             {
@@ -897,7 +921,7 @@ int flowps_is_ignored_ipv4(PS_TRACKER *pstp, u_int32_t *sip, u_int32_t *dip)
             host_sip = ntohl(*sip);
 
             if(ipset_contains(pstp->config.src_ignore_ipv4,
-                              &host_sip, IPV4_FAMILY))
+                              &host_sip, NULL, IPV4_FAMILY))
             {
                 return FLOW_SUCCESS;
             }
@@ -908,7 +932,7 @@ int flowps_is_ignored_ipv4(PS_TRACKER *pstp, u_int32_t *sip, u_int32_t *dip)
             host_dip = ntohl(*dip);
 
             if(ipset_contains(pstp->config.dst_ignore_ipv4,
-                              &host_dip, IPV4_FAMILY))
+                              &host_dip, NULL, IPV4_FAMILY))
             {
                 return FLOW_SUCCESS;
             }

@@ -1,11 +1,12 @@
-/* $Id: getopt.c,v 1.4.6.1 2004/11/17 15:54:23 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** along with this program; if not, write to the Free Software
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
-
+#ifdef SNORT_GETOPT
 
 #include <stdio.h>                  /* for EOF */ 
 #include <string.h>                 /* for strchr() */ 
@@ -26,11 +27,11 @@
 /* static (global) variables that are specified as exported by getopt() */ 
 char *optarg = NULL;    /* pointer to the start of the option argument  */ 
 int   optind = 1;       /* number of the next argv[] to be evaluated    */ 
-int   optopt = 0;       
 int   opterr = 1;       /* non-zero if a question mark should be returned 
                            when a non-valid option character is detected */
+int   optopt;
 
-int getopt(int argc, char *argv[], const char *opstring) 
+int getopt(int argc, char *argv[], char *opstring) 
 { 
     static char *pIndexPosition = NULL; /* place inside current argv string */ 
     char *pArgString = NULL;        /* where to start from next */ 
@@ -126,3 +127,4 @@ int getopt(int argc, char *argv[], const char *opstring)
     } 
 }
 
+#endif

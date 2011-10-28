@@ -1,5 +1,26 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
-**  @file       httpinspect_configuration.h
+**  @file       hi_ui_config.h
 **  
 **  @author     Daniel Roelker <droelker@sourcefire.com>
 **
@@ -24,6 +45,13 @@
 #define HI_UI_CONFIG_STATEFUL  1
 #define HI_UI_CONFIG_MAX_PIPE  20
 
+/*
+**  Special characters treated as whitespace before or after URI
+*/
+
+#define HI_UI_CONFIG_WS_BEFORE_URI 0x01
+#define HI_UI_CONFIG_WS_AFTER_URI  0x02
+
 /**
 **  Defines a search type for the server configurations in the
 **  global configuration.  We want this generic so we can change
@@ -43,6 +71,17 @@ typedef struct s_HTTPINSPECT_CONF_OPT
 
 }  HTTPINSPECT_CONF_OPT;
 
+/* The following are used to delineate server profiles for user output
+ * and debugging information. */
+typedef enum e_PROFILES 
+{
+    HI_ALL,
+    HI_APACHE,
+    HI_IIS,
+    HI_IIS4,
+    HI_IIS5
+} PROFILES;
+
 /**
 **  This is the configuration construct that holds the specific
 **  options for a server.  Each unique server has it's own structure
@@ -54,6 +93,7 @@ typedef struct s_HTTPINSPECT_CONF
     int  port_count;
     char ports[65536];
     int  flow_depth;
+    int  post_depth;
 
     /*
     **  Unicode mapping for IIS servers
@@ -69,7 +109,7 @@ typedef struct s_HTTPINSPECT_CONF
     /*
     **  Chunk encoding anomaly detection
     */
-    int  chunk_length;
+    unsigned int chunk_length;
 
     /*
     **  pipeline requests
@@ -88,6 +128,16 @@ typedef struct s_HTTPINSPECT_CONF
     int allow_proxy;
 
     /*
+    **  Handle tab char (0x09) as a URI delimiter.  Apache honors this, IIS does not.
+    */
+    int tab_uri_delimiter;
+
+    /*
+    **  Characters to be treated as whitespace bracketing a URI.
+    */
+    char whitespace[256];
+
+    /*
     **  These are the URI encoding configurations
     */
     HTTPINSPECT_CONF_OPT ascii;
@@ -97,7 +147,7 @@ typedef struct s_HTTPINSPECT_CONF
     HTTPINSPECT_CONF_OPT base36;
     HTTPINSPECT_CONF_OPT utf_8;
     HTTPINSPECT_CONF_OPT iis_unicode;
-    int                  non_rfc_chars[256];
+    char                 non_rfc_chars[256];
 
     /*
     **  These are the URI normalization configurations
@@ -108,6 +158,8 @@ typedef struct s_HTTPINSPECT_CONF
     HTTPINSPECT_CONF_OPT webroot;
     HTTPINSPECT_CONF_OPT apache_whitespace;
     HTTPINSPECT_CONF_OPT iis_delimiter;
+
+    PROFILES profile;
     
 }  HTTPINSPECT_CONF;
 
@@ -151,6 +203,7 @@ int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
 
 int hi_ui_config_set_profile_apache(HTTPINSPECT_CONF *GlobalConf);
 int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *GlobalConf, int *);
+int hi_ui_config_set_profile_iis_4or5(HTTPINSPECT_CONF *GlobalConf, int *);
 int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *GlobalConf, int *);
 
 #endif

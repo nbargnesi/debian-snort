@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2004-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       sfeventq.c
 **
@@ -7,7 +28,6 @@
 **              inserting the events with a provided function.  All
 **              memory management for events is provided here.
 **
-**  Copyright (C) 2004, Daniel Roelker and Sourcefire, Inc.
 **
 **  The sfeventq functions provide a generic way for handling events,
 **  prioritizing those events, and acting on the highest ranked events
@@ -30,7 +50,7 @@
 */
 
 #include <stdlib.h>
-
+#include "sfeventq.h"
 typedef struct s_SF_EVENTQ_NODE
 {
     void   *event;
@@ -102,18 +122,18 @@ static SF_EVENTQ s_eventq;
 int sfeventq_init(int max_nodes, int log_nodes, int event_size, 
                   int (*sort)(void *, void *))
 {
-    if(max_nodes <= 0 || log_nodes <= 0 || event_size <= 0 || !sort)
+    if(max_nodes <= 0 || log_nodes <= 0 || event_size <= 0 ) /* || !sort) Jan06 -- not required */
         return -1;
 
     /*
     **  Initialize the memory for the nodes that we are going to use.
     */
     s_eventq.node_mem  = 
-        (SF_EVENTQ_NODE *)malloc(sizeof(SF_EVENTQ_NODE)*max_nodes);
+        (SF_EVENTQ_NODE *)calloc(1,sizeof(SF_EVENTQ_NODE)*max_nodes);
     if(!s_eventq.node_mem)
         return -1;
 
-    s_eventq.event_mem = (char *)malloc(event_size*(max_nodes+1));
+    s_eventq.event_mem = (char *)calloc(1,event_size*(max_nodes+1));
     if(!s_eventq.event_mem)
         return -1;
 
@@ -192,6 +212,37 @@ void sfeventq_reset(void)
 
 /*
 **  NAME
+**    sfeventq_free::
+*/
+/**
+**  Cleanup the event queue.  
+**
+**  @return none
+**
+*/
+void sfeventq_free(void)
+{
+    /* Clean out the events */
+    sfeventq_reset();
+
+    /*
+    **  Free the memory for the nodes that were in use.
+    */
+    if (s_eventq.node_mem)
+    {
+        free(s_eventq.node_mem);
+        s_eventq.node_mem = NULL;
+    }
+
+    if (s_eventq.event_mem)
+    {
+        free(s_eventq.event_mem);
+        s_eventq.event_mem = NULL;
+    }
+}
+
+/*
+**  NAME
 **    get_eventq_node::
 */
 /**
@@ -220,6 +271,11 @@ static SF_EVENTQ_NODE *get_eventq_node(void *event)
         **  If this event does not have a higher priority than
         **  the last one, we don't won't it.
         */
+        if (!s_eventq.sort)
+        {
+            return NULL;
+        }
+
         if(!s_eventq.sort(event, s_eventq.last->event))
         {
             s_eventq.reserve_event = event;
@@ -301,24 +357,27 @@ int sfeventq_add(void *event)
     /*
     **  Now we search for where to insert this node.
     */
-    for(tmp = s_eventq.head; tmp; tmp = tmp->next)
+    if( s_eventq.sort ) /* Not used --- Jan06 each action group is presorted in fpFinalSelect */
     {
-        if(s_eventq.sort(event, tmp->event))
+        for(tmp = s_eventq.head; tmp; tmp = tmp->next)
         {
-            /*
-            **  Put node here.
-            */
-            if(tmp->prev)
-                tmp->prev->next = node;
-            else
-                s_eventq.head   = node;
-                
-            node->prev = tmp->prev;
-            node->next = tmp;
+            if(s_eventq.sort(event, tmp->event))
+            {
+                /*
+                **  Put node here.
+                */
+                if(tmp->prev)
+                    tmp->prev->next = node;
+                else
+                    s_eventq.head   = node;
 
-            tmp->prev  = node;
+                node->prev = tmp->prev;
+                node->next = tmp;
 
-            return 0;
+                tmp->prev  = node;
+
+                return 0;
+            }
         }
     }
 

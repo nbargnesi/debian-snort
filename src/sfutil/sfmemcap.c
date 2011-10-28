@@ -1,7 +1,28 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /*
   sfmemcap.c
 
-  These functions wrap the malloc & free functions. They enforce a memory cap using
+  These functions wrap the alloc & free functions. They enforce a memory cap using
   the MEMCAP structure.  The MEMCAP structure tracks memory usage.  Each allocation
   has 4 bytes added to it so we can store the allocation size.  This allows us to 
   free a block and accurately track how much memory was recovered.
@@ -13,6 +34,7 @@
 #include <string.h>
 
 #include "sfmemcap.h"
+#include "util.h"
 
 /*
 *   Set max # bytes & init other variables.
@@ -68,7 +90,9 @@ void * sfmemcap_alloc( MEMCAP * mc, unsigned nbytes )
       }
    }
 
-   data = (long *) malloc( nbytes );
+   //data = (long *) malloc( nbytes );
+   data = (long *)SnortAlloc( nbytes );
+
    if( data == NULL )
    {
         return 0;
@@ -112,12 +136,19 @@ void sfmemcap_showmem( MEMCAP * mc )
 */
 char * sfmemcap_strdup( MEMCAP * mc, const char *str )
 {
-    char * data = (char *)sfmemcap_alloc( mc, strlen(str) + 1 );
+    char *data = NULL;
+    int data_size;
+
+    data_size = strlen(str) + 1;
+    data = (char *)sfmemcap_alloc(mc, data_size);
+
     if(data == NULL)
     {
         return  0 ;
     }
-    strcpy(data,str);
+
+    SnortStrncpy(data, str, data_size);
+
     return data;
 }
 

@@ -1,11 +1,12 @@
-/* $Id: spp_arpspoof.c,v 1.22.4.1 2004/12/09 17:38:47 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2001-2004 Jeff Nathan <jeff@snort.org>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -89,6 +90,9 @@
 #include "util.h"
 #include "event_queue.h"
 
+#include "snort.h"
+#include "profiler.h"
+
 
 /*  D E F I N E S  **************************************************/
 #define MODNAME "spp_arpspoof"
@@ -122,13 +126,16 @@ int check_unicast_arp, check_overwrite;
 u_int8_t bcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static IPMacEntryList *ipmel = NULL;
 
+#ifdef PERF_PROFILING
+PreprocStats arpPerfStats;
+#endif
 
 /*  P R O T O T Y P E S  ********************************************/
 void ARPspoofInit(u_char *args);
 void ARPspoofHostInit(u_char *args);
 void ParseARPspoofArgs(char *args);
 void ParseARPspoofHostArgs(char *args);
-void DetectARPattacks(Packet *p);
+void DetectARPattacks(Packet *p, void *context);
 void ARPspoofCleanExit(int signal, void *unused);
 void FreeIPMacEntryList(IPMacEntryList *ip_mac_entry_list);
 int AddIPMacEntryToList(IPMacEntryList *ip_mac_entry_list, 
@@ -160,12 +167,16 @@ void ARPspoofInit(u_char *args)
     /* Parse the arpspoof arguments from snort.conf */
     ParseARPspoofArgs(args);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("arpspoof", &arpPerfStats, 0, &totalPerfStats);
+#endif
+
     /* Add arpspoof to the preprocessor function list */
-    AddFuncToPreprocList(DetectARPattacks);
+    AddFuncToPreprocList(DetectARPattacks, PRIORITY_NETWORK, PP_ARPSPOOF);
 
     /* Restart and CleanExit are identical */
-    AddFuncToCleanExitList(ARPspoofCleanExit, NULL);
-    AddFuncToRestartList(ARPspoofCleanExit, NULL);
+    AddFuncToPreprocCleanExitList(ARPspoofCleanExit, NULL, PRIORITY_LAST, PP_ARPSPOOF);
+    AddFuncToPreprocRestartList(ARPspoofCleanExit, NULL, PRIORITY_LAST, PP_ARPSPOOF);
 
     return;
 }
@@ -295,19 +306,17 @@ void ParseARPspoofHostArgs(char *args)
  * Detect ARP anomalies and overwrite attacks.
  *
  * @param p packet to detect anomalies and overwrite attacks on
+ * @param context unused
  *
  * @return void function
  */
-void DetectARPattacks(Packet *p)
+void DetectARPattacks(Packet *p, void *context)
 {
     IPMacEntry *ipme;
+    PROFILE_VARS;
 
     /* is the packet valid? */
     if (p == NULL)
-        return;
-
-    /* is Arpspoof supposed to operate on this packet? */
-    if(!(p->preprocessors & PP_ARPSPOOF))
         return;
 
     /* are the Ethernet and ARP headers present? */
@@ -318,6 +327,8 @@ void DetectARPattacks(Packet *p)
     if ((ntohs(p->ah->ea_hdr.ar_hrd) != 0x0001) || 
             (ntohs(p->ah->ea_hdr.ar_pro) != ETHERNET_TYPE_IP))
         return;
+
+    PREPROC_PROFILE_START(arpPerfStats);
 
     switch(ntohs(p->ah->ea_hdr.ar_op))
     {
@@ -368,6 +379,7 @@ void DetectARPattacks(Packet *p)
             }
             break;
     }
+    PREPROC_PROFILE_END(arpPerfStats);
 
     /* return if the overwrite list hasn't been initialized */
     if (!check_overwrite)
@@ -423,8 +435,7 @@ int AddIPMacEntryToList(IPMacEntryList *ip_mac_entry_list,
     if (ip_mac_entry == NULL || ip_mac_entry_list == NULL)
         return 1;
 
-    newNode = (IPMacEntryListNode *)malloc(sizeof(IPMacEntryListNode));
-    /* XXX: OOM Check */
+    newNode = (IPMacEntryListNode *)SnortAlloc(sizeof(IPMacEntryListNode));
     newNode->ip_mac_entry = ip_mac_entry;
     newNode->next = NULL;
 

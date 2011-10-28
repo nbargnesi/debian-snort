@@ -1,4 +1,4 @@
-/* $Id: detect.c,v 1.46.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2002, Sourcefire, Inc.
@@ -6,9 +6,10 @@
 **    Marc Norton <mnorton@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,16 +49,16 @@
 #include "sfthreshold.h"
 #include "event_wrapper.h"
 #include "event_queue.h"
-#include "stream.h"
-
-#ifdef GIDS
+#include "stream_api.h"
 #include "inline.h"
-#endif /* GIDS */
 
 /* XXX modularization violation */
-#include "preprocessors/spp_stream4.h"
 #include "preprocessors/spp_flow.h"
 
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats detectPerfStats;
+#endif
 
 /* #define ITERATIVE_ENGINE */
 
@@ -66,8 +67,8 @@ extern ListHead Log;           /* Log Block Header */
 extern ListHead Pass;          /* Pass Block Header */
 extern ListHead Activation;    /* Activation Block Header */
 extern ListHead Dynamic;       /* Dynamic Block Header */
-#ifdef GIDS
 extern ListHead Drop;
+#ifdef GIDS
 extern ListHead SDrop;
 extern ListHead Reject;
 #endif /* GIDS */
@@ -90,10 +91,9 @@ extern OutputFuncNode *LogList; /* log function list */
 */
 extern HttpUri UriBufs[URI_COUNT];
 
-extern Stream4Data s4data;
-
 int do_detect;
-u_int32_t event_id;
+int do_detect_content;
+u_int16_t event_id;
 char check_tags_flag;
 
 void printRuleListOrder(RuleListNode * node);
@@ -101,10 +101,15 @@ static int CheckTagging(Packet *p);
 static RuleListNode *addNodeToOrderedList(RuleListNode *ordered_list, 
         RuleListNode *node, int evalIndex);
 
+#ifdef PERF_PROFILING
+PreprocStats eventqPerfStats;
+#endif
+
 int Preprocess(Packet * p)
 {
     PreprocessFuncNode *idx;
     int retval = 0;
+    PROFILE_VARS;
 
     /*
      *  If the packet has an invalid checksum marked, throw that
@@ -112,45 +117,67 @@ int Preprocess(Packet * p)
      *
      *  This can be disabled by config checksum_mode: none
      */
-    if(p->csum_flags)
+    if(!p->csum_flags)
     {
-        return 0;
-    }
+        do_detect = do_detect_content = 1;
+        idx = PreprocessList;
+
+        /*
+        **  Reset the appropriate application-layer protocol fields
+        */
+        p->uri_count = 0;
+        UriBufs[0].decode_flags = 0;
+
+        /*
+        **  Turn on all preprocessors
+        */
+        boSetAllBits(p->preprocessor_bits);
+
+        while ((idx != NULL) && (!(p->packet_flags & PKT_PASS_RULE)))
+        {
+            assert(idx->func != NULL);
+            if (IsPreprocBitSet(p, idx->preproc_bit))
+            {
+                idx->func(p, idx->context);
+            }
+            idx = idx->next;
+        }
+
+        check_tags_flag = 1;
     
-    do_detect = 1;
-    idx = PreprocessList;
-
-    /*
-    **  Reset the appropriate application-layer protocol fields
-    */
-    p->uri_count = 0;
-    UriBufs[0].decode_flags = 0;
-
-    /*
-    **  Turn on all preprocessors
-    */
-    p->preprocessors = PP_ALL;
-
-    while(idx != NULL)
+        if ((do_detect) && (p->bytes_to_inspect != -1))
+        {
+            /* Check if we are only inspecting a portion of this packet... */
+            if (p->bytes_to_inspect > 0)
+            {
+                DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "Ignoring part of server "
+                    "traffic -- only looking at %d of %d bytes!!!\n",
+                    p->bytes_to_inspect, p->dsize););
+                p->dsize = (u_int16_t)p->bytes_to_inspect;
+            }
+            Detect(p);
+        }
+        else if (p->bytes_to_inspect == -1)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "Ignoring server traffic!!!\n"););
+        }
+    }
+    else
     {
-        assert(idx->func != NULL);
-        idx->func(p);
-        idx = idx->next;
+        DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "Invalid Checksum, Ignoring traffic!!!\n"););
+        pc.invalid_checksums++;
     }
-
-    check_tags_flag = 1;
-    
-    if(do_detect)
-        Detect(p);
 
     /*
     ** By checking tagging here, we make sure that we log the
     ** tagged packet whether it generates an alert or not.
     */
+    PREPROC_PROFILE_START(eventqPerfStats);
     CheckTagging(p);
 
     retval = SnortEventqLog(p);
     SnortEventqReset();
+    PREPROC_PROFILE_END(eventqPerfStats);
 
     otn_tmp = NULL;
 
@@ -159,8 +186,8 @@ int Preprocess(Packet * p)
     **  the stream to make sure that we didn't miss any
     **  attacks before this packet.
     */
-    if(retval && p->ssnptr)
-        AlertFlushStream(p);
+    if(retval && stream_api)
+        stream_api->alert_flush_stream(p);
 
     /**
      * See if we should go ahead and remove this flow from the
@@ -209,51 +236,27 @@ static int CheckTagging(Packet *p)
     return 0;
 }
 
+/*
+ *  11/2/05 marc norton
+ *  removed thresholding from this function. This function should only
+ *  be called by fpLogEvent, which already does the thresholding test.
+ */
 void CallLogFuncs(Packet *p, char *message, ListHead *head, Event *event)
 {
     OutputFuncNode *idx = NULL;
 
-    /*
-    **  Don't do thresholding on tagged packets.  The tv_sec check
-    **  makes sure that we don't.
-    */
-    if(p && event->ref_time.tv_sec == 0)
-    {
-        /*
-         *  Perform Thresholding Tests 
-         */
-        if(p->iph)
-        {
-            if( !sfthreshold_test( event->sig_generator,
-                                   event->sig_id,
-                                   p->iph->ip_src.s_addr,
-                                   p->iph->ip_dst.s_addr,
-                                   p->pkth->ts.tv_sec ) )
-            {
-                return; /* Don't log it ! */
-            }
-        }
-        else
-        {
-            if( !sfthreshold_test( event->sig_generator,
-                                   event->sig_id,
-                                   0,
-                                   0,
-                                   p->pkth->ts.tv_sec ) )
-            {
-                return; /* Don't log it ! */
-            }
-        }
-
-        /*
-        **  Set the ref time after we check thresholding.
-        */
-        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
-        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
-    }
+    event->ref_time.tv_sec = p->pkth->ts.tv_sec;
+    event->ref_time.tv_usec = p->pkth->ts.tv_usec;
 
     /* set the event number */
-    event->event_id = event_id;
+    event->event_id = event_id | pv.event_log_id;
+
+    if(BsdPseudoPacket &&
+       !(p->packet_flags & PKT_REBUILT_FRAG) && 
+       !(p->packet_flags & PKT_REBUILT_STREAM))
+    {
+        p = BsdPseudoPacket;
+    }
 
     if(head == NULL)
     {
@@ -322,54 +325,30 @@ void CallSigOutputFuncs(Packet *p, OptTreeNode *otn, Event *event)
     }
 }
 
-
+/*
+ *  11/2/05 marc norton
+ *  removed thresholding from this function. This function should only
+ *  be called by fpLogEvent, which already does the thresholding test.
+ */
 void CallAlertFuncs(Packet * p, char *message, ListHead * head, Event *event)
 {
     OutputFuncNode *idx = NULL;
 
-    /*
-    **  Don't do thresholding on tagged packets.  The tv_sec check
-    **  makes sure that we don't.
-    */
-    if(p && event->ref_time.tv_sec == 0)
-    {
-        /*
-         *  Perform Thresholding Tests 
-         */
-        if(p->iph)
-        {
-            if( !sfthreshold_test( event->sig_generator,
-                                   event->sig_id,
-                                   p->iph->ip_src.s_addr,
-                                   p->iph->ip_dst.s_addr,
-                                   p->pkth->ts.tv_sec ) )
-            {
-                return; /* Don't log it ! */
-            }
-        }
-        else
-        {
-            if( !sfthreshold_test( event->sig_generator,
-                                   event->sig_id,
-                                   0,
-                                   0,
-                                   p->pkth->ts.tv_sec ) )
-            {
-                return; /* Don't log it ! */
-            }
-        }
-
-        /*
-        **  Set the ref time after we check thresholding.
-        */
-        event->ref_time.tv_sec = p->pkth->ts.tv_sec;
-        event->ref_time.tv_usec = p->pkth->ts.tv_usec;
-    }
+    event->ref_time.tv_sec = p->pkth->ts.tv_sec;
+    event->ref_time.tv_usec = p->pkth->ts.tv_usec;
 
     /* set the event number */
-    event->event_id = event_id;
+    event->event_id = event_id | pv.event_log_id;
     /* set the event reference info */
     event->event_reference = event->event_id;
+
+    if(BsdPseudoPacket &&
+       !(p->packet_flags & PKT_REBUILT_FRAG) && 
+       !(p->packet_flags & PKT_REBUILT_STREAM))
+       
+    {
+        p = BsdPseudoPacket;
+    }
 
     if(head == NULL)
     {
@@ -379,7 +358,6 @@ void CallAlertFuncs(Packet * p, char *message, ListHead * head, Event *event)
 
     if(p && pv.obfuscation_flag)
         ObfuscatePacket(p);
-
 
     pc.alert_pkts++;
     idx = head->AlertList;
@@ -433,19 +411,28 @@ void CallAlertPlugins(Packet * p, char *message, void *args, Event *event)
 int Detect(Packet * p)
 {
     int detected = 0;
+    PROFILE_VARS;
 
-    RuleListNode *rule;
-
-    rule = RuleLists;
-
-    if(p && p->iph == NULL)
+    if(p == NULL || p->iph == NULL)
+    {
         return 0;
+    }
+
+    if (p->packet_flags & PKT_PASS_RULE)
+    {
+        /* If we've already seen a pass rule on this,
+         * no need to continue do inspection.
+         */
+        return 0;
+    }
 
     /*
     **  This is where we short circuit so 
     **  that we can do IP checks.
     */
+    PREPROC_PROFILE_START(detectPerfStats);
     detected = fpEvalPacket(p);
+    PREPROC_PROFILE_END(detectPerfStats);
 
     return detected;
 }
@@ -605,7 +592,7 @@ int CheckAddrPort(IpAddrSet *rule_addr, u_int16_t hi_port, u_int16_t lo_port,
         if(except_port_flag)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-				    ", port match exception,  packet rejected\n"););
+                                    ", port match exception,  packet rejected\n"););
             return 0;
         }
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, ", ports match"););
@@ -646,7 +633,9 @@ void DumpChain(RuleTreeNode * rtn_head, char *rulename, char *listname)
     rtn_idx = rtn_head;
 
     if(rtn_idx == NULL)
+    {
         DEBUG_WRAP(DebugMessage(DEBUG_RULES, "    Empty!\n\n"););
+    }
 
     /* walk thru the RTN list */
     while(rtn_idx != NULL)
@@ -685,7 +674,7 @@ void DumpChain(RuleTreeNode * rtn_head, char *rulename, char *listname)
             DEBUG_WRAP(DebugMessage(DEBUG_RULES,
                         "[%d]    0x%.8lX / 0x%.8lX",
                         i++,(u_long)  idx->ip_addr,
-                        (u_long)  idx->netmask););	    
+                        (u_long)  idx->netmask););    
             if(idx->addr_flags & EXCEPT_IP)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_RULES, 
@@ -721,22 +710,22 @@ void DumpChain(RuleTreeNode * rtn_head, char *rulename, char *listname)
 
         otn_idx = rtn_idx->down;
 
-            DEBUG_WRAP(
-                    /* print the RTN header number */
-                    DebugMessage(DEBUG_RULES,
-                        "Head: %d (type: %d)\n",
-                        rtn_idx->head_node_number, otn_idx->type);
-                    DebugMessage(DEBUG_RULES, "      |\n");
-                    DebugMessage(DEBUG_RULES, "       ->");
-                    );
+        DEBUG_WRAP(
+            /* print the RTN header number */
+            DebugMessage(DEBUG_RULES,
+                "Head: %d (type: %d)\n",
+                rtn_idx->head_node_number, otn_idx->type);
+            DebugMessage(DEBUG_RULES, "      |\n");
+            DebugMessage(DEBUG_RULES, "       ->");
+            );
 
-            /* walk thru the OTN chain */
-            while(otn_idx != NULL)
-            {
-                DEBUG_WRAP(DebugMessage(DEBUG_RULES,
-                            " %d", otn_idx->chain_node_number););
-                otn_idx = otn_idx->next;
-            }
+        /* walk thru the OTN chain */
+        while(otn_idx != NULL)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_RULES,
+                        " %d", otn_idx->chain_node_number););
+            otn_idx = otn_idx->next;
+        }
 
         DEBUG_WRAP(DebugMessage(DEBUG_RULES, "|=-\n"););
 #endif
@@ -756,7 +745,7 @@ void IntegrityCheck(RuleTreeNode * rtn_head, char *rulename, char *listname)
 #ifdef DEBUG
     char chainname[STD_BUF];
 
-    snprintf(chainname, STD_BUF - 1, "%s %s", rulename, listname);
+    SnortSnprintf(chainname, STD_BUF, "%s %s", rulename, listname);
 
     if(!pv.quiet_flag)
         DebugMessage(DEBUG_DETECT, "%-20s: ", chainname);
@@ -785,7 +774,7 @@ void IntegrityCheck(RuleTreeNode * rtn_head, char *rulename, char *listname)
             while(ofl_idx != NULL)
             {
                 opt_func_count++;
-		DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "%p->",ofl_idx->OptTestFunc););
+                DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "%p->",ofl_idx->OptTestFunc););
                 ofl_idx = ofl_idx->next;
             }
 
@@ -822,18 +811,18 @@ int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx,
                            rtn_idx->flags, CHECK_DST))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-				    "   Dst->Dst check failed,"
-				    " checking inverse combination\n"););
+                                    "   Dst->Dst check failed,"
+                                    " checking inverse combination\n"););
             if(CheckAddrPort(rtn_idx->dip, rtn_idx->hdp, rtn_idx->ldp, p,
                              rtn_idx->flags, (CHECK_SRC | INVERSE)))
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-					"   Inverse Dst->Src check passed\n"););
+                                    "   Inverse Dst->Src check passed\n"););
                 if(!CheckAddrPort(rtn_idx->sip, rtn_idx->hsp, rtn_idx->lsp, p,
                                   rtn_idx->flags, (CHECK_DST | INVERSE)))
                 {
                     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-					    "   Inverse Src->Dst check failed\n"););
+                                    "   Inverse Src->Dst check failed\n"););
                     return 0;
                 }
                 else
@@ -844,7 +833,7 @@ int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx,
             else
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   Inverse Dst->Src check failed,"
-					" trying next rule\n"););
+                                        " trying next rule\n"););
                 return 0;
             }
         }
@@ -855,8 +844,8 @@ int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx,
     }
     else
     {
-	DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-				"   Src->Src check failed, trying inverse test\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
+                                "   Src->Src check failed, trying inverse test\n"););
         if(CheckAddrPort(rtn_idx->dip, rtn_idx->hdp, rtn_idx->ldp, p,
                          rtn_idx->flags, CHECK_SRC | INVERSE))
         {
@@ -1066,7 +1055,7 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
                         ^ (idx->addr_flags & EXCEPT_IP)) )
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-					"address matched, failing on DIP\n"););
+                                        "address matched, failing on DIP\n"););
                 /* got address match on globally negated rule, fail */
                 return 0;
             }
@@ -1219,13 +1208,13 @@ void CreateDefaultRules()
 {
     CreateRuleType("activation", RULE_ACTIVATE, 1, &Activation);
     CreateRuleType("dynamic", RULE_DYNAMIC, 1, &Dynamic);
-#ifdef GIDS
+    CreateRuleType("pass", RULE_PASS, 0, &Pass); /* changed on Jan 06 */
     CreateRuleType("drop", RULE_DROP, 1, &Drop);
+#ifdef GIDS
     CreateRuleType("sdrop", RULE_SDROP, 0, &SDrop);
     CreateRuleType("reject", RULE_REJECT, 1, &Reject);
 #endif /* GIDS */
     CreateRuleType("alert", RULE_ALERT, 1, &Alert);
-    CreateRuleType("pass", RULE_PASS, 0, &Pass);
     CreateRuleType("log", RULE_LOG, 1, &Log);
 }
 
@@ -1253,42 +1242,39 @@ ListHead *CreateRuleType(char *name, int mode, int rval, ListHead *head)
     RuleListNode *node;
     int evalIndex = 0;
 
-    /* Using calloc() instead of malloc() because code isn't initializing
-     * all of the structure fields before returning.  This is a non-
-     * time-critical function, and is only called a half dozen times
-     * on startup.
-     */
-
     /*
      * if this is the first rule list node, then we need to create a new
      * list. we do not allow multiple rules with the same name.
      */
     if(!RuleLists)
     {
-        RuleLists = (RuleListNode *)calloc(1, sizeof(RuleListNode));
+        RuleLists = (RuleListNode *)SnortAlloc(sizeof(RuleListNode));
         node = RuleLists;
     }
     else
     {
+        RuleListNode *prev = NULL;
+
         node = RuleLists;
 
-        while(1)
+        do
         {
             evalIndex++;
-            if(!strcmp(node->name, name))
+            if (strcmp(node->name, name) == 0)
                 return NULL;
-            if(!node->next)
-                break;
-            node = node->next;
-        }
 
-        node->next = (RuleListNode *) calloc(1, sizeof(RuleListNode));
-        node = node->next;
+            prev = node;
+            node = node->next;
+
+        } while (node != NULL);
+
+        prev->next = (RuleListNode *)SnortAlloc(sizeof(RuleListNode));
+        node = prev->next;
     }
 
     if(!head)
     {
-        node->RuleList = (ListHead *)calloc(1, sizeof(ListHead));
+        node->RuleList = (ListHead *)SnortAlloc(sizeof(ListHead));
         node->RuleList->IpList = NULL;
         node->RuleList->TcpList = NULL;
         node->RuleList->UdpList = NULL;
@@ -1304,7 +1290,7 @@ ListHead *CreateRuleType(char *name, int mode, int rval, ListHead *head)
     node->RuleList->ruleListNode = node;
     node->mode = mode;
     node->rval = rval;
-    node->name = strdup(name);
+    node->name = SnortStrdup(name);
     node->evalIndex = evalIndex;
     node->next = NULL;
     
@@ -1345,23 +1331,18 @@ void OrderRuleLists(char *order)
         prev = NULL;
         node = RuleLists;
 
-        while( 1 )
+        while (node != NULL)
         {
-            if( node == NULL )
+            if (strcmp(toks[i], node->name) == 0)
             {
-                FatalError("ruletype %s does not exist or "
-                           "has already been ordered.\n", toks[i]);
-                break;
-            }
-            if( !strcmp(toks[i], node->name) )
-            {
-                if( prev == NULL )
+                if (prev == NULL)
                     RuleLists = node->next;
                 else
                     prev->next = node->next;
+
                 /* Add node to ordered list */
-                ordered_list = addNodeToOrderedList(ordered_list, node, 
-                        evalIndex++);
+                ordered_list = addNodeToOrderedList(ordered_list, node, evalIndex++);
+
                 break;
             }
             else
@@ -1369,6 +1350,12 @@ void OrderRuleLists(char *order)
                 prev = node;
                 node = node->next;
             }
+        }
+
+        if( node == NULL )
+        {
+            FatalError("ruletype %s does not exist or "
+                       "has already been ordered.\n", toks[i]);
         }
     }
     mSplitFree(&toks, num_toks);
@@ -1416,13 +1403,16 @@ static RuleListNode *addNodeToOrderedList(RuleListNode *ordered_list,
 
 void printRuleListOrder(RuleListNode * node)
 {
-    char buf[STD_BUF+1];
+    char buf[STD_BUF];
+    RuleListNode *first_node = node;
 
-    snprintf(buf, STD_BUF, "Rule application order: ");
+    SnortSnprintf(buf, STD_BUF, "Rule application order: ");
 
     while( node != NULL )
     {
-        sfsnprintfappend(buf, STD_BUF, "->%s", node->name);
+        SnortSnprintfAppend(buf, STD_BUF, "%s%s",
+                      node == first_node ? "" : "->", node->name);
+
         node = node->next;
     }
 
@@ -1443,8 +1433,8 @@ int PassAction()
 int ActivateAction(Packet * p, OptTreeNode * otn, Event *event)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-			    "        <!!> Activating and generating alert! \"%s\"\n",
-			    otn->sigInfo.message););
+                   "        <!!> Activating and generating alert! \"%s\"\n",
+                   otn->sigInfo.message););
     CallAlertFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
 
     if (otn->OTN_activation_ptr == NULL)
@@ -1488,9 +1478,9 @@ int AlertAction(Packet * p, OptTreeNode * otn, Event *event)
     CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
 
     /*
-    if(p->ssnptr != NULL)
+    if(p->ssnptr != NULL && stream_api)
     {
-        if(AlertFlushStream(p) == 0)
+        if(stream_api->alert_flush_stream(p) == 0)
         {
             CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
         }
@@ -1506,26 +1496,21 @@ int AlertAction(Packet * p, OptTreeNode * otn, Event *event)
     return 1;
 }
 
-#ifdef GIDS
 int DropAction(Packet * p, OptTreeNode * otn, Event *event)
 {
-    Session *ssnptr;
-
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                "        <!!> Generating Alert and dropping! \"%s\"\n",
                otn->sigInfo.message););
     
-    if(!s4data.ms_inline_alerts)
+    if(stream_api && !stream_api->alert_inline_midstream_drops())
     {
-        ssnptr = (Session *)p->ssnptr;
-
-        if(ssnptr && ssnptr->session_flags & SSNFLAG_MIDSTREAM) 
+        if(stream_api->get_session_flags(p->ssnptr) & SSNFLAG_MIDSTREAM) 
         {
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                 " <!!> Alert Came From Midstream Session Silently Drop! "
                 "\"%s\"\n", otn->sigInfo.message);); 
 
-            InlineDrop();
+            InlineDrop(p);
             return 1;
         }
     }
@@ -1534,35 +1519,16 @@ int DropAction(Packet * p, OptTreeNode * otn, Event *event)
     **  Set packet flag so output plugins will know we dropped the
     **  packet we just logged.
     */
-    p->packet_flags |= PKT_INLINE_DROP;
+    InlineDrop(p);
 
     CallAlertFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
 
     CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
 
-    /*
-    if(p->ssnptr != NULL)
-    {
-        if(AlertFlushStream(p) == 0)
-        {
-            CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
-        }
-    }
-    else
-    {
-        CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
-    }
-
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-                            "   => Alert packet finished, returning!\n"););
-    */
-
-    InlineDrop();
-
     return 1;
 }
 
-
+#ifdef GIDS
 int SDropAction(Packet * p, OptTreeNode * otn, Event *event)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
@@ -1570,7 +1536,7 @@ int SDropAction(Packet * p, OptTreeNode * otn, Event *event)
                otn->sigInfo.message););
 
     // Let's silently drop the packet
-    InlineDrop();
+    InlineDrop(p);
     return 1;
 }
 
@@ -1588,7 +1554,7 @@ int RejectAction(Packet * p, OptTreeNode * otn, Event *event)
     /*
     if(p->ssnptr != NULL)
     {
-        if(AlertFlushStream(p) == 0)
+        if(stream_api && stream_api->alert_flush_stream(p) == 0)
         {
             CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
         }
@@ -1614,8 +1580,8 @@ int DynamicAction(Packet * p, OptTreeNode * otn, Event *event)
     RuleTreeNode *rtn = otn->rtn;
 
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   => Logging packet data and"
-			    " adjusting dynamic counts (%d/%d)...\n",
-			    rtn->countdown, otn->countdown););
+                            " adjusting dynamic counts (%d/%d)...\n",
+                            rtn->countdown, otn->countdown););
 
     CallLogFuncs(p, otn->sigInfo.message, otn->rtn->listhead, event);
 
@@ -1697,4 +1663,4 @@ void ObfuscatePacket(Packet *p)
 }
 
 /* end of rule action functions */
-          
+

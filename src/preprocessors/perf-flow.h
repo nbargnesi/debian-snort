@@ -1,4 +1,4 @@
-/* $Id: perf-flow.h,v 1.3 2003/10/20 15:03:37 chrisgreen Exp $ */
+/* $Id$ */
 /*
 ** perf-flow.h
 **
@@ -8,9 +8,10 @@
 **
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -28,7 +29,7 @@
 #define _PERF_FLOW_H
 
 #define SF_MAX_PKT_LEN 4500
-#define SF_MAX_PORT 1024
+#define SF_MAX_PORT (64*1024)
 
 typedef struct _portflow {
 
@@ -68,7 +69,8 @@ typedef struct _sfflow {
     UINT64    portUdpTotal;
 
     UINT64    typeIcmpTotal;
-        
+
+    int       maxPortToTrack;
 }  SFFLOW;
 
 typedef struct _sfflow_stats {

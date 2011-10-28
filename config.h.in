@@ -15,8 +15,23 @@
 /* Define if FREEBSD */
 #undef FREEBSD
 
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the <dnet.h> header file. */
+#undef HAVE_DNET_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `c' library (-lc). */
+#undef HAVE_LIBC
+
+/* Define to 1 if you have the `dl' library (-ldl). */
+#undef HAVE_LIBDL
+
+/* Define to 1 if you have the `dnet' library (-ldnet). */
+#undef HAVE_LIBDNET
 
 /* Define to 1 if you have the `ipq' library (-lipq). */
 #undef HAVE_LIBIPQ
@@ -39,6 +54,15 @@
 /* Define to 1 if you have the `pcre' library (-lpcre). */
 #undef HAVE_LIBPCRE
 
+/* Define to 1 if you have the `pfring' library (-lpfring). */
+#undef HAVE_LIBPFRING
+
+/* Define to 1 if you have the `pq' library (-lpq). */
+#undef HAVE_LIBPQ
+
+/* Define whether Prelude support is enabled */
+#undef HAVE_LIBPRELUDE
+
 /* Define to 1 if you have the `socket' library (-lsocket). */
 #undef HAVE_LIBSOCKET
 
@@ -53,6 +77,9 @@
 
 /* Define to 1 if you have the <pcre.h> header file. */
 #undef HAVE_PCRE_H
+
+/* Define to 1 if you have the <pfring.h> header file. */
+#undef HAVE_PFRING_H
 
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
@@ -95,6 +122,15 @@
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
+
+/* Define to 1 if you have the `vswprintf' function. */
+#undef HAVE_VSWPRINTF
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#undef HAVE_WCHAR_H
+
+/* Define to 1 if you have the `wprintf' function. */
+#undef HAVE_WPRINTF
 
 /* Define if the compiler understands __FUNCTION__. */
 #undef HAVE___FUNCTION__

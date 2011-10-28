@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
  * @file   server_stats.c
  * @author Chris Green <cmg@sourcefire.com>
@@ -181,7 +202,7 @@ int server_stats_contains(SERVER_STATS *ssp, u_int32_t address)
     {
         u_int32_t hostaddress = ntohl(address);
 
-        if(ipset_contains(ssp->ipv4_watch, &hostaddress, IPV4_FAMILY))
+        if(ipset_contains(ssp->ipv4_watch, &hostaddress, NULL, IPV4_FAMILY))
         {
             return FLOW_SUCCESS;
         }
@@ -200,7 +221,7 @@ u_int32_t server_stats_hitcount_ipv4(SERVER_STATS *ssp, u_int8_t ip_proto, u_int
 #endif /* DEBUG */
 
     /* OK, IPSETs are acting in HOST ORDER */
-    FLOWASSERT(ipset_contains(ssp->ipv4_watch, &hostaddress, IPV4_FAMILY));
+    FLOWASSERT(ipset_contains(ssp->ipv4_watch, &hostaddress, NULL, IPV4_FAMILY));
 
     /* make a key */
     kp->address = address;
@@ -232,7 +253,7 @@ int server_stats_add_ipv4(SERVER_STATS *ssp, u_int8_t ip_proto, u_int32_t addres
         return FLOW_ENULL;
 
     /* calls to this subsystem should only be made if we are really watching this. */
-    FLOWASSERT(ipset_contains(ssp->ipv4_watch, &hostaddress, IPV4_FAMILY));
+    FLOWASSERT(ipset_contains(ssp->ipv4_watch, &hostaddress, NULL, IPV4_FAMILY));
     
     /* make the key */
     kp->address  = address;
@@ -353,8 +374,8 @@ int server_stats_save(SERVER_STATS *ssp, char *filename)
         
         count        = ntohl(count);       
         ipv4_address = htonl(kp->address);
-        port         = htons(kp->port);
-        protocol     = kp->protocol;
+        port         = htons((u_int16_t) kp->port);
+        protocol     = (u_int8_t) kp->protocol;
 
         memcpy(buf + FAMILY_OFFSET,   &family,        FAMILY_SIZE);
         memcpy(buf + IPV4_OFFSET,     &ipv4_address,  IPV4_SIZE);       
@@ -382,90 +403,6 @@ int server_stats_save(SERVER_STATS *ssp, char *filename)
         }
     }
     
-    return FLOW_SUCCESS;
-}
-
-
-
-/** 
- * load a server stats file
- *
- * fmt:
- *
- * 1 char for the family
- * hex network representation of the IP  (8 chars)
- * hex network representation of the port (2 chars)
- * 1 char for the ip_proto                (1 char)
- * hex network representation of the hit count (4 chars)
- *
- * yes this record format is hard to use but it's easy to parse! :>
- * 
- * @param ssp server stats pointer
- * @param filename filename to load
- * 
- * @return FLOW_SUCCESS on sucess
- */
-int server_stats_load(SERVER_STATS *ssp, char *filename)
-{
-    SERVER_KEY *kp = &s_key;
-    size_t rsize;
-    unsigned char buf[STATSREC_SIZE];
-    int fd;
-    
-    if(!filename || !ssp)
-        return FLOW_ENULL;
-
-
-    fd = open(filename, O_RDONLY);
-
-    if(fd < 0)
-    {
-        return FLOW_NOTFOUND;
-    }
-
-    /* this is a crappy parser... that's par for the course */
-    while((rsize = read(fd, &buf, STATSREC_SIZE) == STATSREC_SIZE) > 0)
-    {
-        u_int8_t  family;
-        u_int32_t ipv4_address;
-        u_int16_t port;
-        u_int8_t  protocol;
-        u_int32_t count;
-        
-        if(rsize != STATSREC_SIZE)
-        {
-            /* this record was truncated */
-            close(fd);
-            return FLOW_EINVALID;
-        }
-
-        memcpy(&family,       buf + FAMILY_OFFSET,   FAMILY_SIZE);
-        memcpy(&ipv4_address, buf + IPV4_OFFSET,     IPV4_SIZE);       
-        memcpy(&port,         buf + PORT_OFFSET,     PORT_SIZE);
-        memcpy(&protocol,     buf + IP_PROTO_OFFSET, IP_PROTO_SIZE);
-        memcpy(&count,        buf + COUNT_OFFSET,    COUNT_SIZE);
-
-        /* make sure that we're reading a format we understand */
-        
-        if(family != '4')
-        {
-            close(fd);
-            return FLOW_EINVALID;
-        }
-
-        kp->protocol = ntohs(protocol);
-        kp->address  = ntohl(ipv4_address);
-        kp->port     = ntohs(port);
-        count        = ntohl(count);
-        
-        if(sfxhash_add(ssp->ipv4_table, kp, &count) != 0)
-        {
-            close(fd);
-            return FLOW_BADJUJU;
-        }
-    }
-
-    close(fd);
     return FLOW_SUCCESS;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: sfprocpidstats.c,v 1.3.6.1 2004/11/02 22:07:18 jhewlett Exp $
+** $Id$
 **
 **  sfprocpidstats.c
 **
@@ -7,9 +7,10 @@
 ** Dan Roelker <droelker@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -50,8 +51,8 @@ typedef struct _USERSYS {
 
 static int giCPUs = 1;
 
-static USERSYS *gpStatCPUs;
-static USERSYS *gpStatCPUs_2;
+static USERSYS *gpStatCPUs = NULL;
+static USERSYS *gpStatCPUs_2 = NULL;
 
 static FILE *proc_stat;
 

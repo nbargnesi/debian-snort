@@ -1,4 +1,4 @@
-// $Id: inline.h,v 1.1 2004/09/13 17:44:49 jhewlett Exp $
+/* $Id$ */
 #ifndef __INLINE_H__
 #define __INLINE_H__
 
@@ -43,6 +43,8 @@ int InlineReplace();
 #endif
 
 int InlineMode();
-int InlineDrop();  /* call to drop current packet */
+int InlineModeSetPrivsAllowed();
+int InlineDrop(Packet *p);  /* call to drop current packet */
+int InlineWasPacketDropped();
 
 #endif /* __INLINE_H__ */

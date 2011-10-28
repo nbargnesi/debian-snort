@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: spp_rpc_decode.c,v 1.29 2004/06/03 20:11:06 jhewlett Exp $ */
+/* $Id$ */
 /* spp_rpc_decode 
  * 
  * Purpose:
@@ -67,9 +68,13 @@
 #include "generators.h"
 #include "event_queue.h"
 
+#include "profiler.h"
+#include "bounds.h"
+
 extern char *file_name;
 extern int file_line;
 extern int do_detect;
+extern u_int8_t DecodeBuffer[DECODE_BLEN];
 
 #define OPT_ALERT_FRAGMENTS "alert_fragments"
 #define OPT_ALERT_MULTIPLE_REQUESTS "no_alert_multiple_requests"
@@ -93,11 +98,15 @@ typedef struct _RpcDecodeData
 static RpcDecodeData rpcpreprocdata; /* Configuration Set */
 static char RpcDecodePorts[65536/8];
 
+#ifdef PERF_PROFILING
+PreprocStats rpcdecodePerfStats;
+#endif
+
 void RpcDecodeInit(u_char *);
 void RpcDecodeInitIgnore(u_char *);
-void PreprocRpcDecode(Packet *);
+void PreprocRpcDecode(Packet *, void *);
 void SetRpcPorts(char *);
-int ConvertRPC(u_int8_t *, u_int16_t *);
+int ConvertRPC(Packet *);
 
 /*
  * Function: SetupRpcDecode()
@@ -110,7 +119,7 @@ int ConvertRPC(u_int8_t *, u_int16_t *);
  * Returns: void function
  *
  */
-void SetupRpcDecode()
+void SetupRpcDecode(void)
 {
     /* link the preprocessor keyword to the init function in 
        the preproc list */
@@ -144,10 +153,14 @@ void RpcDecodeInit(u_char *args)
     rpcpreprocdata.alert_large = 1;
     
     /* parse the argument list into a list of ports to normalize */
-    SetRpcPorts(args);
+    SetRpcPorts((char *)args);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToPreprocList(PreprocRpcDecode);
+    AddFuncToPreprocList(PreprocRpcDecode, PRIORITY_APPLICATION, PP_RPCDECODE);
+
+#ifdef PREF_PROFILING
+    RegisterPreprocessorProfile("rpcdecode", &rpcdecodePerfStats, 0, &totalPerfStats);
+#endif
 }
 
 /*
@@ -262,9 +275,10 @@ void SetRpcPorts(char *portlist)
  * Returns: void function
  *
  */
-void PreprocRpcDecode(Packet *p)
+void PreprocRpcDecode(Packet *p, void *context)
 {
     int ret = 0; /* return code for ConvertRPC */
+    PROFILE_VARS;
     
     DEBUG_WRAP(DebugMessage(DEBUG_RPC,"rpc decoder init on %d bytes\n", p->dsize););
 
@@ -290,7 +304,9 @@ void PreprocRpcDecode(Packet *p)
         return;
     }
 
-    ret = ConvertRPC(p->data, &p->dsize);
+    PREPROC_PROFILE_START(rpcdecodePerfStats);
+
+    ret = ConvertRPC(p);
     DEBUG_WRAP(DebugMessage(DEBUG_RPC,"Got ret: %d from ConvertRPC\n", ret););
     
     if(ret != 0)
@@ -325,9 +341,17 @@ void PreprocRpcDecode(Packet *p)
                         1, RPC_CLASS, 3, RPC_INCOMPLETE_SEGMENT_STR, 0);
             }
             break;
+        case RPC_ZERO_LENGTH_FRAGMENT:
+            if(rpcpreprocdata.alert_multi)
+            {
+                SnortEventqAdd(GENERATOR_SPP_RPC_DECODE, RPC_ZERO_LENGTH_FRAGMENT, 
+                        1, RPC_CLASS, 3, RPC_ZERO_LENGTH_FRAGMENT_STR, 0);
+            }
+            break;
         }
     }
     
+    PREPROC_PROFILE_END(rpcdecodePerfStats);
     return;    
 }
 
@@ -371,18 +395,22 @@ void PreprocRpcDecode(Packet *p)
  *        }
  */
 
-int ConvertRPC(u_int8_t *data, u_int16_t *size)
+int ConvertRPC(Packet *p)
 {
-    u_int8_t *rpc;       /* this is where the converted data will be written */
-    u_int8_t *index;     /* this is the index pointer to walk thru the data */
-    u_int8_t *end;       /* points to the end of the payload for loop control */
-    u_int16_t psize = *size;     /* payload size */
+    u_int8_t *data = p->data;   /* packet data */
+    u_int8_t *norm_index;
+    u_int8_t *data_index;     /* this is the index pointer to walk thru the data */
+    u_int8_t *data_end;       /* points to the end of the payload for loop control */
+    u_int16_t psize = p->dsize;     /* payload size */
     int i = 0;           /* loop counter */
     int length;          /* length of current fragment */
     int last_fragment = 0; /* have we seen the last fragment sign? */
-    int decoded_len = 4; /* our decoded length is always atleast a 0 byte header */
+    int decoded_len; /* our decoded length is always atleast a 0 byte header */
     u_int32_t fraghdr;   /* Used to store the RPC fragment header data */
     int fragcount = 0;   /* How many fragment counters have we seen? */
+    int ret;
+    u_int8_t *decode_buf_start = &DecodeBuffer[0];
+    u_int8_t *decode_buf_end = decode_buf_start + DECODE_BLEN;
     
     if(psize < 32)
     {
@@ -411,13 +439,18 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
         /* on match, normalize the data */
         DEBUG_WRAP(DebugMessage(DEBUG_RPC, "Found Last Fragment: %u!\n",fraghdr););
 
-        if(length + 4 != psize)
+        if((length + 4 != psize) && !(p->packet_flags & PKT_REBUILT_STREAM))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_RPC, "It's not the only thing in this buffer!"
                                     " length: %d psize: %d!\n", length, psize););            
             return RPC_MULTIPLE_RECORD;
         }
-        
+        else if ( length == 0 )
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_RPC, "Zero-length RPC fragment detected."
+                                    " length: %d psize: %d.\n", length, psize););            
+            return RPC_ZERO_LENGTH_FRAGMENT;
+        }
         return 0;
     }
     else if(rpcpreprocdata.alert_fragments)
@@ -425,10 +458,9 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
         return RPC_FRAG_TRAFFIC;
     }
 
-    rpc =   (u_int8_t *) data;
-    index = (u_int8_t *) data;
-    end =   (u_int8_t *) data + psize;
-
+    norm_index = &DecodeBuffer[0]; 
+    data_index = (u_int8_t *)data;
+    data_end = (u_int8_t *)data + psize;
 
     /* now we know it's in fragmented records, 4 bytes of 
      * header(of which the most sig bit fragment (0=yes 1=no). 
@@ -439,28 +471,29 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
      */
     
     /* This is where decoded data will be written */
-    rpc += 4;
+    norm_index += 4;
+    decoded_len = 4;
 
     /* always make sure that we have enough data to process atleast
      * the header and that we only process at most, one fragment
      */
     
-    while(((end - index) >= 4) && (last_fragment == 0))
+    while(((data_end - data_index) >= 4) && (last_fragment == 0))
     {
         /* get the fragment length (31 bits) and move the pointer to
            the start of the actual data */
-        
-        *((u_int8_t *) &fraghdr)       = index[0];
-        *(((u_int8_t *) &fraghdr) + 1) = index[1];
-        *(((u_int8_t *) &fraghdr) + 2) = index[2];
-        *(((u_int8_t *) &fraghdr) + 3) = index[3];
+
+        *((u_int8_t *) &fraghdr)       = data_index[0];
+        *(((u_int8_t *) &fraghdr) + 1) = data_index[1];
+        *(((u_int8_t *) &fraghdr) + 2) = data_index[2];
+        *(((u_int8_t *) &fraghdr) + 3) = data_index[3];
 
         fraghdr = ntohl(fraghdr);
         length = fraghdr & 0x7FFFFFFF;
         
         /* move the current index into the packet past the
            fragment header */
-        index += 4; 
+        data_index += 4; 
         
         if(fraghdr & MSB)
         {
@@ -487,8 +520,6 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
             DEBUG_WRAP(DebugMessage(DEBUG_RPC, "Length of"
                                     " field(%d) exceeds packet size(%d)\n",
                                     length, psize););
-
-            
             return RPC_INCOMPLETE_SEGMENT;
         }
         else if(decoded_len > psize)
@@ -501,7 +532,7 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
                                     decoded_len, psize););
             return RPC_LARGE_FRAGSIZE;
         }
-        else if((index + length) > end)
+        else if((data_index + length) > data_end)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_RPC,
                                     "returning LARGE_FRAGSIZE"
@@ -516,36 +547,29 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
                                     "length: %d size: %d decoded_len: %d\n",
                                     length, psize, decoded_len););                        
 
-            if(fragcount == 1)
+            ret = SafeMemcpy(norm_index, data_index, length, decode_buf_start, decode_buf_end);
+            if (ret != SAFEMEM_SUCCESS)
             {
-                /* adjust the indexes because the records are already
-                 * in the right spot */
-                rpc += length;
-                index += length; /* index is checked against the end above */
+                return 0;
             }
-            else
-            {                
-                for (i=0; i < length; i++, rpc++, index++)
-                {
-                    *rpc = *index;
-                }
-            }
+
+            norm_index += length;
+            data_index += length;
         }
     }
 
     /* rewrite the header on the request packet */
     /* move the fragment header back onto the data */
-
     
     fraghdr = ntohl(decoded_len); /* size */
 
-    data[0] = *((u_int8_t *) &fraghdr);
-    data[1] = *(((u_int8_t *) &fraghdr) + 1);
-    data[2] = *(((u_int8_t *) &fraghdr) + 2);
-    data[3] = *(((u_int8_t *) &fraghdr) + 3);
+    DecodeBuffer[0] = *((u_int8_t *) &fraghdr);
+    DecodeBuffer[1] = *(((u_int8_t *) &fraghdr) + 1);
+    DecodeBuffer[2] = *(((u_int8_t *) &fraghdr) + 2);
+    DecodeBuffer[3] = *(((u_int8_t *) &fraghdr) + 3);
     
-    data[0] |=  0x80;             /* Mark as unfragmented */
-    
+    DecodeBuffer[0] |=  0x80;             /* Mark as unfragmented */
+
     /* is there another request encoded that is trying to evade us by doing
      *
      * frag last frag [ more data ]?
@@ -557,17 +581,14 @@ int ConvertRPC(u_int8_t *data, u_int16_t *size)
         return RPC_MULTIPLE_RECORD;
     }
 
-    
-    /* set the payload size to reflect the new size
-     *
-     * sizeof(Header) + total payload size of a single message
-     */
-    *size = decoded_len; /* this potentially throws away data... */
-
     DEBUG_WRAP(DebugMessage(DEBUG_RPC, "New size: %d\n", decoded_len);
                DebugMessage(DEBUG_RPC, "converted data:\n");
                //PrintNetData(stdout, data, decoded_len);
                );
+
+    p->alt_dsize = decoded_len;
+    p->packet_flags |= PKT_ALT_DECODE;
+
     return 0;
 }
 

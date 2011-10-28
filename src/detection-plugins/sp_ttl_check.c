@@ -2,9 +2,10 @@
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,7 +17,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_ttl_check.c,v 1.15 2003/10/20 15:03:33 chrisgreen Exp $ */
+/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -332,14 +333,13 @@ int CheckTtlRG(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
-    else
+    else if (p->iph != NULL)
     {
         /* you can put debug comments here or not */
         DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n", 
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl,
-        ((TtlCheckData
-        *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl,
-        p->iph->ip_ttl);
+                     ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl,
+                     ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl,
+                     p->iph->ip_ttl);
     }
 #endif
 

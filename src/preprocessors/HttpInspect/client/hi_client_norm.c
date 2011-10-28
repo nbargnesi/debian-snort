@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_client_norm.c
 **  
@@ -33,38 +54,59 @@
 
 #define MAX_URI 4096
 
-static int UriNorm(HI_SESSION *Session)
+int hi_client_norm(HI_SESSION *Session)
 {
     static u_char UriBuf[MAX_URI];
+    static u_char PostBuf[MAX_URI];
     HI_CLIENT_REQ    *ClientReq;
     int iRet;
     int iUriBufSize = MAX_URI;
-    /*int iCtr;*/
+    int iPostBufSize = MAX_URI;
+
+    if(!Session || !Session->server_conf)
+    {
+        return HI_INVALID_ARG;
+    }
 
     ClientReq = &Session->client.request;
 
-    if((iRet = hi_norm_uri(Session, UriBuf, &iUriBufSize, ClientReq->uri,
-                           ClientReq->uri_size)))
+    /* Handle URI normalization */
+    if(ClientReq->uri_norm)
     {
-        /*
-        **  This means there was a problem while normalizing, so we don't
-        **  set anything.
-        */
-        ClientReq->uri_norm = NULL;
-        ClientReq->uri_norm_size = 0;
-
-        /*
-        **  We still return successful, and just inspect the unnormalized
-        **  URI.
-        */
-        return HI_SUCCESS;
+        Session->norm_flags &= ~HI_BODY;
+        if( (iRet = hi_norm_uri(Session, UriBuf, &iUriBufSize, 
+                           ClientReq->uri, ClientReq->uri_size)) )
+        {
+            /* There was a non-fatal problem normalizing */
+            ClientReq->uri_norm = NULL;
+            ClientReq->uri_norm_size = 0;
+        }
+        else 
+        {
+            /* Client code is expecting these to be set to non-NULL if 
+             * normalization occurred. */
+            ClientReq->uri_norm      = UriBuf;
+            ClientReq->uri_norm_size = iUriBufSize;
+        }
     }
 
-    /*
-    **  This is where we set up the normalized buffer and length.
-    */
-    ClientReq->uri_norm      = UriBuf;
-    ClientReq->uri_norm_size = iUriBufSize;
+    /* Handle normalization of post methods. 
+     * Note: posts go into a different buffer. */
+    if(ClientReq->post_norm)
+    {
+        Session->norm_flags |= HI_BODY;
+        if( (iRet = hi_norm_uri(Session, PostBuf, &iPostBufSize, 
+                           ClientReq->post_raw, ClientReq->post_raw_size)) )
+        {
+            ClientReq->post_norm = NULL;
+            ClientReq->post_norm_size = 0;
+        }
+        else 
+        {
+            ClientReq->post_norm      = PostBuf;
+            ClientReq->post_norm_size = iPostBufSize;
+        }
+    }
 
     /*
     printf("** uri_norm = |");
@@ -79,36 +121,6 @@ static int UriNorm(HI_SESSION *Session)
     }
     printf("| size = %u\n", ClientReq->uri_norm_size);
     */
-
-    return HI_SUCCESS;
-}
-
-int hi_client_norm(HI_SESSION *Session)
-{
-    int iRet;
-
-    if(!Session)
-    {
-        return HI_INVALID_ARG;
-    }
-
-    if(!Session->server_conf)
-    {
-        return HI_INVALID_ARG;
-    }
-
-    /*
-    **  We only normalize the URI right now.
-    **
-    **  Make sure that we have a uri to normalize.
-    */
-    if(Session->client.request.uri_norm)
-    {
-        if((iRet = UriNorm(Session)))
-        {
-            return iRet;
-        }
-    }
 
     return HI_SUCCESS;
 }

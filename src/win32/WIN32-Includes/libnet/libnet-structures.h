@@ -1,5 +1,5 @@
 /*
- *  $Id: libnet-structures.h,v 1.2 2003/10/20 15:03:44 chrisgreen Exp $
+ *  $Id$
  *
  *  libnet-structures.h - Network routine library structures header file
  *

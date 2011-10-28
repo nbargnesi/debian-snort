@@ -1,11 +1,12 @@
-/* $Id: mstring.c,v 1.31 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -47,6 +48,7 @@
 #include "mstring.h"
 #include "debug.h"
 #include "plugbase.h" /* needed for fasthex() */
+#include "util.h"
 
 #ifdef GIDS
 extern int detect_depth;
@@ -115,7 +117,7 @@ char **mSplit(char *str, char *sep, int max_strs, int *toks, char meta)
     char *sep_idx;      /* index ptr into seperator string */
     int len = 0;        /* length of current token string */
     int curr_str = 0;       /* current index into the 2D return array */
-    char last_char = (char) 0xFF;
+    unsigned char last_char = 0xFF;  /* initialize to something that won't be in meta */
 
     if(!toks) return NULL;
 
@@ -146,9 +148,7 @@ char **mSplit(char *str, char *sep, int max_strs, int *toks, char meta)
      * alloc space for the return string, this is where the pointers to the
      * tokens will be stored
      */
-    if((retstr = (char **) malloc((sizeof(char **) * max_strs))) == NULL)
-        FatalPrintError("malloc");
-
+    retstr = (char **) SnortAlloc( sizeof(char **) * max_strs );
 
     max_strs--;
 
@@ -178,9 +178,9 @@ char **mSplit(char *str, char *sep, int max_strs, int *toks, char meta)
                     {
                         /* allocate space for the new token */
                         if((retstr[curr_str] = (char *)
-                                    malloc((sizeof(char) * len) + 1)) == NULL)
+                                    calloc(1,(sizeof(char) * len) + 1)) == NULL)
                         {
-                            FatalPrintError("malloc");
+                            FatalPrintError("calloc");
                         }
 
                         /* copy the token into the return string array */
@@ -225,8 +225,8 @@ char **mSplit(char *str, char *sep, int max_strs, int *toks, char meta)
                         fflush(stdout);
 
                         if((retstr[curr_str] = (char *)
-                                    malloc((sizeof(char) * len) + 1)) == NULL)
-                            FatalPrintError("malloc");
+                                    calloc(1,(sizeof(char) * len) + 1)) == NULL)
+                            FatalPrintError("calloc");
 
                         memcpy(retstr[curr_str], idx, len);
                         retstr[curr_str][len] = 0;
@@ -279,8 +279,8 @@ char **mSplit(char *str, char *sep, int max_strs, int *toks, char meta)
                     "Allocating %d bytes for last token ", len + 1););
 
         if((retstr[curr_str] = (char *)
-                    malloc((sizeof(char) * len) + 1)) == NULL)
-            FatalPrintError("malloc");
+                    calloc(1,(sizeof(char) * len) + 1)) == NULL)
+            FatalPrintError("calloc");
 
         memcpy(retstr[curr_str], (idx - len), len);
         retstr[curr_str][len] = 0;
@@ -436,14 +436,11 @@ int mContainsSubstr(char *buf, int b_len, char *pat, int p_len)
  ****************************************************************/
 int *make_skip(char *ptrn, int plen)
 {
-    int *skip = (int *) malloc(256 * sizeof(int));
-    int *sptr = &skip[256];
+    int  i;
+    int *skip = (int *) SnortAlloc(256* sizeof(int));
 
-    if (skip == NULL)
-        FatalPrintError("malloc");
-
-    while(sptr-- != skip)
-        *sptr = plen + 1;
+    for ( i = 0; i < 256; i++ )
+        skip[i] = plen + 1;
 
     while(plen != 0)
         skip[(unsigned char) *ptrn++] = plen--;
@@ -469,13 +466,10 @@ int *make_skip(char *ptrn, int plen)
  ****************************************************************/
 int *make_shift(char *ptrn, int plen)
 {
-    int *shift = (int *) malloc(plen * sizeof(int));
+    int *shift = (int *) SnortAlloc(plen * sizeof(int));
     int *sptr = shift + plen - 1;
     char *pptr = ptrn + plen - 1;
     char c;
-
-    if (shift == NULL)
-        FatalPrintError("malloc");
 
      c = ptrn[plen - 1];
 

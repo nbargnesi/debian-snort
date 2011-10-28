@@ -1,5 +1,5 @@
 # /etc/sysconfig/snort
-# $Id: snort.sysconfig,v 1.1.2.1 2004/11/10 23:20:32 jhewlett Exp $
+# $Id$
 
 # All of these options with the exception of -c, which tells Snort where
 # the configuration file is, may be specified in that configuration file as

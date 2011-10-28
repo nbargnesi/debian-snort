@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       preproc_setup.c
 **  
@@ -32,6 +53,11 @@
 #include "hi_client.h"
 #include "hi_norm.h"
 #include "snort_httpinspect.h"
+#include "hi_util_kmap.h"
+#include "hi_util_xmalloc.h"
+
+#include "snort.h"
+#include "profiler.h"
 
 /*
 **  Defines for preprocessor initialization
@@ -64,6 +90,12 @@ extern HttpUri UriBufs[URI_COUNT];
 */
 HTTPINSPECT_GLOBAL_CONF GlobalConf;
 
+#ifdef PERF_PROFILING
+PreprocStats hiPerfStats;
+PreprocStats hiDetectPerfStats;
+int hiDetectCalled = 0;
+#endif
+
 /*
 **  NAME
 **    HttpInspect::
@@ -81,8 +113,10 @@ HTTPINSPECT_GLOBAL_CONF GlobalConf;
 **
 **  @return void
 */
-static void HttpInspect(Packet *p)
+static void HttpInspect(Packet *p, void *context)
 {
+    PROFILE_VARS;
+
     /*
     **  IMPORTANT:
     **  This is where we initialize any variables that can impact other
@@ -103,8 +137,7 @@ static void HttpInspect(Packet *p)
         return;
     }
 
-    if(!(p->preprocessors & PP_HTTPINSPECT))
-        return;
+    PREPROC_PROFILE_START(hiPerfStats);
 
     /*
     **  Pass in the configuration and the packet.
@@ -114,7 +147,71 @@ static void HttpInspect(Packet *p)
     p->uri_count = 0;
     UriBufs[0].decode_flags = 0;
 
+    /* XXX:
+     * NOTE: this includes the HTTPInspect directly
+     * calling the detection engine - 
+     * to get the true HTTPInspect only stats, have another
+     * var inside SnortHttpInspect that tracks the time
+     * spent in Detect().
+     * Subtract the ticks from this if iCallDetect == 0
+     */
+    PREPROC_PROFILE_END(hiPerfStats);
+#ifdef PERF_PROFILING
+    if (hiDetectCalled)
+    {
+        hiPerfStats.ticks -= hiDetectPerfStats.ticks;
+        /* And Reset ticks to 0 */
+        hiDetectPerfStats.ticks = 0;
+        hiDetectCalled = 0;
+    }
+#endif
+
     return;
+}
+
+void HttpInspectDropStats(void) 
+{
+    if(!hi_stats.total)
+        return;
+
+    LogMessage("================================================"
+                "===============================\n");
+    LogMessage("HTTP Inspect - encodings (Note: stream-reassembled"
+                " packets included):\n");
+
+#ifdef WIN32
+    LogMessage("    POST methods:                   %-10I64i\n", hi_stats.post);
+    LogMessage("    GET methods:                    %-10I64i\n", hi_stats.get);
+    LogMessage("    Post parameters extracted:      %-10I64i\n", hi_stats.post_params);
+    LogMessage("    Unicode:                        %-10I64i\n", hi_stats.unicode);
+    LogMessage("    Double unicode:                 %-10I64i\n", hi_stats.double_unicode);
+    LogMessage("    Non-ASCII representable:        %-10I64i\n", hi_stats.non_ascii);
+    LogMessage("    Base 36:                        %-10I64i\n", hi_stats.base36);
+    LogMessage("    Directory traversals:           %-10I64i\n", hi_stats.dir_trav);
+    LogMessage("    Extra slashes (\"//\"):           %-10I64i\n", hi_stats.slashes);
+    LogMessage("    Self-referencing paths (\"./\"):  %-10I64i\n", hi_stats.self_ref);
+    LogMessage("    Total packets processed:        %-10I64i\n", hi_stats.total);
+#else
+    LogMessage("    POST methods:                   %-10llu\n", hi_stats.post);
+    LogMessage("    GET methods:                    %-10llu\n", hi_stats.get);
+    LogMessage("    Post parameters extracted:      %-10llu\n", hi_stats.post_params);
+    LogMessage("    Unicode:                        %-10llu\n", hi_stats.unicode);
+    LogMessage("    Double unicode:                 %-10llu\n", hi_stats.double_unicode);
+    LogMessage("    Non-ASCII representable:        %-10llu\n", hi_stats.non_ascii);
+    LogMessage("    Base 36:                        %-10llu\n", hi_stats.base36);
+    LogMessage("    Directory traversals:           %-10llu\n", hi_stats.dir_trav);
+    LogMessage("    Extra slashes (\"//\"):           %-10llu\n", hi_stats.slashes);
+    LogMessage("    Self-referencing paths (\"./\"):  %-10llu\n", hi_stats.self_ref);
+    LogMessage("    Total packets processed:        %-10llu\n", hi_stats.total);
+#endif
+}
+
+static void HttpInspectCleanExit(int signal, void *data)
+{
+    /* Cleanup */
+    KMapDelete(GlobalConf.server_lookup);
+
+    xfree(GlobalConf.iis_unicode_map);
 }
 
 /*
@@ -150,7 +247,10 @@ static void HttpInspectInit(u_char *args)
 
     if(siFirstConfig)
     {
-        if((iRet = hi_ui_config_init_global_conf(&GlobalConf)))
+        memset(&hi_stats, 0, sizeof(HIStats));
+
+        iRet = hi_ui_config_init_global_conf(&GlobalConf);
+        if (iRet)
         {
             snprintf(ErrorString, iErrStrLen,
                     "Error initializing Global Configuration.");
@@ -159,7 +259,8 @@ static void HttpInspectInit(u_char *args)
             return;
         }
 
-        if((iRet = hi_ui_config_default(&GlobalConf)))
+        iRet = hi_ui_config_default(&GlobalConf);
+        if (iRet)
         {
             snprintf(ErrorString, iErrStrLen,
                     "Error configuring default global configuration.");
@@ -168,7 +269,8 @@ static void HttpInspectInit(u_char *args)
             return;
         }
 
-        if((iRet = hi_client_init(&GlobalConf)))
+        iRet = hi_client_init(&GlobalConf);
+        if (iRet)
         {
             snprintf(ErrorString, iErrStrLen,
                     "Error initializing client module.");
@@ -177,7 +279,8 @@ static void HttpInspectInit(u_char *args)
             return;
         }
 
-        if((iRet = hi_norm_init(&GlobalConf)))
+        iRet = hi_norm_init(&GlobalConf);
+        if (iRet)
         {
             snprintf(ErrorString, iErrStrLen,
                      "Error initializing normalization module.");
@@ -192,8 +295,8 @@ static void HttpInspectInit(u_char *args)
         iGlobal = 1;
     }
     
-    if((iRet = HttpInspectSnortConf(&GlobalConf, args, iGlobal,
-                    ErrorString, iErrStrLen)))
+    iRet = HttpInspectSnortConf(&GlobalConf, args, iGlobal, ErrorString, iErrStrLen);
+    if (iRet)
     {
         if(iRet > 0)
         {
@@ -243,16 +346,21 @@ static void HttpInspectInit(u_char *args)
         /*
         **  Add HttpInspect into the preprocessor list
         */
-        AddFuncToPreprocList(HttpInspect);
+        AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT);
 
         /*
         **  Remember to add any cleanup functions into the appropriate
         **  lists.
         */
-
+        AddFuncToPreprocCleanExitList(HttpInspectCleanExit, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
+        AddFuncToPreprocRestartList(HttpInspectCleanExit, NULL, PRIORITY_APPLICATION, PP_HTTPINSPECT);
         siFirstConfig = 0;
+
+#ifdef PERF_PROFILING
+        RegisterPreprocessorProfile("httpinspect", &hiPerfStats, 0, &totalPerfStats);
+#endif
     }
-    
+
     return;
 }
 
@@ -274,10 +382,11 @@ static void HttpInspectInit(u_char *args)
 **
 **  @return void
 */
-void SetupHttpInspect()
+void SetupHttpInspect(void)
 {
     RegisterPreprocessor(GLOBAL_KEYWORD, HttpInspectInit);
     RegisterPreprocessor(SERVER_KEYWORD, HttpInspectInit);
+    AddFuncToConfigCheckList(HttpInspectCheckConfig);
 
     DEBUG_WRAP(DebugMessage(DEBUG_HTTPINSPECT, "Preprocessor: HttpInspect is "
                 "setup . . .\n"););

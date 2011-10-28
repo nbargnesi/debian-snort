@@ -1,12 +1,13 @@
-/* $Id: sp_respond.h,v 1.9 2003/10/20 15:03:31 chrisgreen Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,9 +26,9 @@
 ************************************************************/
 #ifndef __RESPOND_H__
 #define __RESPOND_H__
-#ifdef ENABLE_RESPONSE
+#if defined(ENABLE_RESPONSE) && !defined(ENABLE_RESPONSE2)
 
 void SetupRespond(void);
 
-#endif
+#endif /* ENABLE_RESPONSE && !ENABLE_RESPONSE2 */
 #endif /* __RESPOND_H__ */

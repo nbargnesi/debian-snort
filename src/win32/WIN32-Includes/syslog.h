@@ -1,4 +1,4 @@
-/* $Id: syslog.h,v 1.4.6.1 2005/01/13 20:36:23 jhewlett Exp $ */
+/* $Id$ */
 /* -/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/
  . Copyright (c) 2001 Michael Davis <mike@datanerds.net>
  . All rights reserved.

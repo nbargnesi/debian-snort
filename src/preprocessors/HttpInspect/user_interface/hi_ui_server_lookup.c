@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_ui_server_lookup.c
 **
@@ -43,7 +64,7 @@
 */
 int hi_ui_server_lookup_init(SERVER_LOOKUP **ServerLookup)
 {
-    *ServerLookup = KMapNew(NULL); 
+    *ServerLookup = KMapNew(free); 
     if(*ServerLookup == NULL)
     {
         return HI_MEM_ALLOC_FAIL;
@@ -86,7 +107,8 @@ int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, unsigned long Ip,
         return HI_INVALID_ARG;
     }
 
-    if((iRet = KMapAdd(ServerLookup, (void *)&Ip, 4, (void *)ServerConf)))
+    iRet = KMapAdd(ServerLookup, (void *)&Ip, 4, (void *)ServerConf);
+    if (iRet)
     {
         /*
         **  This means the key has already been added.
@@ -142,7 +164,8 @@ HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup,
 
     *iError = HI_SUCCESS;
 
-    if(!(ServerConf = (HTTPINSPECT_CONF *)KMapFind(ServerLookup,(void *)&Ip,4)))
+    ServerConf = (HTTPINSPECT_CONF *)KMapFind(ServerLookup,(void *)&Ip,4);
+    if (!ServerConf)
     {
         *iError = HI_NOT_FOUND;
     }
@@ -185,7 +208,8 @@ HTTPINSPECT_CONF *hi_ui_server_lookup_first(SERVER_LOOKUP *ServerLookup,
 
     *iError = HI_SUCCESS;
 
-    if(!(ServerConf = (HTTPINSPECT_CONF *)KMapFindFirst(ServerLookup)))
+    ServerConf = (HTTPINSPECT_CONF *)KMapFindFirst(ServerLookup);
+    if (!ServerConf)
     {
         *iError = HI_NOT_FOUND;
     }
@@ -228,7 +252,8 @@ HTTPINSPECT_CONF *hi_ui_server_lookup_next(SERVER_LOOKUP *ServerLookup,
 
     *iError = HI_SUCCESS;
 
-    if(!(ServerConf = (HTTPINSPECT_CONF *)KMapFindNext(ServerLookup)))
+    ServerConf = (HTTPINSPECT_CONF *)KMapFindNext(ServerLookup);
+    if (!ServerConf)
     {
         *iError = HI_NOT_FOUND;
     }

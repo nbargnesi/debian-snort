@@ -1,6 +1,6 @@
 #ifndef UBI_SPLAYTREE_H
 #define UBI_SPLAYTREE_H
-/* $Id: ubi_SplayTree.h,v 1.4 2004/02/02 18:49:51 droelker Exp $ */
+/* $Id$ */
 /* ========================================================================== **
  *                              ubi_SplayTree.h
  *
@@ -94,6 +94,20 @@ ubi_trBool ubi_sptInsert( ubi_btRootPtr  RootPtr,
    *           within the tree.
    * ------------------------------------------------------------------------ **
    */
+
+void Rotate( ubi_btNodePtr p );
+  /* ------------------------------------------------------------------------ **
+   * This function performs a single rotation, moving node *p up one level
+   * in the tree.
+   * 
+   * Input:    p - a pointer to an ubi_btNode in a tree.
+   *
+   * Output:   None.
+   * 
+   * Notes:    This implements a single rotation in either direction (left
+   *            or right).  This is the basic building block of all splay
+   *            tree rotations.
+   * ------------------------------------------------------------------------ **   */
 
 ubi_btNodePtr ubi_sptRemove( ubi_btRootPtr RootPtr, ubi_btNodePtr DeadNode );
   /* ------------------------------------------------------------------------ **

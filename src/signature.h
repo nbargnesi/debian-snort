@@ -1,12 +1,13 @@
-/* $Id: signature.h,v 1.5 2004/06/03 20:11:05 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2002 Sourcefire, Inc.
 ** Author(s):   Andrew R. Baker <andrewb@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -79,6 +80,21 @@ void ParseSID(char *sid, struct _OptTreeNode *otn);
 void ParseRev(char *sid, struct _OptTreeNode *otn);
 
 
+/*
+ *  sid-gid -> otn mapping
+ */
+typedef struct {
+   u_int32_t generator;
+   u_int32_t id;
+}sg_otn_key_t;
+
+#define SI_RULE_FLUSHING_OFF 0
+#define SI_RULE_FLUSHING_ON  1
+
+#define SI_RULE_TYPE_DETECT  0
+#define SI_RULE_TYPE_DECODE  1
+#define SI_RULE_TYPE_PREPROC 2
+
 typedef struct _SigInfo
 {
     u_int32_t generator;
@@ -89,9 +105,19 @@ typedef struct _SigInfo
     u_int32_t priority;
     char *message;
     ReferenceNode *refs;
+    int           shared; /* shared object rule */
+    int           rule_type; /* 0-std rule, 1-decoder, rule, 3 preprocessor rule */
+    int           rule_flushing; /* 0-disabled, 1-enabled */
+    sg_otn_key_t otnKey;
 } SigInfo;
 
+int    soid_otn_lookup_init();
+void   soid_otn_lookup_add( struct _OptTreeNode * );
+struct _OptTreeNode * soid_sg_otn_lookup( u_int32_t gid, u_int32_t sid );
+struct _OptTreeNode * soid_sg_otn_lookup_next( u_int32_t gid, u_int32_t sid );
 
-
+int    otn_lookup_init();
+void   otn_lookup_add( struct _OptTreeNode * );
+struct _OptTreeNode * otn_lookup( u_int32_t gid, u_int32_t sid );
 
 #endif /* SIGNATURE */

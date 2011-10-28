@@ -1,11 +1,12 @@
-/* $Id: detect.h,v 1.11 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,13 +34,14 @@
 #include "event.h"
 /*  P R O T O T Y P E S  ******************************************************/
 extern int do_detect;
+extern int do_detect_content;
 
 /* rule match action functions */
 int PassAction();
 int ActivateAction(Packet *, OptTreeNode *, Event *);
 int AlertAction(Packet *, OptTreeNode *, Event *);
-#ifdef GIDS
 int DropAction(Packet *, OptTreeNode *, Event *);
+#ifdef GIDS
 int SDropAction(Packet *, OptTreeNode *, Event *);
 int RejectAction(Packet *, OptTreeNode *, Event *);
 #endif /* GIDS */
@@ -54,12 +56,19 @@ int EvalPacket(ListHead *, int, Packet * );
 int EvalHeader(RuleTreeNode *, Packet *, int);
 int EvalOpts(OptTreeNode *, Packet *);
 void TriggerResponses(Packet *, OptTreeNode *);
-int CheckAddrPort(IpAddrSet *, u_short, u_short, Packet *, u_int32_t, int);
+int CheckAddrPort(IpAddrSet *, u_int16_t, u_int16_t, Packet *, u_int32_t, int);
 
+#include "bitop_funcs.h"
 static inline void DisableDetect(Packet *p)
 {
-    p->preprocessors = 0;
-    do_detect = 0;
+    boResetBITOP(p->preprocessor_bits);
+    do_detect_content = 0;
+}
+
+static inline void DisableAllDetect(Packet *p)
+{
+    boResetBITOP(p->preprocessor_bits);
+    do_detect = do_detect_content = 0;
 }
 
 /* detection modules */

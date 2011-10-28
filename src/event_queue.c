@@ -1,7 +1,27 @@
+/* $Id$ */
+/*
+ ** Copyright (C) 2004-2006 Sourcefire, Inc.
+ **
+ ** This program is free software; you can redistribute it and/or modify
+ ** it under the terms of the GNU General Public License Version 2 as
+ ** published by the Free Software Foundation.  You may not use, modify or
+ ** distribute this program under any other version of the GNU General
+ ** Public License.
+ **
+ ** This program is distributed in the hope that it will be useful,
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ ** GNU General Public License for more details.
+ **
+ ** You should have received a copy of the GNU General Public License
+ ** along with this program; if not, write to the Free Software
+ ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 /**
 **  @file       event_queue.c
 **
 **  @author     Daniel Roelker <droelker@sourcefire.com>
+**  @author     Marc Norton <mnorton@sourcefire.com>
 **
 **  @brief      Snort wrapper to sfeventq library.
 **
@@ -9,6 +29,30 @@
 **
 **  These functions wrap the sfeventq API and provide the priority
 **  functions for ordering incoming events.
+**
+** Notes:
+**  11/1/05  Updates to add support for rules for all events in 
+**           decoders and preprocessors and the detection engine.
+**           Added support for rule by rule flushing control via
+**           metadata. Also added code to check fo an otn for every
+**           event (gid,sid pair).  This is now required to get events
+**           to be logged. The decoders and preprocessors are still 
+**           configured independently, which allows them to inspect and 
+**           call the alerting functions SnortEventqAdd, GenerateSnortEvent()
+**           and GenerateEvent2() for sfportscan.c.  The GnerateSnoprtEvent()
+**           function now finds and otn and calls fpLogEvent.
+**
+**           Any event that has no otn associated with it's gid,sid pair,
+**           will/should not alert, even if the preprocessor or decoiderr is
+**           configured to detect an alertable event.
+**
+**           In the future, preporcessor may have an api that gets called
+**           after rules are loaded that checks for the gid/sid -> otn 
+**           mapping, and then adjusts it's inspection or detection
+**           accordingly.  
+**
+**           SnortEventqAdd() - only adds events that have an otn 
+**          
 */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -25,8 +69,16 @@
 /*
 **  Set default values
 */
-SNORT_EVENT_QUEUE g_event_queue = {8,3,SNORT_EVENTQ_CONTENT_LEN};
+SNORT_EVENT_QUEUE g_event_queue = {8,3,SNORT_EVENTQ_CONTENT_LEN,0};
 
+/*
+ *  Changed so events are inserted in action config order 'drop alert ...',
+ *  and sub sorted in each action group by priority or content length.
+ *  The sub sorting is done in fpFinalSelect inf fpdetect.c.  Once the
+ *  events are inserted they can all be logged, as we only insert
+ *  g_event_queue.log_events into the queue.
+ *  ... Jan '06
+ */
 int SnortEventqAdd(unsigned int gid, 
                    unsigned int sid, 
                    unsigned int rev, 
@@ -36,7 +88,7 @@ int SnortEventqAdd(unsigned int gid,
                    void        *rule_info)
 {
     EventNode *en;
-
+    
     en = (EventNode *)sfeventq_event_alloc();
     if(!en)
         return -1;
@@ -49,12 +101,41 @@ int SnortEventqAdd(unsigned int gid,
     en->msg = msg;
     en->rule_info = rule_info;
 
-    if(sfeventq_add((void *)en))
-        return -1;
+    /* 
+     * Check if we have a preprocessor or decoder event
+     * Preprocessors and decoders may be configured to inspect
+     * and alert in their principle configuration (legacy code) 
+     * this test than checks if the rule otn says they should 
+     * be enabled or not.  The rule itself will decide if it should
+     * be an alert or a drop (sdrop) condition.
+     */
+   
+#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
+    {
+        struct _OptTreeNode * potn;
 
+        /* every event should have a rule/otn  */
+        potn = otn_lookup( gid, sid );
+        /* 
+        * if no rule otn exists for this event, than it was 
+        * not enabled via rules 
+        */
+        if( !potn ) 
+        {
+         /* no otn found/created - do not add it to the queue */
+         return 0;
+        }
+    }
+#endif
+     
+    if(sfeventq_add((void *)en))
+    {
+        return -1;
+    }
+    
     return 0;
 }
-
+#ifdef OLD_RULE_ORDER
 static int OrderPriority(void *event1, void *event2)
 {
     EventNode *e1;
@@ -123,11 +204,12 @@ static int OrderContentLength(void *event1, void *event2)
 
     return 0;
 }
+#endif
 
 int SnortEventqInit(void)
 {
     int (*sort)(void *, void*) = NULL;
-
+#ifdef OLD_RULE_ORDER
     if(g_event_queue.order == SNORT_EVENTQ_PRIORITY)
     {
         sort = OrderPriority;
@@ -140,7 +222,9 @@ int SnortEventqInit(void)
     {
         FatalError("Order function for event queue is invalid.\n");
     }
-        
+#else
+    sort = 0;
+#endif
     if(sfeventq_init(g_event_queue.max_events, g_event_queue.log_events,
                     sizeof(EventNode), sort))
     {
@@ -155,6 +239,7 @@ static int LogSnortEvents(void *event, void *user)
     Packet    *p;
     EventNode *en;
     OTNX      *otnx;
+    struct    _OptTreeNode * potn;
     SNORT_EVENTQ_USER *snort_user;
 
     if(!event || !user)
@@ -173,14 +258,37 @@ static int LogSnortEvents(void *event, void *user)
         if(!otnx->rtn || !otnx->otn)
             return 0;
 
-        snort_user->rule_alert = 1;
-
+        snort_user->rule_alert = otnx->otn->sigInfo.rule_flushing;
         fpLogEvent(otnx->rtn, otnx->otn, p);
     }
     else
     {
-        GenerateSnortEvent(p, en->gid, en->sid, en->rev,
-                           en->classification, en->priority, en->msg);
+        /* Look up possible decoder and preprocessor event otn */
+        potn = otn_lookup( en->gid, en->sid );
+
+#ifndef PREPROCESSOR_AND_DECODER_RULE_EVENTS
+        if( !potn )
+        {
+            potn = GenerateSnortEventOtn(
+                            en->gid,
+                            en->sid,
+                            en->rev,
+                            en->classification,
+                            en->priority,
+                            en->msg);
+          if( potn )  
+          {
+            otn_lookup_add(potn);
+          }
+        }
+#endif        
+        if( potn )
+        {
+            snort_user->rule_alert = potn->sigInfo.rule_flushing;
+            potn->sigInfo.message = en->msg;
+
+            fpLogEvent( potn->rtn, potn, p );
+        }
     }
 
     sfthreshold_reset();
@@ -221,5 +329,11 @@ int SnortEventqLog(Packet *p)
 void SnortEventqReset(void)
 {
     sfeventq_reset();
+    return;
+}
+
+void SnortEventqFree(void)
+{
+    sfeventq_free();
     return;
 }

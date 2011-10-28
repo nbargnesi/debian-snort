@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_ui_iis_unicode_map.c
 **  
@@ -53,7 +74,7 @@
 */
 static int FindCodePage(FILE *fFile, int iCodePage)
 {
-    char buffer[MAX_BUFFER];
+    static char buffer[MAX_BUFFER];
     char *pcToken;
     int  iCodePageTest;
     char *pcEnd;
@@ -220,7 +241,8 @@ int hi_ui_parse_iis_unicode_map(int **iis_unicode_map, char *filename,
 
     *iis_unicode_map = (int *)xmalloc(sizeof(int) * 65536);
     if(*iis_unicode_map == NULL)
-    {
+    {   
+        fclose(fFile);
         return HI_MEM_ALLOC_FAIL;
     }
 
@@ -229,17 +251,22 @@ int hi_ui_parse_iis_unicode_map(int **iis_unicode_map, char *filename,
     /*
     **  Find the correct codepage
     */
-    if((iRet = FindCodePage(fFile, iCodePage)))
+    iRet = FindCodePage(fFile, iCodePage);
+    if (iRet)
     {
         //printf("** Did not find codepage\n");
+        fclose(fFile);
         return iRet;
     }
 
-    if((iRet = MapCodePoints(fFile, *iis_unicode_map)))
+    iRet = MapCodePoints(fFile, *iis_unicode_map);
+    if (iRet)
     {
         //printf("** Error while parsing codepage.\n");
+        fclose(fFile);
         return iRet;
     }
 
+    fclose(fFile);
     return HI_SUCCESS;
 }

@@ -1,13 +1,14 @@
-/* $Id: sp_pcre.c,v 1.4.4.1 2004/12/09 17:38:47 jhewlett Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 2003 Brian Caswell <bmc@snort.org>
 ** Copyright (C) 2003 Michael J. Pomraning <mjp@securepipe.com>
 ** Copyright (C) 2003 Sourcefire, Inc
 ** 
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +41,8 @@
 
 #include <pcre.h>
 
+extern int g_nopcre;
+
 typedef struct _PcreData
 {
     pcre *re;           /* compiled regex */
@@ -52,6 +55,7 @@ typedef struct _PcreData
 #define SNORT_PCRE_INVERT   2  /* invert detect */
 #define SNORT_PCRE_URI      4  /* check URI buffers */
 #define SNORT_PCRE_RAWBYTES 8  /* Don't use decoded buffer (if available) */
+#define SNORT_PCRE_BODY     16 /* Check HTTP body buffer */
 
 /* 
  * we need to specify the vector length for our pcre_exec call.  we only care 
@@ -84,12 +88,6 @@ void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
      */
     pcre_data = (PcreData *) SnortAlloc(sizeof(PcreData));
 
-    if(pcre_data == NULL)
-    {
-        FatalError("%s (%d): Unable to allocate pcre_data node\n",
-                   file_name, file_line);
-    }
-
     SnortPcreParse(data, pcre_data, otn);
 
     fpl = AddOptFuncToList(SnortPcre, otn);
@@ -99,6 +97,9 @@ void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
      * individually
      */
     fpl->context = (void *) pcre_data;
+
+    if (pcre_data->options & SNORT_PCRE_RELATIVE)
+        fpl->isRelative = 1;
 
     return;
 }
@@ -118,12 +119,8 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
                    file_name, file_line);
     }
 
-    if(!(free_me = strdup(data)))
-    {
-        FatalError("%s (%d): pcre strdup() failed\n", file_name, file_line);
-    }
+    free_me = SnortStrdup(data);
     re = free_me;
-
 
     /* get rid of starting and ending whitespace */
     while (isspace((int)re[strlen(re)-1])) re[strlen(re)-1] = '\0';
@@ -165,7 +162,7 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
 
         delimit = *re;
     } 
-    else if(! *re == delimit)
+    else if(*re != delimit)
         goto syntax;
 
     /* find ending delimiter, trim delimit chars */
@@ -197,6 +194,7 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
         case 'R':  pcre_data->options |= SNORT_PCRE_RELATIVE; break;
         case 'U':  pcre_data->options |= SNORT_PCRE_URI;      break;
         case 'B':  pcre_data->options |= SNORT_PCRE_RAWBYTES; break;
+        case 'P':  pcre_data->options |= SNORT_PCRE_BODY;     break;
         default:
             FatalError("%s (%d): unknown/extra pcre option encountered\n", file_name, file_line);
         }
@@ -262,7 +260,7 @@ static int pcre_search(const PcreData *pcre_data,
     int ovector[SNORT_PCRE_OVECTOR_SIZE];
     int matched;
     int result;
-    
+  
     if(pcre_data == NULL
        || buf == NULL
        || len <= 0
@@ -330,27 +328,44 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
     DEBUG_WRAP(char *hexbuf;);
 
+    //short circuit this for testing pcre performance impact
+    if( g_nopcre )
+        return 0;
+    
     /* get my data */
     pcre_data =(PcreData *) fp_list->context;
 
     /* This is the HTTP case */
     if(pcre_data->options & SNORT_PCRE_URI) 
     {
-        for(i=0;i<p->uri_count;i++)
-        {
-            matched = pcre_search(pcre_data,
-                                  UriBufs[i].uri,
-                                  UriBufs[i].length,
-                                  0,
-                                  &found_offset);
+        matched = pcre_search(pcre_data,
+                              UriBufs[HTTP_BUFFER_URI].uri,
+                              UriBufs[HTTP_BUFFER_URI].length,
+                              0,
+                              &found_offset);
             
-            if(matched)
-            {
-                /* don't touch doe_ptr on URI contents */
-                return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-            }
+        if(matched)
+        {
+            /* don't touch doe_ptr on URI contents */
+            return fp_list->next->OptTestFunc(p, otn, fp_list->next);
         }
-        
+
+        return 0;
+    }
+
+    if(pcre_data->options & SNORT_PCRE_BODY) 
+    {
+        matched = pcre_search(pcre_data,
+                              UriBufs[HTTP_BUFFER_CLIENT_BODY].uri,
+                              UriBufs[HTTP_BUFFER_CLIENT_BODY].length,
+                              0,
+                              &found_offset);
+            
+        if(matched)
+        {
+            /* don't touch doe_ptr on URI contents */
+            return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        }
         return 0;
     }
     /* end of the HTTP case */
@@ -427,6 +442,10 @@ int SnortPcre(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
             return 1;
         }
+
+        /* if the next option isn't relative and it failed, we're done */
+        if (fp_list->next->isRelative == 0)
+            return 0;
 
         /* the other OTNs search's were not successful so we need to keep searching */
         if(search_offset <= 0 || length < search_offset)

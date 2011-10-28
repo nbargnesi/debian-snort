@@ -1,4 +1,4 @@
-/* $Id: syslog.c,v 1.9 2004/01/23 08:04:24 chris_reid Exp $ */
+/* $Id$ */
 /* -/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/
  . Copyright (c) 2001 Michael Davis <mike@datanerds.net>
  . All rights reserved.
@@ -59,47 +59,53 @@ void syslog(int pri, char *fmt, ...)
 }
 
 void vsyslog(int pri, char *fmt, va_list ap){
-	char ch, *p, *t;
+	char *p, *t;
 	register int cnt;
 	int tbuf_left, fmt_left, prlen, saved_errno;
 	char *stdp, tbuf[TBUF_LEN], fmt_cpy[FMT_LEN];
     time_t now;
 	SOCKET sockfd;
 	struct sockaddr_in sin;
-	HANDLE	hEventLog;				/* handle to the Event Log. */
+    HANDLE	hEventLog;				/* handle to the Event Log. */
 
-	if(!pv.syslog_remote_flag) { /* Log to Event Log. */
-	    p = tbuf;
-	    tbuf_left = TBUF_LEN;
+     /* Log to Event Log. */
+    if (!pv.syslog_remote_flag)
+    {
+        p = tbuf;
+        tbuf_left = TBUF_LEN;
 
-	    saved_errno = errno;
+        saved_errno = errno;
 
-            /*
-             * We wouldn't need this mess if printf handled %m, or if
-             * strerror() had been invented before syslog().
-             */
-            for (t = fmt_cpy, fmt_left = FMT_LEN;
-                 (ch = *fmt);
-                 ++fmt)
+        /*
+         * We wouldn't need this mess if printf handled %m, or if
+         * strerror() had been invented before syslog().
+         */
+        for (t = fmt_cpy, fmt_left = FMT_LEN; *fmt != '\0' && fmt_left > 1; fmt++)
+        {
+            if (*fmt == '%' && *(fmt + 1) == 'm')
             {
-                    if (ch == '%' && fmt[1] == 'm') {
-                            ++fmt;
-                            prlen = _snprintf(t, fmt_left, "%s",
-                                strerror(saved_errno));
-                            if (prlen >= fmt_left)
-                                    prlen = fmt_left - 1;
-                            t += prlen;
-                            fmt_left -= prlen;
-                    } else {
-                            if (fmt_left > 1) {
-                                    *t++ = ch;
-                                    fmt_left--;
-                            }
-                    }
-            }
-            *t = '\0';
+                fmt++;
+                SnortSnprintf(t, fmt_left, "%s", strerror(saved_errno));
+                prlen = SnortStrnlen(t, fmt_left);
 
-	    _vsnprintf(p, tbuf_left, fmt_cpy, ap);
+                t += prlen;
+                fmt_left -= prlen;
+            }
+            else
+            {
+                if (fmt_left > 1)
+                {
+                    *t++ = *fmt;
+                    fmt_left--;
+                }
+            }
+        }
+
+        *t = '\0';
+
+        fmt_cpy[FMT_LEN - 1] = '\0';
+	    vsnprintf(p, tbuf_left, fmt_cpy, ap);
+        p[tbuf_left - 1] = '\0';
 	    
 	    /* Get connected, output the message to the local logger. */
 	    if (!opened)
@@ -165,7 +171,8 @@ void vsyslog(int pri, char *fmt, va_list ap){
                 tbuf_left -= prlen;             \
         } while (0)
 
-    prlen = snprintf(p, tbuf_left, "<%d>", pri);
+    SnortSnprintf(p, tbuf_left, "<%d>", pri);
+    prlen = SnortStrnlen(p, tbuf_left);
     DEC();
 
     prlen = strftime(p, tbuf_left, "%h %e %T ", localtime(&now));
@@ -176,11 +183,13 @@ void vsyslog(int pri, char *fmt, va_list ap){
     if (LogTag == NULL)
             LogTag = VERSION;
     if (LogTag != NULL) {
-            prlen = snprintf(p, tbuf_left, "%s", LogTag);
+            SnortSnprintf(p, tbuf_left, "%s", LogTag);
+            prlen = SnortStrnlen(p, tbuf_left);
             DEC();
     }
     if (LogStat & LOG_PID) {
-            prlen = snprintf(p, tbuf_left, "[%d]", getpid());
+            SnortSnprintf(p, tbuf_left, "[%d]", getpid());
+            prlen = SnortStrnlen(p, tbuf_left);
             DEC();
     }
     if (LogTag != NULL) {
@@ -198,25 +207,34 @@ void vsyslog(int pri, char *fmt, va_list ap){
      * We wouldn't need this mess if printf handled %m, or if
      * strerror() had been invented before syslog().
      */
-    for (t = fmt_cpy, fmt_left = FMT_LEN; (ch = *fmt); ++fmt) {
-            if (ch == '%' && fmt[1] == 'm') {
-                    ++fmt;
-                    prlen = snprintf(t, fmt_left, "%s",
-                        strerror(saved_errno));
-                    if (prlen >= fmt_left)
-                            prlen = fmt_left - 1;
-                    t += prlen;
-                    fmt_left -= prlen;
-            } else {
-                    if (fmt_left > 1) {
-                            *t++ = ch;
-                            fmt_left--;
-                    }
+    for (t = fmt_cpy, fmt_left = FMT_LEN; *fmt != '\0' && fmt_left > 1; fmt++)
+    {
+        if (*fmt == '%' && *(fmt + 1) == 'm')
+        {
+            fmt++;
+            SnortSnprintf(t, fmt_left, "%s", strerror(saved_errno));
+            prlen = SnortStrnlen(t, fmt_left);
+            if (prlen >= fmt_left)
+                prlen = fmt_left - 1;
+
+            t += prlen;
+            fmt_left -= prlen;
+        }
+        else
+        {
+            if (fmt_left > 1)
+            {
+                *t++ = *fmt;
+                fmt_left--;
             }
+        }
     }
+
     *t = '\0';
 
+    fmt_cpy[FMT_LEN - 1] = '\0';
     prlen = vsnprintf(p, tbuf_left, fmt_cpy, ap);
+    p[tbuf_left - 1] = '\0';
     DEC();
     cnt = p - tbuf;
 
@@ -229,7 +247,9 @@ void vsyslog(int pri, char *fmt, va_list ap){
 	sin.sin_port = htons((u_short)pv.syslog_server_port);
 	sin.sin_family = AF_INET;
 
-	if (!(sin.sin_addr.s_addr = resolve_host(pv.syslog_server))){
+	sin.sin_addr.s_addr = resolve_host(pv.syslog_server);
+	if (!sin.sin_addr.s_addr)
+    {
 		ErrorMessage("[!] ERROR: Could not resolve syslog server's hostname. Error Number: %d.\n", WSAGetLastError());		
 		closesocket(sockfd);
 		return;
@@ -268,7 +288,7 @@ void AddEventSource(char *ident)
 	
     // Add your source name as a subkey under the Application 
     // key in the EventLog registry key. 
-    _snprintf(key, sizeof(key), "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s", ident);
+    SnortSnprintf(key, sizeof(key), "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s", ident);
 
     if (RegCreateKey(HKEY_LOCAL_MACHINE, key, &hk)) {
 		printf("Could not create the registry key."); 
@@ -277,6 +297,7 @@ void AddEventSource(char *ident)
  
     // Set the name of the message file. 
 	GetModuleFileName(NULL, szFilePath, sizeof(szFilePath));
+    szFilePath[ sizeof(szFilePath)-1 ] = 0;
     // Add the name to the EventMessageFile subkey. 
  
     if (RegSetValueEx(hk,             // subkey handle 
@@ -322,6 +343,12 @@ unsigned long resolve_host(char *host) {
         else
         {
             /* protecting against malicious DNS servers */
+            if (he->h_length < 0)
+            {
+                printf("Unable to resolve address: %s", host);
+                return 0;
+            }
+
             if(he->h_length <= sizeof(unsigned long))
             {
                 memcpy((char FAR *)&(ip), he->h_addr, he->h_length);

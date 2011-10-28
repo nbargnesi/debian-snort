@@ -1,3 +1,24 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /**
 **  @file       hi_client.c
 **
@@ -5,6 +26,7 @@
 **
 **  @brief      Main file for all the client functions and inspection
 **              flow.
+**
 **
 **  The job of the client module is to analyze and inspect the HTTP
 **  protocol, finding where the various fields begin and end.  This must
@@ -18,6 +40,7 @@
 **  
 **  NOTES:
 **    - 3.8.03:  Initial development.  DJR
+**    - 2.4.05:  Added tab_uri_delimiter config option.  AJM.
 */
 
 #include <stdlib.h>
@@ -35,8 +58,11 @@
 #include "hi_util_hbm.h"
 #include "hi_return_codes.h"
 
-#define URI_END  1
-#define NO_URI  -1
+/* These numbers were chosen to avoid conflicting with 
+ * the return codes in hi_return_codes.h */ 
+#define URI_END  99
+#define POST_END 100
+#define NO_URI   101
 #define INVALID_HEX_VAL -1
 
 /**
@@ -82,6 +108,8 @@ typedef int (*LOOKUP_FCN)(HI_SESSION *, u_char *, u_char *, u_char **,
 */
 static LOOKUP_FCN lookup_table[256];
 static int hex_lookup[256];
+static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
+        u_char *end, u_char **ptr, URI_PTR *uri_ptr);
 
 /*
 **  NAME
@@ -112,7 +140,7 @@ static int hex_lookup[256];
 */
 static int CheckChunkEncoding(HI_SESSION *Session, u_char *start, u_char *end)
 {
-    u_int  iChunkLen   = 0;
+    u_int   iChunkLen   = 0;
     int    iChunkChars = 0;
     int    iCheckChunk = 1;
     u_char *ptr;
@@ -385,7 +413,12 @@ static int IsHttpVersion(u_char **ptr, u_char *end)
     **  remaining length so we should increment the pointer by that much
     **  since we don't need to inspect this again.
     */
+
+    /* This pointer is not used again.   When 1 is returned it causes 
+     * NextNonWhiteSpace to return also.  */
+#if 0
     (*ptr)++;
+#endif
 
     return 1;
 }
@@ -452,7 +485,7 @@ static int find_rfc_delimiter(HI_SESSION *Session, u_char *start,
         return URI_END;
     }
 
-    return NO_URI;
+    return NextNonWhiteSpace(Session, start, end, ptr, uri_ptr);
 }
 
 /*
@@ -572,6 +605,17 @@ static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
     u_char **end_sp;
 
     /*
+    **  Horizontal tab is only accepted by apache web servers, not IIS.
+    **  Some IIS exploits contain a tab (0x09) in the URI, so we don't want
+    **  to treat it as a URI delimiter and cut off the URI.
+    */
+    if ( **ptr == '\t' && !ServerConf->tab_uri_delimiter )
+    {
+        (*ptr)++;
+        return HI_SUCCESS;
+    }
+
+    /*
     **  Reset the identifier, because we've just seen another space.  We
     **  should only see the identifier immediately after a space followed
     **  by a delimiter.
@@ -615,6 +659,18 @@ static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
         if(uri_ptr->second_sp_end)
         {
             return NO_URI;
+        }
+
+        /* 
+        **  Treat whitespace differently at the end of the URI than we did
+        **  at the beginning.  Ignore and return if special characters are
+        **  not defined as whitespace after the URI.
+        */
+        if(ServerConf->whitespace[**ptr]
+            && !(ServerConf->whitespace[**ptr] & HI_UI_CONFIG_WS_AFTER_URI))
+        {
+            (*ptr)++;
+            return HI_SUCCESS;
         }
 
         /*
@@ -663,7 +719,7 @@ static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
             (*ptr)++;
             continue;
         }
-        else if((**ptr == '\t'))
+        else if(ServerConf->whitespace[**ptr])
         {
             if(ServerConf->apache_whitespace.on)
             {
@@ -673,14 +729,9 @@ static int NextNonWhiteSpace(HI_SESSION *Session, u_char *start,
                     hi_eo_client_event_log(Session, HI_EO_CLIENT_APACHE_WS,
                                            NULL, NULL);
                 }
-
-                (*ptr)++;
-                continue;
             }
-            else
-            {
-                return NO_URI;
-            }
+            (*ptr)++;
+            continue;
         }
         else
         {
@@ -838,8 +889,8 @@ static INLINE int CheckLongDir(HI_SESSION *Session, URI_PTR *uri_ptr,
     /*
     **  Check for oversize directory
     */
-    if(Session->server_conf->long_dir && uri_ptr->last_dir &&
-       !uri_ptr->param)
+    if(Session->server_conf->long_dir && 
+        uri_ptr->last_dir && !uri_ptr->param)
     {
         iDirLen = ptr - uri_ptr->last_dir;
 
@@ -1071,7 +1122,7 @@ static int SetProxy(HI_SESSION *Session, u_char *start,
         {
             if(hi_util_in_bounds(start, end, ((*ptr)+2)))
             {
-                if(*((*ptr)+1) == '/' && *((*ptr)+1) == '/')
+                if(*((*ptr)+1) == '/' && *((*ptr)+2) == '/')
                 {
                     uri_ptr->proxy = *ptr;
                 }
@@ -1168,6 +1219,156 @@ static int SetClientVars(HI_CLIENT *Client, URI_PTR *uri_ptr, u_int dsize)
     return HI_SUCCESS;
 }
 
+static INLINE int hi_client_extract_post(
+    HI_SESSION *Session, HTTPINSPECT_CONF *ServerConf,
+    u_char *ptr, u_char *end, URI_PTR *result)
+{
+    int iRet;
+    u_char *start = ptr;
+
+    Session->norm_flags &= HI_BODY;
+
+    /* Limit search depth */
+    if(ServerConf->post_depth && ((end - ptr) > ServerConf->post_depth)) 
+    {
+        end = ptr + ServerConf->post_depth;
+        result->uri_end = end;
+    }
+
+    result->uri = start;
+ 
+    while(hi_util_in_bounds(start, end, ptr))
+    {
+        if(lookup_table[*ptr] || ServerConf->whitespace[*ptr])
+        {
+            if(lookup_table[*ptr])
+            {
+                iRet = (lookup_table[*ptr])(Session, start, end, &ptr, result);
+            }
+            else
+            {
+                iRet = NextNonWhiteSpace(Session, start, end, &ptr, result);
+            }
+
+            if(iRet == URI_END || iRet == HI_OUT_OF_BOUNDS)
+            {
+                return POST_END;
+            }
+            else if(iRet != HI_SUCCESS)
+            {
+                return HI_NONFATAL_ERR;
+            }
+        }
+
+        ptr++;       
+    }
+
+    return POST_END;
+}
+
+static INLINE int hi_client_extract_uri(
+    HI_SESSION *Session, HTTPINSPECT_CONF *ServerConf, 
+    HI_CLIENT * Client, u_char *start, u_char *end, 
+    u_char *ptr, URI_PTR *uri_ptr)
+{
+    int iRet = HI_SUCCESS;
+
+    Session->norm_flags &= ~HI_BODY;
+
+    /*
+    **  This loop compares each char to an array of functions
+    **  (one for each char) and calling that function if there is one.
+    **  
+    **  If there is no function, then we just increment the char ptr and
+    **  continue processing.
+    **
+    **  If there is a function, we call that function and process.  It's
+    **  important to note that the function that is called is responsible
+    **  for incrementing the ptr to the next char to be inspected.  The
+    **  loop does not increment the pointer when a function is called to
+    **  allow the maximum flexibility to the functions.
+    */
+
+    while(hi_util_in_bounds(start, end, ptr))
+    {
+        if(lookup_table[*ptr] || ServerConf->whitespace[*ptr])
+        {
+            if(lookup_table[*ptr])
+            {
+                iRet = (lookup_table[*ptr])(Session, start, end,
+                            &ptr, uri_ptr);
+            }
+            else
+            {
+                iRet = NextNonWhiteSpace(Session, start, end, &ptr, uri_ptr);
+            }
+            if(iRet)
+            {
+                if(iRet == URI_END)
+                {
+                    /*
+                    **  You found a URI, let's break and check it out.
+                    */
+                    break;
+                }
+                else if(iRet == HI_OUT_OF_BOUNDS)
+                {
+                    /*
+                    **  Means you've reached the end of the buffer.  THIS
+                    **  DOESN'T MEAN YOU HAVEN'T FOUND A URI.
+                    */
+                    break;
+                }
+                else /* NO_URI */
+                {
+                    /*
+                    **  Check for chunk encoding, because the delimiter can
+                    **  also be a space, which would look like a pipeline request
+                    **  to us if we don't do this first.
+                    */
+                    if(Session->server_conf->chunk_length)
+                            CheckChunkEncoding(Session, start, end);
+
+                    /*
+                    **  We only inspect the packet for another pipeline
+                    **  request if there wasn't a previous pipeline request.
+                    **  The reason that we do this is because 
+                    */  
+                    if(!Client->request.pipeline_req)
+                    {
+                        /*
+                        **  Just because there was no URI in the first part
+                        **  the packet, doesn't mean that this isn't a
+                        **  pipelined request that has been segmented.
+                        */
+                        if(!ServerConf->no_pipeline)
+                        {
+                            Client->request.pipeline_req = FindPipelineReq(ptr, end);
+                            if(Client->request.pipeline_req)
+                            {
+                                return HI_SUCCESS;
+                            }
+                        }
+                    }
+
+                    return HI_NONFATAL_ERR;
+                }
+            }
+            else
+            {
+                /*
+                **  This means that we found the next non-whitespace char
+                **  and since we are already pointed there, so we just
+                **  continue.
+                */
+                continue;
+            }
+        }
+
+        ptr++;
+    }
+    return iRet;
+}
 /*
 **  NAME
 **    StatelessInspection::
@@ -1223,10 +1424,12 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
     HTTPINSPECT_CONF *ClientConf;
     HI_CLIENT *Client;
     URI_PTR uri_ptr;
+    URI_PTR post_ptr;
     u_char *start;
     u_char *end;
     u_char *ptr;
     int iRet;
+    int len;
 
     if(!Session || !data || dsize < 1)
     {
@@ -1248,6 +1451,7 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
     Client = &Session->client;
 
     memset(&uri_ptr, 0x00, sizeof(URI_PTR));
+    memset(&post_ptr, 0x00, sizeof(URI_PTR));
 
     /*
     **  We set the starting boundary depending on whether this request is
@@ -1263,7 +1467,7 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
         start = data;
     }
 
-    end   = data + dsize;
+    end = data + dsize;
 
     ptr = start;
 
@@ -1296,88 +1500,61 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
     uri_ptr.uri = ptr;
     uri_ptr.uri_end = end;
 
-    /*
-    **  This loop compares each char to an array of functions
-    **  (one for each char) and calling that function if there is one.
-    **  
-    **  If there is no function, then we just increment the char ptr and
-    **  continue processing.
-    **
-    **  If there is a function, we call that function and process.  It's
-    **  important to note that the function that is called is responsible
-    **  for incrementing the ptr to the next char to be inspected.  The
-    **  loop does not increment the pointer when a function is called to
-    **  allow the maximum flexibility to the functions.
-    */
-    while(hi_util_in_bounds(start, end, ptr))
+    len = end - ptr;
+
+    /* Need slightly special handling for POST requests 
+     * Since we don't normalize on the request method itself,
+     * just do a strcmp here and skip the characters below. */
+    if(len > 4 && !strncasecmp("POST", ptr, 4)) 
     {
-        if(lookup_table[*ptr])
+        hi_stats.post++;
+        Client->request.method = HI_POST_METHOD;
+    }
+    else if(len > 3 && !strncasecmp("GET", ptr, 3))
+    {
+        hi_stats.get++;
+        Client->request.method = HI_GET_METHOD;
+    }
+    else
+    {
+        Client->request.method = HI_UNKNOWN_METHOD;
+    }
+
+    /* This will set up the URI pointers - effectively extracting
+     * the URI. */
+    iRet = hi_client_extract_uri(
+             Session, ServerConf, Client, start, end, ptr, &uri_ptr);
+
+    if(iRet == URI_END && 
+        (Client->request.method & (HI_POST_METHOD | HI_GET_METHOD)))
+    {
+        /* Need to skip over header and get to the body.
+         * The unaptly named FindPipelineReq will do that. */
+        ptr = FindPipelineReq(ptr, end); 
+ 
+        post_ptr.uri = ptr;
+        post_ptr.uri_end = end;
+ 
+        if(ptr && (POST_END == hi_client_extract_post(
+                Session, ServerConf, ptr, end, &post_ptr)))
         {
-            if((iRet = (lookup_table[*ptr])(Session, start, end,
-                            &ptr, &uri_ptr)))
-            {
-                if(iRet == URI_END)
-                {
-                    /*
-                    **  You found a URI, let's break and check it out.
-                    */
-                    break;
-                }
-                else if(iRet == HI_OUT_OF_BOUNDS)
-                {
-                    /*
-                    **  Means you've reached the end of the buffer.  THIS
-                    **  DOESN'T MEAN YOU HAVEN'T FOUND A URI.
-                    */
-                    break;
-                }
-                else /* NO_URI */
-                {
-                    /*
-                    **  Check for chunk encoding, because the delimiter can
-                    **  also be a space, which would look like a pipeline request
-                    **  to us if we don't do this first.
-                    */
-                    if(Session->server_conf->chunk_length)
-                            CheckChunkEncoding(Session, start, end);
-
-                    /*
-                    **  We only inspect the packet for another pipeline
-                    **  request if there wasn't a previous pipeline request.
-                    **  The reason that we do this is because 
-                    */  
-                    if(!Client->request.pipeline_req)
-                    {
-                        /*
-                        **  Just because there was no URI in the first part
-                        **  the packet, doesn't mean that this isn't a
-                        **  pipelined request that has been segmented.
-                        */
-                        if(!ServerConf->no_pipeline)
-                        {
-                            if((Client->request.pipeline_req =
-                                FindPipelineReq(ptr, end)))
-                            {
-                                return HI_SUCCESS;
-                            }
-                        }
-                    }
-
-                    return HI_NONFATAL_ERR;
-                }
-            }
-            else
-            {
-                /*
-                **  This means that we found the next non-whitespace char
-                **  and since we are already pointed there, so we just
-                **  continue.
-                */
-                continue;
-            }
+            hi_stats.post_params++;
+            Client->request.post_raw = post_ptr.uri;
+            Client->request.post_raw_size = post_ptr.uri_end - post_ptr.uri;
+            Client->request.post_norm = post_ptr.norm;
         }
-
-        ptr++;
+        else 
+        {
+            Client->request.post_raw = NULL;
+            Client->request.post_raw_size = 0;
+            Client->request.post_norm = NULL;
+        }
+    }
+    else 
+    {
+        Client->request.post_raw = NULL;
+        Client->request.post_raw_size = 0;
+        Client->request.post_norm = NULL;
     }
 
     /*
@@ -1401,7 +1578,8 @@ static int StatelessInspection(HI_SESSION *Session, unsigned char *data,
     **  We set the HI_CLIENT variables from the URI_PTR structure.  We also
     **  do error checking for the values in this routine as well.
     */
-    if((iRet = SetClientVars(Client, &uri_ptr, dsize)))
+    iRet = SetClientVars(Client, &uri_ptr, dsize);
+    if (iRet)
     {
         return iRet;
     }
@@ -1492,7 +1670,8 @@ int hi_client_inspection(void *S, unsigned char *data, int dsize)
         /*
         **  Otherwise we assume stateless inspection
         */
-        if((iRet = StatelessInspection(Session, data, dsize)))
+        iRet = StatelessInspection(Session, data, dsize);
+        if (iRet)
         {
             return iRet;
         }
@@ -1541,7 +1720,6 @@ int hi_client_init(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
         lookup_table[0x00] = SetBinaryNorm;
 
         lookup_table[' ']  = NextNonWhiteSpace;
-        lookup_table['\t'] = NextNonWhiteSpace;
         lookup_table['\r'] = find_rfc_delimiter;
         lookup_table['\n'] = find_non_rfc_delimiter;
 

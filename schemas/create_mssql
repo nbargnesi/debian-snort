@@ -8,9 +8,10 @@
 --             Todd Schrubb <tls@cert.org>
 --
 -- This program is free software; you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation; either version 2 of the License, or
--- (at your option) any later version.
+-- it under the terms of the GNU General Public License Version 2 as
+-- published by the Free Software Foundation.  You may not use, modify or
+-- distribute this program under any other version of the GNU General
+-- Public License.
 -- 
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,7 +40,7 @@
 CREATE TABLE [schema] ( vseq        NUMERIC(10,0) NOT NULL,
                         ctime       DATETIME      NOT NULL,
                         PRIMARY KEY (vseq))
-INSERT INTO [schema]  (vseq, ctime) VALUES ('106', GETDATE())
+INSERT INTO [schema]  (vseq, ctime) VALUES ('107', GETDATE())
 
 CREATE TABLE event  ( sid         NUMERIC(10,0)   NOT NULL ,  -- FK to sensor.sid
                       cid         NUMERIC(10,0)   NOT NULL ,
@@ -55,6 +56,7 @@ CREATE TABLE signature ( sig_id       NUMERIC(10,0) IDENTITY(1,1) NOT NULL ,
                          sig_priority NUMERIC(10,0),
                          sig_rev      NUMERIC(10,0),
                          sig_sid      NUMERIC(10,0),
+                         sig_gid      NUMERIC(10,0),
                          PRIMARY KEY (sig_id))
 CREATE INDEX IX_signature_signame    ON signature(sig_name)
 CREATE INDEX IX_signature_sigclassid ON signature(sig_class_id)

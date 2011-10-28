@@ -1,5 +1,5 @@
 /*
- *  $Id: libnet-asn1.h,v 1.2 2003/10/20 15:03:44 chrisgreen Exp $
+ *  $Id$
  *
  *  libnet-asn1.h - Network routine library ASN.1 header file
  *

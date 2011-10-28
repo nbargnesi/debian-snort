@@ -1,12 +1,35 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2003-2007 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
+ 
 /*!
  *
  * \file sfthd.c  
  *
  * An Abstracted Event Thresholding System
  *
- * Copyright (C) 2003 Sourcefire,Inc.
  * Marc Norton
  *
+ * 3/5/07 - man - fixed memory leak in globnal config to limit 
+ * of one gid=0, or multiple gid!=0 but not both. 
+ * Boris Lytochkin found it.
  */
 
 #include <stdlib.h>
@@ -18,7 +41,8 @@
 #include "sfxhash.h"
 
 #include "sfthd.h"
-    
+#include "util.h" 
+
 static int s_id = 1;  /* thd_id generator for both local and global thresholds */
 
 /*
@@ -216,13 +240,18 @@ sfthd_create_threshold_local(	THD_STRUCT * thd,
         sfthd_item->sig_id          = sig_id;
         sfthd_item->sfthd_node_list = sflist_new();
 
-	if(!sfthd_item->sfthd_node_list)
+        if(!sfthd_item->sfthd_node_list)
+        {
+            free(sfthd_item);
             return -4;
+        }
 
         /* Add the sfthd_item to the hash table */
         hstatus = sfghash_add( sfthd_hash, (void*)&sig_id, sfthd_item );
         if( hstatus )
         {
+            sflist_free(sfthd_item->sfthd_node_list);
+            free(sfthd_item);
             return -5;
         }
     }     
@@ -241,13 +270,13 @@ sfthd_create_threshold_local(	THD_STRUCT * thd,
       p = (THD_NODE*)sfthd_item->sfthd_node_list->tail->ndata;
       if(p) /* just to be safe- if thers a tail, there is is node data */
       {
-	 if( p->type != THD_TYPE_SUPPRESS && type != THD_TYPE_SUPPRESS )
-	 {
+    	 if( p->type != THD_TYPE_SUPPRESS && type != THD_TYPE_SUPPRESS )
+	     {
 #ifdef THD_DEBUG
-	     printf("THD_DEBUG: Could not add a 2nd Threshold object, you can onlky have 1 per sid: gid=%u, sid=%u\n",gen_id,sig_id);
+    	     printf("THD_DEBUG: Could not add a 2nd Threshold object, you can onlky have 1 per sid: gid=%u, sid=%u\n",gen_id,sig_id);
 #endif	 
-	     return THD_TOO_MANY_THDOBJ;/* cannot add more than one threshold per sid in version 3.0, wait for 3.2 and CIDR blocks */	 
-	 }
+    	     return THD_TOO_MANY_THDOBJ;/* cannot add more than one threshold per sid in version 3.0, wait for 3.2 and CIDR blocks */	 
+    	 }
       }
     }
 
@@ -279,12 +308,12 @@ sfthd_create_threshold_local(	THD_STRUCT * thd,
    
     if( type == THD_TYPE_SUPPRESS )
     {
-	sfthd_node->priority = THD_PRIORITY_SUPPRESS;
+    	sfthd_node->priority = THD_PRIORITY_SUPPRESS;
 
-	if( sfthd_node->ip_mask == 0 && sfthd_node->ip_address != 0 )
-	{
+    	if( sfthd_node->ip_mask == 0 && sfthd_node->ip_address != 0 )
+    	{
             sfthd_node->ip_mask = 0xffffffff;
-	}
+	    }
     }
 
     thd->count++;
@@ -365,7 +394,26 @@ sfthd_create_threshold_global(	THD_STRUCT * thd,
 				unsigned     ip_mask )
 {
     THD_NODE * sfthd_node;
-	   
+	
+    /* 
+     * check for duplicates, we only allow 
+     * a single gid=0/sid=0 rule,
+     * or multiple gid!=0/sid=0 rules 
+     */
+    if( gen_id == 0)
+    {
+       int i;
+       for(i=0;i<THD_MAX_GENID;i++)
+           if( thd->sfthd_garray [ i ] )
+           {
+               return THD_TOO_MANY_THDOBJ;
+           }
+    }
+    else if(  thd->sfthd_garray [ gen_id ] )
+    {
+       return THD_TOO_MANY_THDOBJ;
+    }
+
     sfthd_node = (THD_NODE*)calloc(1,sizeof(THD_NODE));
     if( !sfthd_node )
     {
@@ -490,8 +538,7 @@ int sfthd_create_threshold(	THD_STRUCT * thd,
 static char * printIP(unsigned u )
 {
 	static char s[80];
-	snprintf(s,80,"%d.%d.%d.%d", (u>>24)&0xff, (u>>16)&0xff, (u>>8)&0xff, u&0xff );
-	s[79]=0;
+	SnortSnprintf(s,80,"%d.%d.%d.%d", (u>>24)&0xff, (u>>16)&0xff, (u>>8)&0xff, u&0xff );
 	return s;
 }
 #endif
@@ -732,6 +779,8 @@ int sfthd_test_gobject(	THD_STRUCT * thd,
         printf("THD_DEBUG:        PKT  DIP=%s\n",printIP((unsigned)dip) );
 	fflush(stdout);
 #endif
+
+    gen_id = gen_id;
 
     /*
      *  Get The correct IP  
@@ -1047,7 +1096,7 @@ global_test:
      g_thd_node = thd->sfthd_garray[ gen_id ];
      if( g_thd_node )
      {
-         status = sfthd_test_gobject( thd, g_thd_node, sig_id, gen_id, sip, dip, curtime );
+         status = sfthd_test_gobject( thd, g_thd_node, gen_id, sig_id, sip, dip, curtime );
          if( status < 0 ) /* -1 == Don't log and stop looking */
          {
 #ifdef THD_DEBUG

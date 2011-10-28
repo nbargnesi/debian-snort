@@ -1,12 +1,13 @@
-/* $Id: sp_respond.c,v 1.28 2004/03/23 15:34:46 chris_reid Exp $ */
+/* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 1999,2000,2001 Christian Lademann <cal@zls.de>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,7 +19,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: sp_respond.c,v 1.28 2004/03/23 15:34:46 chris_reid Exp $ */
+/* $Id$ */
 
 /*
  * CREDITS:
@@ -33,7 +34,7 @@
 #endif
 
 
-#ifdef ENABLE_RESPONSE
+#if defined(ENABLE_RESPONSE) && !defined(ENABLE_RESPONSE2)
 #include <libnet.h>
 
 #include "decode.h"
@@ -55,7 +56,7 @@ void RespondInit(char *, OptTreeNode *, int );
 void RespondRestartFunction(int, void *);
 int ParseResponse(char *);
 int SendICMP_UNREACH(int, u_long, u_long, Packet *);
-int SendTCPRST(u_long, u_long, u_short, u_short, u_long, u_long);
+int SendTCPRST(u_long, u_long, u_short, u_short, u_long, u_long, u_short);
 int Respond(Packet *, RspFpList *);
 
 
@@ -128,10 +129,7 @@ void RespondInit(char *data, OptTreeNode *otn, int protocol)
         ttl += 64;
     } 
 
-    if(( rd = (RespondData *)calloc(sizeof(RespondData), sizeof(char))) == NULL)
-    {
-        FatalError("sp_respnd RespondInit() calloc failed!\n");
-    }
+    rd = (RespondData *)SnortAlloc(sizeof(RespondData));
     
     rd->response_flag = ParseResponse(data);
     
@@ -350,7 +348,8 @@ int Respond(Packet *p, RspFpList *fp_list)
                                    p->iph->ip_src.s_addr,
                                    p->tcph->th_dport, p->tcph->th_sport,
                                    p->tcph->th_ack, 
-                                   htonl(ntohl(p->tcph->th_seq) + p->dsize));
+                                   htonl(ntohl(p->tcph->th_seq) + p->dsize),
+                                   p->tcph->th_win);
                     }
 
                     if(rd->response_flag & RESP_RST_RCV)
@@ -359,7 +358,8 @@ int Respond(Packet *p, RspFpList *fp_list)
                                    p->iph->ip_dst.s_addr,
                                    p->tcph->th_sport, p->tcph->th_dport, 
                                    p->tcph->th_seq, 
-                                   htonl(ntohl(p->tcph->th_ack) + p->dsize));
+                                   htonl(ntohl(p->tcph->th_ack) + p->dsize),
+                                   p->tcph->th_win);
                     }
                 }
             }
@@ -435,7 +435,7 @@ int SendICMP_UNREACH(int code, u_long saddr, u_long daddr, Packet * p)
 #ifdef DEBUG
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "firing ICMP response packet\n"););
     PrintNetData(stdout, icmp_pkt, sz);
-    ClearDumpBuf();
+    //ClearDumpBuf();
 #endif
     if(libnet_write_ip(nd, icmp_pkt, sz) < sz)
     {
@@ -447,7 +447,7 @@ int SendICMP_UNREACH(int code, u_long saddr, u_long daddr, Packet * p)
 
 
 int SendTCPRST(u_long saddr, u_long daddr, u_short sport, u_short dport, 
-        u_long seq, u_long ack)
+        u_long seq, u_long ack, u_short win)
 {
     int sz = IP_H + TCP_H;
     IPHdr *iph;
@@ -463,12 +463,13 @@ int SendTCPRST(u_long saddr, u_long daddr, u_short sport, u_short dport,
     tcph->th_dport = dport;
     tcph->th_seq = seq;
     tcph->th_ack = ack;
+    tcph->th_win = 0;
 
     libnet_do_checksum(tcp_pkt, IPPROTO_TCP, sz - IP_H);
     
     DEBUG_WRAP(
 	       PrintNetData(stdout, tcp_pkt, sz);
-	       ClearDumpBuf();
+	       //ClearDumpBuf();
 	       DebugMessage(DEBUG_PLUGIN, "firing response packet\n");
 	       DebugMessage(DEBUG_PLUGIN,
                    "0x%lX:%u -> 0x%lX:%d (seq: 0x%lX  ack: 0x%lX)\n",
@@ -483,4 +484,4 @@ int SendTCPRST(u_long saddr, u_long daddr, u_short sport, u_short dport,
     return 0;
 }
 
-#endif
+#endif /* ENABLE_RESPONSE && !ENABLE_RESPONSE2 */

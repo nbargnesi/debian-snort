@@ -1,5 +1,5 @@
 /*
- *  $Id: libnet-functions.h,v 1.2 2003/10/20 15:03:44 chrisgreen Exp $
+ *  $Id$
  *
  *  libnet-functions.h - Network routine library function prototype header file
  *

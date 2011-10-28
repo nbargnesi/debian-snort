@@ -8,9 +8,10 @@
 ** Copyright (C) 2003 Sourcefire, Inc
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License as published by
-** the Free Software Foundation; either version 2 of the License, or
-** (at your option) any later version.
+** it under the terms of the GNU General Public License Version 2 as
+** published by the Free Software Foundation.  You may not use, modify or
+** distribute this program under any other version of the GNU General
+** Public License.
 **
 ** This program is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -67,6 +68,7 @@ typedef struct _ktrienode {
 } KTRIENODE;
 
 
+#define KTRIE_ROOT_NODES     256
 
 /*
 *
@@ -76,7 +78,7 @@ typedef struct {
   KTRIEPATTERN * patrn; /* List of patterns, built as they are added */
 
   
-  KTRIENODE    * root[256];  /* KTrie nodes */
+  KTRIENODE    * root[KTRIE_ROOT_NODES];  /* KTrie nodes */
  
   int            memory;
   int            nchars;
@@ -84,16 +86,19 @@ typedef struct {
   int 		 duplicates;
 
   int            bcSize;
-  unsigned short bcShift[256];  
+  unsigned short bcShift[KTRIE_ROOT_NODES];  
  
 } KTRIE_STRUCT;
 
 
 
-KTRIE_STRUCT * KTrieNew();
+KTRIE_STRUCT * KTrieNew(void);
 int            KTrieAddPattern( KTRIE_STRUCT *ts, unsigned char * P, int n, int nocase,void*  id );
 int            KTrieCompile(KTRIE_STRUCT * ts);
 int            KTrieSearch( KTRIE_STRUCT * ts, unsigned char * T, 
-               int n, int (*match)(void* id, int index,void* data),void *data );
+                   int n, int (*match)(void* id, int index,void* data),void *data );
+unsigned       KTrieMemUsed(void);
+void           KTrieDelete(KTRIE_STRUCT *k);
+
 
 #endif
