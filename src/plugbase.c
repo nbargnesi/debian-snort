@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -99,6 +100,7 @@
 #endif
 #include "detection-plugins/sp_ftpbounce.h"
 #include "detection-plugins/sp_urilen_check.h"
+#include "detection-plugins/sp_cvs.h"
 
 /* built-in output plugins */
 #include "output-plugins/spo_alert_syslog.h"
@@ -111,6 +113,7 @@
 #include "output-plugins/spo_unified.h"
 #include "output-plugins/spo_log_null.h"
 #include "output-plugins/spo_log_ascii.h"
+#include "output-plugins/spo_unified2.h"
 
 #ifdef ARUBA
 #include "output-plugins/spo_alert_arubaaction.h"
@@ -124,6 +127,8 @@
 #include "output-plugins/spo_alert_sf_socket.h"
 #endif
 
+#include "output-plugins/spo_alert_test.h"
+
 PluginSignalFuncNode *PluginShutdownList;
 PluginSignalFuncNode *PluginCleanExitList;
 PluginSignalFuncNode *PluginRestartList;
@@ -132,11 +137,12 @@ PluginSignalFuncNode *PluginPostConfigList;
 PreprocSignalFuncNode *PreprocShutdownList;
 PreprocSignalFuncNode *PreprocCleanExitList;
 PreprocSignalFuncNode *PreprocRestartList;
+PreprocSignalFuncNode *PreprocResetList;
+PreprocSignalFuncNode *PreprocResetStatsList;
+PreprocGetReassemblyPktFuncNode *PreprocGetReassemblyPktList = NULL;
 
 extern int file_line;
 extern char *file_name;
-
-
 
 
 /**************************** Detection Plugin API ****************************/
@@ -186,11 +192,26 @@ void InitPlugIns()
 #endif
     SetupFTPBounce();
     SetupUriLenCheck();
+    SetupCvs();
 }
 
+
+/****************************************************************************
+ * utils for translation from enum to char*
+ ***************************************************************************/
+
+#ifdef DEBUG
+static const char* optTypeMap[OPT_TYPE_MAX] = {
+    "action", "logging", "detection"
+};
+#endif
+
+#define ENUM2STR(num, map) \
+    ((num < sizeof(map)/sizeof(map[0])) ? map[num] : "undefined")
+    
 /****************************************************************************
  *
- * Function: RegisterPlugin(char *, void (*func)())
+ * Function: RegisterPlugin(char *, void (*func)(), enum OptionType)
  *
  * Purpose:  Associates a rule option keyword with an option setup/linking
  *           function.
@@ -198,16 +219,20 @@ void InitPlugIns()
  * Arguments: keyword => The option keyword to associate with the option
  *                       handler
  *            *func => function pointer to the handler
+ *            type => used to determine where keyword is allowed
  *
  * Returns: void function
  *
  ***************************************************************************/
-void RegisterPlugin(char *keyword, void (*func) (char *, OptTreeNode *, int))
-{
+void RegisterPlugin(
+    char *keyword,
+    void (*func) (char *, OptTreeNode *, int),
+    enum OptionType type
+) {
     KeywordXlateList *idx;
 
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Registering keyword:func => %s:%p\n",
-               keyword, func););
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Registering keyword:func => %s/%s:%p\n",
+               ENUM2STR(type, optTypeMap), keyword, func););
 
     idx = KeywordList;
 
@@ -216,9 +241,10 @@ void RegisterPlugin(char *keyword, void (*func) (char *, OptTreeNode *, int))
         KeywordList = (KeywordXlateList *)SnortAlloc(sizeof(KeywordXlateList));
 
         KeywordList->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
-
         SnortStrncpy(KeywordList->entry.keyword, keyword, strlen(keyword) + 1);
+
         KeywordList->entry.func = func;
+        KeywordList->entry.type = type;
     }
     else
     {
@@ -234,16 +260,15 @@ void RegisterPlugin(char *keyword, void (*func) (char *, OptTreeNode *, int))
         }
 
         idx->next = (KeywordXlateList *)SnortAlloc(sizeof(KeywordXlateList));
-
         idx = idx->next;
 
         idx->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
         SnortStrncpy(idx->entry.keyword, keyword, strlen(keyword) + 1);
+        
         idx->entry.func = func;
+        idx->entry.type = type;
     }
 }
-
-
 
 
 /****************************************************************************
@@ -411,6 +436,7 @@ void AddRspFuncToList(int (*func) (Packet *, struct _RspFpList *), OptTreeNode *
 
 /************************** Preprocessor Plugin API ***************************/
 PreprocessKeywordList *PreprocessKeywords = NULL;
+PreprocessStatsList *PreprocessStats = NULL;
 PreprocessFuncNode *PreprocessList = NULL;
 PreprocessCheckConfigNode *PreprocessConfigCheckList = NULL;
 
@@ -422,6 +448,7 @@ void InitPreprocessors()
     }
     SetupRpcDecode();
     SetupBo();
+//    SetupTelNeg();
     SetupStream4();
     SetupARPspoof();
     SetupHttpInspect();
@@ -465,7 +492,7 @@ void PostConfigInitPlugins()
 
 /****************************************************************************
  *
- * Function: RegisterPreprocessor(char *, void (*func)(u_char *))
+ * Function: RegisterPreprocessor(char *, void (*)(char *))
  *
  * Purpose:  Associates a preprocessor statement with its function.
  *
@@ -476,7 +503,7 @@ void PostConfigInitPlugins()
  * Returns: void function
  *
  ***************************************************************************/
-void RegisterPreprocessor(char *keyword, void (*func) (u_char *))
+void RegisterPreprocessor(char *keyword, void (*func)(char *))
 {
     PreprocessKeywordList *idx;
 
@@ -508,6 +535,7 @@ void RegisterPreprocessor(char *keyword, void (*func) (u_char *))
                 FatalError("%s(%d) => Duplicate preprocessor keyword!\n",
                            file_name, file_line);
             }
+
             idx = idx->next;
         }
 
@@ -522,11 +550,106 @@ void RegisterPreprocessor(char *keyword, void (*func) (u_char *))
         SnortStrncpy(idx->entry.keyword, keyword, strlen(keyword) + 1);
 
         /* set the function pointer to the keyword handler function */
-        idx->entry.func = (void (*)(char *))func;
+        idx->entry.func = func;
     }
 }
 
 
+/****************************************************************************
+ *
+ * Function: RegisterPreprocStats(char *keyword, void (*func)(int))
+ *
+ * Purpose: Registers a function for printing preprocessor final stats
+ *          (or other if it has a use for printing final stats)
+ *
+ * Arguments: keyword => keyword (preprocessor) whose stats will print
+ *            func => function pointer to the handler
+ *
+ * Returns: void function
+ *
+ ***************************************************************************/
+void RegisterPreprocStats(char *keyword, void (*func)(int))
+{
+    PreprocessStatsList *idx;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Registering final stats function: preproc => %s:%p\n", keyword, func););
+
+    idx = PreprocessStats;
+
+    if (idx == NULL)
+    {
+        /* alloc the node */
+        PreprocessStats = (PreprocessStatsList *)SnortAlloc(sizeof(PreprocessStatsList));
+
+        /* alloc space for the keyword */
+        PreprocessStats->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
+
+        /* copy the keyword into the struct */
+        SnortStrncpy(PreprocessStats->entry.keyword, keyword, strlen(keyword) + 1);
+
+        /* set the function pointer to the keyword handler function */
+        PreprocessStats->entry.func = func;
+
+        PreprocessStats->next = NULL;
+    }
+    else
+    {
+        /* loop to the end of the list */
+        while (idx->next != NULL)
+        {
+            if(!strcasecmp(idx->entry.keyword, keyword))
+            {
+                FatalError("%s(%d) => Duplicate final stats keyword!\n",
+                           file_name, file_line);
+            }
+
+            idx = idx->next;
+        }
+
+        idx->next = (PreprocessStatsList *)SnortAlloc(sizeof(PreprocessStatsList));
+
+        idx = idx->next;
+
+        /* alloc space for the keyword */
+        idx->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
+
+        /* copy the keyword into the struct */
+        SnortStrncpy(idx->entry.keyword, keyword, strlen(keyword) + 1);
+
+        /* set the function pointer to the keyword handler function */
+        idx->entry.func = func;
+
+        idx->next = NULL;
+    }
+}
+
+
+/***************************************************************************
+ *
+ * Function: PreprocessStatsFree(void)
+ *
+ * Purpose: Free memory allocated by RegisterPreprocStats
+ *
+ * Arguments: none
+ *
+ * Returns: void function
+ *
+ **************************************************************************/
+void PreprocessStatsFree(void)
+{
+    PreprocessStatsList *tmp;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Freeing stats function structures\n"););
+
+    while (PreprocessStats != NULL)
+    {
+        if (PreprocessStats->entry.keyword != NULL)
+            free(PreprocessStats->entry.keyword);
+        tmp = PreprocessStats;
+        PreprocessStats = PreprocessStats->next;
+        free(tmp);
+    }
+}
 
 
 /****************************************************************************
@@ -585,6 +708,31 @@ int SetPreprocBit(Packet *p, unsigned int preproc_id)
         preproc_bit = idx->preproc_bit;
         return boSetBit(p->preprocessor_bits, preproc_bit);
     }
+    return 0;
+}
+
+int IsPreprocGetReassemblyPktBitSet(Packet *p, unsigned int preproc_id)
+{
+    PreprocessFuncNode *idx = sfghash_find(preprocIdTable, &preproc_id);
+    if (idx)
+    {
+        int preproc_bit = idx->preproc_bit;
+        return boIsBitSet(p->preproc_reassembly_pkt_bits, preproc_bit);
+    }
+
+    return 0;
+}
+
+int SetPreprocGetReassemblyPktBit(Packet *p, unsigned int preproc_id)
+{
+    PreprocessFuncNode *idx = sfghash_find(preprocIdTable, &preproc_id);
+    if (idx)
+    {
+        int preproc_bit = idx->preproc_bit;
+        p->packet_flags |= PKT_PREPROC_RPKT;
+        return boSetBit(p->preproc_reassembly_pkt_bits, preproc_bit);
+    }
+    
     return 0;
 }
 
@@ -699,27 +847,68 @@ PreprocessCheckConfigNode *AddFuncToConfigCheckList(void (*func)(void))
     return idx;
 }
 
-/* functions to aid in cleaning up aftre plugins */
+/* functions to aid in cleaning up after plugins */
 void AddFuncToPreprocRestartList(void (*func) (int, void *), void *arg,
-        unsigned short priority, unsigned int preproc_id)
+                                 unsigned short priority, unsigned int preproc_id)
 {
     PreprocRestartList = AddFuncToPreprocSignalList(func, arg, PreprocRestartList, priority, preproc_id);
 }
 
 void AddFuncToPreprocCleanExitList(void (*func) (int, void *), void *arg,
-        unsigned short priority, unsigned int preproc_id)
+                                   unsigned short priority, unsigned int preproc_id)
 {
     PreprocCleanExitList = AddFuncToPreprocSignalList(func, arg, PreprocCleanExitList, priority, preproc_id);
 }
 
 void AddFuncToPreprocShutdownList(void (*func) (int, void *), void *arg,
-        unsigned short priority, unsigned int preproc_id)
+                                  unsigned short priority, unsigned int preproc_id)
 {
     PreprocShutdownList = AddFuncToPreprocSignalList(func, arg, PreprocShutdownList, priority, preproc_id);
 }
 
+void AddFuncToPreprocResetList(void (*func) (int, void *), void *arg,
+                               unsigned short priority, unsigned int preproc_id)
+{
+    PreprocResetList = AddFuncToPreprocSignalList(func, arg, PreprocResetList, priority, preproc_id);
+}
+
+void AddFuncToPreprocResetStatsList(void (*func) (int, void *), void *arg,
+                                    unsigned short priority, unsigned int preproc_id)
+{
+    PreprocResetStatsList = AddFuncToPreprocSignalList(func, arg, PreprocResetStatsList, priority, preproc_id);
+}
+
+void AddFuncToPreprocGetReassemblyPktList(void * (*func)(void), unsigned int preproc_id)
+{
+    PreprocGetReassemblyPktFuncNode *idx = PreprocGetReassemblyPktList;
+    PreprocGetReassemblyPktFuncNode *tmp;
+
+    if (idx == NULL)
+    {
+        idx = (PreprocGetReassemblyPktFuncNode *)
+            SnortAlloc(sizeof(PreprocGetReassemblyPktFuncNode));
+
+        idx->func = func;
+        idx->preproc_id = preproc_id;
+    }
+    else
+    {
+        /* just insert at front of list */
+        tmp = idx;
+        idx = (PreprocGetReassemblyPktFuncNode *)
+            SnortAlloc(sizeof(PreprocGetReassemblyPktFuncNode));
+
+        idx->next = tmp;
+        idx->func = func;
+        idx->preproc_id = preproc_id;
+    }
+
+    PreprocGetReassemblyPktList = idx;
+}
+
 PreprocSignalFuncNode *AddFuncToPreprocSignalList(void (*func) (int, void *), void *arg,
-                                          PreprocSignalFuncNode * list, unsigned short priority, unsigned int preproc_id)
+                                                  PreprocSignalFuncNode * list, unsigned short priority,
+                                                  unsigned int preproc_id)
 {
     PreprocSignalFuncNode *idx;
     PreprocSignalFuncNode *insertAfter = NULL;
@@ -798,6 +987,7 @@ void InitOutputPlugins()
     AlertCSVSetup();
     LogNullSetup();
     UnifiedSetup();
+    Unified2Setup();
     LogAsciiSetup();
 
 #ifdef ARUBA
@@ -812,6 +1002,8 @@ void InitOutputPlugins()
 #ifdef HAVE_LIBPRELUDE
     AlertPreludeSetup();
 #endif
+
+    AlertTestSetup();
 }
 
 int ActivateOutputPlugin(char *plugin_name, char *plugin_options)
@@ -886,7 +1078,7 @@ OutputKeywordNode *GetOutputPlugin(char *plugin_name)
  * Returns: void function
  *
  ***************************************************************************/
-void RegisterOutputPlugin(char *keyword, int type, void (*func) (u_char *))
+void RegisterOutputPlugin(char *keyword, int type, OutputInitFunc func)
 {
     OutputKeywordList *idx;
 
@@ -933,7 +1125,7 @@ void RegisterOutputPlugin(char *keyword, int type, void (*func) (u_char *))
     idx->entry.node_type = (char) type;
 
     /* set the function pointer to the keyword handler function */
-    idx->entry.func = (void (*)(char *))func;
+    idx->entry.func = func;
 }
 
 
@@ -1089,7 +1281,7 @@ void SetOutputList(void (*func) (Packet *, char *, void *, Event *),
 
 int PacketIsIP(Packet * p)
 {
-    if(p->iph != NULL)
+    if(IPH_IS_VALID(p))
         return 1;
 
     return 0;
@@ -1099,7 +1291,7 @@ int PacketIsIP(Packet * p)
 
 int PacketIsTCP(Packet * p)
 {
-    if(p->iph != NULL && p->tcph != NULL)
+    if(IPH_IS_VALID(p) && p->tcph != NULL)
         return 1;
 
     return 0;
@@ -1109,7 +1301,7 @@ int PacketIsTCP(Packet * p)
 
 int PacketIsUDP(Packet * p)
 {
-    if(p->iph != NULL && p->udph != NULL)
+    if(IPH_IS_VALID(p) && p->udph != NULL)
         return 1;
 
     return 0;
@@ -1119,7 +1311,7 @@ int PacketIsUDP(Packet * p)
 
 int PacketIsICMP(Packet * p)
 {
-    if(p->iph != NULL && p->icmph != NULL)
+    if(IPH_IS_VALID(p) && p->icmph != NULL)
         return 1;
 
     return 0;
@@ -1129,7 +1321,11 @@ int PacketIsICMP(Packet * p)
 
 int DestinationIpIsHomenet(Packet * p)
 {
+#ifdef SUP_IP6
+    if(sfip_contains(&pv.homenet, GET_DST_IP(p)) == SFIP_CONTAINS)
+#else
     if((p->iph->ip_dst.s_addr & pv.netmask) == pv.homenet)
+#endif
     {
         return 1;
     }
@@ -1140,7 +1336,11 @@ int DestinationIpIsHomenet(Packet * p)
 
 int SourceIpIsHomenet(Packet * p)
 {
+#ifdef SUP_IP6
+    if(sfip_contains(&pv.homenet, GET_SRC_IP(p)) == SFIP_CONTAINS)
+#else
     if((p->iph->ip_src.s_addr & pv.netmask) == pv.homenet)
+#endif
     {
         return 1;
     }
@@ -1156,7 +1356,7 @@ int CheckNet(struct in_addr * compare, struct in_addr * compare2)
     return 0;
 }
 
-/* functions to aid in cleaning up aftre plugins */
+/* functions to aid in cleaning up after plugins */
 void AddFuncToRestartList(void (*func) (int, void *), void *arg)
 {
     PluginRestartList = AddFuncToSignalList(func, arg, PluginRestartList);
@@ -1257,6 +1457,9 @@ char *GetIP(char * iface)
     struct ifreq ifr;
     struct sockaddr_in *addr;
     int s;
+#ifdef SUP_IP6
+    sfip_t ret;
+#endif
 
     if(iface)
     {
@@ -1279,7 +1482,13 @@ char *GetIP(char * iface)
         }
         close(s);
 
+#ifdef SUP_IP6
+// XXX-IPv6 uses ioctl to populate a sockaddr_in structure ... but what if the interface only has an IPv6 address?
+        sfip_set_raw(&ret, addr, AF_INET); 
+        return SnortStrdup(sfip_ntoa(&ret));
+#else
         return SnortStrdup(inet_ntoa(addr->sin_addr));
+#endif
     }
     else
     {
@@ -1451,7 +1660,7 @@ char *GetCurrentTimestamp()
  * Returns: data base64 encoded as a char *
  *
  ***************************************************************************/
-char * base64(u_char * xdata, int length)
+char * base64(const u_char * xdata, int length)
 {
     int count, cols, bits, c, char_count;
     unsigned char alpha[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";  /* 64 bytes */
@@ -1532,7 +1741,7 @@ char * base64(u_char * xdata, int length)
  * Returns: char * -- You must free this char * when you are done with it.
  *
  ***************************************************************************/
-char *ascii(u_char *xdata, int length)
+char *ascii(const u_char *xdata, int length)
 {
      char *d_ptr, *ret_val;
      int i,count = 0;
@@ -1612,7 +1821,7 @@ char *ascii(u_char *xdata, int length)
  * Returns: char * -- You must free this char * when you are done with it.
  *
  ***************************************************************************/
-char *hex(u_char *xdata, int length)
+char *hex(const u_char *xdata, int length)
 {
     int x;
     char *rval = NULL;
@@ -1641,12 +1850,12 @@ char *hex(u_char *xdata, int length)
 
 
 
-char *fasthex(u_char *xdata, int length)
+char *fasthex(const u_char *xdata, int length)
 {
     char conv[] = "0123456789ABCDEF";
     char *retbuf = NULL; 
-    char *index;
-    char *end;
+    const u_char *index;
+    const u_char *end;
     char *ridx;
 
     index = xdata;

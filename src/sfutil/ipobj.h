@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -48,12 +48,12 @@
 enum {
   NOFAMILY,
   IPV4_FAMILY,
-  IPV6_FAMILY,
+  IPV6_FAMILY
 };
 
 enum {
   IPV4_LEN=4,
-  IPV6_LEN=16,
+  IPV6_LEN=16
 };
 
 typedef struct {

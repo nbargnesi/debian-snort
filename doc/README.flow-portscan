@@ -317,3 +317,15 @@ server-scanner-limit 50 \
 alert-mode all \
 output-mode msg \
 server-learning-time 3600
+
+Alerts
+=====
+
+flow-portscan uses GID 121 and can produce the following alerts:
+
+SID   Description
+---   -----------
+1     Fixed Scale Scanner Limit Exceeded
+2     Sliding Scale Scanner Limit Exceeded
+3     Fixed Scale Talker Limit Exceeded 
+4     Sliding Scale Talker Limit Exceeded

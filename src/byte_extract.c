@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2003 Sourcefire, Inc.
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -50,8 +50,8 @@
  *
  * @returns 0 on success, otherwise failure
  */
-int byte_extract(int endianess, int bytes_to_grab, u_int8_t *ptr,
-                 u_int8_t *start, u_int8_t *end,
+int byte_extract(int endianess, int bytes_to_grab, const u_int8_t *ptr,
+                 const u_int8_t *start, const u_int8_t *end,
                  u_int32_t *value)
 {
     if(endianess != LITTLE && endianess != BIG)
@@ -127,8 +127,8 @@ int byte_extract(int endianess, int bytes_to_grab, u_int8_t *ptr,
  *
  * @returns 0 on success, otherwise failure
  */
-int string_extract(int bytes_to_grab, int base, u_int8_t *ptr,
-                   u_int8_t *start, u_int8_t *end,
+int string_extract(int bytes_to_grab, int base, const u_int8_t *ptr,
+                   const u_int8_t *start, const u_int8_t *end,
                    u_int32_t *value)
 {
     char byte_array[TEXTLEN];
@@ -173,7 +173,7 @@ int string_extract(int bytes_to_grab, int base, u_int8_t *ptr,
             
     printf("converted value: 0x%08X (%u) %s\n", *value, *value, (char *) byte_array);
 #endif /* TEST_BYTE_EXTRACT */    
-    return 0;
+    return(parse_helper - byte_array);  /* Return the number of bytes actually extracted */
 }
 
 
@@ -307,7 +307,7 @@ void test_string()
     int datalen = strlen(stringdata);
     u_int32_t ret;
     
-    if(string_extract(4, 10, stringdata,  stringdata, stringdata + datalen,  &ret))
+    if(string_extract(4, 10, stringdata,  stringdata, stringdata + datalen,  &ret) < 0)
     {
         printf("TS1: Failed\n");
     }
@@ -316,7 +316,7 @@ void test_string()
         printf("TS1: value %x %u\n", ret, ret);
     }
 
-    if(string_extract(10, 10, stringdata,  stringdata, stringdata + datalen,  &ret))
+    if(string_extract(10, 10, stringdata,  stringdata, stringdata + datalen,  &ret) < 0)
     {
         printf("TS2: Failed\n");
     }
@@ -325,7 +325,7 @@ void test_string()
         printf("TS2: value %x %u\n", ret, ret);
     }
 
-    if(string_extract(9, 10, stringdata,  stringdata, stringdata + datalen,  &ret))
+    if(string_extract(9, 10, stringdata,  stringdata, stringdata + datalen,  &ret) < 0)
     {
         printf("TS3: Failed\n");
     }
@@ -335,7 +335,7 @@ void test_string()
     }
 
     
-    if(string_extract(19, 10, stringdata,  stringdata, stringdata + datalen,  &ret))
+    if(string_extract(19, 10, stringdata,  stringdata, stringdata + datalen,  &ret) < 0)
     {
         printf("TS4: Failed Normally\n");
     }

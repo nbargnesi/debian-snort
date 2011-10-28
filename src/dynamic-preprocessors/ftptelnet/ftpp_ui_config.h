@@ -1,7 +1,7 @@
 /*
  * ftpp_ui_config.h
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -41,6 +41,7 @@
 
 #include "ftpp_include.h"
 #include "ftpp_util_kmap.h"
+#include "ipv6_port.h"
 
 /*
  * Defines
@@ -159,7 +160,7 @@ typedef struct s_FTP_PARAM_FMT
     struct s_FTP_PARAM_FMT **choices;
     int numChoices;
     int prev_optional; /* Only set if optional is set */
-    char *next_param; /* Pointer to buffer for the next parameter.
+    const char *next_param; /* Pointer to buffer for the next parameter.
                          To be used to backtrack for optional
                          parameters that don't match. */
 
@@ -217,7 +218,7 @@ typedef struct s_FTP_SERVER_PROTO_CONF
 
 typedef struct s_FTP_BOUNCE_TO
 {
-    unsigned long ip;
+    snort_ip ip;
     int relevant_bits;
     unsigned short portlo;
     unsigned short porthi;
@@ -298,10 +299,8 @@ int ftpp_ui_config_reset_ftp_cmd(FTP_CMD_CONF *FTPCmd);
 int ftpp_ui_config_reset_telnet_proto(TELNET_PROTO_CONF *ClientConf);
 
 int ftpp_ui_config_add_ftp_client(FTPTELNET_GLOBAL_CONF *GlobalConf,
-                            unsigned long ClientIP, 
-                            FTP_CLIENT_PROTO_CONF *ClientConf);
+                            snort_ip_p ClientIP, FTP_CLIENT_PROTO_CONF *ClientConf);
 int ftpp_ui_config_add_ftp_server(FTPTELNET_GLOBAL_CONF *GlobalConf,
-                            unsigned long ClientIP, 
-                            FTP_SERVER_PROTO_CONF *ClientConf);
+                            snort_ip_p ClientIP, FTP_SERVER_PROTO_CONF *ClientConf);
 
 #endif

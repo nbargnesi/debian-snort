@@ -1,7 +1,7 @@
 /*
  * ftpp_ui_server_lookup.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -57,7 +57,7 @@
  */
 int ftpp_ui_server_lookup_init(SERVER_LOOKUP **ServerLookup)
 {
-    *ServerLookup = KMapNew(FTPTelnetCleanupFTPServerConf); 
+    *ServerLookup = KMapNew((KMapUserFreeFunc)FTPTelnetCleanupFTPServerConf); 
     if(*ServerLookup == NULL)
     {
         return FTPP_MEM_ALLOC_FAIL;

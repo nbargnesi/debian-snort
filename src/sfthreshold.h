@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -23,6 +23,7 @@
 #define SF_THRESHOLD
 
 #include "sfthd.h"
+#include "ipv6_port.h"
 
 void ParseThreshold2( THDX_STRUCT * thdx, char * s );
 void ProcessThresholdOptions( char * args);
@@ -33,8 +34,9 @@ int  sfthreshold_init( void );
 void sfthreshold_reset(void);
 
 int  sfthreshold_create( THDX_STRUCT * thdx  );
-int  sfthreshold_test( unsigned gen_id,unsigned  sig_id, unsigned sip, unsigned dip, long  curtime );
+int  sfthreshold_test( unsigned gen_id,unsigned  sig_id, snort_ip_p sip, snort_ip_p dip, long  curtime );
 
 void print_thresholding();
+void sfthreshold_reset_active(void);
 
 #endif

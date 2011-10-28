@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -22,12 +22,13 @@
 #ifndef __HI_INCLUDE_H__
 #define __HI_INCLUDE_H__
 
+#include "sf_types.h"
+#include "debug.h"
+#include "ipv6_port.h"
+
 #define HI_UNKNOWN_METHOD 1
 #define HI_POST_METHOD 2
 #define HI_GET_METHOD 4
-
-#include "debug.h"
-#include "rules.h" /* For UINT64 */
 
 typedef struct _hi_stats {
     UINT64 unicode;
@@ -54,5 +55,4 @@ extern HIStats hi_stats;
 #endif
 
 #endif /* endif for INLINE */
-
 #endif

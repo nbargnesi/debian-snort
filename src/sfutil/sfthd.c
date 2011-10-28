@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -169,8 +169,10 @@ sfthd_create_threshold_local(	THD_STRUCT * thd,
 				int          priority,
 				int          count,
 				int          seconds,
-				unsigned     ip_address,
+				snort_ip_p     ip_address,
+#ifndef SUP_IP6
 				unsigned     ip_mask,
+#endif
                 unsigned     not_flag)
 {
     SFGHASH  * sfthd_hash;
@@ -302,18 +304,28 @@ sfthd_create_threshold_local(	THD_STRUCT * thd,
     sfthd_node->priority  = priority;
     sfthd_node->count     = count;
     sfthd_node->seconds   = seconds;
+#ifdef SUP_IP6
+    sfthd_node->ip_address= *ip_address;
+#else
     sfthd_node->ip_address= ip_address;
     sfthd_node->ip_mask   = ip_mask;
+#endif
     sfthd_node->not_flag  = not_flag;
    
     if( type == THD_TYPE_SUPPRESS )
     {
-    	sfthd_node->priority = THD_PRIORITY_SUPPRESS;
-
+#ifdef SUP_IP6
+        if( !sfip_bits(&sfthd_node->ip_address) && sfip_is_set(ip_address))
+        {
+            /* not necessary for IP6 */
+        }
+#else
     	if( sfthd_node->ip_mask == 0 && sfthd_node->ip_address != 0 )
     	{
             sfthd_node->ip_mask = 0xffffffff;
-	    }
+	}
+#endif
+    	sfthd_node->priority = THD_PRIORITY_SUPPRESS;
     }
 
     thd->count++;
@@ -390,8 +402,11 @@ sfthd_create_threshold_global(	THD_STRUCT * thd,
 				int          priority,
 				int          count,
 				int          seconds,
-				unsigned     ip_address,
-				unsigned     ip_mask )
+				snort_ip_p     ip_address
+#ifndef SUP_IP6
+				,unsigned     ip_mask 
+#endif
+                )
 {
     THD_NODE * sfthd_node;
 	
@@ -429,13 +444,31 @@ sfthd_create_threshold_global(	THD_STRUCT * thd,
     sfthd_node->priority  = priority;
     sfthd_node->count     = count;
     sfthd_node->seconds   = seconds;
+#ifdef SUP_IP6
+    sfthd_node->ip_address= *ip_address;
+#else
     sfthd_node->ip_address= ip_address;
     sfthd_node->ip_mask   = ip_mask;
+#endif
    
+#ifdef SUP_IP6
+    if( !sfip_bits(&sfthd_node->ip_address) && sfip_is_set(ip_address))
+    {
+        if(sfip_family(ip_address) == AF_INET)
+        {
+            sfip_set_bits(&sfthd_node->ip_address, 32);
+        }
+        else
+        {
+            sfip_set_bits(&sfthd_node->ip_address, 128);
+        }
+    }
+#else
     if( sfthd_node->ip_mask == 0 && sfthd_node->ip_address != 0 )
     {
         sfthd_node->ip_mask = 0xffffffff;
     }
+#endif
 
     /* need a hash of these where the key=[gen_id,sig_id] => THD_GNODE_KEY, the data = THD_NODE's */
     if( gen_id == 0)/* do em all */
@@ -496,8 +529,10 @@ int sfthd_create_threshold(	THD_STRUCT * thd,
 				int          priority,
 				int          count,
 				int          seconds,
-				unsigned     ip_address,
+				snort_ip_p     ip_address,
+#ifndef SUP_IP6
                 unsigned     ip_mask,
+#endif
                 unsigned     not_flag)
 {
 
@@ -511,8 +546,12 @@ int sfthd_create_threshold(	THD_STRUCT * thd,
 				     priority,
 				     count,
 				     seconds,
-				     ip_address,
-				     ip_mask );
+				     ip_address
+#ifndef SUP_IP6
+				     ,ip_mask 
+#endif
+
+);
 
   }
   else
@@ -529,7 +568,9 @@ int sfthd_create_threshold(	THD_STRUCT * thd,
                                             count,
                                             seconds,
                                             ip_address,
+#ifndef SUP_IP6
                                             ip_mask,
+#endif
                                             not_flag );
   }
 }
@@ -563,14 +604,15 @@ static char * printIP(unsigned u )
 static
 int sfthd_test_object(	THD_STRUCT * thd,
 			THD_NODE   * sfthd_node,
-			unsigned     sip,   
-			unsigned     dip,
+			snort_ip_p     sip,   
+			snort_ip_p     dip,
 			time_t       curtime )  
 {
     THD_IP_NODE_KEY key;
     THD_IP_NODE     data,*sfthd_ip_node;
     int             status=0;
-    unsigned        ip,dt;
+    snort_ip_p        ip;
+    unsigned        dt;
 
 #ifdef THD_DEBUG
         printf("THD_DEBUG: Key THD_NODE IP=%s,",printIP((unsigned)sfthd_node->ip_address) );
@@ -600,8 +642,18 @@ int sfthd_test_object(	THD_STRUCT * thd,
 #ifdef THD_DEBUG
         printf("THD_DEBUG: SUPPRESS NODE Testing...\n");fflush(stdout);
 #endif
-        if((sfthd_node->ip_address == (sfthd_node->ip_mask & ip) && !sfthd_node->not_flag) ||
-           (sfthd_node->ip_address != (sfthd_node->ip_mask & ip) && sfthd_node->not_flag))
+
+#ifdef SUP_IP6
+        if((IP_EQUALITY(&sfthd_node->ip_address, ip) && 
+            !sfthd_node->not_flag) ||
+           (!IP_EQUALITY(&sfthd_node->ip_address, ip) && 
+            sfthd_node->not_flag))
+#else
+        if((sfthd_node->ip_address == (sfthd_node->ip_mask & ip) && 
+            !sfthd_node->not_flag) ||
+           (sfthd_node->ip_address != (sfthd_node->ip_mask & ip) && 
+            sfthd_node->not_flag))
+#endif
         { 
 #ifdef THD_DEBUG
             printf("THD_DEBUG: SUPPRESS NODE, do not log events with this IP\n");fflush(stdout);
@@ -616,11 +668,19 @@ int sfthd_test_object(	THD_STRUCT * thd,
     */
     
     /* Set up the key */
+#ifdef SUP_IP6
+    key.ip     = *ip;
+    key.thd_id = sfthd_node->thd_id;
+
+    /* Set up a new data element */
+    data.ip     = *ip;
+#else
     key.ip     = ip;
     key.thd_id = sfthd_node->thd_id;
 
     /* Set up a new data element */
     data.ip     = ip;
+#endif
     data.count  = 1;
     data.tstart = curtime; /* Event time */
 
@@ -762,14 +822,15 @@ int sfthd_test_gobject(	THD_STRUCT * thd,
 			THD_NODE   * sfthd_node,  
 			unsigned     gen_id,     /* from current event */
 			unsigned     sig_id,     /* from current event */
-			unsigned     sip,        /* " */
-			unsigned     dip,        /* " */
+			snort_ip_p     sip,        /* " */
+			snort_ip_p     dip,        /* " */
 			time_t       curtime )   
 {
     THD_IP_GNODE_KEY key;
     THD_IP_GNODE     data, *sfthd_ip_node;
     int              status=0;
-    unsigned         ip, dt;
+    snort_ip_p         ip;
+    unsigned         dt;
 
 #ifdef THD_DEBUG
         printf("THD_DEBUG-GLOBAL:  gen_id=%u, sig_id=%u\n",gen_id,sig_id);
@@ -802,7 +863,12 @@ int sfthd_test_gobject(	THD_STRUCT * thd,
 #ifdef THD_DEBUG
         printf("THD_DEBUG: G-SUPPRESS NODE Testing...\n");fflush(stdout);
 #endif
+
+#ifdef SUP_IP6
+        if( IP_EQUALITY(&sfthd_node->ip_address, ip) )
+#else
         if( sfthd_node->ip_address == (sfthd_node->ip_mask & ip) )
+#endif
 	{ 
 #ifdef THD_DEBUG
             printf("THD_DEBUG: G-SUPPRESS NODE, do not log events with this IP\n");fflush(stdout);
@@ -817,7 +883,11 @@ int sfthd_test_gobject(	THD_STRUCT * thd,
     */
     
     /* Set up the key */
+#ifdef SUP_IP6
+    key.ip     = *ip;
+#else
     key.ip     = ip;
+#endif
     key.gen_id = sfthd_node->gen_id;
     key.sig_id = sig_id;
 
@@ -972,8 +1042,8 @@ int sfthd_test_gobject(	THD_STRUCT * thd,
 int sfthd_test_threshold( THD_STRUCT * thd,
                           unsigned gen_id,  
                           unsigned sig_id,
-                          unsigned sip,   
-                          unsigned dip,
+                          snort_ip_p sip,   
+                          snort_ip_p dip,
                           long     curtime )  
 {
     SFGHASH  * sfthd_hash; 
@@ -1178,9 +1248,16 @@ int sfthd_show_objects( THD_STRUCT * thd )
 		  
                 if( sfthd_node->type == THD_TYPE_SUPPRESS )
                 {
+#ifdef SUP_IP6
+                    printf(".........ip      =%s\n", 
+                        sfip_to_str(&sfthd_node->ip_address));
+                    printf(".........mask    =%d\n",
+                        sfip_bits(&sfthd_node->ip_address));
+#else
                     printf(".........ip      =%d\n",sfthd_node->ip_address);
                     printf(".........mask    =%d\n",sfthd_node->ip_mask);
                     printf(".........not_flag=%d\n",sfthd_node->ip_mask);
+#endif
                 }
                 else
                 {

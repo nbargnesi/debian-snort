@@ -3,7 +3,7 @@
 **
 **  mpse.h       
 **
-** Copyright (C) 2002 Sourcefire,Inc
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 **
 ** Multi-Pattern Search Engine
@@ -39,6 +39,7 @@
 #include "config.h"
 #endif
 
+#include "sf_types.h"
 #include "bitop.h"
 
 /*
@@ -47,10 +48,6 @@
 */
 #ifndef CDECL 
 #define CDECL 
-#endif
-
-#ifndef UINT64
-#define UINT64 unsigned long long
 #endif
 
 
@@ -68,10 +65,13 @@
 #define MPSE_ACSB     9 
 #define MPSE_AC_BNFA   10 
 
+#define MPSE_INCREMENT_GLOBAL_CNT 1
+#define MPSE_DONT_INCREMENT_GLOBAL_COUNT 0
+
 /*
 ** PROTOTYPES
 */
-void * mpseNew( int method );
+void * mpseNew( int method, int use_global_counter_flag );
 void   mpseFree( void * pv );
 
 int  mpseAddPattern  ( void * pv, void * P, int m, 
@@ -83,7 +83,7 @@ int  mpsePrepPatterns  ( void * pv );
 
 void mpseSetRuleMask   ( void *pv, BITOP * rm );
 
-int  mpseSearch( void *pv, unsigned char * T, int n, 
+int  mpseSearch( void *pv, const unsigned char * T, int n, 
      int ( *action )(void* id, int index, void *data), 
      void * data, int* current_state ); 
 

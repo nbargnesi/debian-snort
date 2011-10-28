@@ -1,7 +1,7 @@
 /*
  * ftp_bounce_lookup.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -59,7 +59,7 @@
  */
 int ftp_bounce_lookup_init(BOUNCE_LOOKUP **BounceLookup)
 {
-    KMAP *km = KMapNew(FTPTelnetCleanupFTPBounceTo); 
+    KMAP *km = KMapNew((KMapUserFreeFunc)FTPTelnetCleanupFTPBounceTo); 
     *BounceLookup = km;
     if(*BounceLookup == NULL)
     {

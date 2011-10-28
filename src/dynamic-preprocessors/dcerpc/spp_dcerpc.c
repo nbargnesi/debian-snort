@@ -1,7 +1,7 @@
 /*
  * spp_dcerpc.c
  *
- * Copyright (C) 2004-2006 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire,Inc
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -76,7 +76,6 @@
 #ifdef PERF_PROFILING
 PreprocStats dcerpcPerfStats;
 PreprocStats dcerpcDetectPerfStats;
-int dcerpcDetectCalled = 0;
 #endif
 
 /*
@@ -90,9 +89,11 @@ int dcerpcDetectCalled = 0;
  */
 #define CONF_SEPARATORS " \t\n\r"
  
-void DCERPCInit(u_char *);
+void DCERPCInit(char *);
 void ProcessDCERPCPacket(void *, void *);
-void DCERPCCleanExitFunction(int signal, void *data);
+static void DCERPCCleanExitFunction(int, void *);
+static void DCERPCReset(int, void *);
+static void DCERPCResetStats(int, void *);
 
 
 /*
@@ -112,12 +113,12 @@ void SetupDCERPC()
        the preproc list */
     _dpd.registerPreproc("dcerpc", DCERPCInit);
 
-    DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC,"Preprocessor: DCERPC in setup...\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"Preprocessor: DCERPC in setup...\n"););
 }
 
 
 /*
- * Function: DCERPCInit(u_char *)
+ * Function: DCERPCInit(char *)
  *
  * Purpose: Processes the args sent to the preprocessor, sets up the
  *          port list, links the processing function into the preproc
@@ -128,7 +129,7 @@ void SetupDCERPC()
  * Returns: void function
  *
  */
-void DCERPCInit(u_char *args)
+void DCERPCInit(char *args)
 {
     char ErrorString[ERRSTRLEN];
     int  iErrStrLen = ERRSTRLEN - 1;
@@ -138,7 +139,7 @@ void DCERPCInit(u_char *args)
 
     ErrorString[ERRSTRLEN - 1] = '\0';
 
-    DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC,"Preprocessor: DCERPC Initialized\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"Preprocessor: DCERPC Initialized\n"););
 
     /* parse the argument list into a list of ports to normalize */
     
@@ -150,19 +151,36 @@ void DCERPCInit(u_char *args)
         DynamicPreprocessorFatalMessage("%s(%d) => %s\n", *_dpd.config_file, *_dpd.config_line, ErrorString);
     }
 
+    /* Init reassembly packet */
+    DCERPC_InitPacket();
+
     /* Set the preprocessor function into the function list */
 	_dpd.addPreproc(ProcessDCERPCPacket, PRIORITY_APPLICATION, PP_DCERPC);
 	_dpd.addPreprocExit(DCERPCCleanExitFunction, NULL, PRIORITY_LAST, PP_DCERPC);
+	_dpd.addPreprocReset(DCERPCReset, NULL, PRIORITY_LAST, PP_DCERPC);
+	_dpd.addPreprocResetStats(DCERPCResetStats, NULL, PRIORITY_LAST, PP_DCERPC);
+	_dpd.addPreprocGetReassemblyPkt(DCERPC_GetReassemblyPkt, PP_DCERPC);
 
 #ifdef PERF_PROFILING
     _dpd.addPreprocProfileFunc("dcerpc", &dcerpcPerfStats, 0, _dpd.totalPerfStats);
 #endif
 }
 
-
+#if 0
 static void DCERPC_DisableDetect(SFSnortPacket *p)
 {
     _dpd.disableAllDetect(p);
+
+    _dpd.setPreprocBit(p, PP_SFPORTSCAN);
+    _dpd.setPreprocBit(p, PP_PERFMONITOR);
+    _dpd.setPreprocBit(p, PP_STREAM4);
+    _dpd.setPreprocBit(p, PP_STREAM5);
+}
+#endif
+
+static void DCERPC_DisablePreprocessors(SFSnortPacket *p)
+{
+    _dpd.disablePreprocessors(p);
 
     _dpd.setPreprocBit(p, PP_SFPORTSCAN);
     _dpd.setPreprocBit(p, PP_PERFMONITOR);
@@ -185,11 +203,10 @@ static void DCERPC_DisableDetect(SFSnortPacket *p)
 void ProcessDCERPCPacket(void *pkt, void *context)
 {
 	SFSnortPacket *p = (SFSnortPacket *)pkt;
-    int            detected = 0;
     u_int32_t      session_flags = 0;
     PROFILE_VARS;
 
-    DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC,"DCERPC packet with %d bytes\n", p->payload_size););
+    DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"DCERPC packet with %d bytes\n", p->payload_size););
 
     /* no data to inspect */
     if (p->payload_size == 0)
@@ -199,13 +216,13 @@ void ProcessDCERPCPacket(void *pkt, void *context)
        completed before processing anything */
     if(!IsTCP(p))
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC,"It isn't TCP session traffic\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"It isn't TCP session traffic\n"););
         return;
     }
 
     if(p->flags & FLAG_FROM_SERVER)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC,"This is from a server\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_DCERPC,"This is from a server\n"););
         return;
     }
 
@@ -220,7 +237,7 @@ void ProcessDCERPCPacket(void *pkt, void *context)
 
     if ( !_dpd.streamAPI )
 	{
-		DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "Error: Failed to get Stream API - Stream not enabled?\n"););
+		DEBUG_WRAP(DebugMessage(DEBUG_DCERPC, "Error: Failed to get Stream API - Stream not enabled?\n"););
         return;
 	}
 
@@ -237,44 +254,10 @@ void ProcessDCERPCPacket(void *pkt, void *context)
 
     PREPROC_PROFILE_START(dcerpcPerfStats);
 
-    /* Okay, do something with it... */
-    if (DCERPCDecode(p) == 0)
-    {
-        PREPROC_PROFILE_END(dcerpcPerfStats);
-        return;
-    }
+    if (DCERPCDecode(p))
+        DCERPC_DisablePreprocessors(p);
 
-    PREPROC_PROFILE_START(dcerpcDetectPerfStats);
-
-    detected = _dpd.detect(p);
-
-#ifdef PERF_PROFILING
-    dcerpcDetectCalled = 1;
-#endif
-
-    PREPROC_PROFILE_END(dcerpcDetectPerfStats);
-
-    /* Turn off detection since we've already done it. */
-    DCERPC_DisableDetect(p);
-     
     PREPROC_PROFILE_END(dcerpcPerfStats);
-
-#ifdef PERF_PROFILING
-    if (dcerpcDetectCalled)
-    {
-        dcerpcPerfStats.ticks -= dcerpcDetectPerfStats.ticks;
-        /* And Reset ticks to 0 */
-        dcerpcDetectPerfStats.ticks = 0;
-        dcerpcDetectCalled = 0;
-    }
-#endif
-
-    if ( detected )
-    {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_DCERPC, "DCE/RPC vulnerability detected\n"););
-    }
-
-    return;
 }
 
 /* 
@@ -291,8 +274,19 @@ void ProcessDCERPCPacket(void *pkt, void *context)
  *       
  * Returns: void function
  */                   
-void DCERPCCleanExitFunction(int signal, void *data)
+static void DCERPCCleanExitFunction(int signal, void *data)
 {    
     DCERPC_Exit();
 }
+
+static void DCERPCReset(int signal, void *data)
+{
+    return;
+}
+
+static void DCERPCResetStats(int signal, void *data)
+{
+    return;
+}
+
 

@@ -6,7 +6,7 @@
 **
 ** Aho-Corasick State Machine -  uses a Deterministic Finite Automata - DFA
 **
-** Copyright (C) 2002 Sourcefire,Inc.
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Marc Norton
 **
 **  
@@ -586,7 +586,7 @@ acsmSearch (ACSM_STRUCT * acsm, unsigned char *Tx, int n,
                 if( mlist->nocase )
                 {
                     nfound++;
-                    if (Match (mlist->id, index, data))
+                    if (Match (mlist->id, index, data) > 0)
                     {
                         *current_state = state;
                         return nfound;
@@ -597,7 +597,7 @@ acsmSearch (ACSM_STRUCT * acsm, unsigned char *Tx, int n,
                     if( memcmp (mlist->casepatrn, Tx + index, mlist->n) == 0 )
                     {
                         nfound++;
-                        if (Match (mlist->id, index, data))
+                        if (Match (mlist->id, index, data) > 0)
                         {
                             *current_state = state;
                             return nfound;

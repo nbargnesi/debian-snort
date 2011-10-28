@@ -1,6 +1,6 @@
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
-** Copyright (C) 2003 Sourcefire, Inc.
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -42,6 +42,8 @@
 
 #include "ubi_SplayTree.h"
 
+#include "ipv6_port.h"
+
 /*  D E F I N E S  **************************************************/
 #define TAG_SESSION   1
 #define TAG_HOST      2
@@ -62,7 +64,6 @@
 #define TAG_PRUNE_QUANTUM   300
 #define TAG_MEMCAP          4194304  /* 4MB */
 
-
 /*  D A T A   S T R U C T U R E S  **********************************/
 typedef struct _PruneData
 {
@@ -76,8 +77,8 @@ typedef struct _TagNode
     ubi_trNode Node;
     
     /* ip addrs */
-    u_int32_t sip;
-    u_int32_t dip;
+    snort_ip sip;
+    snort_ip dip;
 
     /* ports */
     u_int16_t sp;
@@ -130,7 +131,8 @@ extern int file_line;
 
 /*  P R O T O T Y P E S  ********************************************/
 static TagNode * TagAlloc(void);
-static void TagFree(TagNode *node);
+static void TagFree(TagNode *);
+static void TagFreeNodeFunc(ubi_btNodePtr);
 static int PruneTagCache(u_int32_t, int);
 static int PruneTime(ubi_trRootPtr, u_int32_t);
 static void TagSession(Packet *, TagData *, u_int32_t, u_int16_t);
@@ -191,6 +193,18 @@ static void TagFree(TagNode *node)
     tag_memory_usage -= sizeof(TagNode);
 }
 
+static void TagFreeNodeFunc(ubi_btNodePtr node)
+{
+    TagFree((TagNode *)node);
+}
+
+void TagCacheReset(void)
+{
+    ubi_btKillTree(ssn_tag_cache_ptr, TagFreeNodeFunc);
+    ubi_btKillTree(host_tag_cache_ptr, TagFreeNodeFunc);
+}
+
+
 #ifdef DEBUG
 
 /** 
@@ -200,22 +214,40 @@ static void TagFree(TagNode *node)
  */
 static void PrintTagNode(TagNode *np)
 {
+#ifndef SUP_IP6
+	struct in_addr sip,dip;
+
+	sip.s_addr = np->sip;
+	dip.s_addr = np->dip;
+#endif
     if(!DebugThis(DEBUG_FLOW))
     {
         return;
     }
     
     printf("+--------------------------------------------------------------\n");
-    printf("| Ssn Counts: %u, Host Counts: %u\n",
+    printf("| Ssn Counts: %lu, Host Counts: %lu\n",
            ssn_tag_cache.count,
            host_tag_cache.count);
     
-    printf("| (%u) %x:%d -> %x:%d Metric: %u "
-           "LastAccess: %u, event_id: %u mode: %u event_time.tv_sec: %u\n"
-           "| Packets: %d, Bytes: %d, Seconds: %d\n",
+    printf("| (%u) %s:%d -> ",
            np->proto,
-           np->sip, np->sp,
-           np->dip, np->dp,
+#ifdef SUP_IP6
+           inet_ntoa(&np->sip), np->sp
+#else
+
+           inet_ntoa(sip), np->sp
+#endif
+        );
+
+    printf("%s:%d Metric: %u "
+           "LastAccess: %u, event_id: %u mode: %u event_time.tv_sec: %ld\n"
+           "| Packets: %d, Bytes: %d, Seconds: %d\n",
+#ifdef SUP_IP6
+           inet_ntoa(&np->dip), np->dp,
+#else
+           inet_ntoa(dip), np->dp,
+#endif
            np->metric,
            np->last_access,
            np->event_id,
@@ -224,6 +256,7 @@ static void PrintTagNode(TagNode *np)
            np->packets,
            np->bytes,
            np->seconds);
+
     printf("+--------------------------------------------------------------\n");
 }
 
@@ -236,7 +269,7 @@ static void PrintTagNode(TagNode *np)
  */
 static INLINE void SwapTag(TagNode *np)
 {
-    u_int32_t tip;
+    snort_ip tip;
     u_int16_t tport;
 
     tip = np->sip;
@@ -257,23 +290,43 @@ static int TagCompareSession(ubi_trItemPtr ItemPtr, ubi_trNodePtr NodePtr)
     nTag = ((TagNode *)NodePtr);
     iTag = ((TagNode *)ItemPtr);
 
-    if(nTag->sip < iTag->sip)
+#ifdef SUP_IP6
+    if(IP_LESSER(&nTag->sip, &iTag->sip))
     {
         return 1;
     }
-    else if(nTag->sip > iTag->sip)
+    else if(IP_GREATER(&nTag->sip, &iTag->sip))
     {
         return -1;
     }
         
-    if(nTag->dip < iTag->dip)
+    if(IP_LESSER(&nTag->dip, &iTag->dip))
     {
         return 1;
     }
-    else if(nTag->dip > iTag->dip)
+    else if(IP_GREATER(&nTag->dip, &iTag->dip))
     {
         return -1;
     }
+#else
+    if(IP_LESSER(nTag->sip, iTag->sip))
+    {
+        return 1;
+    }
+    else if(IP_GREATER(nTag->sip, iTag->sip))
+    {
+        return -1;
+    }
+        
+    if(IP_LESSER(nTag->dip, iTag->dip))
+    {
+        return 1;
+    }
+    else if(IP_GREATER(nTag->dip, iTag->dip))
+    {
+        return -1;
+    }
+#endif
 
     if(nTag->sp < iTag->sp)
     {
@@ -305,19 +358,30 @@ static int TagCompareHost(ubi_trItemPtr ItemPtr, ubi_trNodePtr NodePtr)
     nTag = ((TagNode *)NodePtr);
     iTag = ((TagNode *)ItemPtr);
 
-    if(nTag->sip < iTag->sip)
+#ifdef SUP_IP6
+    if(IP_LESSER(&nTag->sip, &iTag->sip))
     {
         return 1;
     }
-    else if(nTag->sip > iTag->sip)
+    else if(IP_GREATER(&nTag->sip,  &iTag->sip))
     {
         return -1;
     }
+#else
+    if(IP_LESSER(nTag->sip, iTag->sip))
+    {
+        return 1;
+    }
+    else if(IP_GREATER(nTag->sip,  iTag->sip))
+    {
+        return -1;
+    }
+#endif
 
     return 0;
 }
 
-void InitTag()
+void InitTag(void)
 {
     (void)ubi_trInitTree(ssn_tag_cache_ptr,  /* ptr to the tree head */
                          TagCompareSession,  /* comparison function */
@@ -326,7 +390,6 @@ void InitTag()
     (void)ubi_trInitTree(host_tag_cache_ptr, /* ptr to the tree head */
                          TagCompareHost,     /* comparison function */
                          0);            /* don't allow overwrites/duplicates */
-
 }
 
 
@@ -380,11 +443,11 @@ static void AddTagNode(Packet *p, TagData *tag, int mode, u_int32_t now,
         return;
     }
 
-    idx->sip = p->iph->ip_src.s_addr;
-    idx->dip = p->iph->ip_dst.s_addr;
+    IP_COPY_VALUE(idx->sip, GET_SRC_IP(p));
+    IP_COPY_VALUE(idx->dip, GET_DST_IP(p));
     idx->sp = p->sp;
     idx->dp = p->dp;
-    idx->proto = p->iph->ip_proto;
+    idx->proto = GET_IPH_PROTO(p);
     idx->metric = tag->tag_metric;
     idx->last_access = now;
     idx->event_id = event_id;
@@ -489,7 +552,7 @@ int CheckTagList(Packet *p, Event *event)
         return 0;
     }
 
-    if(p == NULL || p->iph == NULL)
+    if(p == NULL || !IPH_IS_VALID(p))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "bailing from CheckTagList, p->iph == NULL\n"););
         return 0;
@@ -500,8 +563,8 @@ int CheckTagList(Packet *p, Event *event)
 
     DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "[*] Checking session tag list (forward)...\n"););
 
-    idx.sip = p->iph->ip_src.s_addr;
-    idx.dip = p->iph->ip_dst.s_addr;
+    IP_COPY_VALUE(idx.sip, GET_SRC_IP(p));
+    IP_COPY_VALUE(idx.dip, GET_DST_IP(p));
     idx.sp = p->sp;
     idx.dp = p->dp;
 
@@ -510,8 +573,8 @@ int CheckTagList(Packet *p, Event *event)
 
     if(returned == NULL)
     {
-        idx.dip = p->iph->ip_src.s_addr;
-        idx.sip = p->iph->ip_dst.s_addr;
+        IP_COPY_VALUE(idx.dip, GET_SRC_IP(p));
+        IP_COPY_VALUE(idx.sip, GET_DST_IP(p));
         idx.dp = p->sp;
         idx.sp = p->dp;
 
@@ -533,7 +596,7 @@ int CheckTagList(Packet *p, Event *event)
                 **  Only switch sip, because that's all we check for
                 **  the host tags.
                 */
-                idx.sip = p->iph->ip_src.s_addr;
+                IP_COPY_VALUE(idx.sip, GET_SRC_IP(p));
 
                 returned = (TagNode *) ubi_sptFind(host_tag_cache_ptr, 
                         (ubi_btItemPtr)&idx);
@@ -585,7 +648,7 @@ int CheckTagList(Packet *p, Event *event)
 
         if(returned->metric & TAG_METRIC_BYTES)
         {
-            returned->bytes -= (int) ntohs(p->iph->ip_len);
+            returned->bytes -= (int) ntohs(GET_IPH_LEN(p));
 
             if(returned->bytes < 0)
             {
@@ -742,6 +805,24 @@ void SetTags(Packet *p, OptTreeNode *otn, u_int16_t event_id)
         {
             switch(otn->tag->tag_type)
             {
+#ifdef SUP_IP6
+                case TAG_SESSION: 
+                    DEBUG_WRAP(DebugMessage(DEBUG_FLOW,"Setting session tag:\n");
+			            DebugMessage(DEBUG_FLOW,"SIP: %s  SP: %d   ",
+                            sfip_ntoa(GET_SRC_IP(p)), p->sp);
+                        DebugMessage(DEBUG_FLOW,"DIP: %s  DP: %d\n", 
+					        sfip_ntoa(GET_DST_IP(p)),p->dp););
+                    TagSession(p, otn->tag, p->pkth->ts.tv_sec, event_id);
+                    break;
+                case TAG_HOST:
+                    DEBUG_WRAP(DebugMessage(DEBUG_FLOW,"Setting host tag:\n");
+    			        DebugMessage(DEBUG_FLOW,"SIP: %s  SP: %d   ",
+	    			        sfip_ntoa(GET_SRC_IP(p)),p->sp);
+                        DebugMessage(DEBUG_FLOW, "DIP: %s  DP: %d\n", 
+                            sfip_ntoa(GET_DST_IP(p)),p->dp););
+                    TagHost(p, otn->tag, p->pkth->ts.tv_sec, event_id);
+                    break;    
+#else
                 case TAG_SESSION: 
                     DEBUG_WRAP(DebugMessage(DEBUG_FLOW,"Setting session tag:\n");
 			       DebugMessage(DEBUG_FLOW,"SIP: 0x%X  SP: %d   DIP: 0x%X  "
@@ -758,6 +839,7 @@ void SetTags(Packet *p, OptTreeNode *otn, u_int16_t event_id)
 					    p->iph->ip_dst.s_addr,p->dp););
                     TagHost(p, otn->tag, p->pkth->ts.tv_sec, event_id);
                     break;    
+#endif
     
                 default:
                     LogMessage("WARNING: Trying to tag with unknown "

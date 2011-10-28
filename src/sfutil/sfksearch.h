@@ -5,7 +5,7 @@
 *
 *
 *  Copyright (C) 2001 Marc Norton
-** Copyright (C) 2003 Sourcefire, Inc
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -97,7 +97,7 @@ int            KTrieAddPattern( KTRIE_STRUCT *ts, unsigned char * P, int n, int 
 int            KTrieCompile(KTRIE_STRUCT * ts);
 int            KTrieSearch( KTRIE_STRUCT * ts, unsigned char * T, 
                    int n, int (*match)(void* id, int index,void* data),void *data );
-unsigned       KTrieMemUsed(void);
+unsigned int   KTrieMemUsed(void);
 void           KTrieDelete(KTRIE_STRUCT *k);
 
 

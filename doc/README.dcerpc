@@ -88,10 +88,11 @@ preprocessor dcerpc: \
 
 
 -- Alerts --
-There is currently only one alert, which is triggered when the preprocessor
-has reached the "memcap" limit for memory allocation.  The alert is
-gid 130, sid 1.
+DCERPC use generator ID 130 for the following alerts:
 
+SID   Description
+---   -----------
+1     Maximum memory usage reached
 
 -- Conclusion --
 At the current time, there is not much to do with the dcerpc preprocessor

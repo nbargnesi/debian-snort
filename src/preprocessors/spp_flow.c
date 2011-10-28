@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2003 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * @file   spp_flow.c
  * @author Chris Green <cmg@sourcefire.com>
@@ -39,6 +39,7 @@
 #include "plugbase.h" /* RegisterPreprocesor */
 #include "util.h" /* FatalError */
 #include "parser.h" /* file_name, file_line */
+#include "stream_api.h"
 
 #include "spp_flow.h"
 #include "flow/flow.h"
@@ -69,13 +70,17 @@ static SPPFLOW_CONFIG s_config;
 static int FlowParseArgs(SPPFLOW_CONFIG *config, char *args);
 static INLINE int FlowPacket(Packet *p);
 static void FlowPreprocessor(Packet *p, void *);
-static void FlowInit(u_char *args);
+static void FlowInit(char *args);
 static void FlowCleanExit(int signal, void *data);
 static void FlowRestart(int signal, void *data);
+static void FlowReset(int signal, void *data);
+static void FlowResetStats(int signal, void *data);
 static void FlowParseOption(SPPFLOW_CONFIG *config,
                             char *fname, int lineno,
                             char *key, char *value);
 static void DisplayFlowConfig(void);
+static void FlowPrintStats(int exiting);
+static void FlowVerifyConfig(void);
 
 static int s_debug = 0;
 unsigned int giFlowbitSize = 64;
@@ -131,12 +136,17 @@ static INLINE int FlowPacket(Packet *p)
  * 
  * @param args command line arguments from snort.conf
  */
-static void FlowInit(u_char *args)
+static void FlowInit(char *args)
 {
     static int init_once = 0;
     int ret;
     static SPPFLOW_CONFIG *config = &s_config;
     
+#ifdef SUP_IP6
+    FatalError("The flow preprocessor is now part of Stream5.  This version of"
+                " flow is not supported when IPv6 support is compiled into Snort.");
+#endif
+
     if(init_once)
         FatalError("%s(%d) Unable to reinitialize flow!\n", file_name, file_line);
     else
@@ -161,8 +171,12 @@ static void FlowInit(u_char *args)
     s_flow_running = 1;
     
     AddFuncToPreprocList(FlowPreprocessor, PRIORITY_NETWORK, PP_FLOW);
+    RegisterPreprocStats("flow", FlowPrintStats);
     AddFuncToPreprocCleanExitList(FlowCleanExit, NULL, PRIORITY_LAST, PP_FLOW);
     AddFuncToPreprocRestartList(FlowRestart, NULL, PRIORITY_LAST, PP_FLOW);
+    AddFuncToPreprocResetList(FlowReset, NULL, PRIORITY_LAST, PP_FLOW);
+    AddFuncToPreprocResetStatsList(FlowResetStats, NULL, PRIORITY_LAST, PP_FLOW);
+    AddFuncToConfigCheckList(FlowVerifyConfig);
 
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("flow", &flowPerfStats, 0, &totalPerfStats);
@@ -174,16 +188,37 @@ static void FlowRestart(int signal, void *data)
     return;
 }
 
-static void FlowCleanExit(int signal, void *data)
+static void FlowPrintStats(int exiting)
 {
     fflush(stdout);
-    LogMessage("Final Flow Statistics\n");
-    if(!pv.quiet_flag)
-        flowcache_stats(stdout, &s_fcache);
+    flowcache_stats(stdout, &s_fcache);
     fflush(stdout);
-    flowcache_destroy(&s_fcache);
+
+    if (exiting)
+    {
+        flowcache_destroy(&s_fcache);
+    }
+}
+
+static void FlowCleanExit(int signal, void *data)
+{
     return;
 }
+
+static void FlowReset(int signal, void *data)
+{
+    /* don't empty the hash table here - stats need it */
+    return;
+}
+
+static void FlowResetStats(int signal, void *data)
+{
+    sfxhash_make_empty(s_fcache.ipv4_table);
+
+    memset(&s_fcache.total, 0, sizeof(s_fcache.total));
+    memset(&s_fcache.per_proto[0], 0, sizeof(s_fcache.per_proto));
+}
+
 
 /** 
  * The runtime entry point for the flow module from snort
@@ -438,7 +473,7 @@ static void DisplayFlowConfig(void)
     LogMessage("| Hash Method:     %d\n", cp->hashid);
     LogMessage("| Memcap:          %d\n", cp->memcap);
     LogMessage("| Rows  :          %d\n", flowcache_row_count(fcp));
-    LogMessage("| Overhead Bytes:  %d(%%%.2lf)\n",
+    LogMessage("| Overhead Bytes:  %d(%%%.2f)\n",
                flowcache_overhead_bytes(fcp),
                calc_percent(flowcache_overhead_bytes(fcp),cp->memcap));
     LogMessage("`----------------------------------------------\n");
@@ -455,3 +490,22 @@ int SppFlowIsRunning(void)
 {
     return s_flow_running;
 }
+
+
+void FlowVerifyConfig(void)
+{
+    if (stream_api != NULL)
+    {
+        if (stream_api->version >= STREAM_API_VERSION5)
+        {
+            FatalError("Stream5 and flow cannot be used at the same time, as "
+                       "Stream5 provides the same functionality as flow.  It "
+                       "would result in a performance degradation to use both, "
+                       "as the information gathered from flow would be duplicated "
+                       "by Stream5.  Please change your 'snort.conf' to use "
+                       "either only stream5 (with tcp & udp tracking) or stream4 "
+                       "and flow.  See the Snort manual for more details.\n");
+        }
+    }
+}
+

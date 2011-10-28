@@ -144,8 +144,14 @@
 /* Define if IRIX */
 #undef IRIX
 
+/* For libpcap versions that accumulate stats */
+#undef LIBPCAP_ACCUMULATES
+
 /* Define if LINUX */
 #undef LINUX
+
+/* For Linux libpcap versions 0.9.0 to 0.9.4 */
+#undef LINUX_LIBPCAP_DOUBLES_STATS
 
 /* Define if MACOS */
 #undef MACOS
@@ -180,11 +186,17 @@
 /* Define if SOLARIS */
 #undef SOLARIS
 
+/* For sparc v9 with %time register */
+#undef SPARCV9
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
 /* Define if SUNOS */
 #undef SUNOS
+
+/* If unsigned long is 64 bits */
+#undef ULONGIS64BIT
 
 /* Version number of package */
 #undef VERSION

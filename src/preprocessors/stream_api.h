@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * ** Copyright (C) 2005 Sourcefire, Inc.
+ * ** Copyright (C) 2005-2008 Sourcefire, Inc.
  * ** AUTHOR: Steven Sturges
  * **
  * ** This program is free software; you can redistribute it and/or modify
@@ -41,9 +41,10 @@
 
 #include <sys/types.h>
 
-#include "snort_packet_header.h"
+#include "ipv6_port.h"
 #include "preprocids.h" /* IDs are used when setting preproc specific data */
 #include "bitop.h"
+#include "decode.h"
 
 #define IGNORE_FLAG_ALWAYS 0x01
 
@@ -74,6 +75,9 @@
 #define SSNFLAG_COUNTED_CLOSING     0x00008000
 #define SSNFLAG_TIMEDOUT            0x00010000
 #define SSNFLAG_PRUNED              0x00020000
+#define SSNFLAG_RESET               0x00040000
+#define SSNFLAG_DROP_CLIENT         0x00080000
+#define SSNFLAG_DROP_SERVER         0x00100000
 #define SSNFLAG_ALL                 0xFFFFFFFF /* all that and a bag of chips */
 #define SSNFLAG_NONE                0x00000000 /* nothing, an MT bag of chips */
 
@@ -98,7 +102,7 @@
 #define STREAM_API_VERSION5 5
 
 typedef void (*StreamAppDataFree)(void *);
-typedef int (*PacketIterator)(SnortPktHeader *,
+typedef int (*PacketIterator)(struct pcap_pkthdr *,
                               u_int8_t *,
                               void *); /* user-defined data pointer */
 
@@ -131,7 +135,7 @@ typedef struct _stream_api
      *     IP
      *     Port
      */
-    void (*update_direction)(void *, char, u_int32_t, u_int16_t );
+    void (*update_direction)(void *, char, snort_ip_p, u_int16_t );
 
     /* Get direction of packet
      *
@@ -174,7 +178,7 @@ typedef struct _stream_api
      *     0 on success
      *     -1 on failure
      */
-    int (*ignore_session)(u_int32_t, u_int16_t, u_int32_t, u_int16_t,
+    int (*ignore_session)(snort_ip_p, u_int16_t, snort_ip_p, u_int16_t,
                           char, char, char);
 
     /* Resume inspection for session.
@@ -346,13 +350,63 @@ typedef struct _stream_api
      * sequence or packets are missing
      *
      * Parameters
-     *     Direction
      *     Session Ptr
+     *     Direction
      *
      * Returns
      *     true/false
      */
     char (*is_stream_sequenced)(void *, char);
+
+    /* Get whether there are missing packets before, after or
+     * before and after reassembled buffer
+     *
+     * Parameters
+     *      Session Ptr
+     *      Direction
+     *
+     * Returns
+     *      3 if missing before and after
+     *      2 if missing before
+     *      1 if missing after
+     *      0 if none missing
+     */
+    char (*missing_in_reassembled)(void *, char);
+
+    /* Get true/false as to whether packets were missed on
+     * the stream
+     *
+     * Parameters
+     *     Session Ptr
+     *     Direction
+     *
+     * Returns
+     *     true/false
+     */
+    char (*missed_packets)(void *, char);
+
+#ifdef TARGET_BASED
+    /* Get the protocol identifier from a stream
+     *
+     * Parameters
+     *     Session Ptr
+     * 
+     * Returns
+     *     integer protocol identifier
+     */
+    int16_t (*get_application_protocol_id)(void *);
+
+    /* Set the protocol identifier for a stream
+     *
+     * Parameters
+     *     Session Ptr
+     *     ID
+     * 
+     * Returns
+     *     integer protocol identifier
+     */
+    int16_t (*set_application_protocol_id)(void *, int16_t);
+#endif
 
 } StreamAPI;
 

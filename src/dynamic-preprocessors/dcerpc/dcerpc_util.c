@@ -1,7 +1,7 @@
 /*
  * dcerpc_util.c
  *
- * Copyright (C) 2006 Sourcefire,Inc
+ * Copyright (C) 2006-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -125,7 +125,7 @@ void DCERPC_GenerateAlert(dcerpc_event_e event, char *msg)
 
 
 /* Print out given buffer in hex and ascii, for debugging */
-void PrintBuffer(char * title, u_int8_t *buf, u_int16_t buf_len)
+void PrintBuffer(const char * title, const u_int8_t *buf, u_int16_t buf_len)
 {
     u_int16_t i, j = 0;
 

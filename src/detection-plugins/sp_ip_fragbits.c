@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -74,6 +75,14 @@
 #define FB_DF  0x4000
 #define FB_MF  0x2000
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats fragBitsPerfStats;
+PreprocStats fragOffsetPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 
 typedef struct _FragBitsData
@@ -117,7 +126,10 @@ static u_int16_t bitmask;
 void SetupFragBits(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("fragbits", FragBitsInit);
+    RegisterPlugin("fragbits", FragBitsInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("fragbits", &fragBitsPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: FragBits Setup\n"););
 }
@@ -269,25 +281,29 @@ void ParseFragBits(char *data, OptTreeNode *otn)
 int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     FragBitsData *fb;
+    PROFILE_VARS;
 
-    if(!p->iph)
+    if(!IPH_IS_VALID(p))
     {
         return 0;
     }
+
+    PREPROC_PROFILE_START(fragBitsPerfStats);
     
     fb = otn->ds_list[PLUGIN_FRAG_BITS];
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "           <!!> CheckFragBits: ");
 	       DebugMessage(DEBUG_PLUGIN, "[rule: 0x%X:%d   pkt: 0x%X] ",
-			    fb->frag_bits, fb->mode, (p->iph->ip_off&bitmask)););
+			    fb->frag_bits, fb->mode, (GET_IPH_OFF(p)&bitmask)););
 
     switch(fb->mode)
     {
         case FB_NORMAL:
             /* check if the rule bits match the bits in the packet */
-            if(fb->frag_bits == (p->iph->ip_off&bitmask)) 
+            if(fb->frag_bits == (GET_IPH_OFF(p)&bitmask)) 
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got Normal bits match\n"););
+                PREPROC_PROFILE_END(fragBitsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
             else
@@ -298,9 +314,10 @@ int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
         case FB_NOT:
             /* check if the rule bits don't match the bits in the packet */
-            if((fb->frag_bits & (p->iph->ip_off&bitmask)) == 0)
+            if((fb->frag_bits & (GET_IPH_OFF(p)&bitmask)) == 0)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got NOT bits match\n"););
+                PREPROC_PROFILE_END(fragBitsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
             else
@@ -311,9 +328,10 @@ int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             
         case FB_ALL:
             /* check if the rule bits are present in the packet */
-            if((fb->frag_bits & (p->iph->ip_off&bitmask)) == fb->frag_bits)
+            if((fb->frag_bits & (GET_IPH_OFF(p)&bitmask)) == fb->frag_bits)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got ALL bits match\n"););
+                PREPROC_PROFILE_END(fragBitsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
             else
@@ -324,9 +342,10 @@ int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             
         case FB_ANY:
             /* check if any of the rule bits match the bits in the packet */
-            if((fb->frag_bits & (p->iph->ip_off&bitmask)) != 0)
+            if((fb->frag_bits & (GET_IPH_OFF(p)&bitmask)) != 0)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Got ANY bits match\n"););
+                PREPROC_PROFILE_END(fragBitsPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
             else
@@ -337,6 +356,7 @@ int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(fragBitsPerfStats);
     return 0;
 }
 
@@ -355,8 +375,11 @@ int CheckFragBits(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 void SetupFragOffset(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("fragoffset", FragOffsetInit);
+    RegisterPlugin("fragoffset", FragOffsetInit, OPT_TYPE_DETECTION);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("fragoffset", &fragOffsetPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: FragOffset Setup\n"););
 }
 
@@ -470,11 +493,18 @@ int CheckFragOffset(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     FragOffsetData *ipd;  /* data struct pointer */
     int p_offset = p->frag_offset * 8;
+    PROFILE_VARS;
     
+    if(!IPH_IS_VALID(p))
+    {
+        return 0;
+    }
+
+    PREPROC_PROFILE_START(fragOffsetPerfStats);
+
     ipd = otn->ds_list[PLUGIN_FRAG_OFFSET];
 
     
-
 #ifdef DEBUG
     DebugMessage(DEBUG_PLUGIN,
 		 "[!] Checking fragoffset %d against %d\n",
@@ -484,7 +514,7 @@ int CheckFragOffset(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
 	DebugMessage(DEBUG_PLUGIN, "Frag Offset: 0x%04X   Frag Size: 0x%04X\n",
 		     (p->frag_offset & 0x1FFF) * 8,
-		     (ntohs(p->iph->ip_len) - p->frag_offset - IP_HEADER_LEN));
+		     (ntohs(GET_IPH_LEN(p)) - p->frag_offset - IP_HEADER_LEN));
     }
 #endif
 
@@ -493,6 +523,7 @@ int CheckFragOffset(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         if((ipd->offset == p_offset) ^ ipd->not_flag)
         {
+            PREPROC_PROFILE_END(fragOffsetPerfStats);
             return fp_list->next->OptTestFunc(p, otn, fp_list->next);
         }
         else
@@ -507,6 +538,7 @@ int CheckFragOffset(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             if(p_offset > ipd->offset)
             {
+                PREPROC_PROFILE_END(fragOffsetPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
         }
@@ -514,11 +546,13 @@ int CheckFragOffset(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
 	    if(p_offset < ipd->offset)
             {
+                PREPROC_PROFILE_END(fragOffsetPerfStats);
                 return fp_list->next->OptTestFunc(p, otn, fp_list->next);
             }
         }
     }
     
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(fragOffsetPerfStats);
     return 0;
 }

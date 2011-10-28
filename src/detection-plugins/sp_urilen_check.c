@@ -1,6 +1,6 @@
 /* $Id */
 /*  
-** Copyright (C) 2005 
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -41,6 +41,16 @@
 
 #include "sp_urilen_check.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats urilenEQPerfStats;
+PreprocStats urilenGTPerfStats;
+PreprocStats urilenLTPerfStats;
+PreprocStats urilenRangePerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 extern HttpUri UriBufs[URI_COUNT];
 
 void UriLenCheckInit( char*, OptTreeNode*, int );
@@ -54,12 +64,18 @@ int CheckUriLenRange(Packet*, struct _OptTreeNode*, OptFpList*);
 * 
  * PARAMETERS:	None.
  *
- * RETURNS:	Ntohing.
+ * RETURNS:	Nothing.
  */
 void 
 SetupUriLenCheck()
 {
-	RegisterPlugin("urilen", UriLenCheckInit );
+	RegisterPlugin("urilen", UriLenCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("urilen_eq", &urilenEQPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("urilen_gt", &urilenGTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("urilen_lt", &urilenLTPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("urilen_range", &urilenRangePerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 }
 
 /* Parses the urilen rule arguments and attaches info to 
@@ -108,7 +124,7 @@ UriLenCheckInit( char* argp, OptTreeNode* otnp, int protocol )
  *		parsed.
  * otnp:	Pointer to the current rule option list node.
  *
- * RETURNS:	Ntohing.
+ * RETURNS:	Nothing.
  */
 void
 ParseUriLen( char* argp, OptTreeNode* otnp )
@@ -134,7 +150,6 @@ ParseUriLen( char* argp, OptTreeNode* otnp )
 		cur_tokenp = strtok(curp, " <>");
 		if(!cur_tokenp)
 		{
-
 			FatalError("%s(%d): Invalid 'urilen' argument.\n",
 	       			file_name, file_line);
 		}
@@ -210,9 +225,13 @@ ParseUriLen( char* argp, OptTreeNode* otnp )
 int 
 CheckUriLenEQ(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(urilenEQPerfStats);
 
     if ((p->packet_flags & PKT_REBUILT_STREAM) || ( !UriBufs[0].uri  ))
     {
+        PREPROC_PROFILE_END(urilenEQPerfStats);
         return 0;
     }
 
@@ -220,10 +239,12 @@ CheckUriLenEQ(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 		UriBufs[0].length )
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(urilenEQPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(urilenEQPerfStats);
     return 0;
 }
 
@@ -241,8 +262,13 @@ CheckUriLenEQ(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 int 
 CheckUriLenGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(urilenGTPerfStats);
+
     if ((p->packet_flags & PKT_REBUILT_STREAM) || ( !UriBufs[0].uri ))
     {
+        PREPROC_PROFILE_END(urilenGTPerfStats);
         return 0;
     }
 
@@ -250,10 +276,12 @@ CheckUriLenGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 		UriBufs[0].length )
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(urilenGTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(urilenGTPerfStats);
     return 0;
 }
  
@@ -271,8 +299,13 @@ CheckUriLenGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 int 
 CheckUriLenLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(urilenLTPerfStats);
+
     if ((p->packet_flags & PKT_REBUILT_STREAM) || ( !UriBufs[0].uri ))
     {
+        PREPROC_PROFILE_END(urilenLTPerfStats);
         return 0;
     }
 
@@ -280,10 +313,12 @@ CheckUriLenLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 		UriBufs[0].length )
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(urilenLTPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(urilenLTPerfStats);
     return 0;
 }
 
@@ -301,8 +336,13 @@ CheckUriLenLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 int 
 CheckUriLenRange(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(urilenRangePerfStats);
+
     if ((p->packet_flags & PKT_REBUILT_STREAM) || ( !UriBufs[0].uri ))
     {
+        PREPROC_PROFILE_END(urilenRangePerfStats);
         return 0;
     }
 
@@ -312,9 +352,11 @@ CheckUriLenRange(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 		UriBufs[0].length )
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(urilenRangePerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
+    PREPROC_PROFILE_END(urilenRangePerfStats);
     return 0;
 }
 

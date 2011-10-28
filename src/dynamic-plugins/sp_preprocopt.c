@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire Inc.
  *
  * Author: Steven Sturges
  *
@@ -65,9 +65,16 @@
 
 #include "sfghash.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats preprocRuleOptionPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 SFGHASH *preprocRulesOptions = NULL;
 
-extern u_int8_t *doe_ptr;
+extern const u_int8_t *doe_ptr;
 
 
 typedef struct _PreprocessorOptionInfo
@@ -80,6 +87,9 @@ typedef struct _PreprocessorOptionInfo
 
 void PreprocessorRuleOptionsInit()
 {
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("preproc_rule_options", &preprocRuleOptionPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     preprocRulesOptions = sfghash_new(10, 0, 0, NULL);
 }
 
@@ -136,10 +146,8 @@ int GetPreprocessorRuleOptionFuncs(char *optionName, void **initFunc, void **eva
         return 0;
     }
 
-DISABLE_WARNING(4152)
-    *initFunc = optionInfo->optionInit;
-    *evalFunc = optionInfo->optionEval;
-ENABLE_WARNING(4152)
+    *initFunc = (PreprocOptionInit)optionInfo->optionInit;
+    *evalFunc = (PreprocOptionEval)optionInfo->optionEval;
 
     return 1;
 }
@@ -148,8 +156,11 @@ ENABLE_WARNING(4152)
 int PreprocessorOptionFunc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     PreprocessorOptionInfo *optionInfo;
-    u_int8_t *cursor = NULL;
+    const u_int8_t *cursor = NULL;
     int       success;
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(preprocRuleOptionPerfStats);
 
     optionInfo = (PreprocessorOptionInfo *) fp_list->context;
 
@@ -161,8 +172,12 @@ int PreprocessorOptionFunc(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_li
 
     //  If successful, call next function in chain
     if ( success )
+    {
+        PREPROC_PROFILE_END(preprocRuleOptionPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+    }
 
+    PREPROC_PROFILE_END(preprocRuleOptionPerfStats);
     return 0;
 }
 

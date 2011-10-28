@@ -8,7 +8,7 @@
 **
 ** author: marc norton
 ** date:   12/21/05
-** Copyright (C) 2005-2006 Sourcefire, Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 **
 ** LICENSE (GPL)
 **
@@ -41,22 +41,6 @@
 
 /* debugging - enable full format */
 /* #define ALLOW_NFA_FULL */
-
-
-#ifdef WIN32
-
-#ifdef inline
-#undef inline
-#endif
-
-#define inline __inline
-
-#else
-
-/* for unix systems */
-//#define UINT64 unsigned long long int
-
-#endif
 
 /*
 *   DEFINES and Typedef's
@@ -118,13 +102,13 @@ typedef struct bnfa_match_node_s
 */
 enum {
   BNFA_FULL,
-  BNFA_SPARSE,
+  BNFA_SPARSE
 };
 
 enum { 
   BNFA_PER_PAT_CASE,
   BNFA_CASE,
-  BNFA_NOCASE,
+  BNFA_NOCASE
 };
 
 /*

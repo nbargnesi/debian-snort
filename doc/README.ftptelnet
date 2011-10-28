@@ -328,3 +328,30 @@ defaults are sufficient to get started.  Some of the examples provided,
 especially with respect to the FTP command validation, are derived from
 tests conducted with traffic generated from various publicly available
 freeware and/or trialware telnet & FTP client and server implementations.
+
+== Alerts ==
+
+FTP Telnet uses generator ID 125 for FTP and generator ID 126 for telnet.
+
+The following alerts will be generated for FTP:
+
+SID   Description
+---   -----------
+1     Telnet command on FTP command channel
+2     Invalid FTP command
+3     FTP parameter length overflow
+4     FTP malformed parameter
+5     Possible string format attempt in FTP command/parameter
+6     FTP response length overflow
+7     FTP command channel encrypted
+8     FTP bounce attack
+9     Evasive Telnet command on FTP command channel
+
+The following alerts will be generated for Telnet:
+
+SID   Description
+---   -----------
+1     Telnet consecutive AYT overflow
+2     Telnet data encrypted
+3     Subnegotiation Begin without matching Subnegotiation End
+

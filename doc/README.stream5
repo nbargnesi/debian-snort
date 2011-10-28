@@ -44,6 +44,37 @@ option to the TCP configuration.  Some of these anomalies are
 detected on a per-target basis.  For example, a few operating systems
 allow data in TCP SYN packets, while others do not.
 
+Rule Options
+------------
+Stream5 adds the 'stream_size' rule option.  The option allows a rule to 
+match traffic according to the number of bytes observed, as determined by the
+TCP sequence numbers.
+
+stream_size takes a number of comma-separated arguments in the following 
+format:
+
+    stream_size:<direction>,<operator>,<size>
+
+Where direction is one of:
+
+    client  -   Client side traffic only
+    server  -   Sever side traffic only
+    both    -   Traffic from both sides
+    either  -   Traffic from either side
+
+Valid operators are:
+
+    =
+    <
+    >
+    !=
+    <=
+    >=
+
+For example:
+
+    stream_size:client,<,6;
+
 Configuration
 =============
 Global Configuration
@@ -121,13 +152,17 @@ is not bound to an IP address or network.
                               discouraged.
     detect_anomalies        - Detect TCP protocol anomalies.  The default is set
                               to off.
-    require_3whs [<alt_timeout (secs)>]
+    require_3whs [<number secs>]
                             - Establish sessions only on completion
                               of a SYN/SYN-ACK/ACK handshake.  The default is
-                              set to off.  Alternate timeout is the timeout in
-                              seconds for the handshake to complete.  The
-                              default is "0" (unlimited), the minimum is "0",
-                              and the maximum is "86400" (approximately 1 day).
+                              set to off.  The optional number of seconds
+                              specifies a startup timeout.  This allows a grace
+                              period for existing sessions to be considered
+                              established during that interval immediately
+                              after Snort is started.  The default is "0"
+                              (don't consider existing sessions established),
+                              the minimum is "0", and the maximum is "86400"
+                              (approximately 1 day).
     use_static_footprint_sizes
                             - Emulate Stream4 behavior for flushing
                               reassembled packets.  The default is set to off.
@@ -136,6 +171,17 @@ is not bound to an IP address or network.
                               large packets in reassembly buffer if set.
                               Setting this option could result in missed
                               packets.  The default is set to off.
+    check_session_hijacking - Check for TCP session hijacking.  This check
+                              validates the hardware (MAC) address from both
+                              sides of the connect -- as established on the
+                              3-way handshake against subsequent packets
+                              received on the session.  If an ethernet layer
+                              is not part of the protocol stack received by
+                              Snort, there are no checks performed.  Alerts 
+                              are generated (per 'detect_anomalies' option)
+                              for either the client or server when the MAC
+                              address for one side or the other does not match.
+                              The default is set to off.
     ports <client|server|both> [all|space separated port list] 
                             - Specify the client, server, or both and list of
                               ports in which to perform reassembly.  This can
@@ -146,7 +192,7 @@ is not bound to an IP address or network.
                                 ports client 21 25
                               The default settings are:
                                 ports client 21 23 25 42 53 80 110 111 135 136 \
-                                             137 139 143 445 513 1433 1521 3306
+                                             137 139 143 445 513 514 1433 1521 2401 3306
                               The minimum port allowed is "1" and the maximum
                               allowed is "65535".
 
@@ -219,16 +265,19 @@ preprocessor stream5_tcp: policy solaris
 
 Alerts
 ======
-Stream5 uses generator ID 129.  It is capable of alerting on 8 (eight)
+Stream5 uses generator ID 129.  It is capable of alerting on 10
 anomalies, all of which relate to TCP anomalies.  There are no
-anomaly detection for UDP or ICMP.
+anomaly detection capabilities for UDP or ICMP.
 
-The list of SIDs is as follows:
-1) SYN on established session
-2) Data on SYN packet
-3) Data sent on stream not accepting data
-4) TCP Timestamp is outside of PAWS window
-5) Bad segment, overlap adjusted size less than/equal 0
-6) Window size (after scaling) larger than policy allows
-7) Limit on number of overlapping TCP packets reached
-8) Data after Reset packet
+SID   Description
+---   -----------
+1     SYN on established session
+2     Data on SYN packet
+3     Data sent on stream not accepting data
+4     TCP Timestamp is outside of PAWS window
+5     Bad segment, overlap adjusted size less than/equal 0
+6     Window size (after scaling) larger than policy allows
+7     Limit on number of overlapping TCP packets reached
+8     Data after Reset packet
+9     Possible Hijacked Client
+10    Possible Hijacked Server

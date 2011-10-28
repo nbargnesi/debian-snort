@@ -1,7 +1,7 @@
 #ifndef _BOUNDS_H
 #define _BOUNDS_H
 /*
-** Copyright (C) 2003, Sourcefire, Inc.
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@
  *
  * 1 means it's in bounds, 0 means it's not
  */
-static INLINE int inBounds(u_int8_t *start, u_int8_t *end, u_int8_t *p)
+static INLINE int inBounds(const u_int8_t *start, const u_int8_t *end, const u_int8_t *p)
 {
     if(p >= start && p < end)
     {
@@ -75,7 +75,7 @@ static INLINE int inBounds(u_int8_t *start, u_int8_t *end, u_int8_t *p)
  * 
  * @return 0 on failure, 1 on success
  */
-static INLINE int SafeMemcpy(void *dst, void *src, size_t n, void *start, void *end)
+static INLINE int SafeMemcpy(void *dst, const void *src, size_t n, const void *start, const void *end)
 {
     void *tmp;
 

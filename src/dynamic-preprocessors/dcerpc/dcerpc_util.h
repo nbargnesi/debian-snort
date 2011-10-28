@@ -1,7 +1,7 @@
 /*
  * dcerpc_util.h
  *
- * Copyright (C) 2006 Sourcefire,Inc
+ * Copyright (C) 2006-2008 Sourcefire, Inc.
  * Andrew Mullican
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,6 +45,6 @@ typedef enum _dcerpc_event_e
 void *DCERPC_FragAlloc(void *p, u_int16_t old_size, u_int16_t *new_size);
 int DCERPC_FragFree(void *p, u_int16_t size);
 void DCERPC_GenerateAlert(dcerpc_event_e event, char *msg);
-void PrintBuffer(char * title, u_int8_t *buf, u_int16_t buf_len);
+void PrintBuffer(const char * title, const u_int8_t *buf, u_int16_t buf_len);
 
 #endif  /*  _DCERPC_UTIL_H_  */

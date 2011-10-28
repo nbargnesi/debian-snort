@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -63,10 +63,14 @@
 #define PP_DNS                    25
 #define PP_STREAM5                26
 #define PP_DCERPC                 27
+#define PP_SKYPE                  28
+#define PP_SSL                    29
+#define PP_RULES                  30
 
 #define PRIORITY_FIRST 0x0
 #define PRIORITY_NETWORK 0x10
 #define PRIORITY_TRANSPORT 0x100
+#define PRIORITY_TUNNEL  0x105
 #define PRIORITY_SCANNER 0x110
 #define PRIORITY_APPLICATION 0x200
 #define PRIORITY_LAST 0xffff

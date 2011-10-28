@@ -93,6 +93,7 @@
 #include "snort.h"
 #include "profiler.h"
 
+#undef inet_ntoa
 
 /*  D E F I N E S  **************************************************/
 #define MODNAME "spp_arpspoof"
@@ -131,8 +132,8 @@ PreprocStats arpPerfStats;
 #endif
 
 /*  P R O T O T Y P E S  ********************************************/
-void ARPspoofInit(u_char *args);
-void ARPspoofHostInit(u_char *args);
+void ARPspoofInit(char *args);
+void ARPspoofHostInit(char *args);
 void ParseARPspoofArgs(char *args);
 void ParseARPspoofHostArgs(char *args);
 void DetectARPattacks(Packet *p, void *context);
@@ -159,7 +160,7 @@ void SetupARPspoof(void)
 }
 
 
-void ARPspoofInit(u_char *args)
+void ARPspoofInit(char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, 
             "Preprocessor: ARPspoof Initialized\n"););
@@ -216,7 +217,7 @@ void ParseARPspoofArgs(char *args)
 }
 
 
-void ARPspoofHostInit(u_char *args)
+void ARPspoofHostInit(char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, 
             "Preprocessor: ARPspoof (overwrite list) Initialized\n"););

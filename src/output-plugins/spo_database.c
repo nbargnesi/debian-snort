@@ -220,9 +220,71 @@ typedef struct _SharedDatabaseDataNode
 
 #define LATEST_DB_SCHEMA_VERSION 107
 
+/******** fatals *******************************************************/
+/* these strings deliberately break fatal error messages into
+ * chunks with lengths < 509 to keep ISO C89 compilers happy
+ */
+
+static const char* FATAL_NO_SENSOR_1 =
+    " When this plugin starts, a SELECT query is run to find the sensor id for the\n"
+    " currently running sensor. If the sensor id is not found, the plugin will run\n"
+    " an INSERT query to insert the proper data and generate a new sensor id. Then a\n"
+    " SELECT query is run to get the newly allocated sensor id. If that fails then\n"
+    " this error message is generated.\n";
+
+static const char* FATAL_NO_SENSOR_2 =
+    " Some possible causes for this error are:\n"
+    "  * the user does not have proper INSERT or SELECT privileges\n"
+    "  * the sensor table does not exist\n"
+    "\n"
+    " If you are _absolutely_ certain that you have the proper privileges set and\n"
+    " that your database structure is built properly please let me know if you\n"
+    " continue to get this error. You can contact me at (roman@danyliw.com).\n";
+
+static const char* FATAL_BAD_SCHEMA_1 =
+    "database: The underlying database has not been initialized correctly.  This\n"
+    "          version of Snort requires version %d of the DB schema.  Your DB\n"
+    "          doesn't appear to have any records in the 'schema' table.\n%s";
+
+static const char* FATAL_BAD_SCHEMA_2 =
+    "          Please re-run the appropriate DB creation script (e.g. create_mysql,\n"
+    "          create_postgresql, create_oracle, create_mssql) located in the\n"
+    "          contrib\\ directory.\n\n"
+    "          See the database documentation for cursory details (doc/README.database).\n"
+    "          and the URL to the most recent database plugin documentation.\n";
+
+static const char* FATAL_OLD_SCHEMA_1 =
+    "database: The underlying database seems to be running an older version of\n"
+    "          the DB schema (current version=%d, required minimum version= %d).\n\n"
+    "          If you have an existing database with events logged by a previous\n"
+    "          version of snort, this database must first be upgraded to the latest\n"
+    "          schema (see the snort-users mailing list archive or DB plugin\n"
+    "          documention for details).\n%s\n";
+
+static const char* FATAL_OLD_SCHEMA_2 =
+    "          If migrating old data is not desired, merely create a new instance\n"
+    "          of the snort database using the appropriate DB creation script\n"
+    "          (e.g. create_mysql, create_postgresql, create_oracle, create_mssql)\n"
+    "          located in the contrib\\ directory.\n\n"
+    "          See the database documentation for cursory details (doc/README.database).\n"
+    "          and the URL to the most recent database plugin documentation.\n";
+
+static const char* FATAL_NO_SUPPORT_1 =
+    "If this build of snort was obtained as a binary distribution (e.g., rpm,\n"
+    "or Windows), then check for alternate builds that contains the necessary\n"
+    "'%s' support.\n\n"
+    "If this build of snort was compiled by you, then re-run the\n"
+    "the ./configure script using the '--with-%s' switch.\n"
+    "For non-standard installations of a database, the '--with-%s=DIR'\n%s";
+
+static const char* FATAL_NO_SUPPORT_2 =
+    "syntax may need to be used to specify the base directory of the DB install.\n\n"
+    "See the database documentation for cursory details (doc/README.database).\n"
+    "and the URL to the most recent database plugin documentation.\n";
+
 /******** Prototypes  **************************************************/
 
-void          DatabaseInit(u_char *);
+void          DatabaseInit(char *);
 DatabaseData *InitDatabaseData(char *args);
 void          DatabaseInitFinalize(int unused, void *arg);
 void          ParseDatabaseArgs(DatabaseData *data);
@@ -302,7 +364,7 @@ void DatabaseSetup()
 }
 
 /*******************************************************************************
- * Function: DatabaseInit(u_char *)
+ * Function: DatabaseInit(char *)
  *
  * Purpose: Calls the argument parsing function, performs final setup on data
  *          structs, links the preproc function into the function list.
@@ -312,7 +374,7 @@ void DatabaseSetup()
  * Returns: void function
  *
  ******************************************************************************/
-void DatabaseInit(u_char *args)
+void DatabaseInit(char *args)
 {
     DatabaseData *data = NULL;
 
@@ -516,21 +578,8 @@ void DatabaseInitFinalize(int unused, void *arg)
         {
             ErrorMessage("database: Problem obtaining SENSOR ID (sid) from %s->sensor\n", 
                          data->shared->dbname);
-            FatalError("\n"
-                       " When this plugin starts, a SELECT query is run to find the sensor id for the\n"
-                       " currently running sensor. If the sensor id is not found, the plugin will run\n"
-                       " an INSERT query to insert the proper data and generate a new sensor id. Then a\n"
-                       " SELECT query is run to get the newly allocated sensor id. If that fails then\n"
-                       " this error message is generated.\n"
-                       "\n"
-                       " Some possible causes for this error are:\n"
-                       "  * the user does not have proper INSERT or SELECT privileges\n"
-                       "  * the sensor table does not exist\n"
-                       "\n"
-                       " If you are _absolutely_ certain that you have the proper privileges set and\n"
-                       " that your database structure is built properly please let me know if you\n"
-                       " continue to get this error. You can contact me at (roman@danyliw.com).\n"
-                       "\n");
+            FatalError("%s\n%s\n", FATAL_NO_SENSOR_1, FATAL_NO_SENSOR_2);
+
         }
     }
 
@@ -652,31 +701,11 @@ void DatabaseInitFinalize(int unused, void *arg)
 
     if ( data->DBschema_version == 0 )
     {
-       FatalError("database: The underlying database has not been initialized correctly.  This\n"
-                  "          version of Snort requires version %d of the DB schema.  Your DB\n"
-                  "          doesn't appear to have any records in the 'schema' table.\n"
-                  "          Please re-run the appropriate DB creation script (e.g. create_mysql,\n"
-                  "          create_postgresql, create_oracle, create_mssql) located in the\n"
-                  "          contrib\\ directory.\n\n"
-                  "          See the database documentation for cursory details (doc/README.database).\n"
-                  "          and the URL to the most recent database plugin documentation.\n",
-                  LATEST_DB_SCHEMA_VERSION);
+       FatalError(FATAL_BAD_SCHEMA_1, LATEST_DB_SCHEMA_VERSION, FATAL_BAD_SCHEMA_2);
     }
     if ( data->DBschema_version < LATEST_DB_SCHEMA_VERSION )
     {
-       FatalError("database: The underlying database seems to be running an older version of\n"
-                  "          the DB schema (current version=%d, required minimum version= %d).\n\n"
-                  "          If you have an existing database with events logged by a previous\n"
-                  "          version of snort, this database must first be upgraded to the latest\n"
-                  "          schema (see the snort-users mailing list archive or DB plugin\n"
-                  "          documention for details).\n\n"
-                  "          If migrating old data is not desired, merely create a new instance\n"
-                  "          of the snort database using the appropriate DB creation script\n"
-                  "          (e.g. create_mysql, create_postgresql, create_oracle, create_mssql)\n"
-                  "          located in the contrib\\ directory.\n\n"
-                  "          See the database documentation for cursory details (doc/README.database).\n"
-                  "          and the URL to the most recent database plugin documentation.\n",
-                  data->DBschema_version, LATEST_DB_SCHEMA_VERSION);
+       FatalError(FATAL_OLD_SCHEMA_1, data->DBschema_version, LATEST_DB_SCHEMA_VERSION, FATAL_OLD_SCHEMA_2);
     }
     /*
     else if ( data->DBschema_version < LATEST_DB_SCHEMA_VERSION )
@@ -839,16 +868,7 @@ void ParseDatabaseArgs(DatabaseData *data)
              !strncasecmp(type, KEYWORD_ORACLE, strlen(KEYWORD_ORACLE)) )
         {
             ErrorMessage("database: '%s' support is not compiled into this build of snort\n\n", type);
-            FatalError("If this build of snort was obtained as a binary distribution (e.g., rpm,\n"
-                       "or Windows), then check for alternate builds that contains the necessary\n"
-                       "'%s' support.\n\n"
-                       "If this build of snort was compiled by you, then re-run the\n"
-                       "the ./configure script using the '--with-%s' switch.\n"
-                       "For non-standard installations of a database, the '--with-%s=DIR'\n"
-                       "syntax may need to be used to specify the base directory of the DB install.\n\n"
-                       "See the database documentation for cursory details (doc/README.database).\n"
-                       "and the URL to the most recent database plugin documentation.\n",
-                       type, type, type);
+            FatalError(FATAL_NO_SUPPORT_1, type, type, type, FATAL_NO_SUPPORT_2);
         }
         else
         {
@@ -1624,10 +1644,10 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
 
     if(p != NULL)
     {
-        if((!p->frag_flag) && (p->iph)) 
+        if((!p->frag_flag) && (IPH_IS_VALID(p))) 
         {
             /* query = NewQueryNode(query, 0); */
-            if(p->iph->ip_proto == IPPROTO_ICMP && p->icmph)
+            if(GET_IPH_PROTO(p) == IPPROTO_ICMP && p->icmph)
             {
                 query = NewQueryNode(query, 0);
                 /*** Build a query for the ICMP Header ***/
@@ -1672,7 +1692,7 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                         goto bad_query;
                 }
             }
-            else if(p->iph->ip_proto == IPPROTO_TCP && p->tcph)
+            else if(GET_IPH_PROTO(p) == IPPROTO_TCP && p->tcph)
             {
                 query = NewQueryNode(query, 0);
                 /*** Build a query for the TCP Header ***/
@@ -1775,7 +1795,7 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                     }
                 }
             }
-            else if(p->iph->ip_proto == IPPROTO_UDP && p->udph)
+            else if(GET_IPH_PROTO(p) == IPPROTO_UDP && p->udph)
             {
                 query = NewQueryNode(query, 0);
                 /*** Build the query for the UDP Header ***/
@@ -1853,7 +1873,7 @@ void Database(Packet *p, char *msg, void *arg, Event *event)
                                     data->shared->cid,
                                     (u_long)ntohl(p->iph->ip_src.s_addr),
                                     (u_long)ntohl(p->iph->ip_dst.s_addr),
-                                    p->iph->ip_proto);
+                                    GET_IPH_PROTO(p));
 
                 if (ret != SNORT_SNPRINTF_SUCCESS)
                     goto bad_query;
@@ -2543,7 +2563,7 @@ int Insert(char * query, DatabaseData * data)
     if(data->shared->dbtype_id == DB_ODBC)
     {
         if(SQLAllocStmt(data->u_connection, &data->u_statement) == SQL_SUCCESS)
-            if(SQLPrepare(data->u_statement, query, SQL_NTS) == SQL_SUCCESS)
+            if(SQLPrepare(data->u_statement, (ODBC_SQLCHAR *)query, SQL_NTS) == SQL_SUCCESS)
             {
                 if(SQLExecute(data->u_statement) == SQL_SUCCESS)
                 {
@@ -2763,7 +2783,7 @@ int Select(char * query, DatabaseData * data)
     if(data->shared->dbtype_id == DB_ODBC)
     {
         if(SQLAllocStmt(data->u_connection, &data->u_statement) == SQL_SUCCESS)
-            if(SQLPrepare(data->u_statement, query, SQL_NTS) == SQL_SUCCESS)
+            if(SQLPrepare(data->u_statement, (ODBC_SQLCHAR *)query, SQL_NTS) == SQL_SUCCESS)
                 if(SQLExecute(data->u_statement) == SQL_SUCCESS)
                     if(SQLRowCount(data->u_statement, &data->u_rows) == SQL_SUCCESS)
                         if(data->u_rows)
@@ -2949,11 +2969,11 @@ void Connect(DatabaseData * data)
          * You can ignore messages 5701 and 5703; they are only informational.
          */
         ret = SQLConnect( data->u_connection
-                        , data->shared->dbname
+                        , (ODBC_SQLCHAR *)data->shared->dbname
                         , SQL_NTS
-                        , data->user
+                        , (ODBC_SQLCHAR *)data->user
                         , SQL_NTS
-                        , data->password
+                        , (ODBC_SQLCHAR *)data->password
                         , SQL_NTS);
         if( ret != SQL_SUCCESS )
         {
@@ -2981,7 +3001,7 @@ void Connect(DatabaseData * data)
                                            , SQL_MAX_MESSAGE_LENGTH
                                            , &msgLen)) != SQL_NO_DATA)
                 {
-                    if( strstr(msg, "SQL Server") != NULL )
+                    if( strstr((const char *)msg, "SQL Server") != NULL )
                     {
                         data->u_underlying_dbtype_id = DB_MSSQL;
                     }
@@ -2989,7 +3009,7 @@ void Connect(DatabaseData * data)
                     if( nativeError!=5701 && nativeError!=5703 )
                     {
                         encounteredFailure = 1;
-                        strncat(odbcError, msg, sizeof(odbcError));
+                        strncat(odbcError, (const char *)msg, sizeof(odbcError));
                     }
                     errorIndex++;
                 }

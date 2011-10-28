@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2006 Sourcefire, Inc.
+ ** Copyright (C) 1998-2008 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -56,13 +56,20 @@
 #include "util.h"
 #include "mstring.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats isDataAtPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 extern char *file_name;  /* this is the file name from rules.c, generally used
                             for error messages */
 
 extern int file_line;    /* this is the file line number from rules.c that is
                             used to indicate file lines for error messages */
 
-extern u_int8_t *doe_ptr;
+extern const u_int8_t *doe_ptr;
 
 #define ISDATAAT_RELATIVE_FLAG 0x01
 #define ISDATAAT_RAWBYTES_FLAG 0x02
@@ -94,7 +101,10 @@ int  IsDataAt(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIsDataAt(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("isdataat", IsDataAtInit);
+    RegisterPlugin("isdataat", IsDataAtInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("isdataat", &isDataAtPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: IsDataAt Setup\n"););
 }
@@ -236,12 +246,16 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
     IsDataAtData *isdata;
     int dsize;
-    char *base_ptr, *end_ptr, *start_ptr;
+    const u_int8_t *base_ptr, *end_ptr, *start_ptr;
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(isDataAtPerfStats);
 
     isdata = (IsDataAtData *) fp_list->context;
 
     if (!isdata)
     {
+        PREPROC_PROFILE_END(isDataAtPerfStats);
         return 0;
     }
 
@@ -249,7 +263,7 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         /* Rawbytes specified, force use of that buffer */
         dsize = p->dsize;
-        start_ptr = (char *) p->data;
+        start_ptr = p->data;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                     "Using RAWBYTES buffer!\n"););
     }
@@ -257,14 +271,14 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         /* If normalized buffer available, use it... */
         dsize = p->alt_dsize;
-        start_ptr = (char *)DecodeBuffer;
+        start_ptr = DecodeBuffer;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                     "Using Alternative Decode buffer!\n"););
     }
     else
     {
         dsize = p->dsize;
-        start_ptr = (char *) p->data;
+        start_ptr = p->data;
     }
 
     base_ptr = start_ptr;
@@ -276,6 +290,7 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] isdataat bounds check failed..\n"););
+            PREPROC_PROFILE_END(isDataAtPerfStats);
             return 0;
         }
     }
@@ -297,11 +312,13 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "[*] IsDataAt succeeded!  there is data...\n"););
+        PREPROC_PROFILE_END(isDataAtPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
 
     /* otherwise dump */
+    PREPROC_PROFILE_END(isDataAtPerfStats);
     return 0;
 
 }

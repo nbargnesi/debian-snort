@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -56,6 +57,13 @@
 #include "util.h"
 #include "plugin_enum.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats icmpIdPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 typedef struct _IcmpIdData
 {
         u_short icmpid;
@@ -85,8 +93,11 @@ void IcmpIdCheckInit(char *, OptTreeNode *, int);
 void SetupIcmpIdCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("icmp_id", IcmpIdCheckInit);
+    RegisterPlugin("icmp_id", IcmpIdCheckInit, OPT_TYPE_DETECTION);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("icmp_id", &icmpIdPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: IcmpIdCheck Setup\n"););
 }
 
@@ -180,17 +191,26 @@ void ParseIcmpId(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int IcmpIdCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
     if(!p->icmph)
         return 0; /* if error occured while icmp header
-                   * was processed, return 0 automagically.
-               */
-    if(p->icmph->type == ICMP_ECHO || p->icmph->type == ICMP_ECHOREPLY)
+                   * was processed, return 0 automagically.  */
+
+    PREPROC_PROFILE_START(icmpIdPerfStats);
+
+    if( (p->icmph->type == ICMP_ECHO || p->icmph->type == ICMP_ECHOREPLY) 
+#ifdef SUP_IP6
+        || (p->icmph->type == ICMP6_ECHO || p->icmph->type == ICMP6_REPLY) 
+#endif
+      ) 
     {
         /* test the rule ID value against the ICMP extension ID field */
         if(((IcmpIdData *) otn->ds_list[PLUGIN_ICMP_ID_CHECK])->icmpid == 
            p->icmph->s_icmp_id)
         {
             /* call the next function in the function list recursively */
+            PREPROC_PROFILE_END(icmpIdPerfStats);
             return fp_list->next->OptTestFunc(p, otn, fp_list->next);
         }
         else
@@ -201,5 +221,6 @@ int IcmpIdCheck(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(icmpIdPerfStats);
     return 0;
 }

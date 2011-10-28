@@ -3,7 +3,7 @@
 **
 ** perf-base.h
 **
-** Copyright (C) 2002 Sourcefire,Inc
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Dan Roelker (droelker@sourcefire.com)
 ** Marc Norton (mnorton@sourcefire.com)
 ** Chris Green (stream4 instrumentation)
@@ -32,6 +32,8 @@
 
 #include "config.h"
 #include "sfprocpidstats.h"
+#include "debug.h"
+#include "sf_types.h"
 
 #include <time.h>
 
@@ -117,6 +119,9 @@ typedef struct _SFBASE {
     UINT64   iSessionsEstablished;
     UINT64   iSessionsClosing;
 
+    UINT64   iAttributeHosts;
+    UINT64   iAttributeReloads;
+
 }  SFBASE;
 
 typedef struct _SYSTIMES {
@@ -200,7 +205,10 @@ typedef struct _SFBASE_STATS {
     double   tcp_sessions_pruned_per_second;
     double   tcp_sessions_dropped_async_per_second;
 
+    UINT64   current_attribute_hosts;
+    UINT64   attribute_table_reloads;
 }  SFBASE_STATS;
+
 
 int InitBaseStats(SFBASE *sfBase);
 int UpdateBaseStats(SFBASE *sfBase, int len, int iRebuiltPkt);

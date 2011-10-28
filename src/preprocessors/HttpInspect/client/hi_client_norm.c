@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -74,8 +74,9 @@ int hi_client_norm(HI_SESSION *Session)
     if(ClientReq->uri_norm)
     {
         Session->norm_flags &= ~HI_BODY;
-        if( (iRet = hi_norm_uri(Session, UriBuf, &iUriBufSize, 
-                           ClientReq->uri, ClientReq->uri_size)) )
+        iRet = hi_norm_uri(Session, UriBuf, &iUriBufSize, 
+                           ClientReq->uri, ClientReq->uri_size);
+        if (iRet == HI_NONFATAL_ERR)
         {
             /* There was a non-fatal problem normalizing */
             ClientReq->uri_norm = NULL;
@@ -95,8 +96,9 @@ int hi_client_norm(HI_SESSION *Session)
     if(ClientReq->post_norm)
     {
         Session->norm_flags |= HI_BODY;
-        if( (iRet = hi_norm_uri(Session, PostBuf, &iPostBufSize, 
-                           ClientReq->post_raw, ClientReq->post_raw_size)) )
+        iRet = hi_norm_uri(Session, PostBuf, &iPostBufSize, 
+                           ClientReq->post_raw, ClientReq->post_raw_size);
+        if (iRet == HI_NONFATAL_ERR)
         {
             ClientReq->post_norm = NULL;
             ClientReq->post_norm_size = 0;

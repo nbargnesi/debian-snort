@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005 Sourcefire Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * Author: Marc Norton
  *         Steve Sturges
@@ -36,11 +36,11 @@
 #include "bmh.h"
 
 extern DynamicEngineData _ded; /* sf_detection_engine.c */
-extern int checkCursorInternal(void *p, int flags, int offset, u_int8_t *cursor);
+extern int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor);
 
-static char *_buffer_end = NULL;
-static char *_alt_buffer_end = NULL;
-static char *_uri_buffer_end = NULL;
+static const u_int8_t *_buffer_end = NULL;
+static const u_int8_t *_alt_buffer_end = NULL;
+static const u_int8_t *_uri_buffer_end = NULL;
 
 void ContentSetup()
 {
@@ -50,7 +50,7 @@ void ContentSetup()
 }
 
 /*
- *  Initialize Boyer-Moore-Horspool data for single pattern comparisions
+ *  Initialize Boyer-Moore-Horspool data for single pattern comparisons
  *
  *  returns: 0  -> success
  *           !0 -> error,failed
@@ -112,11 +112,11 @@ int BoyerContentSetup(Rule *rule, ContentInfo *content)
  *      post
  *      
  */
-ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, u_int8_t **cursor)
+ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **cursor)
 {
-    char * q=0;
-    char * buffer_start;
-    char * buffer_end = NULL;
+    const u_int8_t * q = NULL;
+    const u_int8_t * buffer_start;
+    const u_int8_t * buffer_end = NULL;
     u_int  buffer_len;
     int    length;
     int    i;
@@ -186,7 +186,7 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, u_int8_t **cursor
                 buffer_len = content->depth;
             }
 
-            q =(char*) hbm_match((HBM_STRUCT*)content->boyer_ptr,buffer_start,buffer_len);
+            q = hbm_match((HBM_STRUCT*)content->boyer_ptr,buffer_start,buffer_len);
 
             if (q)
             {
@@ -276,7 +276,7 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, u_int8_t **cursor
         buffer_len = content->depth;
     }
 
-    q =(char*) hbm_match((HBM_STRUCT*)content->boyer_ptr,buffer_start,buffer_len);
+    q = hbm_match((HBM_STRUCT*)content->boyer_ptr,buffer_start,buffer_len);
 
     if (q)
     {

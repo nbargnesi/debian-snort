@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2006 Sourcefire, Inc.
+ ** Copyright (C) 2002-2008 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,14 @@
 #include "mstring.h"
 #include "byte_extract.h"
 
-extern u_int8_t *doe_ptr;
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats byteJumpPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
+extern const u_int8_t *doe_ptr;
 extern u_int8_t DecodeBuffer[DECODE_BLEN];
 
 typedef struct _ByteJumpData
@@ -120,7 +127,11 @@ int ByteJump(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupByteJump(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("byte_jump", ByteJumpInit);
+    RegisterPlugin("byte_jump", ByteJumpInit, OPT_TYPE_DETECTION);
+
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("byte_jump", &byteJumpPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: ByteJump Setup\n"););
 }
@@ -340,16 +351,20 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     ByteJumpData *bjd;
     u_int32_t value = 0;
     u_int32_t jump_value = 0;
+    u_int32_t payload_bytes_grabbed = 0;
     int dsize;
     int use_alt_buffer = p->packet_flags & PKT_ALT_DECODE;
-    char *base_ptr, *end_ptr, *start_ptr;
+    const u_int8_t *base_ptr, *end_ptr, *start_ptr;
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(byteJumpPerfStats);
 
     bjd = (ByteJumpData *) fp_list->context;
 
     if(use_alt_buffer)
     {
         dsize = p->alt_dsize;
-        start_ptr = (char *) DecodeBuffer;        
+        start_ptr = DecodeBuffer;        
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                     "Using Alternative Decode buffer!\n"););
 
@@ -376,6 +391,8 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] byte jump bounds check failed..\n"););
+
+            PREPROC_PROFILE_END(byteJumpPerfStats);
             return 0;
         }
     }
@@ -404,25 +421,30 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "Byte Extraction Failed\n"););
 
+            PREPROC_PROFILE_END(byteJumpPerfStats);
             return 0;
         }
+
+        payload_bytes_grabbed = bjd->bytes_to_grab;
     }
     else
     {
-        if(string_extract(bjd->bytes_to_grab, bjd->base,
-                          base_ptr, start_ptr, end_ptr, &value))
+        payload_bytes_grabbed = string_extract(bjd->bytes_to_grab, bjd->base,
+                                               base_ptr, start_ptr, end_ptr, &value);
+        if (payload_bytes_grabbed < 0)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "Byte Extraction Failed\n"););
 
+            PREPROC_PROFILE_END(byteJumpPerfStats);
             return 0;
         }
 
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                "grabbed %d bytes, value = %08X\n", 
-                bjd->bytes_to_grab, value););
+                            "grabbed %d of %d bytes, value = %08X\n", 
+                            payload_bytes_grabbed, bjd->bytes_to_grab, value););
 
     /* Adjust the jump_value (# bytes to jump forward) with
      * the multiplier.
@@ -430,8 +452,8 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     jump_value = value * bjd->multiplier;
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                "grabbed %d bytes, after multiplier value = %08X\n", 
-                bjd->bytes_to_grab, jump_value););
+                            "grabbed %d of %d bytes, after multiplier value = %08X\n", 
+                            payload_bytes_grabbed, bjd->bytes_to_grab, jump_value););
 
 
     /* if we need to align on 32-bit boundries, round up to the next
@@ -450,8 +472,8 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                "Grabbed %d bytes at offset %d, value = 0x%08X\n",
-                bjd->bytes_to_grab, bjd->offset, jump_value););
+                            "Grabbed %d bytes at offset %d, value = 0x%08X\n",
+                            payload_bytes_grabbed, bjd->offset, jump_value););
 
     if(bjd->from_beginning_flag)
     {
@@ -465,20 +487,23 @@ int ByteJump(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
     else
     {
-        doe_ptr = base_ptr + bjd->bytes_to_grab + jump_value;
+        doe_ptr = base_ptr + payload_bytes_grabbed + jump_value;
     }
    
     if(!inBounds(start_ptr, end_ptr, doe_ptr))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "tmp ptr is not in bounds %p\n", doe_ptr););
+        PREPROC_PROFILE_END(byteJumpPerfStats);
         return 0;
     }
     else
     {        
+        PREPROC_PROFILE_END(byteJumpPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* Never reached */
+    PREPROC_PROFILE_END(byteJumpPerfStats);
     return 0;
 }

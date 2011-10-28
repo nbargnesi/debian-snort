@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -35,7 +36,12 @@
 #include "debug.h"
 #include "plugin_enum.h"
 
-
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats tcpSeqPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
 
 typedef struct _TcpSeqCheckData
 {
@@ -63,7 +69,10 @@ int CheckTcpSeqEq(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupTcpSeqCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("seq", TcpSeqCheckInit);
+    RegisterPlugin("seq", TcpSeqCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("seq", &tcpSeqPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: TcpSeqCheck Initialized\n"););
 }
@@ -156,14 +165,19 @@ void ParseTcpSeq(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int CheckTcpSeqEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
     if(!p->tcph)
         return 0; /* if error appeared when tcp header was processed,
                * test fails automagically */
+
+    PREPROC_PROFILE_START(tcpSeqPerfStats);
 
     if(((TcpSeqCheckData *)otn->ds_list[PLUGIN_TCP_SEQ_CHECK])->tcp_seq == 
        p->tcph->th_seq)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(tcpSeqPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 #ifdef DEBUG
@@ -175,5 +189,6 @@ int CheckTcpSeqEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 #endif
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(tcpSeqPerfStats);
     return 0;
 }

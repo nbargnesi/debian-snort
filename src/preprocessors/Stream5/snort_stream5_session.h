@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2007 Sourcefire, Inc.
+ * Copyright (C) 2005-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -47,6 +47,7 @@ Stream5LWSession *GetLWSessionFromKey(Stream5SessionCache *, SessionKey *);
 Stream5LWSession *NewLWSession(Stream5SessionCache *, Packet *, SessionKey *);
 int DeleteLWSession(Stream5SessionCache *, Stream5LWSession *);
 void PrintLWSessionCache(Stream5SessionCache *);
+int DeleteLWSessionCache(Stream5SessionCache *sessionCache);
 int PurgeLWSessionCache(Stream5SessionCache *);
 int PruneLWSessionCache(Stream5SessionCache *,
                       u_int32_t thetime,

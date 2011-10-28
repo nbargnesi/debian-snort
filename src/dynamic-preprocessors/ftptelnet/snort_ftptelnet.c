@@ -1,7 +1,7 @@
 /*
  * snort_ftptelnet.c
  *
- * Copyright (C) 2004 Sourcefire,Inc
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -50,6 +50,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include "sf_ip.h"
 #ifndef WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -269,25 +270,30 @@ extern FTPTELNET_GLOBAL_CONF FTPTelnetGlobalConf;
  * The login_cmds and dir_cmds are used to track state of username
  * and current directory.
  */
-#define DEFAULT_FTP_CONF "hardcoded_config\
- def_max_param_len 100 \
- ftp_cmds { USER PASS ACCT CWD CDUP SMNT \
-   QUIT REIN PORT PASV TYPE STRU MODE RETR STOR STOU APPE ALLO REST \
-   RNFR RNTO ABOR DELE RMD MKD PWD LIST NLST SITE SYST STAT HELP NOOP } \
- ftp_cmds { AUTH ADAT PROT PBSZ CONF ENC } \
- ftp_cmds { FEAT OPTS } \
- ftp_cmds { MDTM REST SIZE MLST MLSD } \
- alt_max_param_len 0 { CDUP QUIT REIN PASV STOU ABOR PWD SYST NOOP } \
- cmd_validity MODE < char SBC > \
- cmd_validity STRU < char FRP > \
- cmd_validity ALLO < int [ char R int ] > \
- cmd_validity TYPE < { char AE [ char NTC ] | char I | char L [ number ] } > \
- cmd_validity PORT < host_port > \
- data_chan_cmds { PASV PORT } \
- data_xfer_cmds { RETR STOR STOU APPE LIST NLST } \
- login_cmds { USER PASS } \
- dir_cmds { CWD 250 CDUP 250 PWD 257 } \
-"
+/* DEFAULT_FTP_CONF_* deliberately break the default conf into
+ * chunks with lengths < 509 to keep ISO C89 compilers happy
+ */
+static const char* DEFAULT_FTP_CONF_1 =
+    "hardcoded_config "
+    "def_max_param_len 100 "
+    "ftp_cmds { USER PASS ACCT CWD CDUP SMNT "
+      "QUIT REIN PORT PASV TYPE STRU MODE RETR STOR STOU APPE ALLO REST "
+      "RNFR RNTO ABOR DELE RMD MKD PWD LIST NLST SITE SYST STAT HELP NOOP } "
+    "ftp_cmds { AUTH ADAT PROT PBSZ CONF ENC } "
+    "ftp_cmds { FEAT OPTS } "
+    "ftp_cmds { MDTM REST SIZE MLST MLSD } "
+    "alt_max_param_len 0 { CDUP QUIT REIN PASV STOU ABOR PWD SYST NOOP } ";
+
+static const char* DEFAULT_FTP_CONF_2 =
+    "cmd_validity MODE < char SBC > "
+    "cmd_validity STRU < char FRPO [ string ] > "
+    "cmd_validity ALLO < int [ char R int ] > "
+    "cmd_validity TYPE < { char AE [ char NTC ] | char I | char L [ number ] } > "
+    "cmd_validity PORT < host_port > "
+    "data_chan_cmds { PASV PORT } "
+    "data_xfer_cmds { RETR STOR STOU APPE LIST NLST } "
+    "login_cmds { USER PASS } "
+    "dir_cmds { CWD 250 CDUP 250 PWD 257 } ";
 
 static int printedFTPHeader = 0;
 static int gDefaultServerConfig = 0;
@@ -851,11 +857,15 @@ static int ProcessTelnetConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
 #ifndef INADDR_NONE
 #define INADDR_NONE -1
 #endif
-int GetIPAddr(char *addrString, u_int32_t *ipAddr,
+int GetIPAddr(char *addrString, snort_ip *ipAddr,
                              char *ErrorString, int ErrStrLen)
 {
+#ifdef SUP_IP6
+    if(sfip_pton(addrString, ipAddr) != SFIP_SUCCESS) 
+#else
     *ipAddr = inet_addr(addrString);
     if (*ipAddr == INADDR_NONE)
+#endif
     {
         snprintf(ErrorString, ErrStrLen,
                 "Invalid FTP client IP address '%s'.", addrString);
@@ -2249,11 +2259,11 @@ static int ProcessFTPAllowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
     while ((pcToken = NextToken(CONF_SEPARATORS)) != NULL)
     {
         FTP_BOUNCE_TO *newBounce;
-        u_int32_t ipaddr;
+        snort_ip_p ipaddr;
         int bits;
         u_int16_t portlow;
         u_int16_t porthigh;
-        char *ipPtr;
+        snort_ip *ipPtr;
 
         if(!strcmp(END_PORT_LIST, pcToken))
         {
@@ -2267,8 +2277,12 @@ static int ProcessFTPAllowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
          * return most specific match -- ie a specific host is more specific
          * than subnet.
          */
-        iRet = parseIP(pcToken, &ipaddr, &bits, &portlow, &porthigh);
+#ifdef SUP_IP6
+// XXX-IPV6 parsing IPs not yet implemented here
+#else
+        iRet = parseIP(pcToken, (u_int32_t*)&ipaddr, &bits, &portlow, &porthigh);
         if (iRet)
+#endif
         {
             snprintf(ErrorString, ErrStrLen,
                      "No argument to token '%s'.", ALLOW_BOUNCE);
@@ -2276,8 +2290,10 @@ static int ProcessFTPAllowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
             return FTPP_FATAL_ERR;
         }
 
+#ifndef SUP_IP6
         /* load this into the ClientConf structure  */
         ipaddr = ntohl(ipaddr);
+#endif
         newBounce = (FTP_BOUNCE_TO *)calloc(1, sizeof(FTP_BOUNCE_TO));
         if (newBounce == NULL)
         {
@@ -2285,13 +2301,18 @@ static int ProcessFTPAllowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
                                             *(_dpd.config_file), *(_dpd.config_line));
         }
 
-        newBounce->ip = ipaddr;
         newBounce->relevant_bits = bits;
         newBounce->portlo = portlow;
         newBounce->porthi = porthigh;
-        ipPtr = (char *)&ipaddr;
-        
-        iRet = ftp_bounce_lookup_add(ClientConf->bounce_lookup, ipPtr, 4, newBounce);
+#ifdef SUP_IP6
+        IP_COPY_VALUE(newBounce->ip, ipaddr);
+        ipPtr = ipaddr;
+#else
+        newBounce->ip = ipaddr;
+        ipPtr = (snort_ip *)&ipaddr;
+#endif
+        iRet = ftp_bounce_lookup_add(ClientConf->bounce_lookup, (char *)ipPtr, 
+                            sizeof(snort_ip), newBounce);
         if (iRet)
         {
             free(newBounce);
@@ -2363,8 +2384,13 @@ static int PrintFTPClientConf(char * client, FTP_CLIENT_PROTO_CONF *ClientConf)
     }
     while (FTPBounce)
     {
+#ifdef SUP_IP6
+        snort_ip_p addr;
+        addr = &FTPBounce->ip;
+#else
         struct in_addr addr;
         addr.s_addr = FTPBounce->ip;
+#endif
         if (FTPBounce->porthi)
         {
             _dpd.logMsg("          Address: %s, Ports %d-%d\n",
@@ -2520,7 +2546,8 @@ static int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
     client = NextToken(CONF_SEPARATORS);
     if(strcmp(DEFAULT, client))
     {
-        u_int32_t ipAddr = 0;
+        snort_ip ipAddr;
+        IP_CLEAR(ipAddr);
         iRet = GetIPAddr(client, &ipAddr, ErrorString, ErrStrLen);
         if (iRet)
         {
@@ -2530,15 +2557,27 @@ static int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         {
             /* See if it is already there  */
             FTP_CLIENT_PROTO_CONF *new_client_conf;
-            new_client_conf = ftpp_ui_client_lookup_find(GlobalConf->client_lookup, ipAddr, &iRet);
+            new_client_conf = ftpp_ui_client_lookup_find(GlobalConf->client_lookup, 
+#ifdef SUP_IP6                            
+                                &ipAddr, &iRet
+#else
+                                ipAddr, &iRet
+#endif
+                              );
             if (iRet == FTPP_SUCCESS)
             {
+#ifdef SUP_IP6
+// XXX-IPv6 link issue.
+//                snprintf(ErrorString, ErrStrLen,
+//                        "Duplicate FTP client configuration for IP '%s'.",
+//                        sfip_ntoa(&ipAddr));
+#else
                 struct in_addr addr;
                 addr.s_addr = ipAddr;
                 snprintf(ErrorString, ErrStrLen,
                          "Duplicate FTP client configuration for IP '%s'.",
                          inet_ntoa(addr));
-
+#endif
                 return FTPP_INVALID_ARG;
             }
 
@@ -2556,7 +2595,13 @@ static int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                 DynamicPreprocessorFatalMessage("ProcessFTPClientConf(): Out of memory allocing clientAddr.\n");
             }
 
-            ftpp_ui_config_add_ftp_client(GlobalConf, ipAddr, new_client_conf);
+            ftpp_ui_config_add_ftp_client(GlobalConf, 
+#ifdef SUP_IP6
+                            &ipAddr, 
+#else
+                            ipAddr, 
+#endif
+                            new_client_conf);
             ftp_conf = new_client_conf;
         }
     }
@@ -2892,8 +2937,8 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
     server = NextToken(CONF_SEPARATORS);
     if(strcmp(DEFAULT, server))
     {
-        u_int32_t ipAddr = 0;
-
+        snort_ip ipAddr;
+        IP_CLEAR(ipAddr);
         iRet = GetIPAddr(server, &ipAddr, ErrorString, ErrStrLen);
         if (iRet)
         {
@@ -2903,7 +2948,21 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         {
             /* See if it is already there  */
             FTP_SERVER_PROTO_CONF *new_server_conf;
-            new_server_conf = ftpp_ui_server_lookup_find(GlobalConf->server_lookup, ipAddr, &iRet);
+#ifdef SUP_IP6
+            new_server_conf = ftpp_ui_server_lookup_find(GlobalConf->server_lookup, 
+                                                         &ipAddr, &iRet);
+            if (iRet == FTPP_SUCCESS)
+            {
+// XXX-IPv6 link issue.
+//                snprintf(ErrorString, ErrStrLen,
+//                         "Duplicate FTP client configuration for IP '%s'.",
+//                         sfip_ntoa(&ipAddr));
+                return FTPP_INVALID_ARG;
+            }
+
+#else
+            new_server_conf = ftpp_ui_server_lookup_find(GlobalConf->server_lookup, 
+                                                         ipAddr, &iRet);
             if (iRet == FTPP_SUCCESS)
             {
                 struct in_addr addr;
@@ -2913,6 +2972,7 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                          inet_ntoa(addr));
                 return FTPP_INVALID_ARG;
             }
+#endif
 
             new_server_conf = (FTP_SERVER_PROTO_CONF *)calloc(1, sizeof(FTP_SERVER_PROTO_CONF));
             if (new_server_conf == NULL)
@@ -2928,7 +2988,11 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                 DynamicPreprocessorFatalMessage("ProcessFTPServerConf(): Out of memory allocing serverAddr.\n");
             }
 
+#ifdef SUP_IP6
+            ftpp_ui_config_add_ftp_server(GlobalConf, &ipAddr, new_server_conf);
+#else
             ftpp_ui_config_add_ftp_server(GlobalConf, ipAddr, new_server_conf);
+#endif
             ftp_conf = new_server_conf;
         }
     }
@@ -2943,7 +3007,7 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         char *default_conf_str;
         char *default_client;
         char *saveMaxToken = maxToken;
-        int default_conf_len = strlen(DEFAULT_FTP_CONF);
+        int default_conf_len = strlen(DEFAULT_FTP_CONF_1) + strlen(DEFAULT_FTP_CONF_2);
         default_conf_str = (char *)calloc(default_conf_len + 1, sizeof(char));
         if (default_conf_str == NULL)
         {
@@ -2951,7 +3015,7 @@ static int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                                             *(_dpd.config_file), *(_dpd.config_line));
         }
 
-        strncpy(default_conf_str, DEFAULT_FTP_CONF, default_conf_len);
+        snprintf(default_conf_str, default_conf_len, "%s%s", DEFAULT_FTP_CONF_1, DEFAULT_FTP_CONF_2);
         default_conf_str[default_conf_len] = '\0';
         maxToken = default_conf_str + default_conf_len + 1;
         default_client = strtok(default_conf_str, CONF_SEPARATORS);
@@ -3607,8 +3671,8 @@ static inline int LogTelnetEvents(TELNET_SESSION *TelnetSession)
  */
 static inline int SetSiInput(FTPP_SI_INPUT *SiInput, SFSnortPacket *p)
 {
-    SiInput->sip   = p->ip4_header->source.s_addr;
-    SiInput->dip   = p->ip4_header->destination.s_addr;
+    IP_COPY_VALUE(SiInput->sip, GET_SRC_IP(p));
+    IP_COPY_VALUE(SiInput->dip, GET_DST_IP(p));
     SiInput->sport = p->src_port;
     SiInput->dport = p->dst_port;
 
@@ -3806,7 +3870,7 @@ int SnortFTP(FTPTELNET_GLOBAL_CONF *GlobalConf, SFSnortPacket *p, int iInspectMo
     if (iInspectMode == FTPP_SI_SERVER_MODE)
     {
         /* Force flush of client side of stream  */
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_FTPTELNET,
+        DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
             "Server packet: %.*s\n", p->payload_size, p->payload));
         _dpd.streamAPI->response_flush_stream(p);
     }
@@ -3814,14 +3878,14 @@ int SnortFTP(FTPTELNET_GLOBAL_CONF *GlobalConf, SFSnortPacket *p, int iInspectMo
     {
         if (p->flags & FLAG_STREAM_INSERT)
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_FTPTELNET,
+            DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
                 "Client packet will be reassembled\n"));
             PREPROC_PROFILE_END(ftpPerfStats);
             return FTPP_SUCCESS;
         }
         else
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_FTPTELNET,
+            DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
                 "Client packet: rebuilt %s: %.*s\n",
                 (p->flags & FLAG_REBUILT_STREAM) ? "yes" : "no",
                 p->payload_size, p->payload));
@@ -3972,13 +4036,13 @@ int FTPPBounceInit(char *name, char *parameters, void **dataPtr)
  *          On success, it returns 1;
  *
  ****************************************************************************/
-int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
+int FTPPBounceEval(void *pkt, const u_int8_t **cursor, void *dataPtr)
 {
     u_int32_t ip = 0;
     SFSnortPacket *p = (SFSnortPacket *)pkt;
     int octet=0;
-    char *start_ptr, *end_ptr, *base_ptr;
-    char *this_param = *cursor;
+    const char *start_ptr, *end_ptr, *base_ptr;
+    const char *this_param = *(const char **)cursor;
 
     int dsize;
     int use_alt_buffer = p->flags & FLAG_ALT_DECODE;
@@ -3987,19 +4051,19 @@ int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
     {
         dsize = p->normalized_payload_size;
         start_ptr = (char *) _dpd.altBuffer;        
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
                     "Using Alternative Decode buffer!\n"););
 
     }
     else
     {
-        start_ptr = p->payload;
+        start_ptr = (const char *)p->payload;
         dsize = p->payload_size;
     }
 
     DEBUG_WRAP(
-            _dpd.debugMsg(DEBUG_PATTERN_MATCH,"[*] ftpbounce firing...\n");
-            _dpd.debugMsg(DEBUG_PATTERN_MATCH,"payload starts at %p\n", start_ptr);
+            DebugMessage(DEBUG_PATTERN_MATCH,"[*] ftpbounce firing...\n");
+            DebugMessage(DEBUG_PATTERN_MATCH,"payload starts at %p\n", start_ptr);
             );  /* END DEBUG_WRAP */
 
     /* save off whatever our ending pointer is */
@@ -4016,7 +4080,7 @@ int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
         {
             if (!isdigit((int)*this_param))
             {
-                DEBUG_WRAP(_dpd.debugMsg(DEBUG_PATTERN_MATCH,
+                DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                          "[*] ftpbounce non digit char failed..\n"););
                 return 0;
             }
@@ -4030,7 +4094,7 @@ int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
 
         if (value > 0xFF)
         {
-            DEBUG_WRAP(_dpd.debugMsg(DEBUG_PATTERN_MATCH,
+            DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                      "[*] ftpbounce value > 256 ..\n"););
             return 0;
         }
@@ -4049,7 +4113,7 @@ int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
 
     if (octet < 4)
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_PATTERN_MATCH,
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
             "[*] ftpbounce insufficient data ..\n"););
         return 0;
     }
@@ -4061,7 +4125,7 @@ int FTPPBounceEval(void *pkt, u_int8_t **cursor, void *dataPtr)
     }
     else
     {
-        DEBUG_WRAP(_dpd.debugMsg(DEBUG_PATTERN_MATCH,
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
             "PORT command not being used in bounce\n"););
         return 0;
     }

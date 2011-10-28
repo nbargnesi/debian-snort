@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -32,6 +33,10 @@
 #include "parser.h"
 #include "log.h"
 #include "event.h"
+#ifdef PORTLISTS
+#include "sfutil/sfportobject.h"
+#endif
+
 /*  P R O T O T Y P E S  ******************************************************/
 extern int do_detect;
 extern int do_detect_content;
@@ -56,7 +61,20 @@ int EvalPacket(ListHead *, int, Packet * );
 int EvalHeader(RuleTreeNode *, Packet *, int);
 int EvalOpts(OptTreeNode *, Packet *);
 void TriggerResponses(Packet *, OptTreeNode *);
+
+#ifdef PORTLISTS
+#ifdef SUP_IP6
+int CheckAddrPort(sfip_var_t *, PortObject* , Packet *, u_int32_t, int);
+#else
+int CheckAddrPort(IpAddrSet *, PortObject* , Packet *, u_int32_t, int);
+#endif
+#else
+#ifdef SUP_IP6
+int CheckAddrPort(sfip_var_t *, u_int16_t, u_int16_t, Packet *, u_int32_t, int);
+#else
 int CheckAddrPort(IpAddrSet *, u_int16_t, u_int16_t, Packet *, u_int32_t, int);
+#endif
+#endif
 
 #include "bitop_funcs.h"
 static inline void DisableDetect(Packet *p)
@@ -70,6 +88,12 @@ static inline void DisableAllDetect(Packet *p)
     boResetBITOP(p->preprocessor_bits);
     do_detect = do_detect_content = 0;
 }
+
+static inline void DisablePreprocessors(Packet *p)
+{
+    boResetBITOP(p->preprocessor_bits);
+}
+
 
 /* detection modules */
 int CheckBidirectional(Packet *, struct _RuleTreeNode *, RuleFpList *);

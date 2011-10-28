@@ -11,7 +11,7 @@
 *   
 *
 **  Copyright (C) 2001 Marc Norton
-** Copyright (C) 2003 Sourcefire, Inc
+** Copyright (C) 2003-2008 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -41,9 +41,9 @@
 
 static void KTrieFree(KTRIENODE *n);
 
-static u_int32_t mtot = 0;
+static unsigned int mtot = 0;
 
-u_int32_t KTrieMemUsed(void) { return mtot; }
+unsigned int KTrieMemUsed(void) { return mtot; }
     
 /*
 *  Allocate Memory
@@ -532,7 +532,7 @@ static inline int KTriePrefixMatch( KTRIE_STRUCT  * kt,
             if( pk->nocase )
             {
                 nfound++;
-                if( match( pk->id, index, data ) )
+                if( match( pk->id, index, data ) > 0)
                   return nfound;
             }
             else
@@ -540,7 +540,7 @@ static inline int KTriePrefixMatch( KTRIE_STRUCT  * kt,
 		if( !memcmp(pk->Pcase,Tc,pk->n) )
 		{
                   nfound++;
-                  if( match( pk->id, index, data ) )
+                  if( match( pk->id, index, data ) > 0 )
                     return nfound;
 		}
             }

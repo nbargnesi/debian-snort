@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -35,6 +36,13 @@
 #include "plugin_enum.h"
 #include "util.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ipIdPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 typedef struct _IpIdData
 {
     u_long ip_id;
@@ -60,7 +68,10 @@ int IpIdCheckEq(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIpIdCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("id", IpIdCheckInit);
+    RegisterPlugin("id", IpIdCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("id", &ipIdPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: IpIdCheck Initialized\n"););
 }
@@ -153,13 +164,18 @@ void ParseIpId(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int IpIdCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(!p->iph)
+    PROFILE_VARS;
+
+    if(!IPH_IS_VALID(p))
         return 0; /* if error occured while ip header
-                   * was processed, return 0 automagically.
-               */
-    if(((IpIdData *)otn->ds_list[PLUGIN_IP_ID_CHECK])->ip_id == p->iph->ip_id)
+                   * was processed, return 0 automagically.  */
+
+    PREPROC_PROFILE_START(ipIdPerfStats);
+
+    if(((IpIdData *)otn->ds_list[PLUGIN_IP_ID_CHECK])->ip_id == GET_IPH_ID(p))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ipIdPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -169,5 +185,6 @@ int IpIdCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ipIdPerfStats);
     return 0;
 }

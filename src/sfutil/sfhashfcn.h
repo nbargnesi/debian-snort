@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -46,6 +46,8 @@ typedef struct _SFHASHFCN {
 
 SFHASHFCN * sfhashfcn_new( int nrows );
 void sfhashfcn_free( SFHASHFCN * p );
+void sfhashfcn_static( SFHASHFCN * p );
+
 unsigned sfhashfcn_hash( SFHASHFCN * p, unsigned char *d, int n );
 
 int sfhashfcn_set_keyops( SFHASHFCN * p,

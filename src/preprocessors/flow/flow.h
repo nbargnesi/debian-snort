@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -28,6 +28,8 @@
 #include "flow_print.h"
 #include "flow_packet.h"
 #include "bitop.h"
+
+#undef inet_ntoa
 
 #define FROM_INITIATOR 1
 #define FROM_RESPONDER 2

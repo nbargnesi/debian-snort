@@ -91,12 +91,14 @@
     #define VERSION_DEBUG
 #endif
 
+#define LIBPCAP_ACCUMULATES
+
 /*
  * This version number here, and package name below,
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.7.0"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.8.1"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 
@@ -192,6 +194,7 @@ typedef SSIZE_T        ssize_t;
 
 char * strtok_r(char *s1, const char *s2, char **lasts);
 int    inet_aton(const char *cp, struct in_addr *addr);
+int    inet_pton(int af, const char *src, void *dst);
 
 
 enum msg_type {

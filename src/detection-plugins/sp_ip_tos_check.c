@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -40,6 +41,13 @@
 #include "plugin_enum.h"
 #include "util.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats ipTosPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 typedef struct _IpTosData
 {
     u_int8_t ip_tos;
@@ -67,7 +75,10 @@ int IpTosCheckEq(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIpTosCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("tos", IpTosCheckInit);
+    RegisterPlugin("tos", IpTosCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("tos", &ipTosPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: IpTosCheck Initialized\n"););
 }
 
@@ -178,14 +189,18 @@ void ParseIpTos(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int IpTosCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
-    if(!p->iph)
-        return 0; /* if error occured while ip header
-                   * was processed, return 0 automagically.
-                   */
+    PROFILE_VARS;
 
-    if((((IpTosData *)otn->ds_list[PLUGIN_IP_TOS_CHECK])->ip_tos == p->iph->ip_tos) ^ (((IpTosData *)otn->ds_list[PLUGIN_IP_TOS_CHECK])->not_flag))
+    if(!IPH_IS_VALID(p))
+        return 0; /* if error occured while ip header
+                   * was processed, return 0 automagically.  */
+
+    PREPROC_PROFILE_START(ipTosPerfStats);
+
+    if((((IpTosData *)otn->ds_list[PLUGIN_IP_TOS_CHECK])->ip_tos == GET_IPH_TOS(p)) ^ (((IpTosData *)otn->ds_list[PLUGIN_IP_TOS_CHECK])->not_flag))
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(ipTosPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -195,5 +210,6 @@ int IpTosCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
     
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(ipTosPerfStats);
     return 0;
 }

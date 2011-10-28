@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -35,6 +36,13 @@
 #include "util.h"
 #include "plugin_enum.h"
 
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats tcpAckPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
 
 typedef struct _TcpAckCheckData
 {
@@ -61,7 +69,10 @@ int CheckTcpAckEq(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupTcpAckCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("ack", TcpAckCheckInit);
+    RegisterPlugin("ack", TcpAckCheckInit, OPT_TYPE_DETECTION);
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("ack", &tcpAckPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: TcpAckCheck Initialized\n"););
 }
 
@@ -153,12 +164,17 @@ void ParseTcpAck(char *data, OptTreeNode *otn)
  ****************************************************************************/
 int CheckTcpAckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 {
+    PROFILE_VARS;
+
     if(!p->tcph)
         return 0; /* if error appeared when tcp header was processed,
                * test fails automagically */
+    PREPROC_PROFILE_START(tcpAckPerfStats);
+
     if(((TcpAckCheckData *)otn->ds_list[PLUGIN_TCP_ACK_CHECK])->tcp_ack == p->tcph->th_ack)
     {
         /* call the next function in the function list recursively */
+        PREPROC_PROFILE_END(tcpAckPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
     else
@@ -168,5 +184,6 @@ int CheckTcpAckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     }
 
     /* if the test isn't successful, return 0 */
+    PREPROC_PROFILE_END(tcpAckPerfStats);
     return 0;
 }

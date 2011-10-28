@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2004-2007 Sourcefire, Inc.
+ * Copyright (C) 2004-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -33,22 +33,6 @@
 
 #ifndef ACSMX2S_H
 #define ACSMX2S_H
-
-#ifdef WIN32
-
-#ifdef inline
-#undef inline
-#endif
-
-#define inline __inline
-
-#else
-#ifdef inline
-#undef inline
-#endif
-
-#define inline 
-#endif
 
 /*
 *   DEFINES and Typedef's
@@ -117,7 +101,7 @@ enum {
   ACF_FULL,
   ACF_SPARSE,
   ACF_BANDED,
-  ACF_SPARSEBANDS,
+  ACF_SPARSEBANDS
 };
 
 /*
@@ -130,7 +114,7 @@ enum {
 enum {
   FSA_TRIE,
   FSA_NFA,
-  FSA_DFA,
+  FSA_DFA
 };
 
 /*

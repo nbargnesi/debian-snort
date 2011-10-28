@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2006 Sourcefire, Inc.
+ ** Copyright (C) 2002-2008 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -122,7 +122,14 @@
 #define PARSELEN 10
 #define TEXTLEN  (PARSELEN + 2)
 
-extern u_int8_t *doe_ptr;
+#include "snort.h"
+#include "profiler.h"
+#ifdef PERF_PROFILING
+PreprocStats byteTestPerfStats;
+extern PreprocStats ruleOTNEvalPerfStats;
+#endif
+
+extern const u_int8_t *doe_ptr;
 
 typedef struct _ByteTestData
 {
@@ -157,8 +164,11 @@ int ByteTest(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupByteTest(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("byte_test", ByteTestInit);
+    RegisterPlugin("byte_test", ByteTestInit, OPT_TYPE_DETECTION);
 
+#ifdef PERF_PROFILING
+    RegisterPreprocessorProfile("byte_test", &byteTestPerfStats, 3, &ruleOTNEvalPerfStats);
+#endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Plugin: ByteTest Setup\n"););
 }
 
@@ -410,7 +420,11 @@ int ByteTest(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     int success = 0;
     int use_alt_buffer = p->packet_flags & PKT_ALT_DECODE;
     int dsize;
-    char *base_ptr, *end_ptr, *start_ptr;
+    const char *base_ptr, *end_ptr, *start_ptr;
+    u_int32_t payload_bytes_grabbed = 0;
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(byteTestPerfStats);
 
     if(use_alt_buffer)
     {
@@ -434,10 +448,11 @@ int ByteTest(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(doe_ptr)
     {
         /* @todo: possibly degrade to use the other buffer, seems non-intuitive*/        
-        if(!inBounds(start_ptr, end_ptr, doe_ptr))
+        if(!inBounds((const u_int8_t *)start_ptr, (const u_int8_t *)end_ptr, doe_ptr))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] byte test bounds check failed..\n"););
+            PREPROC_PROFILE_END(byteTestPerfStats);
             return 0;
         }
     }
@@ -448,7 +463,7 @@ int ByteTest(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "Checking relative offset!\n"););
-        base_ptr = doe_ptr + btd->offset;
+        base_ptr = (const char *)doe_ptr + btd->offset;
     }
     else
     {
@@ -465,30 +480,36 @@ int ByteTest(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     if(!btd->data_string_convert_flag)
     {
         if(byte_extract(btd->endianess, btd->bytes_to_compare,
-                        base_ptr, start_ptr, end_ptr, &value))
+                        (const u_int8_t *)base_ptr, (const u_int8_t *)start_ptr, (const u_int8_t *)end_ptr, &value))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "Byte Extraction Failed\n"););
 
+            PREPROC_PROFILE_END(byteTestPerfStats);
             return 0;
         }
+
+        payload_bytes_grabbed = btd->bytes_to_compare;
     }
     else
     {
-        if(string_extract(btd->bytes_to_compare, btd->base,
-                          base_ptr, start_ptr, end_ptr, &value))
+        payload_bytes_grabbed = string_extract(btd->bytes_to_compare, btd->base,
+                                               (const u_int8_t *)base_ptr, (const u_int8_t *)start_ptr,
+                                               (const u_int8_t *)end_ptr, &value);
+        if (payload_bytes_grabbed < 0)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "String Extraction Failed\n"););
 
+            PREPROC_PROFILE_END(byteTestPerfStats);
             return 0;
         }
 
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
-                "Grabbed %d bytes at offset %d, value = 0x%08X(%u)\n",
-                btd->bytes_to_compare, btd->offset, value, value); );
+                            "Grabbed %d bytes at offset %d, value = 0x%08X(%u)\n",
+                            payload_bytes_grabbed, btd->offset, value, value); );
 
     switch(btd->operator)
     {
@@ -519,14 +540,17 @@ int ByteTest(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
                     "checking for not success...flag\n"););
         if (!success)
         {
+            PREPROC_PROFILE_END(byteTestPerfStats);
             return fp_list->next->OptTestFunc(p, otn, fp_list->next);
         }
     }
     else if (success)
     {
+        PREPROC_PROFILE_END(byteTestPerfStats);
         return fp_list->next->OptTestFunc(p, otn, fp_list->next);
     }
 
     /* if the test isn't successful, this function *must* return 0 */
+    PREPROC_PROFILE_END(byteTestPerfStats);
     return 0;
 }

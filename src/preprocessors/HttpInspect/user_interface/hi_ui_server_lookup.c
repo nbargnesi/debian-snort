@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -97,7 +97,7 @@ int hi_ui_server_lookup_init(SERVER_LOOKUP **ServerLookup)
 **  @retval HI_NONFATAL_ERR   key is already in table, don't overwrite
 **                            configuration.
 */
-int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, unsigned long Ip,
+int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, snort_ip_p Ip,
                             HTTPINSPECT_CONF *ServerConf)
 {
     int iRet;
@@ -107,7 +107,11 @@ int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, unsigned long Ip,
         return HI_INVALID_ARG;
     }
 
-    iRet = KMapAdd(ServerLookup, (void *)&Ip, 4, (void *)ServerConf);
+#ifdef SUP_IP6
+    iRet = KMapAdd(ServerLookup, (void *)Ip, sizeof(snort_ip), (void *)ServerConf);
+#else
+    iRet = KMapAdd(ServerLookup, (void *)&Ip, sizeof(snort_ip), (void *)ServerConf);
+#endif
     if (iRet)
     {
         /*
@@ -147,7 +151,7 @@ int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, unsigned long Ip,
 **  @retval HI_NOT_FOUND IP not found
 */
 HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup, 
-                                            unsigned long Ip, int *iError)
+                                            snort_ip_p Ip, int *iError)
 {
     HTTPINSPECT_CONF *ServerConf;
 
@@ -164,7 +168,11 @@ HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup,
 
     *iError = HI_SUCCESS;
 
+#ifdef SUP_IP6
+    ServerConf = (HTTPINSPECT_CONF *)KMapFind(ServerLookup,(void *)Ip,sizeof(snort_ip));
+#else
     ServerConf = (HTTPINSPECT_CONF *)KMapFind(ServerLookup,(void *)&Ip,4);
+#endif
     if (!ServerConf)
     {
         *iError = HI_NOT_FOUND;

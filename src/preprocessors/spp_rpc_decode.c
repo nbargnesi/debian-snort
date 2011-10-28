@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -70,6 +71,7 @@
 
 #include "profiler.h"
 #include "bounds.h"
+#include "strlcatu.h"
 
 extern char *file_name;
 extern int file_line;
@@ -102,8 +104,8 @@ static char RpcDecodePorts[65536/8];
 PreprocStats rpcdecodePerfStats;
 #endif
 
-void RpcDecodeInit(u_char *);
-void RpcDecodeInitIgnore(u_char *);
+void RpcDecodeInit(char *);
+void RpcDecodeInitIgnore(char *);
 void PreprocRpcDecode(Packet *, void *);
 void SetRpcPorts(char *);
 int ConvertRPC(Packet *);
@@ -130,7 +132,7 @@ void SetupRpcDecode(void)
 
 
 /*
- * Function: RpcDecodeInit(u_char *)
+ * Function: RpcDecodeInit(char *)
  *
  * Purpose: Processes the args sent to the preprocessor, sets up the
  *          port list, links the processing function into the preproc
@@ -141,7 +143,7 @@ void SetupRpcDecode(void)
  * Returns: void function
  *
  */
-void RpcDecodeInit(u_char *args)
+void RpcDecodeInit(char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_RPC,"Preprocessor: RpcDecode Initialized\n"););
 
@@ -397,12 +399,11 @@ void PreprocRpcDecode(Packet *p, void *context)
 
 int ConvertRPC(Packet *p)
 {
-    u_int8_t *data = p->data;   /* packet data */
+    const u_int8_t *data = p->data;   /* packet data */
     u_int8_t *norm_index;
     u_int8_t *data_index;     /* this is the index pointer to walk thru the data */
     u_int8_t *data_end;       /* points to the end of the payload for loop control */
     u_int16_t psize = p->dsize;     /* payload size */
-    int i = 0;           /* loop counter */
     int length;          /* length of current fragment */
     int last_fragment = 0; /* have we seen the last fragment sign? */
     int decoded_len; /* our decoded length is always atleast a 0 byte header */
@@ -423,7 +424,7 @@ int ConvertRPC(Packet *p)
     DEBUG_WRAP(DebugMessage(DEBUG_RPC, "Got RPC traffic (%d bytes)!\n", psize););
 
     /* cheesy alignment safe fraghdr = *(uint32_t *) data*/
-    *((u_int8_t *) &fraghdr)       = data[0];
+    *((u_int8_t *)  &fraghdr)      = data[0];
     *(((u_int8_t *) &fraghdr) + 1) = data[1];
     *(((u_int8_t *) &fraghdr) + 2) = data[2];
     *(((u_int8_t *) &fraghdr) + 3) = data[3];

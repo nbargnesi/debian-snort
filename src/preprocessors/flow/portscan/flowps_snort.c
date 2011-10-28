@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -51,7 +51,6 @@
 #include "common_defs.h"
 #include "util_str.h"
 #include "util_net.h"
-#include "snort_packet_header.h"
 #include "util.h"
 
 #ifndef WIN32
@@ -103,7 +102,7 @@ static Packet *s_pkt = NULL;  /* pktkludge output mechanism */
      
 void FlowPSRestart(int signal, void *data);
 void FlowPSCleanExit(int signal, void *data);
-static void FlowPSInit(u_char *args);
+static void FlowPSInit(char *args);
 static void FlowPSParseArgs(PS_CONFIG *config , char *args);
 static int flowps_generate_flow_event(SCORE_ENTRY *sep, FLOWPACKET *p, u_int32_t *address, FLOWPS_OUTPUT output_type, time_t cur);
 static int flowps_init_pkt(void);
@@ -175,7 +174,7 @@ static void FlowPSOutputConfig(PS_TRACKER *trackerp)
     flow_printf("|       rows:  %-8d         %-8d\n",
                 scoreboard_row_count(&trackerp->table_active),
                 scoreboard_row_count(&trackerp->table_scanner));
-    flow_printf("|   overhead:  %-8d(%%%.02lf) %-8d(%%%.02lf)\n",
+    flow_printf("|   overhead:  %-8d(%%%.02f) %-8d(%%%.02f)\n",
                 scoreboard_overhead_bytes(&trackerp->table_active),
                 calc_percent(scoreboard_overhead_bytes(&trackerp->table_active),
                              scoreboard_memcap(&trackerp->table_active)),
@@ -204,7 +203,7 @@ static void FlowPSOutputConfig(PS_TRACKER *trackerp)
     flow_printf("|   Uniqueness:  memcap: %8d rows: %8d\n",
                ut_memcap(&trackerp->unique_tracker),
                ut_row_count(&trackerp->unique_tracker));
-    flow_printf("|      overhead: %d (%%%.02lf)\n",               
+    flow_printf("|      overhead: %d (%%%.02f)\n",               
                 ut_overhead_bytes(&trackerp->unique_tracker),
                 calc_percent(ut_overhead_bytes(&trackerp->unique_tracker),
                              ut_memcap(&trackerp->unique_tracker)));
@@ -215,7 +214,7 @@ static void FlowPSOutputConfig(PS_TRACKER *trackerp)
         flow_printf("| Server Stats:  memcap: %8d rows: %8d\n",
                     server_stats_memcap(&trackerp->server_stats),
                     server_stats_row_count(&trackerp->server_stats));
-        flow_printf("|      overhead: %d (%%%.02lf)\n",               
+        flow_printf("|      overhead: %d (%%%.02f)\n",               
                     server_stats_overhead_bytes(&trackerp->server_stats),
                     calc_percent(server_stats_overhead_bytes(&trackerp->server_stats),
                                  server_stats_memcap(&trackerp->server_stats)));
@@ -243,7 +242,7 @@ static void FlowPSOutputConfig(PS_TRACKER *trackerp)
  * 
  * @param args command line arguments from snort.conf
  */
-static void FlowPSInit(u_char *args)
+static void FlowPSInit(char *args)
 {
     static int init_once = 0;    
     int ret;
@@ -274,7 +273,7 @@ static void FlowPSInit(u_char *args)
 
     FlowPSSetDefaults(&tconfig);
 
-    FlowPSParseArgs(&tconfig, (char *)args);
+    FlowPSParseArgs(&tconfig, args);
 
     
     if((ret = flowps_init(pstp, &tconfig)) != FLOW_SUCCESS)
@@ -644,9 +643,12 @@ int flowps_newflow_callback(FLOW_POSITION position, FLOW *flowp,
 
     if(s_debug > 5)
     {
-        printf("DEBUG: callback %s:%d -> %s:%d\n",
-               inet_ntoax(p->iph->ip_src.s_addr), p->sp,
-               inet_ntoax(p->iph->ip_dst.s_addr), p->dp);
+        if (IS_IP4(p))
+        {
+            printf("DEBUG: callback %s:%d -> %s:%d\n",
+                   inet_ntoax(p->iph->ip_src.s_addr), p->sp,
+                   inet_ntoax(p->iph->ip_dst.s_addr), p->dp);
+        }
     }
 
     if(position != FLOW_NEW)        
@@ -831,7 +833,7 @@ static int flowps_generate_flow_event(SCORE_ENTRY *sep, FLOWPACKET *orig_packet,
                                       FLOWPS_OUTPUT output_type,
                                       time_t cur)
 {
-    Packet *p = NULL;
+    Packet *p = orig_packet;
     char buf[1024 + 1];    
     u_int32_t event_id; 
     u_int32_t event_type; /* the sid for the gid */
@@ -871,7 +873,6 @@ static int flowps_generate_flow_event(SCORE_ENTRY *sep, FLOWPACKET *orig_packet,
                  sep->fixed_scanner.score, sep->sliding_scanner.score);
         buf[1024] = '\0';
         
-        /* p is NULL w/ the VARIABLEMSG fmt */
         event_id = GenerateSnortEvent(p,
                                       GENERATOR_FLOW_PORTSCAN,
                                       event_type,
@@ -921,7 +922,7 @@ static int score_entry_sprint(unsigned char *buf, int buflen, SCORE_ENTRY *sep, 
     
     if(buf && buflen > 0 && sep && address)
     {
-        printed = snprintf(buf + total_printed,
+        printed = snprintf((char *)buf + total_printed,
                            remaining,
                            "Address: %s\n"
                            "AT_SCORE: %u\n"
@@ -969,7 +970,7 @@ static int score_entry_sprint(unsigned char *buf, int buflen, SCORE_ENTRY *sep, 
             CONN_ENTRY *cp = &sep->last_hosts[i];
 
             
-            printed = snprintf(buf + total_printed,
+            printed = snprintf((char *)buf + total_printed,
                                remaining,
                                "ConnInfo: (%d:%s:%d Flags: %x)\n",
                                cp->protocol,
@@ -1012,19 +1013,21 @@ static int score_entry_sprint(unsigned char *buf, int buflen, SCORE_ENTRY *sep, 
 static Packet *flowps_mkpacket(SCORE_ENTRY *sep, FLOWPACKET *orig_packet, u_int32_t *address, time_t cur)
 {
     Packet *p = s_pkt;
+    struct pcap_pkthdr *pkth;
     int len;
     u_int32_t dst_ip;
     unsigned short plen;
 
-    p->pkth->ts.tv_sec = cur;
+    pkth = (struct pcap_pkthdr *)p->pkth;
+    pkth->ts.tv_sec = cur;
 
 
     dst_ip = GetIPv4DstIp(orig_packet);
 
-    memcpy(&p->iph->ip_src.s_addr, address, 4);
-    memcpy(&p->iph->ip_dst.s_addr, &dst_ip, 4);
+    memcpy(&((IPHdr *)p->iph)->ip_src.s_addr, address, 4);
+    memcpy(&((IPHdr *)p->iph)->ip_dst.s_addr, &dst_ip, 4);
 
-    len = score_entry_sprint(p->data, FLOWPSMAXPKTSIZE, sep, address);
+    len = score_entry_sprint((unsigned char *)p->data, FLOWPSMAXPKTSIZE, sep, address);
     
     if(len <= 0)
     {
@@ -1032,7 +1035,7 @@ static Packet *flowps_mkpacket(SCORE_ENTRY *sep, FLOWPACKET *orig_packet, u_int3
         return NULL;
     }
 
-    p->data[len] = '\0';
+    ((u_int8_t *)p->data)[len] = '\0';
     
     /* explicitly cast it down */
     plen = (len & 0xFFFF);
@@ -1046,10 +1049,10 @@ static Packet *flowps_mkpacket(SCORE_ENTRY *sep, FLOWPACKET *orig_packet, u_int3
     p->dsize = plen;
     
     plen += IP_HEADER_LEN;
-    p->iph->ip_len = htons(plen);
+    ((IPHdr *)p->iph)->ip_len = htons(plen);
 
-    p->pkth->caplen = ETHERNET_HEADER_LEN + plen;
-    p->pkth->len    = ETHERNET_HEADER_LEN + plen;
+    pkth->caplen = ETHERNET_HEADER_LEN + plen;
+    pkth->len    = ETHERNET_HEADER_LEN + plen;
         
     return p;
 }
@@ -1067,6 +1070,7 @@ static int flowps_init_pkt(void)
     Packet *p = NULL;
     const char *flow_portscan_mac_addr = "MACDADDY";
     const char twiddlebytes = 2;
+    EtherHdr *eh;
 
     p = (Packet *)SnortAlloc(sizeof(Packet));
 
@@ -1075,7 +1079,7 @@ static int flowps_init_pkt(void)
 
     p->pkth = (struct pcap_pkthdr *) (((u_int8_t *) p->pkth) + twiddlebytes);
 
-    p->pkt  =  ((u_int8_t *)p->pkth) + sizeof(SnortPktHeader);
+    p->pkt  =  ((u_int8_t *)p->pkth) + sizeof(struct pcap_pkthdr);
     p->eh   =   (EtherHdr *)((u_int8_t *)p->pkt);
     p->iph  =  (IPHdr *)((u_int8_t *)p->eh + ETHERNET_HEADER_LEN);
     p->data =  ((u_int8_t *)p->iph) + sizeof(IPHdr);
@@ -1087,17 +1091,18 @@ static int flowps_init_pkt(void)
      *
      */
 
-    p->eh->ether_type = htons(0x0800);
-    memcpy(p->eh->ether_dst, flow_portscan_mac_addr, 6);
-    memcpy(p->eh->ether_src, flow_portscan_mac_addr, 6);
+    eh = (EtherHdr *)p->eh;
+    eh->ether_type = htons(0x0800);
+    memcpy(eh->ether_dst, flow_portscan_mac_addr, 6);
+    memcpy(eh->ether_src, flow_portscan_mac_addr, 6);
     
-    SET_IP_VER(p->iph,  0x4);
-    SET_IP_HLEN(p->iph, 0x5);
+    SET_IP_VER((IPHdr *)p->iph,  0x4);
+    SET_IP_HLEN((IPHdr *)p->iph, 0x5);
     
-    p->iph->ip_proto = 0xFF;  /* set a reserved protocol */
-    p->iph->ip_ttl   = 0x00;  /* set a TTL we'd never see */
-    p->iph->ip_len = 0x5;
-    p->iph->ip_tos = 0x10;
+    ((IPHdr *)p->iph)->ip_proto = 0xFF;  /* set a reserved protocol */
+    ((IPHdr *)p->iph)->ip_ttl   = 0x00;  /* set a TTL we'd never see */
+    ((IPHdr *)p->iph)->ip_len = 0x5;
+    ((IPHdr *)p->iph)->ip_tos = 0x10;
 
     /* save off s_pkt for flowps_mkpkt */
     s_pkt = p;

@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005 Sourcefire, Inc.
+** Copyright (C) 2005-2008 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,7 @@
 #include "plugin_enum.h"
 #include "rules.h"
 #include "snort.h"
+#include "sfsnprintfappend.h"
 
 #include "sp_dynamic.h"
 
@@ -120,10 +121,12 @@ static INLINE int NotForStream4Udp(Packet *p)
 
 static INLINE int GetDirectionUdp(Session *ssn, Packet *p)
 {
+#ifndef SUP_IP6
     if(p->iph->ip_src.s_addr == ssn->client.ip)
     {
         return FROM_CLIENT;
     }
+#endif
         
     return FROM_SERVER;
 }
@@ -176,9 +179,10 @@ static INLINE void UDPPruneCheck(Packet *p)
 
 void Stream4ProcessUdp(Packet *p)
 {
-    Session *ssn = NULL;
+#ifndef SUP_IP6
     int direction;
     char ignore;
+#endif
     u_int8_t action;
 
     if (NotForStream4Udp(p))
@@ -213,9 +217,10 @@ void Stream4ProcessUdp(Packet *p)
         return;
     }
 
+#ifndef SUP_IP6
     if (action & UDP_SESSION)
     {
-        ssn = GetSession(p);
+        Session *ssn = GetSession(p);
 
         if (!ssn)
         {
@@ -225,6 +230,7 @@ void Stream4ProcessUdp(Packet *p)
             {
                 AddUDPSession(&sfPerf.sfBase);
                 ssn->flush_point = 0;
+
                 ssn->client.ip = p->iph->ip_src.s_addr;
                 ssn->server.ip = p->iph->ip_dst.s_addr;
                 ssn->client.port = p->sp;
@@ -337,6 +343,7 @@ void Stream4ProcessUdp(Packet *p)
             p->packet_flags |= PKT_STREAM_UNEST_BI;
         }
     }
+#endif
 
     /* see if we need to prune the session cache */
     UDPPruneCheck(p);

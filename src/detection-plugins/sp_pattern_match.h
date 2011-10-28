@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2002-2008 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -46,7 +47,7 @@ typedef struct _PatternMatchData
     u_int replace_size;     /* size of app layter replace pattern */
     char *replace_buf;      /* app layer pattern to replace with */
     char *pattern_buf;      /* app layer pattern to match on */
-    int (*search)(char *, int, struct _PatternMatchData *);  /* search function */
+    int (*search)(const char *, int, struct _PatternMatchData *);  /* search function */
     int *skip_stride; /* B-M skip array */
     int *shift_stride; /* B-M shift array */
     u_int pattern_max_jump_size; /* Maximum distance we can jump to search for

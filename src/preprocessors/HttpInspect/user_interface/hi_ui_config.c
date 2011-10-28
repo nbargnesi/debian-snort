@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2007 Sourcefire, Inc.
+ * Copyright (C) 2003-2008 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -145,6 +145,8 @@ int hi_ui_config_default(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
     GlobalConf->global_server.whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
     GlobalConf->global_server.whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
 
+    GlobalConf->global_server.max_hdr_len = HI_UI_CONFIG_MAX_HDR_DEFAULT;
+
     return HI_SUCCESS;
 }
 
@@ -240,6 +242,8 @@ int hi_ui_config_set_profile_apache(HTTPINSPECT_CONF *ServerConf)
     ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;  /* form feed */
     ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI | HI_UI_CONFIG_WS_AFTER_URI;  /* carriage return */
 
+    ServerConf->max_hdr_len = HI_UI_CONFIG_MAX_HDR_DEFAULT;
+
     return HI_SUCCESS;
 }
     
@@ -314,6 +318,8 @@ int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *ServerConf,
     ServerConf->whitespace[11] = HI_UI_CONFIG_WS_BEFORE_URI;  /* vertical tab */
     ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
     ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
+
+    ServerConf->max_hdr_len = HI_UI_CONFIG_MAX_HDR_DEFAULT;
 
     return HI_SUCCESS;
 }
@@ -413,6 +419,8 @@ int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *ServerConf,
     ServerConf->whitespace[12] = HI_UI_CONFIG_WS_BEFORE_URI;  /* form feed */
     ServerConf->whitespace[13] = HI_UI_CONFIG_WS_BEFORE_URI;  /* carriage return */
 
+    ServerConf->max_hdr_len = HI_UI_CONFIG_MAX_HDR_DEFAULT;
+
     return HI_SUCCESS;
 }
 
@@ -438,7 +446,7 @@ int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *ServerConf,
 **  @retval HI_NON_FATAL_ERR server has already been added
 */
 int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
-                            unsigned long ServerIP, HTTPINSPECT_CONF *ServerConf)
+                            snort_ip_p ServerIP, HTTPINSPECT_CONF *ServerConf)
 {
     int iRet;
 
