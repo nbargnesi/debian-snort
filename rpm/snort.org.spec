@@ -1,4 +1,4 @@
-# $Id: snort.org.spec,v 1.1.2.6 2005/03/08 16:28:12 jhewlett Exp $
+# $Id: snort.org.spec,v 1.1.2.8 2005/04/22 19:03:56 jhewlett Exp $
 # Snort.org's SPEC file for Snort
 
 ################################################################
@@ -82,7 +82,7 @@
 
 Summary: An open source Network Intrusion Detection System (NIDS)
 Name: snort
-Version: 2.3.2
+Version: 2.3.3
 Release: %{release}
 Epoch: 0
 License: GPL

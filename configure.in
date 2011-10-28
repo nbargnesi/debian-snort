@@ -1,10 +1,10 @@
-# $Id: configure.in,v 1.138.2.9 2005/03/08 16:28:11 jhewlett Exp $ 
+# $Id: configure.in,v 1.138.2.11 2005/04/22 19:03:55 jhewlett Exp $ 
 AC_PREREQ(2.50)
 AC_INIT(src/snort.c)
 AM_CONFIG_HEADER(config.h)
 # When changing the snort version, please also update the VERSION
 # definition in "src/win32/WIN32-Includes/config.h"
-AM_INIT_AUTOMAKE(snort,2.3.2)
+AM_INIT_AUTOMAKE(snort,2.3.3)
 
 # Since we get -O2 from configure defaults, which doesn't work in 64bit
 # mode, let's make some changes here before calling _CC macros.

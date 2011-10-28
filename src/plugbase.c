@@ -1,4 +1,4 @@
-/* $Id: plugbase.c,v 1.83.2.3 2005/01/13 20:36:20 jhewlett Exp $ */
+/* $Id: plugbase.c,v 1.83.2.4 2005/04/22 19:03:56 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -61,6 +61,7 @@
 #include "preprocessors/spp_httpinspect.h"
 #include "preprocessors/spp_flow.h"
 #include "preprocessors/spp_sfportscan.h"
+#include "preprocessors/spp_xlink2state.h"
 
 /* built-in detection plugins */
 #include "detection-plugins/sp_pattern_match.h"
@@ -410,6 +411,7 @@ void InitPreprocessors()
     SetupPerfMonitor();
     SetupFlow();
     SetupPsng();
+    SetupXLINK2STATE();
 }
 
 /****************************************************************************

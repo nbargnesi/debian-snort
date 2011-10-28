@@ -1,4 +1,4 @@
-/* $Id: generators.h,v 1.36 2004/09/13 17:44:49 jhewlett Exp $ */
+/* $Id: generators.h,v 1.36.2.1 2005/04/22 19:03:56 jhewlett Exp $ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -240,6 +240,8 @@
 #define     PSNG_ICMP_PORTSWEEP_FILTERED           26
 
 #define     PSNG_OPEN_PORT                         27
+
+#define GENERATOR_SMTP                             124
 
 /*  This is where all the alert messages will be archived for each
     internal alerts */

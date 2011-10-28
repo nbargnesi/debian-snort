@@ -35,6 +35,7 @@
 #include "checksum.h"
 #include "packet_time.h"
 #include "snort.h"
+#include "sfthreshold.h"
 
 #include "portscan.h"
 
@@ -188,12 +189,26 @@ static int MakeProtoInfo(PS_PROTO *proto, u_char *buffer, u_int *total_size)
 }
 
 static int LogPortscanAlert(Packet *p, char *msg, u_int32_t event_id,
-        u_int32_t event_ref)
+        u_int32_t event_ref, u_int32_t gen_id, u_int32_t sig_id)
 {
     char timebuf[TIMEBUF_SIZE];
+    u_long src_addr = 0;
+    u_long dst_addr = 0;
 
     if(!p->iph)
         return -1;
+
+    /* Do not log if being suppressed */
+    if ( p->iph )
+    {
+        src_addr = p->iph->ip_src.s_addr;
+        dst_addr = p->iph->ip_dst.s_addr;
+    }
+
+    if( !sfthreshold_test(gen_id, sig_id, src_addr, dst_addr, p->pkth->ts.tv_sec) )
+    {
+        return 0;
+    }
 
     ts_print((struct timeval *)&p->pkth->ts, timebuf);
 
@@ -221,7 +236,7 @@ static int GeneratePSSnortEvent(Packet *p,u_int32_t gen_id,u_int32_t sig_id,
     event_id = GenerateSnortEvent(p,gen_id,sig_id,sig_rev,class,priority,msg);
 
     if(g_logfile)
-        LogPortscanAlert(p,msg,event_id,0);
+        LogPortscanAlert(p, msg, event_id, 0, gen_id, sig_id);
 
     return event_id;
 }
@@ -252,6 +267,9 @@ static int GenerateOpenPortEvent(Packet *p, u_int32_t gen_id, u_int32_t sig_id,
     if(!event_ref)
         return 0;
 
+    /* reset the thresholding subsystem checks for this packet */
+    sfthreshold_reset();
+            
     SetEvent(&event, gen_id, sig_id, sig_rev, class, pri, event_ref);
     //CallAlertFuncs(p,msg,NULL,&event);
 
@@ -259,10 +277,23 @@ static int GenerateOpenPortEvent(Packet *p, u_int32_t gen_id, u_int32_t sig_id,
     event.ref_time.tv_usec = event_time->tv_usec;
 
     if(p)
+    {
+        /*
+         * Do threshold test for suppression and thresholding.  We have to do it
+         * here since these are tagged packets, which aren't subject to thresholding,
+         * but we want to do it for open port events.
+         */
+        if( !sfthreshold_test(gen_id, sig_id, p->iph->ip_src.s_addr,
+                            p->iph->ip_dst.s_addr, p->pkth->ts.tv_sec) )
+        {
+            return 0;
+        }
+
         CallLogFuncs(p,msg,NULL,&event);
+    }
 
     if(g_logfile)
-        LogPortscanAlert(p, msg, 0, event_ref);
+        LogPortscanAlert(p, msg, 0, event_ref, gen_id, sig_id);
 
     return event.event_id;
 }
@@ -397,7 +428,7 @@ static int PortscanAlertTcp(Packet *p, PS_PROTO *proto, int proto_type)
     int iCtr;
     unsigned int event_ref;
     int portsweep = 0;
-
+    
     if(!proto)
         return -1;
 
@@ -471,7 +502,12 @@ static int PortscanAlertTcp(Packet *p, PS_PROTO *proto, int proto_type)
     {
         for(iCtr = 0; iCtr < proto->open_ports_cnt; iCtr++)
         {
-            if(MakePortscanPkt(NULL, proto, PS_PROTO_OPEN_PORT, 
+            PS_PKT ps_pkt;            
+            
+            memset(&ps_pkt, 0x00, sizeof(PS_PKT));
+            ps_pkt.pkt = (void *)p;
+
+            if(MakePortscanPkt(&ps_pkt, proto, PS_PROTO_OPEN_PORT, 
                         (void *)&proto->open_ports[iCtr]))
                 return -1;
 

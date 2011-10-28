@@ -16,7 +16,7 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-/* $Id: snort.h,v 1.370.2.10 2005/03/08 16:28:12 jhewlett Exp $ */
+/* $Id: snort.h,v 1.370.2.13 2005/04/23 19:23:30 jhewlett Exp $ */
 
 #ifndef __SNORT_H__
 #define __SNORT_H__
@@ -52,7 +52,7 @@ extern SFPERF sfPerf;
 #endif
 
 /*  D E F I N E S  ************************************************************/
-#define BUILD "12"
+#define BUILD "14"
 
 #define STD_BUF  1024
 

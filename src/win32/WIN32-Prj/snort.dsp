@@ -1000,6 +1000,30 @@ SOURCE=..\..\preprocessors\spp_telnet_negotiation.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\spp_xlink2state.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\spp_xlink2state.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\xlink2state.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\xlink2state.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\str_search.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\str_search.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\preprocessors\stream.h
 # End Source File
 # End Group

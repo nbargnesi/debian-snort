@@ -1,4 +1,4 @@
-/* $Id: spp_stream4.c,v 1.165.2.5 2005/01/13 20:36:20 jhewlett Exp $ */
+/* $Id: spp_stream4.c,v 1.165.2.6 2005/04/22 19:03:56 jhewlett Exp $ */
 
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
@@ -3200,6 +3200,13 @@ void DropSession(Session *ssn)
     DeleteSpd((ubi_trRootPtr)&ssn->server.data);
 
     DeleteSpd((ubi_trRootPtr)&ssn->client.data);
+
+    if (ssn->preproc_free)
+    {
+        ssn->preproc_free(ssn->preproc_data);
+        ssn->preproc_data = NULL;
+        ssn->preproc_free = NULL;
+    }
 
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "[F] Freeing %d byte session\n", 
                             sizeof(Session)););

@@ -38,7 +38,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /usr/cvsroot-snort/snort/src/win32/WIN32-Includes/NET/Bpf.h,v 1.4.6.1 2004/11/17 15:54:23 jhewlett Exp $ (LBL)
+ * @(#) $Header: /cvsroot/snort/src/win32/WIN32-Includes/NET/Bpf.h,v 1.4.6.1 2004/11/17 15:54:23 jhewlett Exp $ (LBL)
  */
 
 #ifndef BPF_MAJOR_VERSION

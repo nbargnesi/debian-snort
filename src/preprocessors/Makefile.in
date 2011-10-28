@@ -102,7 +102,11 @@ spp_httpinspect.c spp_httpinspect.h \
 snort_httpinspect.c snort_httpinspect.h \
 spp_flow.c spp_flow.h \
 portscan.c portscan.h \
-spp_sfportscan.c spp_sfportscan.h
+spp_sfportscan.c spp_sfportscan.h \
+spp_xlink2state.c spp_xlink2state.h \
+xlink2state.c xlink2state.h \
+str_search.c str_search.h \
+stream.h
 
 subdir = src/preprocessors
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -120,7 +124,9 @@ am_libspp_a_OBJECTS = spp_arpspoof.$(OBJEXT) spp_bo.$(OBJEXT) \
 	perf.$(OBJEXT) perf-base.$(OBJEXT) perf-flow.$(OBJEXT) \
 	perf-event.$(OBJEXT) sfprocpidstats.$(OBJEXT) \
 	spp_httpinspect.$(OBJEXT) snort_httpinspect.$(OBJEXT) \
-	spp_flow.$(OBJEXT) portscan.$(OBJEXT) spp_sfportscan.$(OBJEXT)
+	spp_flow.$(OBJEXT) portscan.$(OBJEXT) spp_sfportscan.$(OBJEXT) \
+	spp_xlink2state.$(OBJEXT) xlink2state.$(OBJEXT) \
+	str_search.$(OBJEXT)
 libspp_a_OBJECTS = $(am_libspp_a_OBJECTS)
 
 DEFS = @DEFS@
