@@ -1,6 +1,9 @@
 /*
-** Copyright (C) 1998-2008 Sourcefire, Inc.
-**
+** Copyright (C) 1998-2009 Sourcefire, Inc.
+** Adam Keeton
+** Kevin Liu <kliu@sourcefire.com>
+** 
+** $Id$
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
 ** published by the Free Software Foundation.  You may not use, modify or
@@ -25,12 +28,23 @@
  * Library for managing IP addresses of either v6 or v4 families.  
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h> /* For ceil */
 #include "sf_ip.h"
+
+/* For inet_pton */
+#ifndef WIN32
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#endif  /* WIN32 */
 
 #ifdef TESTER
 #define FatalError printf
@@ -45,13 +59,18 @@ static INLINE int sfip_length(sfip_t *ip) {
 }
 
 /* Support function */
-static INLINE int sfip_str_to_fam(char *str) {
+// note that an ip6 address may have a trailing dotted quad form
+// but that it always has at least 2 ':'s; furthermore there is
+// no valid ip4 format (including mask) with 2 ':'s
+// we don't have to figure out if the format is entirely legal
+// we just have to be able to tell correct formats apart
+static INLINE int sfip_str_to_fam(const char *str) {
+    const char* s;
     ARG_CHECK1(str, 0);
-
-    if(strchr(str,(int)':')) return AF_INET6;
-    if(strchr(str,(int)'.')) return AF_INET;
+    s = strchr(str, (int)':');
+    if ( s && strchr(s+1, (int)':') ) return AF_INET6;
+    if ( strchr(str, (int)'.') ) return AF_INET;
     return AF_UNSPEC;
-
 }
 
 /* Place-holder allocation incase we want to do something more indepth later */
@@ -94,7 +113,7 @@ static INLINE int sfip_cidr_mask(sfip_t *ip, int val) {
 }
 
 /* Allocate IP address from a character array describing the IP */
-sfip_t *sfip_alloc(char *ip, SFIP_RET *status) {
+sfip_t *sfip_alloc(const char *ip, SFIP_RET *status) {
     int tmp;
     sfip_t *ret;
    
@@ -166,7 +185,8 @@ static INLINE int _count_bits(unsigned int val) {
  * into a number of bits to mask off */
 static INLINE int _netmask_str_to_bit_count(char *mask, int family) {
     u_int32_t buf[4];
-    int bits;
+    int bits, i, nBits, nBytes;
+    uint8_t* bytes = (uint8_t*)buf;
 
     /* XXX 
      * Mask not validated.  
@@ -176,19 +196,37 @@ static INLINE int _netmask_str_to_bit_count(char *mask, int family) {
     if(inet_pton(family, mask, buf) < 1)
         return -1;
 
-    if(family == AF_INET)
-        return _count_bits(buf[0]);
+    bits =  _count_bits(buf[0]);
 
-     bits =  _count_bits(buf[0]);
-     bits += _count_bits(buf[1]);
-     bits += _count_bits(buf[2]);
-     bits += _count_bits(buf[3]);
-    
-     return bits;
+    if(family == AF_INET6) {
+        bits += _count_bits(buf[1]);
+        bits += _count_bits(buf[2]);
+        bits += _count_bits(buf[3]);
+        nBytes = 16;
+    } else {
+        nBytes = 4;
+    }
+
+    // now make sure that only the most significant bits are set
+    nBits = bits;
+    for ( i = 0; i < nBytes; i++ ) {
+        if ( nBits >= 8 ) {
+            if ( bytes[i] != 0xff ) return -1;
+            nBits -= 8;
+
+        } else if ( nBits == 0 ) {
+            if ( bytes[i] != 0x00 ) return -1;
+
+        } else {
+            if ( bytes[i] != ((0xff00 >> nBits) & 0xff) ) return -1;
+            nBits = 0;
+        }
+    }
+    return bits;
 }
 
 /* Parses "src" and stores results in "dst" */
-SFIP_RET sfip_pton(char *src, sfip_t *dst) {
+SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
     char *mask;
     char *sfip_buf;
     char *ip;
@@ -204,15 +242,17 @@ SFIP_RET sfip_pton(char *src, sfip_t *dst) {
     dst->family = sfip_str_to_fam(src);
 
     /* skip whitespace or opening bracket */
-    while(isspace((int)*ip) || *ip == '[')
-        ip++;
+    while(isspace((int)*ip) || (*ip == '[')) ip++;
 
     /* check for and extract a mask in CIDR form */
     if( (mask = strchr(ip, (int)'/')) != NULL ) {
         /* NULL out this character so inet_pton will see the 
          * correct ending to the IP string */
-        *mask = 0;
-        mask++;
+        char* end = mask++;
+        while ( (end > ip) && isspace((int)end[-1]) ) end--;
+        *end = 0;
+
+        while(isspace((int)*mask)) mask++;
 
         /* verify a leading digit */
         if(((dst->family == AF_INET6) && !isxdigit((int)*mask)) ||
@@ -227,23 +267,25 @@ SFIP_RET sfip_pton(char *src, sfip_t *dst) {
         else
             bits = atoi(mask);
     }
-    /* We've already skipped the leading whitespace, if there is more 
-     * whitespace, then there's probably a netmask specified after it. */
-    else if( (mask = strchr(ip, (int)' ')) != NULL ||
+    else if(
             /* If this is IPv4, ia ':' may used specified to indicate a netmask */
-             (dst->family == AF_INET && (mask = strchr(ip, (int)':')) != NULL) ) {
+            ((dst->family == AF_INET) && (mask = strchr(ip, (int)':')) != NULL) ||
 
-        *mask = 0;  /* Now the IP will end at this point */
+            /* We've already skipped the leading whitespace, if there is more 
+             * whitespace, then there's probably a netmask specified after it. */
+             (mask = strchr(ip, (int)' ')) != NULL
+    ) {
+        char* end = mask++;
+        while ( (end > ip) && isspace((int)end[-1]) ) end--;
+        *end = 0;  /* Now the IP will end at this point */
 
         /* skip whitespace */
-        do { 
-            mask++;
-        } while(isspace((int)*mask));
+        while(isspace((int)*mask)) mask++;
 
         /* Make sure we're either looking at a valid digit, or a leading
          * colon, such as can be the case with IPv6 */
-        if((dst->family == AF_INET && isdigit((int)*mask)) ||
-           (dst->family == AF_INET6 && (isxdigit((int)*mask) || *mask == ':'))) { 
+        if(((dst->family == AF_INET) && isdigit((int)*mask)) ||
+           ((dst->family == AF_INET6) && (isxdigit((int)*mask) || *mask == ':'))) { 
             bits = _netmask_str_to_bit_count(mask, sfip_str_to_fam(mask));
         } 
         /* No netmask */
@@ -370,8 +412,8 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
     /* If the families are mismatched, check if we're really comparing
      * an IPv4 with a mapped IPv4 (in IPv6) address. */
     if(net_fam != ip_fam) {
-        if(net_fam != AF_INET && !sfip_ismapped(ip))
-            return SFIP_NOT_CONTAINS;
+        if((net_fam != AF_INET) || !sfip_ismapped(ip))
+            return SFIP_ARG_ERR;
 
         /* Both are really IPv4.  Only compare last 4 bytes of 'ip'*/
         p1 = net->ip32;
@@ -395,11 +437,13 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
             return SFIP_NOT_CONTAINS;
     }
 
+    mask = 32 - (bits - 32*i);
+    if ( mask == 32 ) return SFIP_CONTAINS;
+
     /* At this point, there are some number of remaining bits to check.
      * Mask the bits we don't care about off of "ip" so we can compare
      * the ints directly */
     temp = ntohl(*p2);
-    mask = 32 - (bits - 32*i);
     temp = (temp >> mask) << mask;
 
     /* If p1 was setup correctly through this library, there is no need to 
@@ -471,7 +515,7 @@ void sfip_raw_ntop(int family, const void *ip_raw, char *buf, int bufsize) {
 }
 
 /* Uses a static buffer to return a string representation of the IP */
-char *sfip_to_str(sfip_t *ip) {
+char *sfip_to_str(const sfip_t *ip) {
     /* IPv6 addresses will be at most 8 fields, of 4 characters each, 
      * with 7 colons inbetween, one NULL, and one fudge byte for sloppy use
      * in sfip_to_strbuf */
@@ -496,23 +540,27 @@ int sfip_is_loopback(sfip_t *ip) {
     ARG_CHECK1(ip, 0);
 
     if(sfip_family(ip) == AF_INET) {
+        // 127.0.0.0/8 is IPv4 loopback
         return (ip->ip8[0] == 0x7f);
     }
 
     p = ip->ip32;
 
-    /* Check the first two ints in an IPv6 address,
-     * and verify they're NULL.  If not, it's not a loopback */
+    /* Check the first 64 bits in an IPv6 address, and */
+    /* verify they're zero.  If not, it's not a loopback */
     if(p[0] || p[1]) return 0;
 
-    /* Check if the 3rd int is a mapped IPv4 address or NULL */
-    /* If it's 0xffff, then we might be carrying an IPv4 loopback address */
-    if(p[2] != 0xffff && p[2] != 0) return 0;
-
-    if(p[3] == 1 ||       /* IPv6 loopback */
-       ip->ip8[12] == 0x7f /* IPv4 loopback over compatible or mapped IPv6 */
-      ) return 1;
-
+    /* Check if the 3rd 32-bit int is zero */
+    if ( p[2] == 0 ) {
+        /* ::7f00:0/104 is ipv4 compatible ipv6 */
+        /* ::1 is the IPv6 loopback */
+        return ( (ip->ip8[12] == 0x7f) || (ntohl(p[3]) == 0x1) );
+    }
+    /* Check the 3rd 32-bit int for a mapped IPv4 address */
+    if ( ntohl(p[2]) == 0xffff ) {
+        /* ::ffff:127.0.0.0/104 is IPv4 loopback mapped over IPv6 */
+        return ( ip->ip8[12] == 0x7f );
+    }
     return 0;
 }
 
@@ -526,7 +574,7 @@ int sfip_ismapped(sfip_t *ip) {
        
     p = ip->ip32;
 
-    if(p[0] || p[1] || (p[2] != 0xffff && p[2] != 0)) return 0;
+    if(p[0] || p[1] || (ntohl(p[2]) != 0xffff && p[2] != 0)) return 0;
 
     return 1;
 }
@@ -553,20 +601,259 @@ char *strndup(const char *s, size_t n) {
 
 
 #ifdef TESTER
-#include <stdio.h>
-#include <string.h>
-
 #define PASS 1
 #define FAIL 0
 
-int sf_ip_failures = 0;
-/* By using a macro, __LINE__  will be right */
-#define test(msg, result) { \
-    if(result == FAIL) { printf("\tFAILED:\t%s\tline %d\n", msg, __LINE__); sf_ip_failures++; } \
-    else printf("\tPassed:\t%s\n", msg);\
+static int sf_ip_failures = 0;
+
+typedef struct {
+    const char* input;
+    const char* expected;
+} ParseTest;
+
+static ParseTest ptests[] = {
+    { "", "255.255.255.255" },
+    { "192.168.0.1", "192.168.0.1" },
+    { "255.255.255.255/21", "255.255.248.0" },
+    { "1.1.255.255      255.255.248.0", "1.1.248.0" },
+    { " 2001:0db8:0000:0000:0000:0000:1428:57ab   ", "2001:0db8:0000:0000:0000:0000:1428:57ab" },
+    { "ffff:ffff::1", "ffff:ffff:0000:0000:0000:0000:0000:0001" },
+    { "fFfF::FfFf:FFFF/127", "ffff:0000:0000:0000:0000:0000:ffff:fffe" },
+    { "ffff::ffff:1/8", "ff00:0000:0000:0000:0000:0000:0000:0000" },
+    { "6543:21ff:ffff:ffff:ffff:ffff:ffff:ffff ffff:ff00::", "6543:2100:0000:0000:0000:0000:0000:0000" },
+    { "ffee:ddcc:bbaa:9988:7766:5544:3322:1100/32", "ffee:ddcc:0000:0000:0000:0000:0000:0000" },
+    { "ffee:ddcc:bbaa:9988:7766:5544:3322:1100", "ffee:ddcc:bbaa:9988:7766:5544:3322:1100" }, 
+    { "1.2.3.4:255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4/255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4 : 255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4 / 255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4  :255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4/  255.0.0.0", "1.0.0.0" },
+    { "1.2.3.4/16", "1.2.0.0" },
+    { "1.2.3.4/ 16", "1.2.0.0" },
+    { "1.2.3.4 / 16", "1.2.0.0" },
+    { " 1.2.3.4 / 16 ", "1.2.0.0" },
+    { "1234::1.2.3.4", "1234:0000:0000:0000:0000:0000:0102:0304" },
+    { "FEDC:BA98:7654:3210:FEDC:BA98:7654:3210", "fedc:ba98:7654:3210:fedc:ba98:7654:3210" },
+    { "1080:0:0:0:8:800:200C:4171", "1080:0000:0000:0000:0008:0800:200c:4171" },
+    { "3ffe:2a00:100:7031::1", "3ffe:2a00:0100:7031:0000:0000:0000:0001" },
+    { "1080::8:800:200C:417A", "1080:0000:0000:0000:0008:0800:200c:417a" },
+    { "::192.9.5.5", "0000:0000:0000:0000:0000:0000:c009:0505" },
+    { "::FFFF:129.144.52.38", "0000:0000:0000:0000:0000:ffff:8190:3426" },
+    { "2010:836B:4179::836B:4179", "2010:836b:4179:0000:0000:0000:836b:4179" },
+    { "::", "0000:0000:0000:0000:0000:0000:0000:0000" },
+    { NULL, NULL }
+};
+
+typedef struct {
+    const char* func;
+    const char* arg1;
+    const char* arg2;
+    int expected;
+} FuncTest;
+
+// we invert expected bools to match codes[]
+static FuncTest ftests[] = {
+    { "sfip_is_set", "8::", NULL, 0 },
+    { "sfip_is_set", "::1", NULL, 0 },
+    { "sfip_is_set", "::", NULL, 1 },
+
+    { "sfip_is_loopback", "127.0.0.0", NULL, 0 },
+    { "sfip_is_loopback", "127.255.255.255", NULL, 0 },
+    { "sfip_is_loopback", "128.0.0.0", NULL, 1 },
+    { "sfip_is_loopback", "::1", NULL, 0 },
+    { "sfip_is_loopback", "::2", NULL, 1 },
+    { "sfip_is_loopback", "::7f00:0/104", NULL, 0 },
+    { "sfip_is_loopback", "::ffff:127.0.0.0/104", NULL, 0 },
+    { "sfip_is_loopback", "::127.0.0.0", NULL, 0 },
+    { "sfip_is_loopback", "::128.0.0.1", NULL, 1 },
+    { "sfip_is_loopback", "::ffff:0.0.0.1", NULL, 1 },
+
+    { "sfip_ismapped", "::ffff:c000:280", NULL, 0 },
+    { "sfip_ismapped", "8::ffff:c000:280", NULL, 1 },
+    { "sfip_ismapped", "::fffe:c000:280", NULL, 1 },
+
+    { "_ip6_cmp", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", SFIP_EQUAL },
+    { "_ip6_cmp", "1:2:3:4:5:6:7:8", "1:1:3:4:5:6:7:8", SFIP_GREATER },
+    { "_ip6_cmp", "1:2:3:4:5:6:7:8", "1:2:4:4:5:6:7:8", SFIP_LESSER },
+    { "_ip6_cmp", "1:2:3:4:5:6:7:8", "1:2:3:4:5:5:7:8", SFIP_GREATER },
+    { "_ip6_cmp", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:8:8", SFIP_LESSER },
+
+    { "sfip_compare", "1.2.3.4", "1.2.3.4", SFIP_EQUAL },
+    { "sfip_compare", "255.255.255.255", "192.168.0.1", SFIP_GREATER },
+    { "sfip_compare", "192.168.0.1", "255.255.255.255/21", SFIP_LESSER },
+    { "sfip_compare", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", SFIP_EQUAL },
+    { "sfip_compare", "ffff:ffff::1",
+      "6543:21ff:ffff:ffff:ffff:ffff:ffff:ffff ffff:ff00::", SFIP_GREATER },
+    { "sfip_compare", "1.2.3.4", "0.0.0.0", SFIP_EQUAL },
+    { "sfip_compare", "1:2:3:4:5:6:7:8", "::", SFIP_EQUAL },
+
+    { "sfip_compare_unset", "1.2.3.4", "1.2.3.4", SFIP_EQUAL },
+    { "sfip_compare_unset", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", SFIP_EQUAL },
+    { "sfip_compare_unset", "1.2.3.4", "0.0.0.0", SFIP_FAILURE },
+    { "sfip_compare_unset", "1:2:3:4:5:6:7:8", "::", SFIP_FAILURE },
+
+    { "sfip_fast_lt4", "1.2.3.4", "1.2.3.4", 1 },
+    { "sfip_fast_lt4", "1.2.3.4", "1.2.3.5", 0 },
+    { "sfip_fast_lt4", "1.2.3.5", "1.2.3.4", 1 },
+
+    { "sfip_fast_gt4", "1.2.3.4", "1.2.3.4", 1 },
+    { "sfip_fast_gt4", "1.2.3.4", "1.2.3.5", 1 },
+    { "sfip_fast_gt4", "1.2.3.5", "1.2.3.4", 0 },
+
+    { "sfip_fast_eq4", "1.2.3.4", "1.2.3.4", 0 },
+    { "sfip_fast_eq4", "1.2.3.4", "1.2.3.5", 1 },
+    { "sfip_fast_eq4", "1.2.3.5", "1.2.3.4", 1 },
+
+    { "sfip_fast_lt6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", 1 },
+    { "sfip_fast_lt6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:9", 0 },
+    { "sfip_fast_lt6", "1:2:3:4:5:6:7:9", "1:2:3:4:5:6:7:8", 1 },
+
+    { "sfip_fast_gt6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", 1 },
+    { "sfip_fast_gt6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:9", 1 },
+    { "sfip_fast_gt6", "1:2:3:4:5:6:7:9", "1:2:3:4:5:6:7:8", 0 },
+
+    { "sfip_fast_eq6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8", 0 },
+    { "sfip_fast_eq6", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:9", 1 },
+    { "sfip_fast_eq6", "1:2:3:4:5:6:7:9", "1:2:3:4:5:6:7:8", 1 },
+
+    { "sfip_fast_cont4", "255.255.255.255", "192.168.0.1", 1 },
+    { "sfip_fast_cont4", "192.168.0.1", "255.255.255.255/21", 1 },
+    { "sfip_fast_cont4", "255.255.255.255/21", "255.255.255.255", 0 },
+    { "sfip_fast_cont4", "255.255.255.255", "255.255.255.255/21", 1 },
+
+    { "sfip_contains", "255.255.255.255", "192.168.0.1", SFIP_NOT_CONTAINS },
+    { "sfip_contains", "192.168.0.1", "255.255.255.255/21", SFIP_NOT_CONTAINS },
+    { "sfip_contains", "255.255.255.255/21", "255.255.255.255", SFIP_CONTAINS },
+    { "sfip_contains", "255.255.255.255", "255.255.255.255/21", SFIP_NOT_CONTAINS },
+
+    { "sfip_fast_cont6", "ffff:ffff::1", "ffff::ffff:1/8", 1 },
+    { "sfip_fast_cont6", "ffff::ffff:1/8", "ffff:ffff::1", 0 },
+    { "sfip_fast_cont6", "ffee:ddcc:bbaa:9988:7766:5544:3322:1100/32",
+                         "ffee:ddcc:bbaa:9988:7766:5544:3322:1100", 0 },
+    { "sfip_fast_cont6", "1001:db8:85a3::/28", "1001:db0::", 0 },
+    { "sfip_fast_cont6", "1001:db8:85a3::/29", "1001:db0::", 1 },
+
+    { "sfip_contains", "ffff:ffff::1", "ffff::ffff:1/8", SFIP_NOT_CONTAINS },
+    { "sfip_contains", "ffff::ffff:1/8", "ffff:ffff::1", SFIP_CONTAINS },
+    { "sfip_contains", "ffee:ddcc:bbaa:9988:7766:5544:3322:1100/32",
+                       "ffee:ddcc:bbaa:9988:7766:5544:3322:1100", SFIP_CONTAINS },
+    { "sfip_contains", "1001:db8:85a3::/28", "1001:db0::", SFIP_CONTAINS },
+    { "sfip_contains", "1001:db8:85a3::/29", "1001:db0::", SFIP_NOT_CONTAINS },
+
+    { "sfip_contains", "255.255.255.255", 
+      "2001:0db8:0000:0000:0000:0000:1428:57ab", SFIP_ARG_ERR },
+    { NULL }
+};
+
+static const char* codes[] = {
+    "success", 
+    "failure", 
+    "lesser", 
+    "greater", 
+    "equal", 
+    "arg_err", 
+    "cidr_err", 
+    "inet_parse_err", 
+    "invalid_mask", 
+    "alloc_err", 
+    "contains", 
+    "not_contains", 
+    "duplicate", 
+    "lookup_failure", 
+    "unmatched_bracket", 
+    "not_any", 
+    "conflict" 
+};
+
+static void FuncCheck (FuncTest* f, int result) {
+    const char* status = "Passed";
+    const char* code = result < sizeof(codes)/sizeof(code[0]) ? 
+        codes[result] : "uh oh";
+
+    if ( result != f->expected ) {
+        status = "Failed";
+        sf_ip_failures++;
+    }
+    if ( f->arg2 )
+        printf("%s: %s(%s, %s) = %s\n",
+            status, f->func, f->arg1, f->arg2, code);
+    else
+        printf("%s: %s(%s) = %s\n",
+            status, f->func, f->arg1, code);
 }
 
-int test_str(sfip_t *ip, char *str) {
+static void RunFuncs (void) {
+    FuncTest* f = ftests;
+
+    while ( f->func ) {
+        sfip_t ip1, ip2;
+        int result = -1;
+
+        if ( f->arg1 ) sfip_pton(f->arg1, &ip1);
+        if ( f->arg2 ) sfip_pton(f->arg2, &ip2);
+
+        if ( !strcmp(f->func, "sfip_contains") ) {
+            result = sfip_contains(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_is_set") ) {
+            result = !sfip_is_set(&ip1);
+
+        } else if ( !strcmp(f->func, "sfip_is_loopback") ) {
+            result = !sfip_is_loopback(&ip1);
+
+        } else if ( !strcmp(f->func, "sfip_ismapped") ) {
+            result = !sfip_ismapped(&ip1);
+
+        } else if ( !strcmp(f->func, "_ip6_cmp") ) {
+            result = _ip6_cmp(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_compare") ) {
+            result = sfip_compare(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_compare_unset") ) {
+            result = sfip_compare_unset(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_lt4") ) {
+            result = !sfip_fast_lt4(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_gt4") ) {
+            result = !sfip_fast_gt4(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_eq4") ) {
+            result = !sfip_fast_eq4(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_lt6") ) {
+            result = !sfip_fast_lt6(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_gt6") ) {
+            result = !sfip_fast_gt6(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_eq6") ) {
+            result = !sfip_fast_eq6(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_cont4") ) {
+            result = !sfip_fast_cont4(&ip1, &ip2);
+
+        } else if ( !strcmp(f->func, "sfip_fast_cont6") ) {
+            result = !sfip_fast_cont6(&ip1, &ip2);
+        }
+        FuncCheck(f, result);
+        f++;
+    }
+}
+
+/* By using a macro, __LINE__  will be right */
+#define test(msg, result) { \
+    if(result == FAIL) { \
+        printf("\tFAILED:\t%s\tline %d\n", msg, __LINE__); \
+        sf_ip_failures++; \
+    } else { \
+        printf("\tPassed:\t%s\n", msg); \
+    } \
+}
+
+static int test_str(const sfip_t *ip, const char *str) {
     char *s = sfip_to_str(ip);
     if(!strcmp( s, str) ) return PASS;
 
@@ -577,16 +864,18 @@ int test_str(sfip_t *ip, char *str) {
 
 int sf_ip_unittest() {
     unsigned int i = 0xffffffff;
-    sfip_t *ip[9];
+    const int N = sizeof(ptests)/sizeof(ptests[0]) - 1;
+    sfip_t *ip[N];
+#if 0
     sfip_t conv;
+#endif
+    SFIP_RET status;
    
     /* Verify the simplest allocation method */
     puts("*********************************************************************");
     puts("Testing raw allocation:");
-    ip[0] = sfip_alloc_raw(&i, AF_INET);
+    ip[0] = sfip_alloc_raw(&i, AF_INET, &status);
     test("255.255.255.255", test_str(ip[0], "255.255.255.255"));
-
-
 
     /* The following lines verify parsing via sfip_alloc */
     /* sfip_alloc should be able to recognize IPv4 and IPv6 addresses, 
@@ -596,31 +885,10 @@ int sf_ip_unittest() {
     puts("");
     puts("*********************************************************************");
     puts("Testing parsing:");
-    ip[1] = sfip_alloc("192.168.0.1");
-    test("192.168.0.1", test_str(ip[1], "192.168.0.1"));
-    
-    ip[2] = sfip_alloc("255.255.255.255/21");
-    test("255.255.255.255/21", test_str(ip[2], "255.255.248.0"));
-    
-    ip[3] = sfip_alloc("1.1.255.255      255.255.248.0");
-    test("1.1.255.255      255.255.248.0", test_str(ip[3], "1.1.248.0"));
-    
-    ip[4] = sfip_alloc(" 2001:0db8:0000:0000:0000:0000:1428:57ab   ");
-    test(" 2001:0db8:0000:0000:0000:0000:1428:57ab   ", test_str(ip[4], "2001:0db8:0000:0000:0000:0000:1428:57ab"));
-    
-    ip[5] = sfip_alloc("ffff:ffff::1");
-    test("ffff:ffff::1", test_str(ip[5], "ffff:ffff:0000:0000:0000:0000:0000:0001"));
-    
-    ip[6] = sfip_alloc("fFfF::FfFf:FFFF/127");
-    test("fFfF::FfFf:FFFF/127", test_str(ip[6], "ffff:0000:0000:0000:0000:0000:ffff:fffe"));
-    
-    ip[7] = sfip_alloc("ffff::ffff:1/8");
-    test("ffff::ffff:1/8", test_str(ip[7], "ff00:0000:0000:0000:0000:0000:0000:0000"));
-
-    ip[8] = sfip_alloc("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff ::3");
-    test("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff ::3", test_str(ip[8], "c000:0000:0000:0000:0000:0000:0000:0000"));
-
-
+    for ( i = 1; i < N; i++ ) {
+        ip[i] = sfip_alloc(ptests[i].input, &status);
+        test(ptests[i].input, test_str(ip[i], ptests[i].expected));
+    }
 
     /* Free everything and reallocate it. */
     /* This will atleast /imply/ memory is being handled somewhat properly. */
@@ -628,21 +896,16 @@ int sf_ip_unittest() {
     puts("*********************************************************************");
     puts("Verifying deletes:");
     /* Make sure we can free: */
-    for(i=0; i<9; i++) { sfip_free(ip[i]); }
-    i = 0xffffffff;
+    for( i = 0; i < N; i++ ) sfip_free(ip[i]);
+
     /* Reallocate */
-    ip[0] = sfip_alloc_raw(&i, AF_INET);
-    ip[1] = sfip_alloc("192.168.0.1");
-    ip[2] = sfip_alloc("255.255.255.255/21");
-    ip[3] = sfip_alloc("1.1.255.255      255.255.248.0");
-    ip[4] = sfip_alloc(" 2001:0db8:0000:0000:0000:0000:1428:57ab   ");
-    ip[5] = sfip_alloc("ffff:ffff::1");
-    ip[6] = sfip_alloc("ffff::ffff:FFFF/127");
-    ip[7] = sfip_alloc("ffff::ffff:1/8");
-    ip[8] = sfip_alloc("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff ::3");
+    i = 0xffffffff;
+    ip[0] = sfip_alloc_raw(&i, AF_INET, &status);
+    for( i = 1; i < N; i++ ) ip[i] = sfip_alloc(ptests[i].input, &status);
     printf("\tPassed (as best I can tell, since there was no seg fault)\n");
 
-
+#if 0
+    // APPARENTLY THIS CODE IS OUT OF DATE
     /* The following lines verify that IPs can be converted to different families. */
     puts("");
     puts("*********************************************************************");
@@ -654,35 +917,32 @@ int sf_ip_unittest() {
     test("ipv6 -> ipv4", test_str(&conv, "255.255.255.255"));
     conv = sfip_6to4(ip[4]);
     test("ipv6 -> ipv4", test_str(&conv, "20.40.87.171"));
+#endif
     
+    puts("");
+    puts("*********************************************************************");
+    puts("Testing functions:");
+    RunFuncs();
 
-    /* Comparisons can be byte-by-byte, effectively treating an IP that has 
-     * been masked as an unmasked IP (treats the masked bits as zeroed) */
     puts("");
-    puts("*********************************************************************");
-    puts("Testing byte-by-byte comparisons:");
-    test("ip[0] > ip[1]", (sfip_compare(ip[0], ip[1]) == SFIP_GREATER) );
-    test("ip[1] < ip[2]", (sfip_compare(ip[1], ip[2]) == SFIP_LESSER) );
-    test("ip[5] > ip[8]", (sfip_compare(ip[5], ip[8]) == SFIP_GREATER) );
-    
-    /* Comparisons can also check if an IP is contained within a given network */
-    puts("");
-    puts("*********************************************************************");
-    puts("Testing network containment comparisons:");
-    test("ip[0] does not contain ip[1]", (sfip_contains(ip[0], ip[1]) == SFIP_NOT_CONTAINS) );
-    test("ip[1] does not contain ip[2]", (sfip_contains(ip[1], ip[2]) == SFIP_NOT_CONTAINS) );
-    test("ip[5] does not contain ip[7]", (sfip_contains(ip[5], ip[7]) == SFIP_NOT_CONTAINS) );
-    test("ip[7] does contain ip[5]", (sfip_contains(ip[7], ip[5]) == SFIP_CONTAINS) );
-    test("ip[2] does contain ip[0]", (sfip_contains(ip[2], ip[0]) == SFIP_CONTAINS) );
-    test("ip[0] does not contain ip[2]", (sfip_contains(ip[0], ip[2]) == SFIP_NOT_CONTAINS) );
-    test("ip[0] can't be compared to ip[4]", (sfip_contains(ip[0], ip[4]) == SFIP_ARG_ERR) );
-    
     puts("*********************************************************************");
     puts(" ... Cleaning up");
     for(i=0; i<9; i++) { sfip_free(ip[i]); }
 
     printf("\n\tTotal failures: %d\n\n", sf_ip_failures);
-    return 1;
+
+    return sf_ip_failures;
+}
+
+//-------------------------------------
+// build with:
+// gcc -g -DTESTER -o sfipt -lm sf_ip.c
+// then run:
+// ./sfipt
+//-------------------------------------
+
+int main (int argc, char* argv[]) {
+    return sf_ip_unittest();
 }
 
 #endif

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -25,8 +25,6 @@
      Each hash table must allocate it's own SFGHASH struct, this is because
      sfghash_new uses the number of rows in the hash table to modulo the random
      values.
-
-     Copyright (C) 2006-2008 Sourcefire, Inc.
 
      Updates:
      
@@ -104,7 +102,6 @@ unsigned sfhashfcn_hash( SFHASHFCN * p, unsigned char *d, int n )
     return hash ^ p->hardener;
 }
 
-
 /** 
  * Make sfhashfcn use a separate set of operators for the backend.
  *
@@ -130,4 +127,4 @@ int sfhashfcn_set_keyops( SFHASHFCN *h,
 
     return -1;
 }
-                        
+

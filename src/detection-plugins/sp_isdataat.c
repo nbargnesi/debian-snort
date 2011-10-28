@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2008 Sourcefire, Inc.
+ ** Copyright (C) 1998-2009 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -63,6 +63,9 @@ PreprocStats isDataAtPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
+
 extern char *file_name;  /* this is the file name from rules.c, generally used
                             for error messages */
 
@@ -85,7 +88,38 @@ extern u_int8_t DecodeBuffer[DECODE_BLEN];
 
 void IsDataAtInit(char *, OptTreeNode *, int);
 void IsDataAtParse(char *, IsDataAtData *, OptTreeNode *);
-int  IsDataAt(Packet *, struct _OptTreeNode *, OptFpList *);
+int  IsDataAt(void *option_data, Packet *p);
+
+u_int32_t IsDataAtHash(void *d)
+{
+    u_int32_t a,b,c;
+    IsDataAtData *data = (IsDataAtData *)d;
+
+    a = data->offset;
+    b = data->flags;
+    c = RULE_OPTION_TYPE_IS_DATA_AT;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int IsDataAtCompare(void *l, void *r)
+{
+    IsDataAtData *left = (IsDataAtData *)l;
+    IsDataAtData *right = (IsDataAtData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+                                
+    if (( left->offset == right->offset) &&
+        ( left->flags == right->flags))
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 /****************************************************************************
  * 
@@ -101,7 +135,7 @@ int  IsDataAt(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupIsDataAt(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("isdataat", IsDataAtInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("isdataat", IsDataAtInit, NULL, OPT_TYPE_DETECTION);
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("isdataat", &isDataAtPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
@@ -129,6 +163,7 @@ void IsDataAtInit(char *data, OptTreeNode *otn, int protocol)
 {
     IsDataAtData *idx;
     OptFpList *fpl;
+    void *idx_dup;
 
     /* allocate the data structure and attach it to the
        rule's data struct list */
@@ -144,7 +179,14 @@ void IsDataAtInit(char *data, OptTreeNode *otn, int protocol)
        rule option's data structure */
     IsDataAtParse(data, idx, otn);
 
+    if (add_detection_option(RULE_OPTION_TYPE_IS_DATA_AT, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(idx);
+        idx = idx_dup;
+     }
+
     fpl = AddOptFuncToList(IsDataAt, otn);
+    fpl->type = RULE_OPTION_TYPE_IS_DATA_AT;
     
     /* attach it to the context node so that we can call each instance
      * individually
@@ -242,21 +284,20 @@ void IsDataAtParse(char *data, IsDataAtData *idx, OptTreeNode *otn)
  *          On success, it calls the next function in the detection list 
  *
  ****************************************************************************/
-int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
+int IsDataAt(void *option_data, Packet *p)
 {
-    IsDataAtData *isdata;
+    IsDataAtData *isdata = (IsDataAtData *)option_data;
+    int rval = DETECTION_OPTION_NO_MATCH;
     int dsize;
     const u_int8_t *base_ptr, *end_ptr, *start_ptr;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(isDataAtPerfStats);
 
-    isdata = (IsDataAtData *) fp_list->context;
-
     if (!isdata)
     {
         PREPROC_PROFILE_END(isDataAtPerfStats);
-        return 0;
+        return rval;
     }
 
     if (isdata->flags & ISDATAAT_RAWBYTES_FLAG)
@@ -291,7 +332,7 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] isdataat bounds check failed..\n"););
             PREPROC_PROFILE_END(isDataAtPerfStats);
-            return 0;
+            return rval;
         }
     }
 
@@ -312,13 +353,11 @@ int IsDataAt(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "[*] IsDataAt succeeded!  there is data...\n"););
-        PREPROC_PROFILE_END(isDataAtPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        rval = DETECTION_OPTION_MATCH;
     }
 
 
     /* otherwise dump */
     PREPROC_PROFILE_END(isDataAtPerfStats);
-    return 0;
-
+    return rval;
 }

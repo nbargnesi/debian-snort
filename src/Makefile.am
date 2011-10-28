@@ -5,7 +5,6 @@ bin_PROGRAMS = snort
 
 snort_SOURCES = cdefs.h \
 event.h \
-fatal.h \
 generators.h \
 prototypes.h \
 plugin_enum.h \
@@ -27,8 +26,6 @@ snprintf.c snprintf.h \
 strlcatu.c strlcatu.h \
 strlcpyu.c strlcpyu.h \
 tag.c tag.h \
-ubi_BinTree.c ubi_BinTree.h \
-ubi_SplayTree.c ubi_SplayTree.h \
 util.c util.h \
 detect.c detect.h \
 signature.c signature.h \
@@ -59,8 +56,6 @@ snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
 dynamic-plugins/libdynamic.a            \
 preprocessors/libspp.a                \
-preprocessors/flow/portscan/libportscan.a \
-preprocessors/flow/libflow.a \
 parser/libparser.a \
 target-based/libtarget_based.a \
 preprocessors/HttpInspect/libhttp_inspect.a \

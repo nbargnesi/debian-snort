@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2004-2008 Sourcefire, Inc.
+** Copyright (C) 2004-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2004 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -26,8 +26,9 @@
 #include "fpcreate.h"
 void SetupFrag3(void);
 
-int fpAddFragAlert(Packet *p, OTNX *otnx);
-int fpFragAlerted(Packet *p, OTNX *otnx);
+int fpAddFragAlert(Packet *p, OptTreeNode *otn);
+int fpFragAlerted(Packet *p, OptTreeNode *otn);
+
 #ifdef TARGET_BASED
 int fragGetApplicationProtocolId(Packet *p);
 #endif

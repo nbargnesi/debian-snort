@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -85,7 +85,7 @@ whitespace     [ \t]*
 comma          ,
 digit          [0-9]
 numericValue   [+-]?{digit}{1,16}
-stringValue    [ \t_\./\-a-zA-Z0-9,()]{1,4096}
+stringValue    [ \t_/\-a-zA-Z0-9,\.;:()#"'`!@#$%^&*()=+\[\]|\{\}\?\\]{1,4096}
 commentStart   \<!
 commentEnd     \>
 comment        {commentStart}.*{commentEnd}
@@ -183,6 +183,8 @@ comment        {commentStart}.*{commentEnd}
 %%
 char *sfat_grammar_error=NULL;
 char sfat_grammar_error_printed=0;
+char sfat_insufficient_space_logged=0;
+char sfat_fatal_error=1;
 char *sfat_saved_file = NULL;
 static char sfat_saved_file_set = 0;
 char parse_error = 0;

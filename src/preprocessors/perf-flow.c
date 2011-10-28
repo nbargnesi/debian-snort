@@ -4,7 +4,7 @@
 ** perf-flow.c
 **
 **
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 ** Dan Roelker <droelker@sourcefire.com>
 **
@@ -232,7 +232,7 @@ int UpdateFlowStats(SFFLOW *sfFlow, const unsigned char *pucPacket, int len,
     /*
     * Track how many packets of each length
     */
-    if( len <= SF_MAX_PKT_LEN )
+    if( (!iRebuiltPkt)&&(len <= SF_MAX_PKT_LEN) )
     {
         sfFlow->pktLenCnt[ len ]++;
         sfFlow->pktTotal++;

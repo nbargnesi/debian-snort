@@ -299,6 +299,7 @@ EXTRA_DIST = \
 ./WIN32-Prj/snort.dsp \
 ./WIN32-Prj/build_all.dsp \
 ./WIN32-Prj/sf_engine.dsp \
+./WIN32-Prj/sf_engine_initialize.dsp \
 ./WIN32-Prj/snort.dsw
 
 noinst_LIBRARIES = 

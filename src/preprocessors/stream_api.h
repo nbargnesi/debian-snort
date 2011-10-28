@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * ** Copyright (C) 2005-2008 Sourcefire, Inc.
+ * ** Copyright (C) 2005-2009 Sourcefire, Inc.
  * ** AUTHOR: Steven Sturges
  * **
  * ** This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,11 @@
 
 #define IGNORE_FLAG_ALWAYS 0x01
 
+#define SSN_MISSING_NONE   0x00
+#define SSN_MISSING_BEFORE 0x01
+#define SSN_MISSING_AFTER  0x02
+#define SSN_MISSING_BOTH   (SSN_MISSING_BEFORE | SSN_MISSING_AFTER)
+
 #define SSN_DIR_NONE 0x0
 #define SSN_DIR_CLIENT 0x1
 #define SSN_DIR_SENDER 0x1
@@ -78,6 +83,7 @@
 #define SSNFLAG_RESET               0x00040000
 #define SSNFLAG_DROP_CLIENT         0x00080000
 #define SSNFLAG_DROP_SERVER         0x00100000
+#define SSNFLAG_LOGGED_QUEUE_FULL   0x00200000
 #define SSNFLAG_ALL                 0xFFFFFFFF /* all that and a bag of chips */
 #define SSNFLAG_NONE                0x00000000 /* nothing, an MT bag of chips */
 
@@ -366,12 +372,12 @@ typedef struct _stream_api
      *      Direction
      *
      * Returns
-     *      3 if missing before and after
-     *      2 if missing before
-     *      1 if missing after
-     *      0 if none missing
+     *      SSN_MISSING_BOTH if missing before and after
+     *      SSN_MISSING_BEFORE if missing before
+     *      SSN_MISSING_AFTER if missing after
+     *      SSN_MISSING_NONE if none missing
      */
-    char (*missing_in_reassembled)(void *, char);
+    int (*missing_in_reassembled)(void *, char);
 
     /* Get true/false as to whether packets were missed on
      * the stream
@@ -406,12 +412,36 @@ typedef struct _stream_api
      *     integer protocol identifier
      */
     int16_t (*set_application_protocol_id)(void *, int16_t);
+
+    /** Set service to either ignore, inspect or maintain session state.
+     */
+    void (*set_service_filter_status)(int service, int status);
 #endif
+
+    /** Set port to either ignore, inspect or maintain session state. 
+     */
+    void (*set_port_filter_status)(int protocol, u_int16_t port, int status);
+
 
 } StreamAPI;
 
 /* To be set by Stream5 (or Stream4) */
 extern StreamAPI *stream_api;
+
+/**Port Inspection States. Port can be either ignored,
+ * or inspected or session tracked. The values are bitmasks.
+ */
+typedef enum { 
+    /**Dont monitor the port. */
+    PORT_MONITOR_NONE = 0x00, 
+
+    /**Inspect the port. */
+    PORT_MONITOR_INSPECT = 0x01,
+
+    /**perform session tracking on the port. */
+    PORT_MONITOR_SESSION = 0x02
+
+} PortMonitorStates;
 
 #endif /* STREAM_API_H_ */
 

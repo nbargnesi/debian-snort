@@ -1,11 +1,12 @@
 /*
  * ftp_cmd_lookup.c
  *
- * Copyright (C) 2004-2008 Sourcefire, Inc.
+ * Copyright (C) 2004-2009 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
- *
+ * Kevin Liu <kliu@sourcefire.com>
+ * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
  * published by the Free Software Foundation.  You may not use, modify or
@@ -37,7 +38,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "ftpp_util_kmap.h"
+#include "hi_util_kmap.h"
 #include "ftpp_ui_config.h"
 #include "ftpp_return_codes.h"
 #include "snort_ftptelnet.h"

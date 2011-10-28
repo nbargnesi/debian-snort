@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2004-2008 Sourcefire, Inc.
+ * Copyright (C) 2004-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -111,7 +111,6 @@
 #include "packet_time.h"
 #include "sfxhash.h"
 #include "ipobj.h"
-#include "flow.h"
 #include "stream_api.h"
 
 #ifdef SUP_IP6
@@ -365,12 +364,8 @@ static int ps_ignore_ip(unsigned long scanner, unsigned short scanner_port,
     if(g_ps_init.ignore_scanners)
     {
 #ifdef SUP_IP6
-        if(sfip_family(scanner) == AF_INET6 && 
-           ipset_contains(g_ps_init.ignore_scanners, scanner, &scanner_port, IPV6_FAMILY))
-                return 1;
-        else 
-            if(ipset_contains(g_ps_init.ignore_scanners, scanner, &scanner_port, IPV4_FAMILY))
-                return 1;
+        if (ipset_contains(g_ps_init.ignore_scanners, scanner, &scanner_port))
+            return 1;
 #else
         if(ipset_contains(g_ps_init.ignore_scanners, &scanner, &scanner_port, IPV4_FAMILY))
             return 1;
@@ -380,12 +375,8 @@ static int ps_ignore_ip(unsigned long scanner, unsigned short scanner_port,
     if(g_ps_init.ignore_scanned)
     {
 #ifdef SUP_IP6
-        if(sfip_family(scanned) &&
-           ipset_contains(g_ps_init.ignore_scanned, scanned, &scanned_port, IPV6_FAMILY))
+        if (ipset_contains(g_ps_init.ignore_scanned, scanned, &scanned_port))
             return 1;
-        else
-            if(ipset_contains(g_ps_init.ignore_scanned, scanned, &scanned_port, IPV4_FAMILY))
-                return 1;
 #else
         if(ipset_contains(g_ps_init.ignore_scanned, &scanned, &scanned_port, IPV4_FAMILY))
             return 1;
@@ -406,7 +397,6 @@ static int ps_ignore_ip(unsigned long scanner, unsigned short scanner_port,
 static int ps_filter_ignore(PS_PKT *ps_pkt)
 {
     Packet  *p;
-    FLOW    *flow;
     int      reverse_pkt = 0;
 #ifdef SUP_IP6
     snort_ip_p scanner, scanned;
@@ -493,12 +483,6 @@ static int ps_filter_ignore(PS_PKT *ps_pkt)
         if (stream_api->get_packet_direction(p) & PKT_FROM_SERVER)
             reverse_pkt = 1;
     }
-    else if((p->udph || IPH_IS_VALID(p)) && p->flow)
-    {
-        flow = (FLOW *)p->flow;
-        if(flow->stats.direction == FROM_RESPONDER)
-            reverse_pkt = 1;
-    }
 
 #ifdef SUP_IP6
     scanner = GET_SRC_IP(p);
@@ -524,20 +508,10 @@ static int ps_filter_ignore(PS_PKT *ps_pkt)
     if(g_ps_init.watch_ip)
     {
 #ifdef SUP_IP6 
-        if(sfip_family(scanner) == AF_INET6) 
-        {
-            if(ipset_contains(g_ps_init.watch_ip, scanner, &(p->sp), IPV6_FAMILY))
-                return 0;
-            if(ipset_contains(g_ps_init.watch_ip, scanned, &(p->dp), IPV6_FAMILY))
-                return 0;
-        }
-        else
-        {
-            if(ipset_contains(g_ps_init.watch_ip, scanner, &(p->sp), IPV4_FAMILY))
-                return 0;
-            if(ipset_contains(g_ps_init.watch_ip, scanned, &(p->dp), IPV4_FAMILY))
-                return 0;
-        }
+        if(ipset_contains(g_ps_init.watch_ip, scanner, &(p->sp)))
+            return 0;
+        if(ipset_contains(g_ps_init.watch_ip, scanned, &(p->dp)))
+            return 0;
 #else
         if(ipset_contains(g_ps_init.watch_ip, &scanner, &(p->sp), IPV4_FAMILY))
             return 0;
@@ -863,9 +837,9 @@ static int ps_proto_update(PS_PROTO *proto, int ps_cnt, int pri_cnt, snort_ip_p 
         proto->connection_count = 0;
 
 #ifdef SUP_IP6
-    if(!IP_EQUALITY(&proto->u_ips, ip))
+    if(!IP_EQUALITY_UNSET(&proto->u_ips, ip))
 #else
-    if(!IP_EQUALITY(proto->u_ips, ip))
+    if(!IP_EQUALITY_UNSET(proto->u_ips, ip))
 #endif
     {
         proto->u_ip_count++;
@@ -981,15 +955,12 @@ static int ps_tracker_update_tcp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
 {
     Packet  *p;
     time_t  pkt_time;
-    FLOW    *flow;
     u_int32_t session_flags;
     snort_ip cleared;
     IP_CLEAR(cleared);
     
     p = (Packet *)ps_pkt->pkt;
     pkt_time = packet_timeofday();
-
-    flow = (FLOW *)p->flow;
 
     /*
     **  Handle the initiating packet.
@@ -1158,44 +1129,6 @@ static int ps_tracker_update_tcp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
             scanner->priority_node = 1;
         }
     }
-    /*
-    **  If we're none of the above, revert to flow to do some basic
-    **  processing.  This means that the TCP packet we got is not
-    **  considered a valid initiator, so we didn't start a stream
-    **  tracker.
-    */
-    else if(flow)
-    {
-        if(flow->stats.direction == FROM_INITIATOR)
-        {
-            if(scanned)
-            {
-                ps_proto_update(&scanned->proto[proto_idx],1,0,
-                                 GET_SRC_IP(p),p->dp, pkt_time);
-            }
-
-            if(scanner)
-            {
-                ps_proto_update(&scanner->proto[proto_idx],1,0,
-                                 GET_DST_IP(p),p->dp, pkt_time);
-            }
-        }
-        else if(flow->stats.direction == FROM_RESPONDER &&
-                (p->tcph->th_flags & TH_RST))
-        {
-            if(scanned)
-            {
-                ps_proto_update(&scanned->proto[proto_idx],0,1,CLEARED,0,0);
-                scanned->priority_node = 1;
-            }
-
-            if(scanner)
-            {
-                ps_proto_update(&scanner->proto[proto_idx],0,1,CLEARED,0,0);
-                scanner->priority_node = 1;
-            }
-        }
-    }
     return 0;
 }
 
@@ -1204,7 +1137,6 @@ static int ps_tracker_update_ip(PS_PKT *ps_pkt, PS_TRACKER *scanner,
 {
     Packet *p;
     time_t  pkt_time;
-    FLOW   *flow;
     snort_ip cleared;
     IP_CLEAR(cleared);
     
@@ -1233,33 +1165,6 @@ static int ps_tracker_update_ip(PS_PKT *ps_pkt, PS_TRACKER *scanner,
 
             return 0;
         }
-
-        if(p->flow)
-        {
-            flow = (FLOW *)p->flow;
-            if(flow->stats.direction == FROM_INITIATOR)
-            {
-                if(scanned)
-                {
-                    ps_proto_update(&scanned->proto[proto_idx],1,0,
-                        GET_SRC_IP(p),(u_short)p->iph->ip_proto, pkt_time);
-                }
-
-                if(scanner)
-                {
-                    ps_proto_update(&scanner->proto[proto_idx],1,0,
-                        GET_DST_IP(p),(u_short)p->iph->ip_proto, pkt_time);
-                }
-            }
-            else if(flow->stats.direction == FROM_RESPONDER)
-            {
-                if(scanned)
-                    ps_proto_update(&scanned->proto[proto_idx],-1,0,CLEARED,0,0);
-
-                if(scanner)
-                    ps_proto_update(&scanner->proto[proto_idx],-1,0,CLEARED,0,0);
-            }
-        }
     }
 
     return 0;
@@ -1270,7 +1175,6 @@ static int ps_tracker_update_udp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
 {
     Packet  *p;
     time_t  pkt_time;
-    FLOW    *flow;
     snort_ip    cleared;
     IP_CLEAR(cleared);
     
@@ -1349,32 +1253,6 @@ static int ps_tracker_update_udp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
                     ps_proto_update(&scanner->proto[proto_idx],-1,0,0,0,0);
             }
 #endif
-        }
-        else if(p->flow)
-        {
-            flow = (FLOW *)p->flow;
-            if(flow->stats.direction == FROM_INITIATOR)
-            {
-                if(scanned)
-                {
-                    ps_proto_update(&scanned->proto[proto_idx],1,0,
-                                     GET_SRC_IP(p),p->dp, pkt_time);
-                }
-
-                if(scanner)
-                {
-                    ps_proto_update(&scanner->proto[proto_idx],1,0,
-                                     GET_DST_IP(p),p->dp, pkt_time);
-                }
-            }
-            else if(flow->stats.direction == FROM_RESPONDER)
-            {
-                if(scanned)
-                    ps_proto_update(&scanned->proto[proto_idx],-1,0,CLEARED,0,0);
-
-                if(scanner)
-                    ps_proto_update(&scanner->proto[proto_idx],-1,0,CLEARED,0,0);
-            }
         }
     }
 

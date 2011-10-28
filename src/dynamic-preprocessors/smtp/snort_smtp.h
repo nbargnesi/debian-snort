@@ -1,6 +1,6 @@
 /****************************************************************************
  * 
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -91,6 +91,7 @@
 #define SMTP_FLAG_FOLDING                    0x00000004
 #define SMTP_FLAG_IN_CONTENT_TYPE            0x00000008
 #define SMTP_FLAG_GOT_BOUNDARY               0x00000010
+#define SMTP_FLAG_DATA_HEADER_CONT           0x00000020
 
 /* session flags */
 #define SMTP_FLAG_XLINK2STATE_GOTFIRSTCHUNK  0x00000001
@@ -106,6 +107,8 @@
 
 /* Maximum length of header chars before colon, based on Exim 4.32 exploit */
 #define MAX_HEADER_NAME_LEN 64
+
+#define SMTP_PROTO_REF_STR  "smtp"
 
 /**************************************************************************/
 

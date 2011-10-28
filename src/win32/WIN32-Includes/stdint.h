@@ -81,6 +81,9 @@ typedef unsigned __int64   uint64_t;
 #endif  /* _MSC_VER */
 #endif  /* UINT64 */
 
+#ifndef INT64
+#define INT64 signed __int64
+#endif  /* INT64 */
 
 #ifndef HAVE_U_INT8_T
 typedef uint8_t            u_int8_t;
@@ -103,6 +106,21 @@ typedef uint64_t              uint64;
 
 #ifndef UINT32_MAX
 #define UINT32_MAX (4294967295U)
+#endif
+
+#ifndef UINT64_MAX
+# ifdef _MSC_VER
+#  if _MSC_VER <= 1200  /* Visual C++ 6.0 */
+    /* doesn't have an unsigned 64 bit data type and we use a signed 64 bit
+     * type for our unsigned 64 bit data type */
+#   define UINT64_MAX (9223372036854775807UL)
+#  else
+#   define UINT64_MAX (18446744073709551615UL)
+#  endif
+# else
+   /* No MSC_VER, assume it doesn't support unsigned 64 bit types */
+#  define UINT64_MAX (9223372036854775807UL)
+# endif
 #endif
 
 #endif  /* __STDINT_H__ */

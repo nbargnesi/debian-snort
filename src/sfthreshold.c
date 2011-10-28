@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2003-2008 Sourcefire, Inc.
+ ** Copyright (C) 2003-2009 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -26,7 +26,6 @@
    dependent files:  sfthd sfxghash sfghash sflsq 
                      util mstring
 
-   Copyright (C) 2003-2008 Sourcefire, Inc.
    Marc Norton
 
    2003-05-29:
@@ -67,6 +66,35 @@ static int          s_enabled = 1;
 static int          s_checked = 0; /**< have we evaluated this yet? */
 static int          s_answer  = 0; /**< what was the last return value? */
 
+
+/*
+*   Fatal Integer Parser
+*   Ascii to Integer conversion with fatal error support
+*/
+static int xatol( char * s , char * etext)
+{
+    int val;
+
+    char *endptr;
+  
+    while( *s == ' ' ) s++;
+
+    errno = 0;
+    
+    /*
+    *  strtoul - errors on win32 : ERANGE (VS 6.0)
+    *            errors on linux : ERANGE, EINVAL
+    */ 
+    val =(int)strtol(s,&endptr,10);
+    
+    if(errno || endptr == s)
+    {
+       FatalError("%s(%d) => *** %s\n*** Invalid integer input: %s\n",
+                            file_name, file_line, etext, s );
+    } 
+
+    return val;
+}
 
 /*
 *   Fatal Integer Parser
@@ -145,6 +173,7 @@ void ParseThreshold2( THDX_STRUCT * thdx, char * s )
          {
             i++;
             thdx->count = xatou(argv[i],"threshold: count");
+
             count_flag++;
          }
         else if( strcmp(argv[i],"seconds") == 0  )
@@ -324,7 +353,9 @@ void ParseSFThreshold( char * rule )
 
          else if( strcmp(oargs[0],"count")==0 )
          {
-            thdx.count = xatou(oargs[1],"threshold: count");
+            thdx.count = xatol(oargs[1],"threshold: count");
+            if ((thdx.count < 0) && (thdx.count != THD_NO_THRESHOLD))
+                FatalError("%s(%d) => Threshold-Parse: invalid negative count: %d\n", file_name, file_line, thdx.count);
             count_flag++;
          }
 
@@ -583,6 +614,18 @@ int sfthreshold_init()
    return 0;
 }
 
+void sfthreshold_free(void)
+{
+    if ( !s_enabled )
+        return;
+
+    if ( s_thd )
+    {
+        sfthd_free( s_thd );
+        s_thd = NULL;
+    }
+}
+
 /*
 *  DEBUGGING ONLY
 */
@@ -732,13 +775,31 @@ int print_thd_node( THD_NODE *p , int type )
     {
 #ifdef SUP_IP6
         ntoa(buffer,80,&p->ip_address);
+        if (p->not_flag)
+        {
+            SnortSnprintfAppend(buf, STD_BUF, "ip=!%s", buffer );
+        }
+        else
+        {
+            SnortSnprintfAppend(buf, STD_BUF, "ip=%s", buffer );
+        } 
+
+   	if ((((&p->ip_address)->family == AF_INET) && ((&p->ip_address)->bits < 32)) 
+	  || (((&p->ip_address)->family == AF_INET6) && ((&p->ip_address)->bits < 128)))
+       {
+	    SnortSnprintfAppend(buf, STD_BUF, "%s%-16d",  "/" , (&p->ip_address)->bits);	
+       }
+	else
+	    SnortSnprintfAppend(buf, STD_BUF, "%-16s",  "");
+
 #else
         ntoa(buffer,80,p->ip_address);
-#endif
         if (p->not_flag)
             SnortSnprintfAppend(buf, STD_BUF, "ip=!%-16s", buffer);
         else
             SnortSnprintfAppend(buf, STD_BUF, "ip=%-17s", buffer);
+	
+#endif
 #ifndef SUP_IP6
         ntoa(buffer,80,p->ip_mask);
         SnortSnprintfAppend(buf, STD_BUF, " mask=%-15s", buffer );

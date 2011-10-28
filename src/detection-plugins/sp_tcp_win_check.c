@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -47,18 +47,50 @@ PreprocStats tcpWinPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
 
-typedef struct _TcpWinData
+typedef struct _TcpWinCheckData
 {
     u_int16_t tcp_win;
     u_int8_t not_flag;
 
-} TcpWinData;
+} TcpWinCheckData;
 
 void TcpWinCheckInit(char *, OptTreeNode *, int);
 void ParseTcpWin(char *, OptTreeNode *);
-int TcpWinCheckEq(Packet *, struct _OptTreeNode *, OptFpList *);
+int TcpWinCheckEq(void *option_data, Packet *p);
 
+u_int32_t TcpWinCheckHash(void *d)
+{
+    u_int32_t a,b,c;
+    TcpWinCheckData *data = (TcpWinCheckData *)d;
+
+    a = data->tcp_win;
+    b = data->not_flag;
+    c = RULE_OPTION_TYPE_TCP_WIN;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int TcpWinCheckCompare(void *l, void *r)
+{
+    TcpWinCheckData *left = (TcpWinCheckData *)l;
+    TcpWinCheckData *right = (TcpWinCheckData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if ((left->tcp_win == right->tcp_win) &&
+        (left->not_flag == right->not_flag))
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 
 
@@ -76,7 +108,7 @@ int TcpWinCheckEq(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupTcpWinCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("window", TcpWinCheckInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("window", TcpWinCheckInit, NULL, OPT_TYPE_DETECTION);
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("window", &tcpWinPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
@@ -98,6 +130,7 @@ void SetupTcpWinCheck(void)
  ****************************************************************************/
 void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
 {
+    OptFpList *fpl;
     if(protocol != IPPROTO_TCP)
     {
         FatalError("%s(%d): TCP Options on non-TCP rule\n", 
@@ -113,8 +146,8 @@ void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
         
     /* allocate the data structure and attach it to the
        rule's data struct list */
-    otn->ds_list[PLUGIN_TCP_WIN_CHECK] = (TcpWinData *)
-            SnortAlloc(sizeof(TcpWinData));
+    otn->ds_list[PLUGIN_TCP_WIN_CHECK] = (TcpWinCheckData *)
+            SnortAlloc(sizeof(TcpWinCheckData));
 
     /* this is where the keyword arguments are processed and placed into the 
        rule option's data structure */
@@ -122,7 +155,9 @@ void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
 
     /* finally, attach the option's detection function to the rule's 
        detect function pointer list */
-    AddOptFuncToList(TcpWinCheckEq, otn);
+    fpl = AddOptFuncToList(TcpWinCheckEq, otn);
+    fpl->type = RULE_OPTION_TYPE_TCP_WIN;
+    fpl->context = otn->ds_list[PLUGIN_TCP_WIN_CHECK];
 }
 
 
@@ -142,7 +177,8 @@ void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
  ****************************************************************************/
 void ParseTcpWin(char *data, OptTreeNode *otn)
 {
-    TcpWinData *ds_ptr;  /* data struct pointer */
+    TcpWinCheckData *ds_ptr;  /* data struct pointer */
+    void *ds_ptr_dup;
     u_int16_t win_size;
 
     /* set the ds pointer to make it easier to reference the option's
@@ -182,6 +218,11 @@ void ParseTcpWin(char *data, OptTreeNode *otn)
     printf("TCP Window set to 0x%X\n", ds_ptr->tcp_win);
 #endif
 
+    if (add_detection_option(RULE_OPTION_TYPE_TCP_WIN, (void *)ds_ptr, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
+    {
+        otn->ds_list[PLUGIN_TCP_WIN_CHECK] = ds_ptr_dup;
+        free(ds_ptr);
+    }
 }
 
 
@@ -198,21 +239,21 @@ void ParseTcpWin(char *data, OptTreeNode *otn)
  * Returns: void function
  *
  ****************************************************************************/
-int TcpWinCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
+int TcpWinCheckEq(void *option_data, Packet *p)
 {
+    TcpWinCheckData *tcpWinCheckData = (TcpWinCheckData *)option_data;
+    int rval = DETECTION_OPTION_NO_MATCH;
     PROFILE_VARS;
 
     if(!p->tcph)
-        return 0; /* if error occured while ip header
+        return rval; /* if error occured while ip header
                    * was processed, return 0 automagically.  */
 
     PREPROC_PROFILE_START(tcpWinPerfStats);
 
-    if((((TcpWinData *)otn->ds_list[PLUGIN_TCP_WIN_CHECK])->tcp_win == p->tcph->th_win) ^ (((TcpWinData *)otn->ds_list[PLUGIN_TCP_WIN_CHECK])->not_flag))
+    if((tcpWinCheckData->tcp_win == p->tcph->th_win) ^ (tcpWinCheckData->not_flag))
     {
-        /* call the next function in the function list recursively */
-        PREPROC_PROFILE_END(tcpWinPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        rval = DETECTION_OPTION_MATCH;
     }
 #ifdef DEBUG
     else
@@ -224,5 +265,5 @@ int TcpWinCheckEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
 
     /* if the test isn't successful, return 0 */
     PREPROC_PROFILE_END(tcpWinPerfStats);
-    return 0;
+    return rval;
 }

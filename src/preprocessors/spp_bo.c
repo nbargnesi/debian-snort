@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2008 Sourcefire, Inc.
+** Copyright (C) 2005-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -234,7 +234,7 @@ void BoInit(char *args)
         PrecalcPrefix();
 
         /* Set the preprocessor function into the function list */
-        AddFuncToPreprocList(BoFind, PRIORITY_LAST, PP_BO);
+        AddFuncToPreprocList(BoFind, PRIORITY_LAST, PP_BO, PROTO_BIT__UDP);
 
 #ifdef PERF_PROFILING
         RegisterPreprocessorProfile("backorifice", &boPerfStats, 0, &totalPerfStats);
@@ -517,7 +517,7 @@ void BoFind(Packet *p, void *context)
     PROFILE_VARS;
 
     /* make sure it's UDP and that it's at least 19 bytes long */
-    if(!PacketIsUDP(p))
+    if(!IsUDP(p))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, 
                     "   -> spp_bo: Not UDP\n"););

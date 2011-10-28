@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -561,6 +561,31 @@ SFGHASH_NODE * sfghash_findnext( SFGHASH * t )
     sfghash_next( t ); 
 
     return  n;
+}
+
+
+/** 
+ * Make sfhashfcn use a separate set of operators for the backend.
+ *
+ * @param h sfhashfcn ptr
+ * @param hash_fcn user specified hash function
+ * @param keycmp_fcn user specified key comparisoin function
+ */
+
+int sfghash_set_keyops( SFGHASH *h ,
+                        unsigned (*hash_fcn)( SFHASHFCN * p,
+                                              unsigned char *d,
+                                              int n),
+                        int (*keycmp_fcn)( const void *s1,
+                                           const void *s2,
+                                           size_t n))
+{
+    if(h && hash_fcn && keycmp_fcn)
+    {
+        return sfhashfcn_set_keyops(h->sfhashfcn, hash_fcn, keycmp_fcn);
+    }
+
+    return -1;
 }
 
 

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Author(s):   Andrew R. Baker <andrewb@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -62,6 +62,7 @@ typedef struct _ReferenceNode
 ReferenceNode *AddReference(ReferenceNode *, char *system, char *id);
 void FPrintReference(FILE *, ReferenceNode *);
 void ParseReference(char *args, struct _OptTreeNode *otn);
+void DeleteReferenceSystems();
 
 /* struct for rule classification */
 typedef struct _ClassType
@@ -74,6 +75,7 @@ typedef struct _ClassType
 } ClassType;
 
 void ParseClassificationConfig(char *args);
+void DeleteClassifications();
 void ParsePriority(char *priority, struct _OptTreeNode *otn);
 void ParseClassType(char *classtype, struct _OptTreeNode *otn);
 ClassType *ClassTypeLookupByType(char *type);
@@ -126,9 +128,12 @@ void   soid_otn_lookup_add( struct _OptTreeNode * );
 void   otn_remove( struct _OptTreeNode *);
 struct _OptTreeNode * soid_sg_otn_lookup( u_int32_t gid, u_int32_t sid );
 struct _OptTreeNode * soid_sg_otn_lookup_next( u_int32_t gid, u_int32_t sid );
+void soid_otn_lookup_free();
 
 int    otn_lookup_init();
 void   otn_lookup_add( struct _OptTreeNode * );
 struct _OptTreeNode * otn_lookup( u_int32_t gid, u_int32_t sid );
+void otn_lookup_free();
+void otn_free(void *data);
 
 #endif /* SIGNATURE */

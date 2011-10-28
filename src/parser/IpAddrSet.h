@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2002-2008 Sourcefire, Inc.
+ * Copyright (C) 2002-2009 Sourcefire, Inc.
  *
  * Author(s):  Andrew R. Baker <andrewb@sourcefire.com>
  *

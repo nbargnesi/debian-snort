@@ -3,7 +3,7 @@
 **
 ** perf-base.c
 **
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 ** Marc Norton <mnorton@sourcefire.com>
 **
@@ -175,7 +175,13 @@ int InitBaseStats(SFBASE *sfBase)
 
     //sfBase->iAttributeHosts = 0;
     //sfBase->iAttributeReloads = 0;
-    
+    sfBase->total_mpls_packets = 0;
+    sfBase->total_mpls_bytes = 0;
+    sfBase->total_blocked_mpls_packets = 0;
+    sfBase->total_blocked_mpls_bytes = 0;
+
+    sfBase->total_tcp_filtered_packets = 0;
+    sfBase->total_udp_filtered_packets = 0;
     return 0;
 }
 
@@ -278,6 +284,22 @@ void UpdateWireStats(SFBASE *sfBase, int len)
     }
 }
 
+void UpdateMPLSStats(SFBASE *sfBase, int len)
+{
+#ifdef MPLS
+    sfBase->total_mpls_packets++;
+
+    len += 4; /* for the CRC */
+    sfBase->total_mpls_bytes += len;
+   
+    if( InlineWasPacketDropped() )
+    {
+        sfBase->total_blocked_mpls_packets++;
+        sfBase->total_blocked_mpls_bytes += len;
+    }
+#endif
+}
+
 /*
 **  NAME
 **    UpdateIPFragStats
@@ -324,6 +346,26 @@ void UpdateIPReassStats(SFBASE *sfBase, int len)
     sfBase->total_ipreassembled_bytes += len;
 }
 
+/**API to update stats for packets discarded due to
+ * TCP/UDP port/service based filtering.
+ *
+ * @param sfBase - pointer to accumulated stats
+ */
+void UpdateFilteredPacketStats(SFBASE *sfBase, unsigned int proto)
+{
+    switch (proto)
+    {
+        case IPPROTO_TCP:
+            sfBase->total_tcp_filtered_packets++;
+            break;
+        case IPPROTO_UDP:
+            sfBase->total_udp_filtered_packets++;
+            break;
+        default:
+            //coding error
+            ;
+    }
+}
 /*
 **  NAME
 **    AddStreamSession
@@ -721,6 +763,21 @@ int GetPacketsPerSecond(SFBASE *sfBase, SFBASE_STATS *sfBaseStats,
             Systimes->totaltime;
     }
 
+    sfBaseStats->kpackets_per_sec_mpls.realtime   = 
+        (double)((double)sfBase->total_mpls_packets / 1000) / Systimes->realtime;
+
+    if(sfBase->iFlags & MAX_PERF_STATS)
+    {
+        sfBaseStats->kpackets_per_sec_mpls.usertime   = 
+            (double)((double)sfBase->total_mpls_packets / 1000) / 
+            Systimes->usertime;
+        sfBaseStats->kpackets_per_sec_mpls.systemtime = 
+            (double)((double)sfBase->total_mpls_packets / 1000) / 
+            Systimes->systemtime;
+        sfBaseStats->kpackets_per_sec_mpls.totaltime  = 
+            (double)((double)sfBase->total_mpls_packets / 1000) / 
+            Systimes->totaltime;
+    }
     
     return 0;
 }
@@ -783,6 +840,10 @@ int GetMbitsPerSecond(SFBASE *sfBase, SFBASE_STATS *sfBaseStats,
 
     sfBaseStats->ipreass_mbits_per_sec.realtime   = 
                                     ((double)(sfBase->total_ipreassembled_bytes<<3) *
+                                    1.0e-6) /
+                                    Systimes->realtime;
+    sfBaseStats->mpls_mbits_per_sec.realtime   = 
+                                    ((double)(sfBase->total_mpls_bytes<<3) *
                                     1.0e-6) /
                                     Systimes->realtime;
 
@@ -887,7 +948,13 @@ int CalculateBasePerfStats(SFBASE *sfBase, SFBASE_STATS *sfBaseStats)
         return -1;
 
     sfBaseStats->total_blocked_packets = sfBase->total_blocked_packets;
+    sfBaseStats->total_mpls_packets = sfBase->total_mpls_packets;
+    sfBaseStats->total_mpls_bytes = sfBase->total_mpls_bytes;
+    sfBaseStats->total_blocked_mpls_packets = sfBase->total_blocked_mpls_packets;
+    sfBaseStats->total_blocked_mpls_bytes = sfBase->total_blocked_mpls_bytes;
 
+    sfBaseStats->total_tcp_filtered_packets = sfBase->total_tcp_filtered_packets;
+    sfBaseStats->total_udp_filtered_packets = sfBase->total_udp_filtered_packets;
     /*
     **  Avg. bytes per Packet
     */
@@ -926,6 +993,13 @@ int CalculateBasePerfStats(SFBASE *sfBase, SFBASE_STATS *sfBaseStats)
     else
         sfBaseStats->avg_bytes_per_rebuilt_packet = 0;
 
+    if (sfBase->total_mpls_packets > 0)
+        sfBaseStats->avg_bytes_per_mpls_packet =
+                (int)((double)(sfBase->total_mpls_bytes) /
+                (double)(sfBase->total_mpls_packets));
+    else
+        sfBaseStats->avg_bytes_per_mpls_packet = 0;
+    
     /*
     **  CPU time
     */
@@ -1279,6 +1353,13 @@ int LogBasePerfStats(SFBASE_STATS *sfBaseStats,  FILE * fh )
             sfBaseStats->current_attribute_hosts,
             sfBaseStats->attribute_table_reloads);
 
+    fprintf(fh, "%.3f,%d,%.3f,", sfBaseStats->mpls_mbits_per_sec.realtime,
+            sfBaseStats->avg_bytes_per_mpls_packet,
+            sfBaseStats->kpackets_per_sec_mpls.realtime);    
+    
+    fprintf(fh, CSVu64 CSVu64,
+            sfBaseStats->total_tcp_filtered_packets,
+            sfBaseStats->total_udp_filtered_packets);
     fprintf(fh,"\n");
  
     fflush(fh);
@@ -1323,10 +1404,16 @@ int DisplayBasePerfStatsConsole(SFBASE_STATS *sfBaseStats, int iFlags)
 
     LogMessage("%% Dropped:   %.3f%%\n", sfBaseStats->pkt_drop_percent);
 
-    LogMessage("Blocked:     " STDu64 "\n\n", sfBaseStats->total_blocked_packets);
+    LogMessage("Blocked:     " STDu64 "\n", sfBaseStats->total_blocked_packets);
+    LogMessage("Pkts Filtered TCP:     " STDu64 "\n", sfBaseStats->total_tcp_filtered_packets);
+    LogMessage("Pkts Filtered UDP:     " STDu64 "\n\n", sfBaseStats->total_udp_filtered_packets);
 
     LogMessage("Mbits/Sec:   %.3f (wire)\n", 
             sfBaseStats->wire_mbits_per_sec.realtime);
+#ifdef MPLS
+    LogMessage("Mbits/Sec:   %.3f (mpls)\n",    
+                sfBaseStats->mpls_mbits_per_sec.realtime);
+#endif
     LogMessage("Mbits/Sec:   %.3f (ip fragmented)\n",    
             sfBaseStats->ipfrag_mbits_per_sec.realtime);
     LogMessage("Mbits/Sec:   %.3f (ip reassembled)\n",    
@@ -1338,6 +1425,10 @@ int DisplayBasePerfStatsConsole(SFBASE_STATS *sfBaseStats, int iFlags)
 
     LogMessage("Bytes/Pkt:   %d (wire)\n",
         sfBaseStats->avg_bytes_per_wire_packet);
+#ifdef MPLS
+    LogMessage("Bytes/Pkt:   %d (mpls)\n",
+        sfBaseStats->avg_bytes_per_mpls_packet);
+#endif
     LogMessage("Bytes/Pkt:   %d (ip fragmented)\n",
         sfBaseStats->avg_bytes_per_ipfrag_packet);
     LogMessage("Bytes/Pkt:   %d (ip reassembled)\n",
@@ -1349,6 +1440,10 @@ int DisplayBasePerfStatsConsole(SFBASE_STATS *sfBaseStats, int iFlags)
 
     LogMessage("KPkts/Sec:   %.3f (wire)\n",
         sfBaseStats->kpackets_wire_per_sec.realtime);
+#ifdef MPLS
+    LogMessage("KPkts/Sec:   %.3f (mpls)\n",
+        sfBaseStats->kpackets_per_sec_mpls.realtime);
+#endif
     LogMessage("KPkts/Sec:   %.3f (ip fragmented)\n",
         sfBaseStats->kpackets_ipfrag_per_sec.realtime);
     LogMessage("KPkts/Sec:   %.3f (ip reassembled)\n",

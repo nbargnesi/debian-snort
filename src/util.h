@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -177,6 +177,8 @@ char *SnortStrdup(const char *);
 int SnortStrncpy(char *, const char *, size_t);
 char *SnortStrndup(const char *, size_t);
 int SnortStrnlen(const char *, int);
+const char *SnortStrnPbrk(const char *s, int slen, const char *accept);
+const char *SnortStrnStr(const char *s, int slen, const char *searchstr);
 const char *SnortStrcasestr(const char *s, const char *substr);
 void *SnortAlloc(unsigned long);
 void *SnortAlloc2(size_t, const char *, ...);

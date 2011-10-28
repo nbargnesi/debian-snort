@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -51,7 +51,7 @@ int DebugThis(int level)
 int GetDebugLevel (void)
 {
     static int debug_init = 0;
-    static int debug_level = 0;
+    static unsigned int debug_level = 0;
 
     // declared here for compatibility with older compilers
     // not initialized here cuz the next step is done once
@@ -63,7 +63,7 @@ int GetDebugLevel (void)
     key = getenv(DEBUG_VARIABLE);
 
     if ( key )
-        debug_level = strtol(key, NULL, 0);
+        debug_level = strtoul(key, NULL, 0);
     else
         debug_level = 0;
 

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -48,15 +48,9 @@ typedef enum _HI_EVENTS
     HI_EO_CLIENT_PROXY_USE      , 
     HI_EO_CLIENT_WEBROOT_DIR    , 
     HI_EO_CLIENT_LONG_HDR       ,
+    HI_EO_CLIENT_MAX_HEADERS    ,
     HI_EO_CLIENT_EVENT_NUM
 } HI_EVENTS;
-
-/*
-**  IMPORTANT:
-**  Every time you add a client event, this number must be
-**  incremented.
-*/
-#define HI_EO_CLIENT_EVENT_NUM      19
 
 /*
 **  These defines are the alert names for each event
@@ -99,6 +93,8 @@ typedef enum _HI_EVENTS
     "(http_inspect) WEBROOT DIRECTORY TRAVERSAL"
 #define HI_EO_CLIENT_LONG_HDR_STR                       \
     "(http_inspect) LONG HEADER"
+#define HI_EO_CLIENT_MAX_HEADERS_STR                       \
+    "(http_inspect) MAX HEADER FIELDS"
 
 /*
 **  Anomalous Server Events

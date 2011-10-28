@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -38,7 +38,8 @@
 /* DIR-n-m data structures 
  * Each table in the DIR-n-m method is represented by a 
  * dir_sub_table_t.  They are managed by a dir_table_t. */
-typedef struct {
+typedef struct
+{
     word *entries;
     char *lengths;
     int num_entries; /* Number of entries in this table */
@@ -50,7 +51,8 @@ typedef struct {
 } dir_sub_table_t;
 
 /* Master data structure for the DIR-n-m derivative */
-typedef struct {
+typedef struct
+{
     int *dimensions;    /* DIR-n-m will consist of any number of arbitrarily
                          * long tables. This variable keeps track of the
                          * dimensions */

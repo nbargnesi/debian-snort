@@ -62,7 +62,7 @@ am_libspd_a_OBJECTS = sp_dsize_check.$(OBJEXT) \
 	sp_flowbits.$(OBJEXT) sp_asn1.$(OBJEXT) \
 	sp_asn1_detect.$(OBJEXT) sp_respond2.$(OBJEXT) \
 	sp_ftpbounce.$(OBJEXT) sp_urilen_check.$(OBJEXT) \
-	sp_cvs.$(OBJEXT)
+	sp_cvs.$(OBJEXT) detection_options.$(OBJEXT)
 libspd_a_OBJECTS = $(am_libspd_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp =
@@ -218,7 +218,8 @@ sp_flowbits.c sp_flowbits.h sp_asn1.c sp_asn1.h sp_asn1_detect.c sp_asn1_detect.
 sp_respond2.c sp_respond2.h \
 sp_ftpbounce.c sp_ftpbounce.h \
 sp_urilen_check.c sp_urilen_check.h \
-sp_cvs.c sp_cvs.h
+sp_cvs.c sp_cvs.h \
+detection_options.c detection_options.h
 
 all: all-am
 

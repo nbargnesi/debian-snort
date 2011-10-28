@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -21,7 +21,7 @@
 
 /*
 **  $Id$
-** 
+**
 **  ppm.c
 **
 **  Packet Performance Monitor
@@ -29,19 +29,19 @@
 **  Author: Marc Norton <mnorton@sourcefire.com>
 **  Date: 10/2006
 **
-**  Usage:  
+**  Usage:
 *
 *   config ppm: max-pkt-time usecs
 *   config ppm: max-rule-time usecs
 *   config ppm: max-suspend-time secs
 *   config ppm: threshold count
 *   config ppm: suspend-expensive-rules
-*   config ppm: fastpath-expensive-packets 
+*   config ppm: fastpath-expensive-packets
 *   config ppm: pkt-events  syslog|console
 *   config ppm: rule-events alert|syslog|console
 *   config ppm: debug-rules
 *   config ppm: debug-pkts
-* 
+*
 */
 
 #include <stdio.h>
@@ -64,8 +64,9 @@
 #include "log.h"
 #include "ppm.h"
 #include "sf_types.h"
+#include "generators.h"
 
-#ifdef PPM_MGR 
+#ifdef PPM_MGR
 
 #define PPM_BASE_SUSPEND_RULE_GID 1000
 #define PPM_BASE_CLEAR_RULE_GID   2000
@@ -77,7 +78,7 @@
 
 PPM_TICKS ppm_tpu = 0; /* ticks per usec */
 
-ppm_cfg_t         ppm_cfg;   
+ppm_cfg_t         ppm_cfg;
 ppm_pkt_timer_t   ppm_pkt_times[PPM_MAX_TIMERS];
 ppm_pkt_timer_t  *ppm_pt;
 unsigned int      ppm_pkt_index;
@@ -87,10 +88,10 @@ UINT64            ppm_cur_time;
 
 /* debug-pkts  data */
 #define MAX_DP_NRULES 1000
-typedef struct 
+typedef struct
 {
  UINT64   pkt;
- OptTreeNode * otn;
+ detection_option_tree_root_t * tree;
  PPM_TICKS ticks;
 }ppm_rules_t;
 
@@ -99,7 +100,7 @@ static ppm_rules_t ppm_rules[MAX_DP_NRULES];
 static int ppm_n_rules;
 
 /* cleared rules - re-enabled */
-static OptTreeNode * ppm_crules[MAX_DP_NRULES];
+static detection_option_tree_root_t * ppm_crules[MAX_DP_NRULES];
 static int ppm_n_crules;
 
 void ppm_init_rules()
@@ -108,24 +109,25 @@ void ppm_init_rules()
     ppm_n_crules = 0;
 }
 
-void ppm_set_rule(OptTreeNode * otn,PPM_TICKS ticks)
+void ppm_set_rule(detection_option_tree_root_t * root,PPM_TICKS ticks)
 {
     if( ppm_n_rules < MAX_DP_NRULES )
     {
-      ppm_rules[ppm_n_rules].otn=otn;
+      ppm_rules[ppm_n_rules].tree=root;
       ppm_rules[ppm_n_rules].ticks=ticks;
       ppm_n_rules++;
     }
 }
-void ppm_clear_rule(OptTreeNode * otn)
+
+void ppm_clear_rule(detection_option_tree_root_t *root)
 {
     if( ppm_n_crules < MAX_DP_NRULES )
     {
-      ppm_crules[ppm_n_crules++]=otn;
+      ppm_crules[ppm_n_crules++]=root;
     }
 }
 
-/* 
+/*
  * calc ticks per micro-secs in integer units
  */
 static
@@ -141,17 +143,17 @@ void ppm_calc_ticks()
 }
 void ppm_print_cfg()
 {
-    if(! ppm_cfg.enabled ) 
+    if(! ppm_cfg.enabled )
         return ;
-    
+
     if( ppm_cfg.max_pkt_ticks )
     {
         LogMessage("\nPacket Performance Monitor Config:\n");
-        LogMessage("  ticks per usec  : %lu ticks\n",(unsigned long)ppm_tpu);    
-    
-        LogMessage("  max packet time : %lu usecs\n",(unsigned long)(ppm_cfg.max_pkt_ticks/ppm_tpu));    
+        LogMessage("  ticks per usec  : %lu ticks\n",(unsigned long)ppm_tpu);
+
+        LogMessage("  max packet time : %lu usecs\n",(unsigned long)(ppm_cfg.max_pkt_ticks/ppm_tpu));
         LogMessage("  packet action   : ");
-        if( ppm_cfg.pkt_action ) 
+        if( ppm_cfg.pkt_action )
             LogMessage("fastpath-expensive-packets\n");
         else
             LogMessage("none\n");
@@ -162,11 +164,11 @@ void ppm_print_cfg()
     if( ppm_cfg.max_rule_ticks)
     {
         LogMessage("\nRule Performance Monitor Config:\n");
-        LogMessage("  ticks per usec  : %lu ticks\n",(unsigned long)ppm_tpu);    
-    
-        LogMessage("  max rule time   : %lu usecs\n",(unsigned long)(ppm_cfg.max_rule_ticks/ppm_tpu));    
+        LogMessage("  ticks per usec  : %lu ticks\n",(unsigned long)ppm_tpu);
+
+        LogMessage("  max rule time   : %lu usecs\n",(unsigned long)(ppm_cfg.max_rule_ticks/ppm_tpu));
         LogMessage("  rule action     : ");
-        if( ppm_cfg.rule_action ) 
+        if( ppm_cfg.rule_action )
         {
             LogMessage("suspend-expensive-rules\n");
             LogMessage("  rule threshold  : %u \n",(unsigned int)ppm_cfg.rule_threshold);
@@ -176,9 +178,9 @@ void ppm_print_cfg()
 
 #ifdef PPM_TEST
         /* use usecs instead of ticks for rule suspension during pcap playback */
-        LogMessage("  suspend timeout : %lu secs\n", (unsigned long)(ppm_cfg.max_suspend_ticks/((UINT64)1000000)) );    
+        LogMessage("  suspend timeout : %lu secs\n", (unsigned long)(ppm_cfg.max_suspend_ticks/((UINT64)1000000)) );
 #else
-        LogMessage("  suspend timeout : %lu secs\n", (unsigned long)(ppm_cfg.max_suspend_ticks/((UINT64)ppm_tpu*1000000)) );    
+        LogMessage("  suspend timeout : %lu secs\n", (unsigned long)(ppm_cfg.max_suspend_ticks/((UINT64)ppm_tpu*1000000)) );
 #endif
         LogMessage("  rule logging    : ");
         if(ppm_cfg.rule_log&PPM_LOG_ALERT) LogMessage("alert " );
@@ -205,12 +207,12 @@ void ppm_print_summary()
 {
     if(! ppm_cfg.enabled )
         return;
-    
+
       LogMessage("===============================================================================\n");
-      if(ppm_cfg.max_pkt_ticks)  
+      if(ppm_cfg.max_pkt_ticks)
       {
           LogMessage("Packet Performance Summary:\n");
-          LogMessage("   max packet time       : %lu usecs\n",(unsigned long)(ppm_cfg.max_pkt_ticks/ppm_tpu));    
+          LogMessage("   max packet time       : %lu usecs\n",(unsigned long)(ppm_cfg.max_pkt_ticks/ppm_tpu));
           LogMessage("   packet events         : %u\n",(unsigned int)ppm_cfg.pkt_event_cnt);
           if( ppm_cfg.tot_pkts )
               LogMessage("   avg pkt time          : %g usecs\n",
@@ -220,7 +222,7 @@ void ppm_print_summary()
       if(ppm_cfg.max_rule_ticks)
       {
          LogMessage("Rule Performance Summary:\n");
-         LogMessage("   max rule time         : %lu usecs\n",(unsigned long)(ppm_cfg.max_rule_ticks/ppm_tpu));    
+         LogMessage("   max rule time         : %lu usecs\n",(unsigned long)(ppm_cfg.max_rule_ticks/ppm_tpu));
          LogMessage("   rule events           : %u\n",(unsigned int)ppm_cfg.rule_event_cnt);
          if( ppm_cfg.tot_rules )
            LogMessage("   avg rule time         : %g usecs\n",
@@ -253,10 +255,10 @@ void ppm_init()
 {
     /* calc ticks per usec */
     ppm_calc_ticks();
-    
+
     /* disable by default */
     memset( &ppm_cfg, 0, sizeof(ppm_cfg_t) );
-   
+
     ppm_cfg.max_pkt_ticks = PPM_DEFAULT_MAX_PKT_TICKS;
     ppm_cfg.max_rule_ticks= PPM_DEFAULT_MAX_RULE_TICKS;
 
@@ -274,8 +276,8 @@ void ppm_init()
 }
 
 
-/* 
- *  Logging functions - syslog and/or events 
+/*
+ *  Logging functions - syslog and/or events
  */
 #define PPM_FMT_FASTPATH "PPM: Pkt-Event Pkt[" STDi64 "] used=%g usecs, %u rules, %u nc-rules tested, packet fastpathed.\n"
 #define PPM_FMT_PACKET   "PPM: Pkt-Event Pkt[" STDi64 "] used=%g usecs, %u rules, %u nc-rules tested.\n"
@@ -284,9 +286,9 @@ void ppm_pkt_log()
 {
     if( !ppm_cfg.max_pkt_ticks )
         return;
-    
+
     ppm_cfg.pkt_event_cnt++;
-   
+
     if( ppm_cfg.pkt_log  )
     {
         if( ppm_cfg.abort_this_pkt )
@@ -304,169 +306,156 @@ void ppm_pkt_log()
     }
 }
 
-#define PPM_FMT_SUSPENDED "PPM: Rule-Event gid=%u sid=%u Pkt[" STDi64 "] used=%g usecs suspended %s"
-#define PPM_FMT_REENABLED "PPM: Rule-Event gid=%u sid=%u Pkt[" STDi64 "] re-enabled %s"
+#define PPM_FMT_SUSPENDED "PPM: Rule-Event address=0x%x Pkt[" STDi64 "] used=%g usecs suspended %s"
+#define PPM_FMT_REENABLED "PPM: Rule-Event address=0x%x Pkt[" STDi64 "] re-enabled %s"
 
 void ppm_rule_log( UINT64 pktcnt, Packet * p)
 {
     unsigned int i;
     //char buf[STD_BUF];
+    detection_option_tree_root_t *proot;
     OptTreeNode * potn;
-    OptTreeNode * otn;
     char timestamp[TIMEBUF_SIZE] = "";
-   
+
     if( !ppm_cfg.max_rule_ticks )
         return ;
-  
-    for(i=0;i<ppm_n_crules;i++)
+
+    if (ppm_n_crules)
     {
-        otn = ppm_crules[i];
-        if( !otn ) continue;
-      
         if( ppm_cfg.rule_log & PPM_LOG_ALERT )
         {
             Event ev;
-          
-            /* make sure we have an otn already in our table for this event */
-            potn = otn_lookup( 
-                PPM_BASE_CLEAR_RULE_GID + otn->sigInfo.generator, /* GID */
-                otn->sigInfo.id /* SID */
-                );
 
-            if( !potn )
+            /* make sure we have an otn already in our table for this event */
+            potn = otn_lookup(GENERATOR_PPM, PPM_EVENT_RULE_TREE_ENABLED);
+            if (!potn)
             {
                 /* have to make one */
                 potn = GenerateSnortEventOtn(
-                    PPM_BASE_CLEAR_RULE_GID + otn->sigInfo.generator, /* GID */
-                    otn->sigInfo.id, /* SID */
-                    otn->sigInfo.rev, /* Rev */
-                    otn->sigInfo.class_id, /* classification */
-                    otn->sigInfo.priority, /* priority (low) */
-                    otn->sigInfo.message /* msg string */
+                    GENERATOR_PPM, /* GID */
+                    PPM_EVENT_RULE_TREE_ENABLED, /* SID */
+                    1, /* Rev */
+                    0, /* classification */
+                    3, /* priority (low) */
+                    PPM_EVENT_RULE_TREE_ENABLED_STR /* msg string */
                             );
                 /* add it */
-                if( potn )  
+                if( potn )
                 {
                     otn_lookup_add(potn);
-                }
-                else
-                {
-                    continue; /* should never happen, but to be safe...*/
+
+                    SetEvent(
+                        &ev,
+                        potn->sigInfo.generator, /* GID */
+                        potn->sigInfo.id, /* SID */
+                        potn->sigInfo.rev, /* Rev */
+                        potn->sigInfo.class_id, /* classification */
+                        potn->sigInfo.priority, /* priority (low) */
+                        0);
+
+                    AlertAction(p,potn,&ev);
                 }
             }
-
-            SetEvent(
-                &ev,
-                PPM_BASE_CLEAR_RULE_GID + otn->sigInfo.generator, /* GID */
-                otn->sigInfo.id, /* SID */
-                otn->sigInfo.rev, /* Rev */
-                otn->sigInfo.class_id, /* classification */
-                otn->sigInfo.priority, /* priority (low) */
-                0);
-                                                    
-            AlertAction(p,potn,&ev);
         }
-      
+
         if( ppm_cfg.rule_log & PPM_LOG_MESSAGE )
         {
             if(!*timestamp)
                 ts_print((struct timeval*)&p->pkth->ts, timestamp);
 
-            LogMessage(PPM_FMT_REENABLED,
-                otn->sigInfo.generator,
-                otn->sigInfo.id,
-                pktcnt,
-                timestamp);
-        }
-    }
-    ppm_n_crules=0;
+            for (i=0; i< ppm_n_crules; i++)
+            {
+                proot = ppm_crules[i];
 
-    for(i=0;i<ppm_n_rules;i++)
+                LogMessage(PPM_FMT_REENABLED,
+                    proot,
+                    pktcnt,
+                    timestamp);
+            }
+        }
+        ppm_n_crules = 0;
+    }
+
+    if (ppm_n_rules)
     {
-        otn = ppm_rules[i].otn;
-        if( !otn ) continue;
-      
         if( ppm_cfg.rule_log & PPM_LOG_ALERT )
         {
             Event ev;
-          
-            /* make sure we have an otn already in our table for this event */
-            potn = otn_lookup( 
-                PPM_BASE_SUSPEND_RULE_GID + otn->sigInfo.generator, /* GID */
-                otn->sigInfo.id /* SID */
-                );
 
-            if( !potn )
+            /* make sure we have an otn already in our table for this event */
+            potn = otn_lookup(GENERATOR_PPM, PPM_EVENT_RULE_TREE_DISABLED);
+            if (!potn)
             {
                 /* have to make one */
                 potn = GenerateSnortEventOtn(
-                    PPM_BASE_SUSPEND_RULE_GID + otn->sigInfo.generator, /* GID */
-                    otn->sigInfo.id, /* SID */
-                    otn->sigInfo.rev, /* Rev */
-                    otn->sigInfo.class_id, /* classification */
-                    otn->sigInfo.priority, /* priority (low) */
-                    otn->sigInfo.message /* msg string */
+                    GENERATOR_PPM, /* GID */
+                    PPM_EVENT_RULE_TREE_DISABLED, /* SID */
+                    1, /* Rev */
+                    0, /* classification */
+                    3, /* priority (low) */
+                    PPM_EVENT_RULE_TREE_DISABLED_STR /* msg string */
                             );
                 /* add it */
-                if( potn )  
+                if( potn )
                 {
                     otn_lookup_add(potn);
-                }
-                else
-                {
-                    continue; /* should never happen, but to be safe...*/
+
+                    SetEvent(
+                        &ev,
+                        potn->sigInfo.generator, /* GID */
+                        potn->sigInfo.id, /* SID */
+                        potn->sigInfo.rev, /* Rev */
+                        potn->sigInfo.class_id, /* classification */
+                        potn->sigInfo.priority, /* priority (low) */
+                        0);
+
+                    AlertAction(p,potn,&ev);
                 }
             }
-
-            SetEvent(
-                &ev,
-                PPM_BASE_SUSPEND_RULE_GID + otn->sigInfo.generator, /* GID */
-                otn->sigInfo.id, /* SID */
-                otn->sigInfo.rev, /* Rev */
-                otn->sigInfo.class_id, /* classification */
-                otn->sigInfo.priority, /* priority (low) */
-                0);
-                                                    
-            AlertAction(p,potn,&ev);
         }
-      
+
         if( ppm_cfg.rule_log & PPM_LOG_MESSAGE )
         {
             if(!*timestamp)
                 ts_print((struct timeval*)&p->pkth->ts, timestamp);
 
-            LogMessage(PPM_FMT_SUSPENDED,
-                otn->sigInfo.generator,
-                otn->sigInfo.id,
-                pktcnt,
-                ppm_ticks_to_usecs((PPM_TICKS)ppm_rules[i].ticks),
-                timestamp);
+            for (i=0; i< ppm_n_rules; i++)
+            {
+                proot = ppm_rules[i].tree;
+
+                LogMessage(PPM_FMT_SUSPENDED,
+                    proot,
+                    pktcnt,
+                    ppm_ticks_to_usecs((PPM_TICKS)ppm_rules[i].ticks),
+                    timestamp);
+            }
         }
+        ppm_n_rules = 0;
     }
-    ppm_n_rules=0;
+    return;
 }
 
-void ppm_set_rule_event( OptTreeNode * otn )
+void ppm_set_rule_event( detection_option_tree_root_t * root )
 {
     if( !ppm_cfg.max_rule_ticks )
         return;
-   
+
     ppm_cfg.rule_event_cnt++;
 
     if( ppm_cfg.rule_log && ppm_rt )
-        ppm_set_rule(otn,ppm_rt->tot);
+        ppm_set_rule(root,ppm_rt->tot);
 }
 
-void ppm_clear_rule_event( OptTreeNode * otn )
+void ppm_clear_rule_event( detection_option_tree_root_t * root )
 {
      if( !ppm_cfg.max_rule_ticks )
        return;
-   
+
      ppm_cfg.rule_event_cnt++;
 
      if( ppm_cfg.rule_log )
      {
-         ppm_clear_rule(otn);
+         ppm_clear_rule(root);
      }
 }
 

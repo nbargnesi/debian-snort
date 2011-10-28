@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -82,7 +82,7 @@ typedef struct _kmap {
 /*
 *  PROTOTYPES
 */
-KMAP * KMapNew ( KMapUserFreeFunc );
+KMAP * KMapNew ( KMapUserFreeFunc userfree );
 void   KMapSetNoCase( KMAP * km, int flag );
 int    KMapAdd ( KMAP * km, void * key, int ksize, void * userdata );
 void * KMapFind( KMAP * km, void * key, int ksize );

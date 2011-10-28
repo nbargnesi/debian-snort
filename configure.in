@@ -4,7 +4,7 @@ AC_INIT(src/snort.c)
 AM_CONFIG_HEADER(config.h)
 # When changing the snort version, please also update the VERSION
 # definition in "src/win32/WIN32-Includes/config.h"
-AM_INIT_AUTOMAKE(snort,2.8.1)
+AM_INIT_AUTOMAKE(snort,2.8.4.1)
 
 # Since we get -O2 from configure defaults, which doesn't work in 64bit
 # mode, let's make some changes here before calling _CC macros.
@@ -70,7 +70,6 @@ linux="no"
 sunos4="no"
 
 AC_C_BIGENDIAN
-SHELL="/bin/sh"
 
 case "$host" in
   *-openbsd2.6|*-openbsd2.5|*-openbsd2.4|*-openbsd2.3*)
@@ -475,6 +474,25 @@ else
     AC_DEFINE([LIBPCAP_ACCUMULATES], [], [For libpcap versions that accumulate stats])
 fi
 
+# In case INADDR_NONE is not defined (like on Solaris)
+have_inaddr_none="no"
+AC_MSG_CHECKING([for INADDR_NONE])
+AC_RUN_IFELSE(
+[AC_LANG_PROGRAM(
+[[
+#include <sys/types.h>
+#include <netinet/in.h>
+]],
+[[
+	if (inet_addr("10,5,2") == INADDR_NONE);
+]])],
+[have_inaddr_none="yes"],
+[have_inaddr_none="no"])
+AC_MSG_RESULT($have_inaddr_none)
+if test "x$have_inaddr_none" = "xno"; then
+	AC_DEFINE([INADDR_NONE], [-1], [For INADDR_NONE definition])
+fi
+
 default_directory="/usr /usr/local"
 
 AC_DEFUN([FAIL_MESSAGE],[
@@ -726,6 +744,64 @@ if test "x$with_mysql" != "xno"; then
       AC_CHECK_LIB(z, compress)
       LIBS="-lmysqlclient ${LIBS}"
     fi
+  fi
+
+  AC_MSG_CHECKING([for mysql default client reconnect])
+
+  AC_RUN_IFELSE(
+  [AC_LANG_PROGRAM(
+  [[
+  #include <mysql.h>
+  ]],
+  [[
+      if (mysql_get_client_version() < 50003)
+          return 1;
+  ]])],
+  [mysql_default_reconnect="no"],
+  [mysql_default_reconnect="yes"])
+
+  AC_MSG_RESULT($mysql_default_reconnect)
+
+  if test "x$mysql_default_reconnect" = "xno"; then
+      AC_MSG_CHECKING([for mysql reconnect option])
+
+      AC_RUN_IFELSE(
+      [AC_LANG_PROGRAM(
+      [[
+      #include <mysql.h>
+      ]],
+      [[
+          if (mysql_get_client_version() < 50013)
+              return 1;
+      ]])],
+      [mysql_has_reconnect="yes"],
+      [mysql_has_reconnect="no"])
+
+      AC_MSG_RESULT($mysql_has_reconnect)
+
+      if test "x$mysql_has_reconnect" = "xyes"; then
+          AC_DEFINE([MYSQL_HAS_OPT_RECONNECT], [], [For MySQL versions 5.0.13 and greater])
+
+          AC_MSG_CHECKING([for mysql setting of reconnect option before connect bug])
+
+          AC_RUN_IFELSE(
+          [AC_LANG_PROGRAM(
+          [[
+          #include <mysql.h>
+          ]],
+          [[
+              if (mysql_get_client_version() < 50019)
+                  return 1;
+          ]])],
+          [mysql_has_reconnect_bug="no"],
+          [mysql_has_reconnect_bug="yes"])
+
+          AC_MSG_RESULT($mysql_has_reconnect_bug)
+
+          if test "x$mysql_has_reconnect_bug" = "xyes"; then
+              AC_DEFINE([MYSQL_HAS_OPT_RECONNECT_BUG], [], [For MySQL versions 5.0.13 to 5.0.18])
+          fi
+      fi
   fi
 fi
 
@@ -984,18 +1060,18 @@ AC_ARG_ENABLE(sourcefire,
 [  --enable-sourcefire      Enable Sourcefire specific build options],
        enable_sourcefire="$enableval", enable_sourcefire="no")
 if test "x$enable_sourcefire" = "xyes"; then
-    CFLAGS="$CFLAGS -DSOURCEFIRE -DPERF_PROFILING -DSTREAM4_UDP -DNOCOREFILE -DPREPROCESSOR_AND_DECODER_RULE_EVENTS -DPPM_MGR"
+    CFLAGS="$CFLAGS -DSOURCEFIRE -DPERF_PROFILING -DNOCOREFILE -DPREPROCESSOR_AND_DECODER_RULE_EVENTS -DPPM_MGR"
 fi
 
-AC_ARG_ENABLE(stream4udp,
-[  --enable-stream4udp      Enable UDP session tracking in Stream4],
-       enable_stream4udp="$enableval", enable_stream4udp="no")
-if test "x$enable_stream4udp" = "xyes"; then
-    CFLAGS="$CFLAGS -DSTREAM4_UDP"
+AC_ARG_ENABLE(memory-cleanup,
+[  --enable-memory-cleanup  Enable cleanup of Memory at Snort exit],
+       enable_memory_cleanup="$enableval", enable_memory_cleanup="no")
+if test "x$enable_memory_cleanup" = "xyes"; then
+    CFLAGS="$CFLAGS -DSHUTDOWN_MEMORY_CLEANUP"
 fi
 
 AC_ARG_ENABLE(decoder-preprocessor-rules,
-[  --enable-decoder-preprocessor-rules  Enable rule actions for deocoder and preprocessor events],
+[  --enable-decoder-preprocessor-rules  Enable rule actions for decoder and preprocessor events],
        enable_decoder_preprocessor_rules="$enableval", enable_decoder_preprocessor_rules="no")
 if test "x$enable_decoder_preprocessor_rules" = "xyes"; then
     CFLAGS="$CFLAGS -DPREPROCESSOR_AND_DECODER_RULE_EVENTS"
@@ -1007,6 +1083,7 @@ AC_ARG_ENABLE(ipv6,
 if test "x$enable_ipv6" = "xyes"; then
     CFLAGS="$CFLAGS -DSUP_IP6"
 fi
+AM_CONDITIONAL(HAVE_SUP_IP6, test "x$enable_ipv6" = "xyes")
 
 AC_ARG_ENABLE(targetbased,
 [  --enable-targetbased     Enable Target-Based Support in Stream, Frag, and Rules (adds pthread support implicitly)],
@@ -1386,16 +1463,23 @@ if test "x$enable_gre" = "xyes"; then
     CFLAGS="$CFLAGS -DGRE"
 fi
 
-# test for invalid configurations here after all AC_ARG_ENABLEs
-if test "x$enable_ipv6" = "xyes"; then
-    if test "x$enable_targetbased" = "xyes"; then
-        echo
-        echo "   ERROR!  Support for target-based and IPv6 cannot"
-        echo "           be enabled simultaneously in this version."
-        echo
-        exit 1
-    fi
+AC_ARG_ENABLE(mpls,
+[  --enable-mpls             Enable MPLS support],
+       enable_mpls="$enableval", enable_mpls="no")
+if test "x$enable_mpls" = "xyes"; then
+    CFLAGS="$CFLAGS -DMPLS"
 fi
+
+# test for invalid configurations here after all AC_ARG_ENABLEs
+#if test "x$enable_ipv6" = "xyes"; then
+#    if test "x$enable_targetbased" = "xyes"; then
+#        echo
+#        echo "   ERROR!  Support for target-based and IPv6 cannot"
+#        echo "           be enabled simultaneously in this version."
+#        echo
+#        exit 1
+#    fi
+#fi
 
 if test "$tru64_types" = "yes"; then
         AC_CHECK_TYPE(u_int8_t, unsigned char)
@@ -1426,7 +1510,32 @@ if test $GCC = "yes" ; then
     fi
 fi
 
-INCLUDES='-I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/src/sfutil $(extra_incl) -I$(top_srcdir)/src/output-plugins -I$(top_srcdir)/src/detection-plugins -I$(top_srcdir)/src/dynamic-plugins -I$(top_srcdir)/src/preprocessors -I$(top_srcdir)/src/preprocessors/flow -I$(top_srcdir)/src/preprocessors/portscan  -I$(top_srcdir)/src/preprocessors/flow/int-snort  -I$(top_srcdir)/src/preprocessors/HttpInspect/include -I$(top_srcdir)/src/preprocessors/Stream5 -I$(top_srcdir)/src/target-based'
+if test "x$linux" = "xyes"; then
+    AC_MSG_CHECKING(for linuxthreads)
+    tstr=`getconf GNU_LIBPTHREAD_VERSION 2>&1`
+    if test $? = 0; then  # GNU_LIBPTHREAD_VERSION is a valid system variable
+        echo $tstr | grep -i linuxthreads > /dev/null 2>&1
+        if test $? = 0; then
+            AC_DEFINE(HAVE_LINUXTHREADS,, Define whether linuxthreads is being used)
+            AC_MSG_RESULT(yes)
+        else
+            AC_MSG_RESULT(no)
+        fi
+    else
+        # Use libc.so to see if linuxthreads is being used
+        $( ldd `which --skip-alias ls` | grep libc.so | awk '{print $3}' ) | grep -i linuxthreads > /dev/null 2>&1
+        if test $? = 0; then
+            AC_DEFINE(HAVE_LINUXTHREADS,, Define whether linuxthreads is being used)
+            AC_MSG_RESULT(yes)
+        else
+            AC_MSG_RESULT(no)
+        fi
+    fi
+fi
+
+echo $CFLAGS > cflags.out
+
+INCLUDES='-I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/src/sfutil $(extra_incl) -I$(top_srcdir)/src/output-plugins -I$(top_srcdir)/src/detection-plugins -I$(top_srcdir)/src/dynamic-plugins -I$(top_srcdir)/src/preprocessors -I$(top_srcdir)/src/preprocessors/portscan -I$(top_srcdir)/src/preprocessors/HttpInspect/include -I$(top_srcdir)/src/preprocessors/Stream5 -I$(top_srcdir)/src/target-based'
 
 AC_SUBST(INCLUDES)
 
@@ -1445,6 +1554,7 @@ src/dynamic-preprocessors/ftptelnet/Makefile   \
 src/dynamic-preprocessors/smtp/Makefile   \
 src/dynamic-preprocessors/ssh/Makefile   \
 src/dynamic-preprocessors/dcerpc/Makefile   \
+src/dynamic-preprocessors/dcerpc2/Makefile   \
 src/dynamic-preprocessors/dns/Makefile   \
 src/dynamic-examples/Makefile   \
 src/dynamic-examples/dynamic-preprocessor/Makefile   \
@@ -1463,9 +1573,6 @@ src/preprocessors/HttpInspect/normalization/Makefile \
 src/preprocessors/HttpInspect/server/Makefile \
 src/preprocessors/HttpInspect/session_inspection/Makefile \
 src/preprocessors/HttpInspect/user_interface/Makefile \
-src/preprocessors/flow/Makefile \
-src/preprocessors/flow/int-snort/Makefile \
-src/preprocessors/flow/portscan/Makefile \
 src/preprocessors/Stream5/Makefile    \
 src/parser/Makefile            \
 src/target-based/Makefile            \
@@ -1479,3 +1586,25 @@ etc/Makefile                   \
 templates/Makefile             \
 src/win32/Makefile)
 
+if test "x$mysql_has_reconnect" = "xno"; then
+cat <<EOF
+
+********************************************************************************
+ MySQL version warning
+
+ The MySQL client version you are using does not by default reconnect to the
+ server if the connection is lost and does not have the option to configure
+ this for the client.  Snort, for security reasons, erases the connection
+ password from memory, so it cannot explicity reconnect at runtime.  Please
+ update your version of MySQL to 5.0.13 or greater or you risk connections
+ timing out because of inactivity resulting in the inablilty of Snort to write
+ alerts to the database.  If you can't upgrade, try setting the 'wait-timeout'
+ configuration parameter to the maximum value possible in the @<:@mysqld@:>@
+ section of my.cnf, e.g. wait-timeout=31536000.  This should give you a good
+ year of inactivity before the server terminates the connection ... if your
+ network is this clean, you probably don't need to use Snort.
+
+********************************************************************************
+
+EOF
+fi

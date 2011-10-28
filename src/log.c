@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -368,7 +368,12 @@ void PrintIPPkt(FILE * fp, int type, Packet * p)
     {
         Print2ndHeader(fp, p);
     }
-
+#ifdef MPLS
+    if(p->mpls)
+    {
+        PrintMPLSHeader(fp, p);
+    }
+#endif
     /* etc */
     PrintIPHeader(fp, p);
 
@@ -432,21 +437,9 @@ void PrintIPPkt(FILE * fp, int type, Packet * p)
            printf("p->iph->ip_len: %d\n", p->iph->ip_len);
  */
 #ifdef SUP_IP6
-                    if(IS_IP4(p))
-                        PrintNetData(fp, (u_char *) 
-                            ((u_char *)p->iph + (GET_IPH_HLEN(p) << 2)),
-                            (ntohs(GET_IPH_LEN(p)) - (GET_IPH_HLEN(p) << 2)));
-                    else
-                        PrintNetData(fp, (u_char *) 
-                            ((u_char *)p->iph + (GET_IPH_HLEN(p) << 2)),
-                        /* IPv6 packets don't include the IP header in the 
-                         * payload calculation.  Therefore, only need to get 
-                         * the payload length field.  However, for Snort-
-                         * compatibility's sake, the IPv6 payload field is 
-                         * faked to include the header length, so we subtract
-                         * off the difference here beteen the IPv6 and IPv4
-                         * header length. */
-                            ntohs(GET_IPH_LEN(p)) - 20);
+                    PrintNetData(fp, (u_char *) 
+                        ((u_char *)p->iph + (GET_IPH_HLEN(p) << 2)),
+                        GET_IP_PAYLEN(p));
 #else
                     PrintNetData(fp, (u_char *) 
                         ((u_char *) p->iph + (IP_HLEN(p->iph) << 2)), 
@@ -787,6 +780,14 @@ void PrintEthHeader(FILE * fp, Packet * p)
     fprintf(fp, "type:0x%X len:0x%X\n", ntohs(p->eh->ether_type), p->pkth->len);
 }
 
+#ifdef MPLS
+void PrintMPLSHeader(FILE* log, Packet* p)
+{
+
+    fprintf(log,"label:0x%05X exp:0x%X bos:0x%X ttl:0x%X\n",
+            p->mplsHdr.label, p->mplsHdr.exp, p->mplsHdr.bos, p->mplsHdr.ttl);    
+}
+#endif
 
 /****************************************************************************
  *
@@ -1039,13 +1040,13 @@ void PrintIPHeader(FILE * fp, Packet * p)
         fputc(' ', fp);
     }
 
-    fprintf(fp, "%s TTL:%d TOS:0x%X ID:%d IpLen:%d DgmLen:%d",
+    fprintf(fp, "%s TTL:%u TOS:0x%X ID:%u IpLen:%u DgmLen:%u",
             protocol_names[GET_IPH_PROTO(p)],
             GET_IPH_TTL(p),
             GET_IPH_TOS(p),
-            ntohs(GET_IPH_ID(p)),
+            IS_IP6(p) ? ntohl(GET_IPH_ID(p)) : ntohs((u_int16_t)GET_IPH_ID(p)),
             GET_IPH_HLEN(p) << 2, 
-            IS_IP6(p) ? ntohs(GET_IPH_LEN(p)) + 20 : ntohs(GET_IPH_LEN(p)) );
+            GET_IP_DGMLEN(p));
 
     /* print the reserved bit if it's set */
     if((u_int8_t)((ntohs(GET_IPH_OFF(p)) & 0x8000) >> 15) == 1)
@@ -1071,7 +1072,7 @@ void PrintIPHeader(FILE * fp, Packet * p)
     {
         fprintf(fp, "Frag Offset: 0x%04X   Frag Size: 0x%04X\n",
                 (p->frag_offset & 0x1FFF),
-                (ntohs(GET_IPH_LEN(p)) - (GET_IPH_HLEN(p) << 2)));
+                GET_IP_PAYLEN(p));
     }
 }
 

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -53,8 +53,9 @@ static char *standard_protocols[] =
     "smtp",
     "ssh",
     "dcerpc",
-    "smb",
-    "netbios",
+    "netbios-dgm",
+    "netbios-ns",
+    "netbios-ssn",
     "nntp",
     "dns",
     "isakmp",
@@ -161,6 +162,12 @@ void InitializeProtocolReferenceTable()
     {
         AddProtocolReference(*protocol);
     }
+}
+
+void FreeProtoocolReferenceTable()
+{
+    sfghash_delete(proto_reference_table);
+    proto_reference_table = NULL;
 }
 
 int16_t GetProtocolReference(Packet *p)

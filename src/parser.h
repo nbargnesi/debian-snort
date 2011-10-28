@@ -1,5 +1,5 @@
 /*             
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000-2001 Andrew R. Baker <andrewb@uab.edu>
 **             
@@ -104,8 +104,8 @@ void SetRuleStates();
 void ConfigureDynamicPreprocessors();
 #endif
 void ParseIPv6Options(char *);
-int GetOtnIpProto( OptTreeNode * otn );
 int GetPcaps(SF_LIST *, SF_QUEUE *);
 
+void ParserCleanup();
 #endif /* __PARSER_H__ */
 

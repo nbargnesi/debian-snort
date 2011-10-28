@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -98,6 +98,7 @@ typedef struct {
     SF_LIST        * item_list; /* list of port and port-range items */
     SF_LIST        * rule_list; /* list of rules  */
     void           * data;      /* user data, PORT_GROUP based on rule_list - only used by any-any ports */
+    void           (*data_free)(void *);
 }PortObject;
 
 typedef struct  {
@@ -108,6 +109,7 @@ typedef struct  {
     int              port_cnt;  /* count of ports using this object */
     BITOP          * bitop;     /* for collecting ports that use this object */
     void           * data;      /* user data, PORT_GROUP based on rule_hash  */
+    void           (*data_free)(void *);
 }PortObject2;
 
 /*
@@ -137,6 +139,8 @@ typedef struct _PortTable_s {
     /* Compiled / merged port object hash table */
     SFGHASH * pt_mpo_hash;
     SFGHASH * pt_mpxo_hash;
+
+    SF_LIST * pt_plx_list;
 
     /*  a single rule list with all rules merged together */
     SF_LIST * pt_merged_rule_list; 
@@ -214,6 +218,7 @@ typedef struct {
 *    list declarations.
 */
 PortTable  * PortTableNew      (void);
+void         PortTableFree( PortTable  *p );
 int          PortTableAddObject( PortTable *p, PortObject * po );
 int          PortTableAddObjectRaw( PortTable *p, PortObject * po );
 int          PortTableAddRule  ( PortTable * p, int port, int rule );

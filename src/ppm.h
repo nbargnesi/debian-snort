@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire, Inc.
+ * Copyright (C) 2006-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -215,7 +215,7 @@ extern UINT64            ppm_cur_time;
 #endif
 
 /* use PPM_GET_TIME; first to get the current time */
-#define PPM_RULE_TEST(otn,p) \
+#define PPM_RULE_TEST(root,p) \
         if( ppm_rt ) \
         { \
           ppm_rt->tot = ppm_cur_time - ppm_rt->start; \
@@ -223,44 +223,49 @@ extern UINT64            ppm_cur_time;
           { \
              if( ppm_cfg.rule_action & PPM_ACTION_SUSPEND ) \
              { \
+                 int ii; \
                  ppm_cfg.suspend_this_rule=1; \
-                 (otn)->ppm_disable_cnt++; \
-                 if( (otn)->ppm_disable_cnt >= ppm_cfg.rule_threshold ) \
+                 (root)->ppm_disable_cnt++; \
+                 for ( ii = 0; ii< root->num_children; ii++) \
                  { \
-                   ppm_set_rule_event(otn); \
-                   (otn)->rule_state=RULE_STATE_DISABLED; \
-                   (otn)->ppm_suspend_time=PPM_RULE_TIME(p); \
-                   PPM_DBG_CSV("disabled", (otn), (otn)->ppm_suspend_time); \
+                     root->children[ii]->ppm_disable_cnt++; \
+                 } \
+                 if( (root)->ppm_disable_cnt >= ppm_cfg.rule_threshold ) \
+                 { \
+                   ppm_set_rule_event(root); \
+                   (root)->tree_state=RULE_STATE_DISABLED; \
+                   (root)->ppm_suspend_time=PPM_RULE_TIME(p); \
+                   PPM_DBG_CSV("disabled", (root), (root)->ppm_suspend_time); \
                  } \
                  else \
                  { \
-                   (otn)->ppm_suspend_time=0; \
+                   (root)->ppm_suspend_time=0; \
                  } \
              } \
              else \
              { \
-                 (otn)->ppm_suspend_time=0; \
-                 if( (otn)->ppm_disable_cnt > 0 ) \
-                     (otn)->ppm_disable_cnt--; \
+                 (root)->ppm_suspend_time=0; \
+                 if( (root)->ppm_disable_cnt > 0 ) \
+                     (root)->ppm_disable_cnt--; \
              } \
           } \
         }
 
-#define PPM_REENABLE_OTN(otn,p) \
-        if( (otn)->ppm_suspend_time && ppm_cfg.max_suspend_ticks ) \
+#define PPM_REENABLE_TREE(root,p) \
+        if( (root)->ppm_suspend_time && ppm_cfg.max_suspend_ticks ) \
         { \
           PPM_TICKS now = PPM_RULE_TIME(p); \
-          PPM_TICKS then = (otn)->ppm_suspend_time + ppm_cfg.max_suspend_ticks; \
+          PPM_TICKS then = (root)->ppm_suspend_time + ppm_cfg.max_suspend_ticks; \
           if( now > then ) \
           { \
-              (otn)->ppm_suspend_time=0; \
-              (otn)->rule_state=RULE_STATE_ENABLED; \
-              ppm_clear_rule_event(otn); \
-              PPM_DBG_CSV("enabled", (otn), now); \
+              (root)->ppm_suspend_time=0; \
+              (root)->tree_state=RULE_STATE_ENABLED; \
+              ppm_clear_rule_event(root); \
+              PPM_DBG_CSV("enabled", (root), now); \
           } \
           else \
           { \
-              PPM_DBG_CSV("pending", (otn), then-now); \
+              PPM_DBG_CSV("pending", (root), then-now); \
           } \
         }
 
@@ -285,12 +290,12 @@ void   ppm_print_summary(void);
 double ppm_ticks_to_usecs( PPM_TICKS );
 
 void ppm_pkt_log(void);
-void ppm_set_rule_event (OptTreeNode *otn);
-void ppm_clear_rule_event (OptTreeNode *otn);
+void ppm_set_rule_event (detection_option_tree_root_t *root);
+void ppm_clear_rule_event (detection_option_tree_root_t *root);
 void ppm_rule_log(UINT64 pktcnt,Packet * p);
 
 void ppm_init_rules(void);
-void ppm_set_rule(OptTreeNode * otn , PPM_TICKS ticks);
+void ppm_set_rule(detection_option_tree_root_t * root , PPM_TICKS ticks);
 void ppm_print_rules(unsigned int);
 
 #define PPM_INIT()          ppm_init()

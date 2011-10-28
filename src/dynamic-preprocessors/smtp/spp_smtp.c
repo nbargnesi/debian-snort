@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -60,10 +60,13 @@ PreprocStats smtpDetectPerfStats;
 int smtpDetectCalled = 0;
 #endif
 
+#include "sf_types.h"
 
 extern DynamicPreprocessorData _dpd;
 extern SMTP _smtp_no_session;
 extern int _smtp_check_gaps;
+extern int16_t _smtp_proto_id;
+extern SMTPConfig     _smtp_config;
 
 static void SMTPInit(char *);
 static void SMTP_XLINK_Init(char *);
@@ -72,6 +75,10 @@ static void SMTPCleanExitFunction(int, void *);
 static void SMTPRestartFunction(int, void *);
 static void SMTPResetFunction(int, void *);
 static void SMTPResetStatsFunction(int, void *);
+static void _addPortsToStream5Filter();
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter();
+#endif
 
 
 /*
@@ -120,6 +127,15 @@ static void SMTPInit(char *args)
                                         "for SMTP preprocessor\n");
     }
 
+#ifdef TARGET_BASED
+    _smtp_proto_id = _dpd.findProtocolReference(SMTP_PROTO_REF_STR);
+    if (_smtp_proto_id == SFTARGET_UNKNOWN_PROTOCOL)
+        _smtp_proto_id = _dpd.addProtocolReference(SMTP_PROTO_REF_STR);
+
+    DEBUG_WRAP(DebugMessage(DEBUG_SMTP,"SMTP: Target-based: Proto id for %s: %u.\n",
+                            SMTP_PROTO_REF_STR, _smtp_proto_id););
+#endif
+
     if (_dpd.streamAPI->version >= STREAM_API_VERSION5)
         _smtp_check_gaps = 1;
     else
@@ -137,7 +153,7 @@ static void SMTPInit(char *args)
     memset(&_smtp_no_session, 0, sizeof(SMTP));
 
     /* Put the preprocessor function into the function list */
-    _dpd.addPreproc(SMTPDetect, PRIORITY_APPLICATION, PP_SMTP);
+    _dpd.addPreproc(SMTPDetect, PRIORITY_APPLICATION, PP_SMTP, PROTO_BIT__TCP);
     _dpd.addPreprocExit(SMTPCleanExitFunction, NULL, PRIORITY_LAST, PP_SMTP);
     _dpd.addPreprocRestart(SMTPRestartFunction, NULL, PRIORITY_LAST, PP_SMTP);
     _dpd.addPreprocReset(SMTPResetFunction, NULL, PRIORITY_LAST, PP_SMTP);
@@ -148,6 +164,11 @@ static void SMTPInit(char *args)
 #endif
 
     config_done = 1;
+
+    _addPortsToStream5Filter();
+#ifdef TARGET_BASED
+    _addServicesToStream5Filter();
+#endif
 }
 
 
@@ -186,16 +207,8 @@ static void SMTPDetect(void *pkt, void *context)
     SFSnortPacket *p = (SFSnortPacket *)pkt;
     PROFILE_VARS;
 
-    if (!IsTCP(p))
-    {
+    if ((p->payload_size == 0) || !IsTCP(p) || (p->payload == NULL))
         return;
-    }
-
-    /* Make sure it's traffic we're interested in */
-    if (!SMTP_IsServer(p->src_port) && !SMTP_IsServer(p->dst_port))
-    {
-        return;
-    }
 
     PREPROC_PROFILE_START(smtpPerfStats);
 
@@ -207,7 +220,7 @@ static void SMTPDetect(void *pkt, void *context)
 
     PREPROC_PROFILE_END(smtpPerfStats);
 #ifdef PERF_PROFILING
-    if (smtpDetectCalled)
+    if (PROFILING_PREPROCS && smtpDetectCalled)
     {
         smtpPerfStats.ticks -= smtpDetectPerfStats.ticks;
         /* And Reset ticks to 0 */
@@ -267,4 +280,24 @@ static void SMTPResetStatsFunction(int signal, void *data)
 {
     return;
 }
+
+static void _addPortsToStream5Filter()
+{
+    unsigned int portNum;
+
+    for (portNum = 0; portNum < MAXPORTS; portNum++)
+    {
+        if(_smtp_config.ports[(portNum/8)] & (1<<(portNum%8)))
+        {
+            //Add port the port
+            _dpd.streamAPI->set_port_filter_status(IPPROTO_TCP, (u_int16_t)portNum, PORT_MONITOR_SESSION);
+        }
+    }
+}
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter()
+{
+    _dpd.streamAPI->set_service_filter_status(_smtp_proto_id, PORT_MONITOR_SESSION);
+}
+#endif
 

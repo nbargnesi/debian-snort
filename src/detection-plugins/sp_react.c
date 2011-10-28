@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Maciej Szarpak
 **
@@ -68,6 +68,7 @@
 #include "debug.h"
 #include "util.h"
 #include "plugin_enum.h"
+#include "sfhashfcn.h"
 
 #include "snort.h"
 #include "profiler.h"
@@ -75,6 +76,9 @@
 PreprocStats reactPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
+
+#include "sfhashfcn.h"
+#include "detection_options.h"
 
 #define TCP_DATA_BUF    1024
 
@@ -105,6 +109,93 @@ extern int nd; /* raw socket */
 int nd = -1;   /* raw socket */
 #endif
 
+void ReactFree(void *d)
+{
+    ReactData *data = (ReactData *)d;
+    if (data->html_resp_buf)
+        free(data->html_resp_buf);
+    free(data);
+}
+
+u_int32_t ReactHash(void *d)
+{
+    u_int32_t a,b,c,tmp;
+    unsigned int i,j,k,l;
+    ReactData *data = (ReactData *)d;
+
+    a = data->reaction_flag;
+    b = data->proxy_port_nr;
+    c = data->html_resp_size;
+
+    mix(a,b,c);
+
+    for (i=0,j=0;i<data->html_resp_size;i+=4)
+    {
+        tmp = 0;
+        k = data->html_resp_size - i;
+        if (k > 4)
+            k=4;
+                                                               
+        for (l=0;l<k;l++)
+        {
+            tmp |= *(data->html_resp_buf + i + l) << l*8;
+        }
+
+        switch (j)
+        {
+            case 0:
+                a += tmp;
+                break;
+            case 1:
+                b += tmp;
+                break;
+            case 2:
+                c += tmp;
+                break;
+        }
+        j++;
+
+        if (j == 3)
+        {
+            mix(a,b,c);
+            j = 0;
+        }
+    }
+
+    if (j != 0)
+    {
+        mix(a,b,c);
+    }
+
+    a += RULE_OPTION_TYPE_REACT;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int ReactCompare(void *l, void *r)
+{
+    ReactData *left = (ReactData *)l;
+    ReactData *right = (ReactData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if (left->html_resp_size != right->html_resp_size)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if (memcmp(left->html_resp_buf, right->html_resp_buf, left->html_resp_size) != 0)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if (( left->reaction_flag == right->reaction_flag) &&
+        ( left->proxy_port_nr == right->proxy_port_nr))
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 /****************************************************************************
  * 
@@ -123,7 +214,7 @@ void SetupReact(void)
 
 /* we need an empty plug otherwise. To avoid #ifdef in plugbase */
 
-    RegisterPlugin("react", ReactInit, OPT_TYPE_ACTION);
+    RegisterPlugin("react", ReactInit, NULL, OPT_TYPE_ACTION);
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("react", &reactPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
@@ -148,6 +239,8 @@ void SetupReact(void)
 void ReactInit(char *data, OptTreeNode *otn, int protocol)
 {
     ReactData *idx;
+    void *idx_dup;
+
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"In ReactInit()\n"););
 #if defined(ENABLE_REACT) && !defined(ENABLE_RESPONSE)
     AddFuncToRestartList(ReactRestart, NULL);
@@ -174,6 +267,12 @@ void ReactInit(char *data, OptTreeNode *otn, int protocol)
 
     /* parse the react keywords */
     ParseReact(data, otn, idx);
+
+    if (add_detection_option(RULE_OPTION_TYPE_REACT, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(idx);
+        idx = idx_dup;
+     }
 
     /* finally, attach the option's detection function to the rule's 
        detect function pointer list */

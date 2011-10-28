@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005-2008 Sourcefire, Inc.
+** Copyright (C) 2005-2009 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -92,7 +92,7 @@ int IgnoreChannel(snort_ip_p cliIP, u_int16_t cliPort,
     IP_CLEAR(zeroed);
 #ifdef SUP_IP6
     memset(oned.ip8, 1, 16);
-    oned.family = cliIP->family;
+    zeroed.family = oned.family = cliIP->family;
 #else
     oned = 0xffffffff;
 #endif
@@ -113,13 +113,8 @@ int IgnoreChannel(snort_ip_p cliIP, u_int16_t cliPort,
     if ((cliPort == UNKNOWN_PORT) && (srvPort == UNKNOWN_PORT))
         return -1;
 
-#ifdef SUP_IP6
-    if (IP_EQUALITY(cliIP, &zeroed) || IP_EQUALITY(cliIP, &oned) ||
-        IP_EQUALITY(srvIP, &zeroed) || IP_EQUALITY(srvIP, &oned) )
-#else
-    if (IP_EQUALITY(cliIP, zeroed) || IP_EQUALITY(cliIP, oned) ||
-        IP_EQUALITY(srvIP, zeroed) || IP_EQUALITY(srvIP, oned) )
-#endif
+    if (sfip_equal(cliIP, IP_ARG(zeroed)) || sfip_equal(cliIP, IP_ARG(oned)) ||
+        sfip_equal(srvIP, IP_ARG(zeroed)) || sfip_equal(srvIP, IP_ARG(oned)) )
         return -1;
 
     if (IP_LESSER(cliIP, srvIP))
@@ -430,4 +425,13 @@ char CheckIgnoreChannel(Packet *p)
     }
 
     return retVal;
+}
+
+void CleanupIgnore()
+{
+    if (channelHash)
+    {
+        sfghash_delete(channelHash);
+        channelHash = NULL;
+    }
 }

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -52,6 +52,10 @@
 PreprocStats sslpp_perf_stats;
 #endif
 
+#ifdef TARGET_BASED
+int16_t ssl_app_id = SFTARGET_UNKNOWN_PROTOCOL;
+#endif
+
 #define GENERATOR_SPP_SSLPP	133
 
 /* Ultimately calls SnortEventqAdd */
@@ -66,42 +70,42 @@ extern DynamicPreprocessorData _dpd;
 static SSLPP_config_t config;
 static SSLPP_counters_t counts;
 
+static void SSL_UpdateCounts(const uint32_t);
+#if DEBUG
+static void SSL_PrintFlags(uint32_t);
+#endif
+
+static void _addPortsToStream5Filter();
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter();
+#endif
+
 static INLINE int SSLPP_is_encrypted(u_int32_t ssl_flags, SFSnortPacket *packet) 
 {
-    if(SSL_IS_CLEAN(ssl_flags))
+    if (config.flags & SSLPP_TRUSTSERVER_FLAG)
     {
-        if((ssl_flags & SSLPP_ENCRYPTED_FLAGS) == SSLPP_ENCRYPTED_FLAGS)
+        if(ssl_flags & SSL_SAPP_FLAG) 
+            return SSLPP_TRUE;
+    }
+
+    if (SSL_IS_CLEAN(ssl_flags))
+    {
+        if (((ssl_flags & SSLPP_ENCRYPTED_FLAGS) == SSLPP_ENCRYPTED_FLAGS) ||
+            ((ssl_flags & SSLPP_ENCRYPTED_FLAGS2) == SSLPP_ENCRYPTED_FLAGS2))
         {
             counts.completed_hs++;
             return SSLPP_TRUE;
         }
         /* Check if we're either midstream or if packets were missed after the 
          * connection was established */
-        else if( (_dpd.streamAPI->get_session_flags(
-                    packet->stream_session_ptr) & SSNFLAG_MIDSTREAM ) ||
-                  _dpd.streamAPI->missed_packets(
-                    packet->stream_session_ptr, SSN_DIR_BOTH) )
+        else if ((_dpd.streamAPI->get_session_flags (packet->stream_session_ptr) & SSNFLAG_MIDSTREAM) ||
+                 (_dpd.streamAPI->missed_packets(packet->stream_session_ptr, SSN_DIR_BOTH)))
         {
-            /* If we're trusting the server, check if it trusts
-             * the handshake */
-            if( config.flags & SSLPP_TRUSTSERVER_FLAG ) 
-            {
-                if(ssl_flags & SSL_SAPP_FLAG) 
-                    return SSLPP_TRUE;
-            }
-            else if( (ssl_flags & (SSL_CAPP_FLAG | SSL_SAPP_FLAG)) == 
-                     (SSL_CAPP_FLAG | SSL_SAPP_FLAG) )
+            if ((ssl_flags & (SSL_CAPP_FLAG | SSL_SAPP_FLAG)) == (SSL_CAPP_FLAG | SSL_SAPP_FLAG)) 
             {
                 return SSLPP_TRUE;
             }
         }
-    }
-    /* Bad flags were set.  If we're trusting the server, check if it trusts
-     * the handshake */
-    else if( config.flags & SSLPP_TRUSTSERVER_FLAG )
-    {
-        if(ssl_flags & SSL_SAPP_FLAG) 
-            return SSLPP_TRUE;
     }
 
     return SSLPP_FALSE;
@@ -110,7 +114,7 @@ static INLINE int SSLPP_is_encrypted(u_int32_t ssl_flags, SFSnortPacket *packet)
 static INLINE u_int32_t SSLPP_process_alert(
         u_int32_t ssn_flags, u_int32_t new_flags, SFSnortPacket *packet)
 {
-    counts.alerts++;
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Process Alert\n"););
 
     ssn_flags |= new_flags;
 
@@ -118,9 +122,10 @@ static INLINE u_int32_t SSLPP_process_alert(
      * that the cipher flags is not set, and that we are disabling detection */
     if(SSL_IS_HANDSHAKE(ssn_flags) && 
        !SSL_IS_HANDSHAKE(new_flags) &&
-        !(new_flags & SSL_CHANGE_CIPHER_FLAG) &&
-         (config.flags & SSLPP_DISABLE_FLAG))
+       !(new_flags & SSL_CHANGE_CIPHER_FLAG) &&
+       (config.flags & SSLPP_DISABLE_FLAG))
     {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Disabling detect\n"););
         DISABLE_DETECT();
     }
 
@@ -137,15 +142,19 @@ static INLINE u_int32_t SSLPP_process_alert(
 
 static INLINE u_int32_t SSLPP_process_hs(u_int32_t ssl_flags, u_int32_t new_flags)
 {
-    counts.handshakes++;
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Process Handshake\n"););
 
     if(!SSL_BAD_HS(new_flags))
+    {
         ssl_flags |= new_flags & (SSL_CLIENT_HELLO_FLAG | 
-                                 SSL_SERVER_HELLO_FLAG |
-                                 SSL_CLIENT_KEYX_FLAG |
-                                 SSL_SFINISHED_FLAG);
+                                  SSL_SERVER_HELLO_FLAG |
+                                  SSL_CLIENT_KEYX_FLAG |
+                                  SSL_SFINISHED_FLAG);
+    }
     else
+    {
         counts.bad_handshakes++;
+    }
 
     return ssl_flags;
 }
@@ -153,6 +162,8 @@ static INLINE u_int32_t SSLPP_process_hs(u_int32_t ssl_flags, u_int32_t new_flag
 static INLINE u_int32_t SSLPP_process_app(
         u_int32_t ssn_flags, u_int32_t new_flags, SFSnortPacket *packet) 
 {
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Process Application\n"););
+
     if(!(config.flags & SSLPP_DISABLE_FLAG))
         return ssn_flags | new_flags;
 
@@ -160,14 +171,11 @@ static INLINE u_int32_t SSLPP_process_app(
     {
         ssn_flags |= SSL_ENCRYPTED_FLAG;
 
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "STOPPING INSPECTION (process_app)\n"););
         _dpd.streamAPI->stop_inspection(packet->stream_session_ptr,
                            packet, SSN_DIR_BOTH, -1, 0);
 
         counts.stopped++;
-    }
-    else if(SSL_IS_HANDSHAKE(ssn_flags) && (new_flags & SSL_CHANGE_CIPHER_FLAG))
-    {
-        DISABLE_DETECT();
     }
 
     return ssn_flags | new_flags;
@@ -176,21 +184,18 @@ static INLINE u_int32_t SSLPP_process_app(
 static INLINE void SSLPP_process_other(
         u_int32_t ssn_flags, u_int32_t new_flags, SFSnortPacket *packet) 
 {
-    if(new_flags & SSL_CHANGE_CIPHER_FLAG) 
-    {
-        counts.cipher_change++;
-    }
     /* Encrypted SSLv2 will appear unrecognizable.  Check if the handshake was
      * seen and stop inspecting if so. */
-    else if((ssn_flags & SSL_VER_SSLV2_FLAG) && 
-            /* Check for an existing handshake from both sides */
-             SSL_IS_CHELLO(ssn_flags) && SSL_IS_SHELLO(ssn_flags) &&
-            (config.flags & SSLPP_DISABLE_FLAG))
+    /* Check for an existing handshake from both sides */
+    if((ssn_flags & SSL_VER_SSLV2_FLAG) && 
+       SSL_IS_CHELLO(ssn_flags) && SSL_IS_SHELLO(ssn_flags) &&
+       (config.flags & SSLPP_DISABLE_FLAG) && !(new_flags & SSL_CHANGE_CIPHER_FLAG))
     {
         ssn_flags |= SSL_ENCRYPTED_FLAG | new_flags;
 
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "STOPPING INSPECTION (process_other)\n"););
         _dpd.streamAPI->stop_inspection(packet->stream_session_ptr,
-                           packet, SSN_DIR_BOTH, -1, 0);
+                                        packet, SSN_DIR_BOTH, -1, 0);
     }
     else
     {
@@ -226,9 +231,8 @@ static INLINE void SSLPP_process_other(
 
      /* Still need to set application data here because some of the ssn_flags
      * flags were cleared in SSL_CLEAR_TEMPORARY_FLAGS */
-    _dpd.streamAPI->set_application_data(
-            packet->stream_session_ptr, PP_SSL,
-            (void*)(uintptr_t)ssn_flags, NULL);
+    _dpd.streamAPI->set_application_data(packet->stream_session_ptr, PP_SSL,
+                                         (void *)(uintptr_t)ssn_flags, NULL);
 }
 
 /* SSL Preprocessor process callback. */
@@ -237,35 +241,172 @@ static void SSLPP_process(void *raw_packet, void *context)
     SFSnortPacket *packet;
     u_int32_t ssn_flags;
     u_int32_t new_flags;
+#ifdef TARGET_BASED
+    int16_t app_id = SFTARGET_UNKNOWN_PROTOCOL;
+#endif
     PROFILE_VARS;
     
     PREPROC_PROFILE_START(sslpp_perf_stats);
+
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL Start ================================\n"););
 
     packet = (SFSnortPacket*)raw_packet;
 
     if(!packet || !packet->payload || !packet->payload_size || 
        !packet->tcp_header || !packet->stream_session_ptr)
     {
+#ifdef DEBUG
+        if (packet == NULL)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet is NULL\n"););
+        }
+
+        if (packet->payload == NULL)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet payload is NULL\n"););
+        }
+
+        if (packet->payload_size == 0)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet payload size is 0\n"););
+        }
+
+        if (packet->tcp_header == NULL)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet is not TCP\n"););
+        }
+
+        if (packet->stream_session_ptr == NULL)
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - No stream session pointer\n"););
+        }
+
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Not inspecting packet\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL End ================================\n"););
+#endif
         PREPROC_PROFILE_END(sslpp_perf_stats);
         return;
     }
-   
-    /* Make sure the packet is on the right port */
-    if(!config.ports[ PORT_INDEX(packet->src_port) ] &&
-       !config.ports[ PORT_INDEX(packet->dst_port) ])
+#ifdef TARGET_BASED
+    /* Check packet based on protocol number */
+    app_id = _dpd.streamAPI->get_application_protocol_id(packet->stream_session_ptr);
+    if (app_id == SFTARGET_UNKNOWN_PROTOCOL)
     {
+        return;
+    }
+    if (app_id && (app_id != ssl_app_id))
+    {
+        return;
+    }
+    /* Fall back to port checking */
+    if (!app_id) {
+#endif
+    /* Make sure the packet is on the right port */
+    if(!(config.ports[PORT_INDEX(packet->src_port)] & CONV_PORT(packet->src_port)) &&
+       !(config.ports[PORT_INDEX(packet->dst_port)] & CONV_PORT(packet->dst_port)))
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Not configured for these ports\n"););
         PREPROC_PROFILE_END(sslpp_perf_stats);
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL End ================================\n"););
+        return;
+    }
+#ifdef TARGET_BASED
+    }
+#endif
+
+#ifdef DEBUG
+    if (packet->flags & FLAG_FROM_SERVER)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Server packet\n"););
+    }
+    else
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Client packet\n"););
+    }
+
+    if (packet->flags & FLAG_REBUILT_STREAM)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Packet is rebuilt\n"););
+    }
+#endif
+
+    ssn_flags = (u_int32_t)(uintptr_t)
+        _dpd.streamAPI->get_application_data(packet->stream_session_ptr, PP_SSL);
+
+    /* Flush opposite direction to keep conversation in sync */
+    if (!(packet->flags & FLAG_REBUILT_STREAM))
+    {
+        switch (_dpd.streamAPI->get_reassembly_direction(packet->stream_session_ptr))
+        {
+            case SSN_DIR_SERVER:
+                if (packet->flags & FLAG_FROM_SERVER)
+                {
+                    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Flushing server side\n"););
+                    _dpd.streamAPI->response_flush_stream(packet);
+                }
+
+                break;
+
+            case SSN_DIR_CLIENT:
+                if (packet->flags & FLAG_FROM_CLIENT)
+                {
+                    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Flushing client side\n"););
+                    _dpd.streamAPI->response_flush_stream(packet);
+                }
+
+                break;
+
+            case SSN_DIR_BOTH:
+                DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Flushing opposite side\n"););
+                _dpd.streamAPI->response_flush_stream(packet);
+                break;
+
+            case SSN_DIR_NONE:
+            default:
+                break;
+        }
+    }
+
+    if (packet->flags & FLAG_STREAM_INSERT)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Packet is stream inserted - not inspecting\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL End ================================\n"););
         return;
     }
 
-    ssn_flags = (u_int32_t)(uintptr_t)_dpd.streamAPI->get_application_data(
-                packet->stream_session_ptr, PP_SSL);
+#ifdef DEBUG
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Ssn flags before ----------------------\n"););
+    SSL_PrintFlags(ssn_flags);
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "---------------------------------------\n"););
+#endif
 
     SSL_CLEAR_TEMPORARY_FLAGS(ssn_flags);
+
+#ifdef DEBUG
+    if (packet->payload_size >= 5)
+    {
+        const uint8_t *pkt = packet->payload;
+
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Five bytes of data: %02x %02x %02x %02x %02x\n",
+                                pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]););
+    }
+    else
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Payload size < 5 bytes"););
+    }
+#endif
 
     new_flags = SSL_decode(packet->payload, packet->payload_size, packet->flags);
 
     counts.decoded++;
+
+#ifdef DEBUG
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "New flags -----------------------------\n"););
+    SSL_PrintFlags(new_flags);
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "---------------------------------------\n"););
+#endif
+
+    SSL_UpdateCounts(new_flags);
 
     /* Note, there can be multiple record types in each SSL packet.
      * Processing them in this order is intentional.  If there is an
@@ -273,45 +414,86 @@ static void SSLPP_process(void *raw_packet, void *context)
 
     if(SSL_IS_ALERT(new_flags))
     {
-        ssn_flags =
-            SSLPP_process_alert(ssn_flags, new_flags, packet);
+        ssn_flags = SSLPP_process_alert(ssn_flags, new_flags, packet);
     }
-
     else if(SSL_IS_HANDSHAKE(new_flags))
     {
         ssn_flags = SSLPP_process_hs(ssn_flags, new_flags);
     }
-    
     else if(SSL_IS_APP(new_flags))
     {
         ssn_flags = SSLPP_process_app(ssn_flags, new_flags, packet);
     }
-    /* Different record type that we don't care about.
-     * Either it's a 'change cipher spec' or we failed to recognize the
-     * record type.  Do not update session data */
     else 
     {
+        /* Different record type that we don't care about.
+         * Either it's a 'change cipher spec' or we failed to recognize the
+         * record type.  Do not update session data */
         SSLPP_process_other(ssn_flags, new_flags, packet);
         
         /* Application data is updated inside of SSLPP_process_other */
 
         PREPROC_PROFILE_END(sslpp_perf_stats);
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL End ================================\n"););
         return;
     }
 
     ssn_flags |= new_flags;
+
+#if DEBUG
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "Ssn flags after -----------------------\n"););
+    SSL_PrintFlags(ssn_flags);
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "---------------------------------------\n"););
+#endif
 
     _dpd.streamAPI->set_application_data(
                 packet->stream_session_ptr, PP_SSL,
                 (void*)(uintptr_t)ssn_flags, NULL);
 
     PREPROC_PROFILE_END(sslpp_perf_stats);
+    DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL End ================================\n"););
+}
+
+static void SSL_UpdateCounts(const uint32_t new_flags)
+{
+    if(new_flags & SSL_CHANGE_CIPHER_FLAG) 
+        counts.cipher_change++;
+
+    if (new_flags & SSL_ALERT_FLAG)
+        counts.alerts++;
+
+    if (new_flags & SSL_CLIENT_HELLO_FLAG)
+        counts.hs_chello++;
+
+    if (new_flags & SSL_SERVER_HELLO_FLAG)
+        counts.hs_shello++;
+
+    if (new_flags & SSL_CERTIFICATE_FLAG)
+        counts.hs_cert++;
+
+    if (new_flags & SSL_SERVER_KEYX_FLAG)
+        counts.hs_skey++;
+
+    if (new_flags & SSL_CLIENT_KEYX_FLAG)
+        counts.hs_ckey++;
+
+    if (new_flags & SSL_SFINISHED_FLAG)
+        counts.hs_finished++;
+
+    if (new_flags & SSL_HS_SDONE_FLAG)
+        counts.hs_sdone++;
+
+    if (new_flags & SSL_SAPP_FLAG)
+        counts.sapp++;
+
+    if (new_flags & SSL_CAPP_FLAG)
+        counts.capp++;
 }
 
 /* Parsing for the ssl_state rule option */
 static int SSLPP_state_init(char *name, char *params, void **data) 
 {
-    unsigned long flags = 0;
+    int flags = 0;
     char *end;
     char *tok;
 
@@ -321,7 +503,8 @@ static int SSLPP_state_init(char *name, char *params, void **data)
         DynamicPreprocessorFatalMessage("%s(%d) => missing argument to"
             "ssl_state keyword\n", *(_dpd.config_file), *(_dpd.config_line));
 
-    do {
+    do
+    {
         if(!strcasecmp("client_hello", tok))
             flags |= SSL_CUR_CLIENT_HELLO_FLAG;
         else if(!strcasecmp("server_hello", tok))
@@ -336,9 +519,10 @@ static int SSLPP_state_init(char *name, char *params, void **data)
             DynamicPreprocessorFatalMessage(
                 "%s(%d) => %s is not a recognized argument to %s.\n", 
                 *(_dpd.config_file), _dpd.config_file, tok, name);
+
     } while( (tok = strtok_r(NULL, ",", &end)) != NULL );
 
-    *(unsigned long *)data = flags;
+    *data = (void *)(uintptr_t)flags;
 
     return 0;
 }
@@ -346,7 +530,7 @@ static int SSLPP_state_init(char *name, char *params, void **data)
 /* Parsing for the ssl_version rule option */
 static int SSLPP_ver_init(char *name, char *params, void **data) 
 {
-    unsigned long flags = 0;
+    int flags = 0;
     char *end;
     char *tok;
 
@@ -356,7 +540,8 @@ static int SSLPP_ver_init(char *name, char *params, void **data)
         DynamicPreprocessorFatalMessage("%s(%d) => missing argument to"
             "ssl_state keyword\n", *(_dpd.config_file), *(_dpd.config_line));
 
-    do {
+    do
+    {
         if(!strcasecmp("sslv2", tok))
             flags |= SSL_VER_SSLV2_FLAG;
         else if(!strcasecmp("sslv3", tok))
@@ -371,9 +556,10 @@ static int SSLPP_ver_init(char *name, char *params, void **data)
             DynamicPreprocessorFatalMessage(
                 "%s(%d) => %s is not a recognized argument to %s.\n", 
                 *(_dpd.config_file), _dpd.config_file, tok, name);
+
     } while( (tok = strtok_r(NULL, ",", &end)) != NULL );
 
-    *(unsigned long *)data = flags;
+    *data = (void *)(uintptr_t)flags;
 
     return 0;
 }
@@ -381,17 +567,16 @@ static int SSLPP_ver_init(char *name, char *params, void **data)
 /* Rule option evaluation (for both rule options) */
 static int SSLPP_rule_eval(void *raw_packet, const u_int8_t **cursor, void *data)
 {
-    u_int32_t ssn_data; 
-    unsigned long to_match = (unsigned long)data; 
+    int ssn_data; 
     SFSnortPacket *p = (SFSnortPacket*)raw_packet; 
 
-    if(!p || !p->tcp_header || !p->stream_session_ptr || !data) 
+    if (!p || !p->tcp_header || !p->stream_session_ptr)
         return 0; 
 
-    ssn_data = (unsigned long)_dpd.streamAPI->get_application_data( 
+    ssn_data = (int)(uintptr_t)_dpd.streamAPI->get_application_data( 
                 p->stream_session_ptr, PP_SSL); 
 
-    if(to_match & ssn_data)
+    if((int)(uintptr_t)data & ssn_data)
         return 1;
 
     return 0;
@@ -458,8 +643,8 @@ static void SSLPP_config(char *conf)
         else
         {
             DynamicPreprocessorFatalMessage("%s(%d) => Invalid argument to the"
-                    " SSL preprocessor: '%s' in %s\n", 
-                    *(_dpd.config_file), *(_dpd.config_line), comma_tok, conf);
+                " SSL preprocessor: '%s' in %s\n", 
+                *(_dpd.config_file), *(_dpd.config_line), comma_tok, conf);
         }
     } 
 
@@ -467,8 +652,9 @@ static void SSLPP_config(char *conf)
     if ((config.flags & SSLPP_TRUSTSERVER_FLAG) &&
         !(config.flags & SSLPP_DISABLE_FLAG))
     {
-        DynamicPreprocessorFatalMessage("%s(%d) => SSL preprocessor: 'trustservers' requires 'noinspect_encrypted' to be useful.\n",
-                    *(_dpd.config_file), *(_dpd.config_line));
+        DynamicPreprocessorFatalMessage("%s(%d) => SSL preprocessor: 'trustservers' "
+            "requires 'noinspect_encrypted' to be useful.\n",
+            *(_dpd.config_file), *(_dpd.config_line));
     }
 
 }
@@ -505,6 +691,11 @@ static void SSLPP_print_config(void)
         SFP_snprintfa(buf, sizeof(buf), "\n");
 
     _dpd.logMsg(buf);
+    
+    if ( config.flags & SSLPP_TRUSTSERVER_FLAG )
+    {
+        _dpd.logMsg("    Server side data is trusted\n");
+    }
 }
 
 static void SSLPP_init_config(void) {
@@ -532,11 +723,18 @@ static void SSLPP_drop_stats(int exiting)
 
     _dpd.logMsg("SSL Preprocessor:\n");
     _dpd.logMsg("   SSL packets decoded: " FMTu64("-10") "\n", counts.decoded);
-    _dpd.logMsg("         Alert records: " FMTu64("-10") "\n", counts.alerts);
-    _dpd.logMsg("   Application records: " FMTu64("-10") "\n", counts.applications);
-    _dpd.logMsg(" Change cipher records: " FMTu64("-10") "\n", counts.cipher_change);
+    _dpd.logMsg("          Client Hello: " FMTu64("-10") "\n", counts.hs_chello);
+    _dpd.logMsg("          Server Hello: " FMTu64("-10") "\n", counts.hs_shello);
+    _dpd.logMsg("           Certificate: " FMTu64("-10") "\n", counts.hs_cert);
+    _dpd.logMsg("           Server Done: " FMTu64("-10") "\n", counts.hs_sdone);
+    _dpd.logMsg("   Client Key Exchange: " FMTu64("-10") "\n", counts.hs_ckey);
+    _dpd.logMsg("   Server Key Exchange: " FMTu64("-10") "\n", counts.hs_skey);
+    _dpd.logMsg("         Change Cipher: " FMTu64("-10") "\n", counts.cipher_change);
+    _dpd.logMsg("              Finished: " FMTu64("-10") "\n", counts.hs_finished);
+    _dpd.logMsg("    Client Application: " FMTu64("-10") "\n", counts.capp);
+    _dpd.logMsg("    Server Application: " FMTu64("-10") "\n", counts.sapp);
+    _dpd.logMsg("                 Alert: " FMTu64("-10") "\n", counts.alerts);
     _dpd.logMsg("  Unrecognized records: " FMTu64("-10") "\n", counts.unrecognized);
-    _dpd.logMsg("     Handshake records: " FMTu64("-10") "\n", counts.handshakes);
     _dpd.logMsg("  Completed handshakes: " FMTu64("-10") "\n", counts.completed_hs);
     _dpd.logMsg("        Bad handshakes: " FMTu64("-10") "\n", counts.bad_handshakes);
     _dpd.logMsg("      Sessions ignored: " FMTu64("-10") "\n", counts.stopped);
@@ -555,15 +753,26 @@ static void SSLPP_init(char *conf)
 	SSLPP_config(conf);
     SSLPP_print_config();
 
-	_dpd.addPreproc( SSLPP_process, PRIORITY_TUNNEL, PP_SSL );
+	_dpd.addPreproc( SSLPP_process, PRIORITY_TUNNEL, PP_SSL, PROTO_BIT__TCP );
 
-    _dpd.preprocOptRegister("ssl_state", SSLPP_state_init, SSLPP_rule_eval, NULL);
-    _dpd.preprocOptRegister("ssl_version", SSLPP_ver_init, SSLPP_rule_eval, NULL);
+    _dpd.preprocOptRegister("ssl_state", SSLPP_state_init, SSLPP_rule_eval, NULL, NULL, NULL);
+    _dpd.preprocOptRegister("ssl_version", SSLPP_ver_init, SSLPP_rule_eval, NULL, NULL, NULL);
     _dpd.registerPreprocStats("ssl", SSLPP_drop_stats);
 
 #ifdef PERF_PROFILING
     _dpd.addPreprocProfileFunc("ssl", (void *)&sslpp_perf_stats, 0, _dpd.totalPerfStats);
 #endif
+
+#ifdef TARGET_BASED
+    ssl_app_id = _dpd.findProtocolReference("ssl");
+    if (ssl_app_id == SFTARGET_UNKNOWN_PROTOCOL)
+    {
+        ssl_app_id = _dpd.addProtocolReference("ssl");
+    }
+    _addServicesToStream5Filter();
+#endif
+
+    _addPortsToStream5Filter();
 }
 
 void SetupSSLPP(void)
@@ -571,3 +780,194 @@ void SetupSSLPP(void)
 	_dpd.registerPreproc( "ssl", SSLPP_init);
 }
 
+#if DEBUG
+static void SSL_PrintFlags(uint32_t flags)
+{
+    if (flags & SSL_CHANGE_CIPHER_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CHANGE_CIPHER_FLAG\n"););
+    }
+
+    if (flags & SSL_ALERT_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_ALERT_FLAG\n"););
+    }
+
+    if (flags & SSL_POSSIBLE_HS_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_POSSIBLE_HS_FLAG\n"););
+    }
+
+    if (flags & SSL_CLIENT_HELLO_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CLIENT_HELLO_FLAG\n"););
+    }
+
+    if (flags & SSL_SERVER_HELLO_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_SERVER_HELLO_FLAG\n"););
+    }
+
+    if (flags & SSL_CERTIFICATE_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CERTIFICATE_FLAG\n"););
+    }
+
+    if (flags & SSL_SERVER_KEYX_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_SERVER_KEYX_FLAG\n"););
+    }
+
+    if (flags & SSL_CLIENT_KEYX_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CLIENT_KEYX_FLAG\n"););
+    }
+
+    if (flags & SSL_CIPHER_SPEC_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CIPHER_SPEC_FLAG\n"););
+    }
+
+    if (flags & SSL_SFINISHED_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_SFINISHED_FLAG\n"););
+    }
+
+    if (flags & SSL_SAPP_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_SAPP_FLAG\n"););
+    }
+
+    if (flags & SSL_CAPP_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CAPP_FLAG\n"););
+    }
+
+    if (flags & SSL_HS_SDONE_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_HS_SDONE_FLAG\n"););
+    }
+
+    if (flags & SSL_POSSIBLY_ENC_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_POSSIBLY_ENC_FLAG\n"););
+    }
+
+    if (flags & SSL_VER_SSLV2_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_VER_SSLV2_FLAG\n"););
+    }
+
+    if (flags & SSL_VER_SSLV3_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_VER_SSLV3_FLAG\n"););
+    }
+
+    if (flags & SSL_VER_TLS10_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_VER_TLS10_FLAG\n"););
+    }
+
+    if (flags & SSL_VER_TLS11_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_VER_TLS11_FLAG\n"););
+    }
+
+    if (flags & SSL_VER_TLS12_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_VER_TLS12_FLAG\n"););
+    }
+
+#if 0
+SSL_VERFLAGS (SSL_VER_SSLV2_FLAG | SSL_VER_SSLV3_FLAG | \
+              SSL_VER_TLS10_FLAG | SSL_VER_TLS11_FLAG | \
+              SSL_VER_TLS12_FLAG)
+#endif
+
+    if (flags & SSL_CUR_CLIENT_HELLO_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CUR_CLIENT_HELLO_FLAG\n"););
+    }
+
+    if (flags & SSL_CUR_SERVER_HELLO_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CUR_SERVER_HELLO_FLAG\n"););
+    }
+
+    if (flags & SSL_CUR_SERVER_KEYX_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CUR_SERVER_KEYX_FLAG\n"););
+    }
+
+    if (flags & SSL_CUR_CLIENT_KEYX_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_CUR_CLIENT_KEYX_FLAG\n"););
+    }
+
+    if (flags & SSL_ENCRYPTED_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_ENCRYPTED_FLAG\n"););
+    }
+
+    if (flags & SSL_UNKNOWN_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_UNKNOWN_FLAG\n"););
+    }
+
+#if 0
+SSL_STATEFLAGS (SSL_CUR_CLIENT_HELLO_FLAG | SSL_CUR_SERVER_HELLO_FLAG | \
+                SSL_CUR_SERVER_KEYX_FLAG | SSL_CUR_CLIENT_KEYX_FLAG | \
+                SSL_UNKNOWN_FLAG)
+#endif
+
+    if (flags & SSL_BOGUS_HS_DIR_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_BOGUS_HS_DIR_FLAG\n"););
+    }
+
+    if (flags & SSL_TRAILING_GARB_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_TRAILING_GARB_FLAG\n"););
+    }
+
+    if (flags & SSL_BAD_TYPE_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_BAD_TYPE_FLAG\n"););
+    }
+
+    if (flags & SSL_BAD_VER_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_BAD_VER_FLAG\n"););
+    }
+
+    if (flags & SSL_TRUNCATED_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_TRUNCATED_FLAG\n"););
+    }
+
+    if (flags == SSL_ARG_ERROR_FLAG)
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL_ARG_ERROR_FLAG\n"););
+    }
+}
+#endif
+
+static void _addPortsToStream5Filter()
+{
+    unsigned int portNum;
+
+    for (portNum = 0; portNum < MAXPORTS; portNum++)
+    {
+        if(config.ports[(portNum/8)] & (1<<(portNum%8)))
+        {
+            //Add port the port
+            _dpd.streamAPI->set_port_filter_status(IPPROTO_TCP, (u_int16_t)portNum, PORT_MONITOR_SESSION);
+        }
+    }
+}
+#ifdef TARGET_BASED
+static void _addServicesToStream5Filter()
+{
+    _dpd.streamAPI->set_service_filter_status(ssl_app_id, PORT_MONITOR_SESSION);
+}
+#endif

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -258,14 +258,13 @@ MemBucket *mempool_alloc(MemPool *mempool)
 
     li = mempool->free_list.head;
 
-    mempool->free--;
     if((li == NULL) || sf_sdlist_remove(&mempool->free_list, li))
     {
         printf("Failure on sf_sdlist_remove\n");
         return NULL;
     }
-        
-    
+
+    mempool->free--;
     mempool->used++;
 
     if(sf_sdlist_append(&mempool->used_list, li->data, li))

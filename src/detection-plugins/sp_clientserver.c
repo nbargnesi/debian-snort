@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2008 Sourcefire, Inc.
+ ** Copyright (C) 2002-2009 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -64,18 +64,21 @@
 #include "plugin_enum.h"
 #include "snort.h"
 //#include "signature.h"
+#include "sfhashfcn.h"
 
 #include "stream_api.h"
 
 #include "snort.h"
 #include "profiler.h"
 #ifdef PERF_PROFILING
-PreprocStats flowFromClientPerfStats;
-PreprocStats flowFromServerPerfStats;
-PreprocStats flowReassembledPerfStats;
-PreprocStats flowNonReassembledPerfStats;
+PreprocStats flowCheckPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
+
+#define ONLY_STREAM 0x01
+#define ONLY_FRAG 0x02
+#define IGNORE_STREAM 0x01
+#define IGNORE_FRAG 0x02
 
 typedef struct _ClientServerData
 {
@@ -83,15 +86,59 @@ typedef struct _ClientServerData
     u_int8_t from_client;    
     u_int8_t ignore_reassembled; /* ignore reassembled sessions */
     u_int8_t only_reassembled; /* ignore reassembled sessions */
+    u_int8_t stateless;    
+    u_int8_t established;    
+    u_int8_t unestablished;    
 } ClientServerData;
+
+#include "sfhashfcn.h"
+#include "detection_options.h"
 
 void FlowInit(char *, OptTreeNode *, int);
 void ParseFlowArgs(char *, OptTreeNode *);
 void InitFlowData(OptTreeNode *);
-int CheckFromClient(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckFromServer(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckForReassembled(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckForNonReassembled(Packet *p, struct _OptTreeNode *, OptFpList *);
+int CheckFlow(void *option_data, Packet *p);
+
+u_int32_t FlowHash(void *d)
+{
+    u_int32_t a,b,c;
+    ClientServerData *data = (ClientServerData *)d;
+
+    a = data->from_server || data->from_client << 16;
+    b = data->ignore_reassembled || data->only_reassembled << 16;
+    c = data->stateless || data->established << 16;
+
+    mix(a,b,c);
+
+    a += data->unestablished;
+    b += RULE_OPTION_TYPE_FLOW;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int FlowCompare(void *l, void *r)
+{   
+    ClientServerData *left = (ClientServerData *)l;
+    ClientServerData *right = (ClientServerData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+                                                             
+    if (( left->from_server == right->from_server) &&
+        ( left->from_client == right->from_client) &&
+        ( left->ignore_reassembled == right->ignore_reassembled) &&
+        ( left->only_reassembled == right->only_reassembled) &&
+        ( left->stateless == right->stateless) &&
+        ( left->established == right->established) &&
+        ( left->unestablished == right->unestablished))
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 int OtnFlowFromServer( OptTreeNode * otn )
 {
@@ -154,13 +201,10 @@ int OtnFlowOnlyReassembled( OptTreeNode * otn )
 void SetupClientServer(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("flow", FlowInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("flow", FlowInit, NULL, OPT_TYPE_DETECTION);
 
 #ifdef PERF_PROFILING
-    RegisterPreprocessorProfile("flow_from_client", &flowFromClientPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("flow_from_server", &flowFromServerPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("flow_reassembled", &flowReassembledPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("flow_non_reassembled", &flowNonReassembledPerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("flow", &flowCheckPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, 
@@ -182,23 +226,7 @@ void SetupClientServer(void)
  ****************************************************************************/
 void FlowInit(char *data, OptTreeNode *otn, int protocol)
 {
-#ifdef STREAM4_UDP
-    if ((protocol != IPPROTO_TCP) && (protocol != IPPROTO_UDP))
-    {
-        FatalError("%s(%d): Cannot check flow connection "
-                   "for non-TCP and non-UDP traffic\n", file_name, file_line);
-    }
-#else
-    if(protocol != IPPROTO_TCP)
-    {
-        if (!stream_api || (stream_api->version != STREAM_API_VERSION5))
-        {
-            FatalError("%s(%d): Cannot check flow connection "
-                   "for non-TCP traffic\n", file_name, file_line);
-        }
-    }
-#endif
-
+    ClientServerData *csd;
     /* multiple declaration check */
     if(otn->ds_list[PLUGIN_CLIENTSERVER])
     {
@@ -209,9 +237,36 @@ void FlowInit(char *data, OptTreeNode *otn, int protocol)
 
     InitFlowData(otn);
     ParseFlowArgs(data, otn);
+    csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
+
+    if(protocol == IPPROTO_UDP)
+    {
+        if (!stream_api || (stream_api->version != STREAM_API_VERSION5))
+        {
+            FatalError("%s(%d): Cannot check flow connection "
+                   "for UDP traffic\n", file_name, file_line);
+        }
+    }
+   
+    if (protocol == IPPROTO_ICMP)
+    {
+        if ((csd->only_reassembled != ONLY_FRAG) && (csd->ignore_reassembled != IGNORE_FRAG))
+        {
+            FatalError("%s(%d): Cannot check flow connection "
+                   "for ICMP traffic\n", file_name, file_line);
+        }
+    }
 }
 
 
+static void INLINE CheckStream(char *token)
+{
+    if (!stream_api)
+    {
+        FatalError("%s(%d): Stream5 must be enabled to use the '%s' option.\n",
+            file_name, file_line, token);
+    }
+}
 
 /****************************************************************************
  * 
@@ -229,6 +284,8 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
 {
     char *token, *str, *p;
     ClientServerData *csd;
+    void *idx_dup;
+    OptFpList *fpl = NULL;
 
     csd = (ClientServerData *)otn->ds_list[PLUGIN_CLIENTSERVER];
 
@@ -251,39 +308,58 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
 
         if(!strcasecmp(token, "to_server"))
         {
+            CheckStream(token);
             csd->from_client = 1;
         }
         else if(!strcasecmp(token, "to_client"))
         {
+            CheckStream(token);
             csd->from_server = 1;
         } 
         else if(!strcasecmp(token, "from_server"))
         {
+            CheckStream(token);
             csd->from_server = 1;
         } 
         else if(!strcasecmp(token, "from_client"))
         {
+            CheckStream(token);
             csd->from_client = 1;
         }
         else if(!strcasecmp(token, "stateless"))
         {
+            csd->stateless = 1;
             otn->stateless = 1;
         }
         else if(!strcasecmp(token, "established"))
         {
+            CheckStream(token);
+            csd->established = 1;
             otn->established = 1;
         }
         else if(!strcasecmp(token, "not_established"))
         {
+            CheckStream(token);
+            csd->unestablished = 1;
             otn->unestablished = 1;
         }
         else if(!strcasecmp(token, "no_stream"))
         {
-            csd->ignore_reassembled = 1;
+            CheckStream(token);
+            csd->ignore_reassembled |= IGNORE_STREAM;
         }
         else if(!strcasecmp(token, "only_stream"))
         {
-            csd->only_reassembled = 1;
+            CheckStream(token);
+            csd->only_reassembled |= ONLY_STREAM;
+        }
+        else if(!strcasecmp(token, "no_frag"))
+        {
+            csd->ignore_reassembled |= IGNORE_FRAG;
+        }
+        else if(!strcasecmp(token, "only_frag"))
+        {
+            csd->only_reassembled |= ONLY_FRAG;
         }
         else
         {
@@ -332,26 +408,29 @@ void ParseFlowArgs(char *data, OptTreeNode *otn)
                    "options in same rule\n", file_name, file_line);
     }
 
-    if(csd->from_client) 
+    if (add_detection_option(RULE_OPTION_TYPE_FLOW, (void *)csd, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
-        AddOptFuncToList(CheckFromClient, otn);
-    } 
-
-    if(csd->from_server) 
-    {
-        AddOptFuncToList(CheckFromServer, otn);
+#ifdef DEBUG_RULE_OPTION_TREE
+        LogMessage("Duplicate Flow:\n%c %c %c %c\n%c %c %c %c\n\n",
+            csd->from_client,
+            csd->from_server,
+            csd->ignore_reassembled,
+            csd->only_reassembled,
+            ((ClientServerData *)idx_dup)->from_client,
+            ((ClientServerData *)idx_dup)->from_server,
+            ((ClientServerData *)idx_dup)->ignore_reassembled,
+            ((ClientServerData *)idx_dup)->only_reassembled);
+#endif
+        free(csd);
+        csd = otn->ds_list[PLUGIN_CLIENTSERVER] = (ClientServerData *)idx_dup;
     }
 
-    if(csd->ignore_reassembled) 
+    fpl = AddOptFuncToList(CheckFlow, otn);
+    if (fpl)
     {
-        AddOptFuncToList(CheckForNonReassembled, otn);
+        fpl->type = RULE_OPTION_TYPE_FLOW;
+        fpl->context = (void *)csd;
     }
-
-    if(csd->only_reassembled) 
-    {
-        AddOptFuncToList(CheckForReassembled, otn);
-    }
-
     
     free(str);
 }
@@ -381,153 +460,134 @@ void InitFlowData(OptTreeNode * otn)
     }
 }
 
-/****************************************************************************
- * 
- * Function: CheckFromClient(Packet *, struct _OptTreeNode *, OptFpList *)
- *
- * Purpose: Check to see if this packet came from the client side of the 
- *          connection.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns: 0 on failure
- *
- ****************************************************************************/
-int CheckFromClient(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
+int CheckFlow(void *option_data, Packet *p)
 {
+    ClientServerData *csd = (ClientServerData *)option_data;
     PROFILE_VARS;
 
-    PREPROC_PROFILE_START(flowFromClientPerfStats);
+    PREPROC_PROFILE_START(flowCheckPerfStats);
 
-#ifdef DEBUG_CS
-    DebugMessage(DEBUG_STREAM, "CheckFromClient: entering\n");
-    if(p->packet_flags & PKT_REBUILT_STREAM)
+    /* Check established/unestablished first */
+    if(snort_runtime.capabilities.stateful_inspection == 1)
     {
-        DebugMessage(DEBUG_STREAM, "=> rebuilt!\n");
-    }
-#endif /* DEBUG_CS */    
+        if ((csd->established == 1) && !(p->packet_flags & PKT_STREAM_EST))
+        {
+            /*
+            **  We check to see if this packet may have been picked up in
+            **  midstream by stream4 on a timed out session.  If it was, then
+            **  we'll go ahead and inspect it anyway because it might be a 
+            **  packet that we dropped but the attacker has retransmitted after
+            **  the stream4 session timed out.
+            */
+#if 0
+            if(InlineMode())
+            {
+                switch(List->rtn->type)
+                {
+                    case RULE_DROP:
+                    case RULE_SDROP:
 
-    if(!pv.stateful)
-    {
-        /* if we're not in stateful mode we ignore this plugin */
-        PREPROC_PROFILE_END(flowFromClientPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
+                        if(stream_api && 
+                           !(stream_api->get_session_flags(p->ssnptr) & SSNFLAG_MIDSTREAM))
+                        {
+                            return DETECTION_OPTION_NO_MATCH;
+                        }
+                        break;
 
-    if(p->packet_flags & PKT_FROM_CLIENT || 
-            !(p->packet_flags & PKT_FROM_SERVER))
-    {
-        PREPROC_PROFILE_END(flowFromClientPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
-
-    /* if the test isn't successful, this function *must* return 0 */
-    DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "CheckFromClient: returning 0\n"););
-    PREPROC_PROFILE_END(flowFromClientPerfStats);
-    return 0;
-}
-
-
-/****************************************************************************
- * 
- * Function: CheckFromServer(Packet *, struct _OptTreeNode *, OptFpList *)
- *
- * Purpose: Check to see if this packet came from the client side of the 
- *          connection.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns: 0 on failure
- *
- ****************************************************************************/
-int CheckFromServer(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(flowFromServerPerfStats);
-
-    if(!pv.stateful)
-    {
-        /* if we're not in stateful mode we ignore this plugin */
-        PREPROC_PROFILE_END(flowFromServerPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
-    
-    if(p->packet_flags & PKT_FROM_SERVER || 
-            !(p->packet_flags & PKT_FROM_CLIENT))
-    {
-        PREPROC_PROFILE_END(flowFromServerPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+                    default:
+                        return DETECTION_OPTION_NO_MATCH;
+                }
+            }
+            else
+#endif
+            {
+                /* 
+                ** This option requires an established connection and it isn't
+                ** in that state yet, so no match.
+                */
+                PREPROC_PROFILE_END(flowCheckPerfStats);
+                return DETECTION_OPTION_NO_MATCH;
+            }
+        }
+        else if ((csd->unestablished == 1) && (p->packet_flags & PKT_STREAM_EST))
+        {
+            /*
+            **  We're looking for an unestablished stream, and this is
+            **  established, so don't continue processing.
+            */
+            PREPROC_PROFILE_END(flowCheckPerfStats);
+            return DETECTION_OPTION_NO_MATCH;
+        }
     }
 
-    /* if the test isn't successful, this function *must* return 0 */
-    PREPROC_PROFILE_END(flowFromServerPerfStats);
-    return 0;
-}
-
-
-/****************************************************************************
- * 
- * Function: int CheckForReassembled(Packet *p, struct _OptTreeNode *otn,
-                                    OptFpList *fp_list)
- *
- * Purpose: Check to see if this packet came from a reassembled connection
- *          connection.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns: 0 on failure
- *
- ****************************************************************************/
-int CheckForReassembled(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(flowReassembledPerfStats);
-
-    /* is this a reassembled stream? */
-    if(p->packet_flags & PKT_REBUILT_STREAM)
+    /* Now check from client */
+    if (csd->from_client)
     {
-        PREPROC_PROFILE_END(flowReassembledPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+        if(pv.stateful)
+        {
+            if (!(p->packet_flags & PKT_FROM_CLIENT) && 
+                (p->packet_flags & PKT_FROM_SERVER))
+            {
+                /* No match on from_client */
+                PREPROC_PROFILE_END(flowCheckPerfStats);
+                return DETECTION_OPTION_NO_MATCH;
+            }
+        }
     }
 
-    /* if the test isn't successful, this function *must* return 0 */
-    PREPROC_PROFILE_END(flowReassembledPerfStats);
-    return 0;
-}
-
-
-/* 
- * Function: int CheckForNonReassembled(Packet *p, struct _OptTreeNode *otn,
-                                    OptFpList *fp_list)
- *
- * Purpose: Check to see if this packet came from a reassembled connection
- *          connection.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns: 0 on failure
- *
- ****************************************************************************/
-int CheckForNonReassembled(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(flowNonReassembledPerfStats);
-
-    /* is this a reassembled stream? */
-    if(p->packet_flags & PKT_REBUILT_STREAM)
+    /* And from server */
+    if (csd->from_server)
     {
-        PREPROC_PROFILE_END(flowNonReassembledPerfStats);
-        return 0;
+        if(pv.stateful)
+        {
+            if (!(p->packet_flags & PKT_FROM_SERVER) && 
+                (p->packet_flags & PKT_FROM_CLIENT))
+            {
+                /* No match on from_server */
+                PREPROC_PROFILE_END(flowCheckPerfStats);
+                return DETECTION_OPTION_NO_MATCH;
+            }
+        }
     }
 
-    /* if the test isn't successful, this function *must* return 0 */
-    PREPROC_PROFILE_END(flowNonReassembledPerfStats);
-    return fp_list->next->OptTestFunc(p, otn, fp_list->next);
+    /* ...ignore_reassembled */
+    if (csd->ignore_reassembled & IGNORE_STREAM)
+    {
+        if (p->packet_flags & PKT_REBUILT_STREAM)
+        {
+            PREPROC_PROFILE_END(flowCheckPerfStats);
+            return DETECTION_OPTION_NO_MATCH;
+        }
+    }
+
+    if (csd->ignore_reassembled & IGNORE_FRAG)
+    {
+        if (p->packet_flags & PKT_REBUILT_FRAG)
+        {
+            PREPROC_PROFILE_END(flowCheckPerfStats);
+            return DETECTION_OPTION_NO_MATCH;
+        }
+    }
+
+    /* ...only_reassembled */
+    if (csd->only_reassembled & ONLY_STREAM)
+    {
+        if (!(p->packet_flags & PKT_REBUILT_STREAM))
+        {
+            PREPROC_PROFILE_END(flowCheckPerfStats);
+            return DETECTION_OPTION_NO_MATCH;
+        }
+    }
+
+    if (csd->only_reassembled & ONLY_FRAG)
+    {
+        if (!(p->packet_flags & PKT_REBUILT_FRAG))
+        {
+            PREPROC_PROFILE_END(flowCheckPerfStats);
+            return DETECTION_OPTION_NO_MATCH;
+        }
+    }
+
+    PREPROC_PROFILE_END(flowCheckPerfStats);
+    return DETECTION_OPTION_MATCH;
 }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -50,6 +50,7 @@
 #include "util.h"
 
 #include "hi_ui_config.h"
+#include "hi_ui_server_lookup.h"
 #include "hi_client.h"
 #include "hi_norm.h"
 #include "snort_httpinspect.h"
@@ -58,6 +59,12 @@
 
 #include "snort.h"
 #include "profiler.h"
+
+#ifdef TARGET_BASED
+#include "stream_api.h"
+#include "sftarget_protocol_reference.h"
+#endif
+#include "snort_stream5_session.h"
 
 /*
 **  Defines for preprocessor initialization
@@ -105,6 +112,9 @@ static void HttpInspectCleanExit(int, void *);
 static void HttpInspectReset(int, void *);
 static void HttpInspectResetStats(int, void *);
 static void HttpInspectInit(char *);
+static void addServerConfPortsToStream5(
+        void *pData
+        );
 
 
 /*
@@ -136,17 +146,13 @@ static void HttpInspect(Packet *p, void *context)
     **  First thing that we do is reset the p->uri_count to zero, so there
     **  is no way that we would inspect a buffer that was completely bogus.
     */
-    p->uri_count = 0;
-    UriBufs[0].decode_flags = 0;
 
     /*
     **  Check for valid packet
     **  if neither header or data is good, then we just abort.
     */
-    if(!IPH_IS_VALID(p) || !p->tcph || !p->data || !p->dsize)
-    {
+    if (!p->dsize || !IsTCP(p) || !p->data)
         return;
-    }
 
     PREPROC_PROFILE_START(hiPerfStats);
 
@@ -191,6 +197,20 @@ static void HttpInspectDropStats(int exiting)
 #ifdef WIN32
     LogMessage("    POST methods:                   %-10I64u\n", hi_stats.post);
     LogMessage("    GET methods:                    %-10I64u\n", hi_stats.get);
+    LogMessage("    Headers extracted:              %-10I64u\n", hi_stats.headers);
+#ifdef DEBUG
+    if (hi_stats.headers == 0)
+    LogMessage("    Avg Header length:              %-10s\n", "n/a");
+    else
+    LogMessage("    Avg Header length:              %-10.2f\n", (double)hi_stats.header_len / (double)hi_stats.headers);
+#endif
+    LogMessage("    Header Cookies extracted:       %-10I64u\n", hi_stats.cookies);
+#ifdef DEBUG
+    if (hi_stats.cookies == 0)
+    LogMessage("    Avg Cookie length:              %-10s\n", "n/a");
+    else
+    LogMessage("    Avg Cookie length:              %-10.2f\n", (double)hi_stats.cookie_len / (double)hi_stats.cookies);
+#endif
     LogMessage("    Post parameters extracted:      %-10I64u\n", hi_stats.post_params);
     LogMessage("    Unicode:                        %-10I64u\n", hi_stats.unicode);
     LogMessage("    Double unicode:                 %-10I64u\n", hi_stats.double_unicode);
@@ -203,6 +223,20 @@ static void HttpInspectDropStats(int exiting)
 #else
     LogMessage("    POST methods:                   %-10llu\n", hi_stats.post);
     LogMessage("    GET methods:                    %-10llu\n", hi_stats.get);
+    LogMessage("    Headers extracted:              %-10llu\n", hi_stats.headers);
+#ifdef DEBUG
+    if (hi_stats.headers == 0)
+    LogMessage("    Avg Header length:              %-10s\n", "n/a");
+    else
+    LogMessage("    Avg Header length:              %-10.2f\n", (double)hi_stats.header_len / (double)hi_stats.headers);
+#endif
+    LogMessage("    Header Cookies extracted:       %-10llu\n", hi_stats.cookies);
+#ifdef DEBUG
+    if (hi_stats.cookies == 0)
+    LogMessage("    Avg Cookie length:              %-10s\n", "n/a");
+    else
+    LogMessage("    Avg Cookie length:              %-10.2f\n", (double)hi_stats.cookie_len / (double)hi_stats.cookies);
+#endif
     LogMessage("    Post parameters extracted:      %-10llu\n", hi_stats.post_params);
     LogMessage("    Unicode:                        %-10llu\n", hi_stats.unicode);
     LogMessage("    Double unicode:                 %-10llu\n", hi_stats.double_unicode);
@@ -218,8 +252,9 @@ static void HttpInspectDropStats(int exiting)
 static void HttpInspectCleanExit(int signal, void *data)
 {
     /* Cleanup */
-    KMapDelete(GlobalConf.server_lookup);
+    hi_ui_server_lookup_destroy(GlobalConf.server_lookup);
 
+    xfree(GlobalConf.iis_unicode_map_filename);
     xfree(GlobalConf.iis_unicode_map);
 }
 
@@ -258,7 +293,7 @@ static void HttpInspectResetStats(int signal, void *data)
 */
 static void HttpInspectInit(char *args)
 {
-    char ErrorString[ERRSTRLEN];
+    char ErrorString[ERRSTRLEN] = "";
     int  iErrStrLen = ERRSTRLEN;
     int  iRet;
     static int siFirstConfig = 1;
@@ -321,7 +356,7 @@ static void HttpInspectInit(char *args)
             /*
             **  Non-fatal Error
             */
-            if(ErrorString)
+            if(*ErrorString)
             {
                 ErrorMessage("%s(%d) => %s\n", 
                         file_name, file_line, ErrorString);
@@ -332,7 +367,7 @@ static void HttpInspectInit(char *args)
             /*
             **  Fatal Error, log error and exit.
             */
-            if(ErrorString)
+            if(*ErrorString)
             {
                 FatalError("%s(%d) => %s\n", 
                         file_name, file_line, ErrorString);
@@ -364,7 +399,7 @@ static void HttpInspectInit(char *args)
         /*
         **  Add HttpInspect into the preprocessor list
         */
-        AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT);
+        AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT, PROTO_BIT__TCP);
         RegisterPreprocStats("http_inspect", HttpInspectDropStats);
 
         /*
@@ -379,6 +414,11 @@ static void HttpInspectInit(char *args)
 
 #ifdef PERF_PROFILING
         RegisterPreprocessorProfile("httpinspect", &hiPerfStats, 0, &totalPerfStats);
+#endif
+
+#ifdef TARGET_BASED
+        /* Find and cache protocol ID for packet comparison */
+        GlobalConf.app_protocol_id = AddProtocolReference("http");
 #endif
     }
 
@@ -412,3 +452,54 @@ void SetupHttpInspect()
     DEBUG_WRAP(DebugMessage(DEBUG_HTTPINSPECT, "Preprocessor: HttpInspect is "
                 "setup . . .\n"););
 }
+
+/** Add ports configured for http preprocessor to stream5 port filtering so that if 
+ * any_any rules are being ignored them the the packet still reaches http-inspect.
+ *
+ * For ports in global_server configuration, server_lookup and server_lookupIpv6,
+ * add the port to stream5 port filter list.
+ */
+void HttpInspectAddPortsOfInterest()
+{
+    addServerConfPortsToStream5((void*)&GlobalConf.global_server);
+    hi_ui_server_iterate( GlobalConf.server_lookup, addServerConfPortsToStream5);
+    hi_ui_server_iterate( GlobalConf.server_lookupIpv6, addServerConfPortsToStream5);
+}
+
+/**Add server ports from http_inspect preprocessor from snort.comf file to pass through 
+ * port filtering.
+ */
+void addServerConfPortsToStream5(
+        void *pData
+        )
+{
+    unsigned int i;
+
+    HTTPINSPECT_CONF *pConf = (HTTPINSPECT_CONF *)pData;
+    if (pConf)
+    {
+        for (i = 0; i < MAXPORTS; i++)
+        {
+            if (pConf->ports[i])
+            {
+                //Add port the port
+                stream_api->set_port_filter_status(IPPROTO_TCP, (u_int16_t)i, PORT_MONITOR_SESSION);
+            }
+        }
+    }
+}
+
+/**
+ * @param service ordinal number of service.
+ */
+void HttpInspectAddServicesOfInterest()
+{
+#ifdef TARGET_BASED
+    /* Add ordinal number for the service into stream5 */
+    if (GlobalConf.app_protocol_id != SFTARGET_UNKNOWN_PROTOCOL)
+    {
+        stream_api->set_service_filter_status(GlobalConf.app_protocol_id, PORT_MONITOR_SESSION);
+    }
+#endif
+}
+

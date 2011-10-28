@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -53,14 +53,23 @@ typedef unsigned int  uintptr_t;
 #ifndef UINT64
 #ifdef ULONGIS64BIT
 #define UINT64 unsigned long
+#define INT64  signed long
 #else
 #define UINT64 unsigned long long
+#define INT64  signed long long
 #endif  /* ULONGIS64BIT */
 #endif  /* UINT64 */
 
+#ifndef UINT8_MAX
+#define UINT8_MAX 0xff
+#endif
 
 #ifndef USHRT_MAX
 #define USHRT_MAX  0xffff
+#endif
+
+#ifndef UINT16_MAX
+#define UINT16_MAX 0xffff
 #endif
 
 #ifndef UINT32_MAX

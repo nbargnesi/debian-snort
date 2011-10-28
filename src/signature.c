@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Author(s):   Andrew R. Baker <andrewb@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -150,6 +150,23 @@ ReferenceSystemNode *ReferenceSystemAdd(char *name, char *url)
     return newNode;
 }
 
+void DeleteReferenceSystems()
+{
+    ReferenceSystemNode *current, *tmpReference;
+
+    current = referenceSystems;
+    while (current)
+    {
+        tmpReference = current->next;
+        if (current->url)
+            free(current->url);
+        if (current->name)
+            free(current->name);
+        free(current);
+        current = tmpReference;
+    }
+    referenceSystems = NULL;
+}
 ReferenceSystemNode *ReferenceSystemLookup(char *name)
 {   
     ReferenceSystemNode *refSysNode = referenceSystems;
@@ -617,6 +634,24 @@ void ParseClassificationConfig(char *args)
     return;
 }
 
+void DeleteClassifications()
+{
+    ClassType *current, *tmpClass;
+
+    current = classTypes;
+    while (current)
+    {
+        tmpClass = current->next;
+        if (current->type)
+            free(current->type);
+        if (current->name)
+            free(current->name);
+        free(current);
+        current = tmpClass;
+    }
+    classTypes = NULL;
+}
+
 int AddClassificationConfig(ClassType *newNode)
 {
     int max_id = 0;
@@ -674,7 +709,7 @@ int soid_otn_lookup_init()
 {
     if (!soid_sg_otn_map)
     {
-        soid_sg_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,free);
+        soid_sg_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,NULL/* free*/);
         if (!soid_sg_otn_map)
             return -1;
     }
@@ -704,6 +739,15 @@ void soid_otn_lookup_add( OptTreeNode * otn_tmp )
     }
 }
 
+void soid_otn_lookup_free()
+{
+    if (soid_sg_otn_map)
+    {
+        sfghash_delete(soid_sg_otn_map);
+        soid_sg_otn_map = NULL;
+    }
+}
+
 void otn_remove(OptTreeNode *otn) 
 {
     sg_otn_key_t key;
@@ -714,15 +758,73 @@ void otn_remove(OptTreeNode *otn)
     key.generator = otn->sigInfo.generator; 
     key.id = otn->sigInfo.id;
 
-    sfghash_remove(sg_rule_otn_map, &key);
     sfghash_remove(soid_sg_otn_map, &(otn->sigInfo.otnKey));
+    sfghash_remove(sg_rule_otn_map, &key);
+}
+
+void otn_free(void *data)
+{
+    OptTreeNode *otn = (OptTreeNode *)data;
+    OptFpList *opt_func, *opt_func_tmp;
+    RspFpList *rsp_func, *rsp_func_tmp;
+    ReferenceNode *ref_node, *ref_node_tmp;
+
+    if (!otn)
+        return;
+
+    opt_func = otn->opt_func;
+    while (opt_func)
+    {
+        opt_func_tmp = opt_func;
+        opt_func = opt_func->next;
+        free(opt_func_tmp);
+    }
+    rsp_func = otn->rsp_func;
+    while (rsp_func)
+    {
+        rsp_func_tmp = rsp_func;
+        rsp_func = rsp_func->next;
+        free(rsp_func_tmp);
+    }
+
+    if (otn->sigInfo.message)
+    {
+        if (!otn->generated)
+            free(otn->sigInfo.message);
+    }
+#ifdef TARGET_BASED 
+#ifdef PORTLISTS
+    if (otn->sigInfo.service)
+        free(otn->sigInfo.service);
+#endif
+#endif
+
+    ref_node = otn->sigInfo.refs;
+    while (ref_node)
+    {
+        ref_node_tmp = ref_node;
+        ref_node = ref_node->next;
+        free(ref_node_tmp->id);
+        free(ref_node_tmp);
+    }
+
+    if (otn->tag)
+    {
+        free(otn->tag);
+        otn->tag = NULL;
+    }
+
+    if (otn->generated)
+        free(otn->rtn);
+
+    free(otn);
 }
 
 int otn_lookup_init()
 {
     if (!sg_rule_otn_map)
     {
-        sg_rule_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,NULL);
+        sg_rule_otn_map = sfghash_new(10000,sizeof(sg_otn_key_t),0,otn_free);
         if (!sg_rule_otn_map)
             return -1;
     }
@@ -730,12 +832,44 @@ int otn_lookup_init()
 }
 void otn_lookup_add( OptTreeNode * otn )
 {
+    int status;
     sg_otn_key_t key;
     
     key.generator = otn->sigInfo.generator;
     key.id = otn->sigInfo.id;
 
-    sfghash_add(sg_rule_otn_map, &key, otn);
+    status = sfghash_add(sg_rule_otn_map, &key, otn);
+    switch (status)
+    {
+        case SFGHASH_OK:
+            /* otn was inserted successfully */
+            break;
+
+        case SFGHASH_INTABLE:
+            /* Assume it's a rule without an sid */
+            if (key.id == 0)
+            {
+                FatalError("%s(%d): Duplicate rule with same gid (%u) and no sid.  To "
+                           "avoid this, make sure all of your rules define an "
+                           "sid.\n", file_name, file_line, key.generator);
+            }
+            else
+            {
+                FatalError("%s(%d): Duplicate rule with same gid (%u) and sid (%u)\n",
+                           file_name, file_line, key.generator, key.id);
+            }
+
+            break;
+
+        case SFGHASH_NOMEM:
+            FatalError("Failed to allocate memory for rule.\n");
+            break;
+
+        default:
+            FatalError("%s(%d): otn_lookup_add() - unexpected return value "
+                       "from sfghash_add().\n", __FILE__, __LINE__);
+            break;
+    }
 }
 
 OptTreeNode * otn_lookup( u_int32_t gid, u_int32_t sid )
@@ -747,6 +881,15 @@ OptTreeNode * otn_lookup( u_int32_t gid, u_int32_t sid )
     key.id       =sid;
     otn = (OptTreeNode*) sfghash_find(sg_rule_otn_map,&key);
     return otn;
+}
+
+void otn_lookup_free()
+{
+    if (sg_rule_otn_map)
+    {
+        sfghash_delete(sg_rule_otn_map);
+        sg_rule_otn_map = NULL;
+    }
 }
         
 /***************** End of Class/Priority Implementation ***********************/

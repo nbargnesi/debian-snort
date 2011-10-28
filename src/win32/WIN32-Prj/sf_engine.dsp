@@ -45,7 +45,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_ENGINE_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /I "..\..\\" /D "NDEBUG" /D "SF_SNORT_ENGINE_DLL" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /D "TARGET_BASED" /FR /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\dynamic-plugins" /I "..\..\dynamic-plugins\sf_engine" /I "..\Win32-Includes" /D "NDEBUG" /D "SF_SNORT_ENGINE_DLL" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -71,7 +71,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SF_ENGINE_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /D "_DEBUG" /D "SF_SNORT_ENGINE_DLL" /D "MODULUS_HASH" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /D "TARGET_BASED" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\dynamic-plugins" /I "..\..\dynamic-plugins\sf_engine" /I "..\Win32-Includes" /D "SF_SNORT_ENGINE_DLL" /D "_DEBUG" /D "DEBUG" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /FR /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -93,12 +93,12 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "sf_engine___Win32_IPv6_Debug"
-# PROP Intermediate_Dir "sf_engine___Win32_IPv6_Debug"
+# PROP Output_Dir "SF_Engine_IPv6_Debug"
+# PROP Intermediate_Dir "SF_Engine_IPv6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "SF_SNORT_ENGINE_DLL" /D "MODULUS_HASH" /FR /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /I "..\..\\" /D "SF_SNORT_ENGINE_DLL" /D "MODULUS_HASH" /D "_DEBUG" /D "SUP_IP6" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\dynamic-plugins" /I "..\..\dynamic-plugins\sf_engine" /I "..\Win32-Includes" /D "SUP_IP6" /D "SF_SNORT_ENGINE_DLL" /D "_DEBUG" /D "DEBUG" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /FR /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -120,12 +120,12 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "sf_engine___Win32_IPv6_Release"
-# PROP Intermediate_Dir "sf_engine___Win32_IPv6_Release"
+# PROP Output_Dir "SF_Engine_IPv6_Release"
+# PROP Intermediate_Dir "SF_Engine_IPv6_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "SF_SNORT_ENGINE_DLL" /FR /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes" /I "..\..\dynamic-plugins" /I "..\..\sfutil" /I "..\..\\" /D "SF_SNORT_ENGINE_DLL" /D "NDEBUG" /D "SUP_IP6" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "HAVE_CONFIG_H" /D "GRE" /FR /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\dynamic-plugins" /I "..\..\dynamic-plugins\sf_engine" /I "..\Win32-Includes" /D "NDEBUG" /D "SUP_IP6" /D "SF_SNORT_ENGINE_DLL" /D "DYNAMIC_PLUGIN" /D "PERF_PROFILING" /D "_WINDOWS" /D "_USRDLL" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -174,21 +174,21 @@ SOURCE="..\..\dynamic-plugins\sf_engine\sf_snort_detection_engine.c"
 
 !IF  "$(CFG)" == "sf_engine - Win32 Release"
 
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 Debug"
 
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Debug"
 
-# ADD BASE CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD BASE CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Release"
 
-# ADD BASE CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD BASE CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
 
 !ENDIF 
 
@@ -199,21 +199,21 @@ SOURCE="..\..\dynamic-plugins\sf_engine\sf_snort_plugin_api.c"
 
 !IF  "$(CFG)" == "sf_engine - Win32 Release"
 
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 Debug"
 
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Debug"
 
-# ADD BASE CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD BASE CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include"
 
 !ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Release"
 
-# ADD BASE CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
-# ADD CPP /I "..\..\.." /I "..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD BASE CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
+# ADD CPP /I "..\..\.." /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "MODULUS_HASH"
 
 !ENDIF 
 
@@ -340,63 +340,15 @@ SOURCE="..\..\dynamic-plugins\sf_engine\sf_snort_plugin_rc4.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\sfutil\sfghash.c
-
-!IF  "$(CFG)" == "sf_engine - Win32 Release"
-
-# ADD CPP /D "MODULUS_HASH"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Release"
-
-# ADD BASE CPP /D "MODULUS_HASH"
-# ADD CPP /D "MODULUS_HASH"
-
-!ENDIF 
-
+SOURCE="..\..\dynamic-plugins\sf_engine\sfghash.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\sfutil\sfhashfcn.c
-
-!IF  "$(CFG)" == "sf_engine - Win32 Release"
-
-# ADD CPP /D "MODULUS_HASH"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Release"
-
-# ADD BASE CPP /D "MODULUS_HASH"
-# ADD CPP /D "MODULUS_HASH"
-
-!ENDIF 
-
+SOURCE="..\..\dynamic-plugins\sf_engine\sfhashfcn.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\sfutil\sfprimetable.c
-
-!IF  "$(CFG)" == "sf_engine - Win32 Release"
-
-# ADD CPP /D "MODULUS_HASH"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Debug"
-
-!ELSEIF  "$(CFG)" == "sf_engine - Win32 IPv6 Release"
-
-# ADD BASE CPP /D "MODULUS_HASH"
-# ADD CPP /D "MODULUS_HASH"
-
-!ENDIF 
-
+SOURCE="..\..\dynamic-plugins\sf_engine\sfprimetable.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -408,11 +360,35 @@ SOURCE="..\..\dynamic-plugins\sf_engine\bmh.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\..\dynamic-plugins\sf_engine\debug.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\dynamic-plugins\sf_engine\ipv6_port.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\dynamic-plugins\sf_engine\sf_ip.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\..\dynamic-plugins\sf_engine\sf_snort_packet.h"
 # End Source File
 # Begin Source File
 
 SOURCE="..\..\dynamic-plugins\sf_engine\sf_snort_plugin_api.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\dynamic-plugins\sf_engine\sfghash.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\dynamic-plugins\sf_engine\sfhashfcn.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\dynamic-plugins\sf_engine\sfprimetable.h"
 # End Source File
 # End Group
 # Begin Group "Resource Files"

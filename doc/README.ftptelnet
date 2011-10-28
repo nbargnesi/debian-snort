@@ -225,6 +225,17 @@ other than state (preprocessor AND rules) will be performed on that
 data channel.  It can turned on to improve performance -- especially
 with respect to large file transfers -- by ignoring traffic.
 
+Use of "data_chan" is deprecated in favor of "ignore_data_chan".
+This option will be removed in a future release.
+
+* ignore_data_chan yes/no *
+When set to "yes", causes the FTP preprocessor to force the rest of snort
+to ignore the FTP data channel connections. NO INSPECTION other than state
+(preprocessor AND rules) will be performed on that data channel. It can
+be turned on to improve performance -- especially with respect to large
+file transfers from a trusted source -- by ignoring traffic. If your rule
+set includes virus-type rules, it is recommended that this option not be used.
+
 ** Client Configuration **
 There are two types of client configurations: default and [IP].  The
 default configuration:

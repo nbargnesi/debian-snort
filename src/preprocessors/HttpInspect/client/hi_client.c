@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -57,6 +57,7 @@
 #include "hi_util.h"
 #include "hi_util_hbm.h"
 #include "hi_return_codes.h"
+#include "util.h"
 
 /* These numbers were chosen to avoid conflicting with 
  * the return codes in hi_return_codes.h */ 
@@ -94,6 +95,12 @@ typedef struct s_URI_PTR
     const u_char *last_dir;           /* ptr to last dir, so we catch long dirs */
     const u_char *proxy;              /* ptr to the absolute URI */
 }  URI_PTR;
+
+typedef struct s_HEADER_PTR
+{
+    URI_PTR header;
+    COOKIE_PTR cookie;
+} HEADER_PTR;
 
 /**
 **  This makes passing function arguments much more readable and easier
@@ -1257,7 +1264,7 @@ static INLINE int hi_client_extract_post(
     }
 
     result->uri = start;
- 
+
     while(hi_util_in_bounds(start, end, ptr))
     {
         if(lookup_table[*ptr] || ServerConf->whitespace[*ptr])
@@ -1273,17 +1280,23 @@ static INLINE int hi_client_extract_post(
 
             if(iRet == URI_END || iRet == HI_OUT_OF_BOUNDS)
             {
+                result->uri = start;
                 return POST_END;
             }
             else if(iRet != HI_SUCCESS)
             {
+                result->uri = start;
                 return HI_NONFATAL_ERR;
             }
         }
 
-        ptr++;       
+        /* Reset these, since we're not delimited by spaces for the version
+         * with post data */
+        result->first_sp_start = result->first_sp_end = NULL;
+        ptr++;
     }
 
+    result->uri = start;
     return POST_END;
 }
 
@@ -1312,6 +1325,14 @@ static INLINE int hi_client_extract_uri(
 
     while(hi_util_in_bounds(start, end, ptr))
     {
+        /* isascii returns non-zero if it is ascii */
+        if (isascii((int)*ptr) == 0)
+        {
+            /* Possible post data or something else strange... */
+            iRet = URI_END;
+            break;
+        }
+
         if(lookup_table[*ptr] || ServerConf->whitespace[*ptr])
         {
             if(lookup_table[*ptr])
@@ -1392,11 +1413,246 @@ static INLINE int hi_client_extract_uri(
     return iRet;
 }
 
+/*
+**  NAME
+**    hi_client_extract_header::
+*/
+/**
+**  Catch multiple requests per packet, by returning pointer to after the
+**  end of the request header if there is another request.
+**  
+**  There are 4 types of "valid" delimiters that we look for.  They are:
+**  "\r\n\r\n"
+**  "\r\n\n"
+**  "\n\r\n"
+**  "\n\n"
+**  The only patterns that we really only need to look for are:
+**  "\n\r\n"
+**  "\n\n"
+**  The reason being that these two patterns are suffixes of the other 
+**  patterns.  So once we find those, we are all good.
+**  
+**  @param Session pointer to the session
+**  @param start pointer to the start of text
+**  @param end   pointer to the end of text
+**  
+**  @return pointer
+**  
+**  @retval NULL  Did not find pipeline request
+**  @retval !NULL Found another possible request.
+*/
+static INLINE const u_char *hi_client_extract_header(
+    HI_SESSION *Session, HTTPINSPECT_CONF *ServerConf, 
+    HI_CLIENT * Client, HEADER_PTR *header_ptr,
+    const u_char *start, const u_char *end)
+{
+    int iRet = HI_SUCCESS;
+    const u_char *p;
+    const u_char *offset;
+    URI_PTR version_string;
+    COOKIE_PTR *cookie_ptr = NULL;
+    int header_count = 0;
+
+    if(!start || !end)
+        return NULL;
+
+    p = start;
+
+    /*
+    **  We say end - 6 because we need at least six bytes to verify that
+    **  there is an end to the URI and still a request afterwards.  To be
+    **  exact, we should only subtract 1, but we are not interested in a
+    **  1 byte method, uri, etc.
+    **
+    **  a.k.a there needs to be data after the initial request to inspect
+    **  to make it worth our while.
+    */ 
+    if (p > (end - 6 ))
+    {
+        header_ptr->header.uri = NULL;
+        return p;
+    }
+
+    /* This is to skip past the HTTP/1.0 (or 1.1) version string */
+    if (IsHttpVersion(&p, end))
+    {
+        memset(&version_string, 0, sizeof(URI_PTR));
+        version_string.uri = p;
+
+        while (hi_util_in_bounds(start, end, p))
+        {
+            if(lookup_table[*p] || ServerConf->whitespace[*p])
+            {
+                if(lookup_table[*p])
+                {
+                    iRet = (lookup_table[*p])(Session, start, end, &p, &version_string);
+                }
+                else
+                {
+                    iRet = NextNonWhiteSpace(Session, start, end, &p, &version_string);
+                }
+
+                if(iRet == URI_END)
+                {
+                    if (*p == '\n')
+                    {
+                        p++;
+                        if (hi_util_in_bounds(start, end, p))
+                        {
+                            version_string.uri_end = p;
+                        }
+                        else
+                        {
+                            return p;
+                        }
+                    }
+                    break;
+                }
+                else if(iRet == HI_OUT_OF_BOUNDS)
+                {
+                    return p;
+                }
+            }
+            p++;
+        }
+        if (iRet == URI_END)
+        {
+            header_ptr->header.uri = version_string.uri_end + 1;
+            offset = (u_char *)p;
+        }
+        else
+        {
+            return p;
+        }
+    }
+
+    offset = (u_char*)p;
+
+    header_ptr->header.uri = p;
+
+    while (hi_util_in_bounds(start, end, p))
+    {
+        if(*p == '\n')
+        {
+            header_count++;
+
+            if(hi_eo_generate_event(Session, Session->server_conf->max_hdr_len)
+               && ((p - offset) >= Session->server_conf->max_hdr_len))
+            {
+                hi_eo_client_event_log(Session, HI_EO_CLIENT_LONG_HDR, NULL, NULL);
+            }
+
+            if (Session->server_conf->max_headers &&
+                (header_count > Session->server_conf->max_headers))
+            {
+                hi_eo_client_event_log(Session, HI_EO_CLIENT_MAX_HEADERS, NULL, NULL);
+            }
+
+            p++;
+
+            offset = (u_char*)p;
+
+            if (!hi_util_in_bounds(start, end, p))
+            {
+                header_ptr->header.uri_end = p;
+                return p;
+            }
+
+            /* As performance ugly as this may be, need to bounds check p in each of the
+             * if blocks below to prevent read beyond end of buffer */
+            if (*p < 0x0E)
+            {
+                if(*p == '\r')
+                {
+                    p++;
+
+                    if(hi_util_in_bounds(start, end, p) && (*p == '\n'))
+                    {
+                        header_ptr->header.uri_end = p;
+                        return ++p;
+                    }
+                }
+                else if(*p == '\n')
+                {
+                    header_ptr->header.uri_end = p;
+                    return ++p;
+                }
+            }
+            else if (((p - offset) == 0) && ((*p == 'C') || (*p == 'c')))
+            {
+                /* Search for 'Cookie' at beginning, starting from current *p */
+                if (hi_util_in_bounds(start, end, p+6))
+                {
+                    if (!strncasecmp((const char *)p, "Cookie", 6))
+                    {
+                        if (header_ptr->cookie.cookie)
+                        {
+                            /* unusal, multiple cookies... alloc new cookie pointer */
+                            COOKIE_PTR *extra_cookie = calloc(1, sizeof(COOKIE_PTR));
+                            if (!extra_cookie)
+                            {
+                                /* Failure to allocate, stop where we are... */
+                                header_ptr->header.uri_end = p;
+                                return p;
+                            }
+                            cookie_ptr->next = extra_cookie;
+                            cookie_ptr = extra_cookie;
+                            /* extra_cookie->next = NULL; */ /* removed, since calloc NULLs this. */
+                        }
+                        else
+                        {
+                            cookie_ptr = &header_ptr->cookie;
+                        }
+                        cookie_ptr->cookie = p;                           
+
+                        {
+                            const u_char *crlf = (u_char *)SnortStrnStr((const char *)p, end - p, "\r\n");
+                            //const u_char *crlf = (const u_char *)strstr((const char *)p, "\r\n");
+                            /* find a \r\n (CRLF) */
+                            if (crlf) /* && hi_util_in_bounds(start, end, crlf+1)) bounds is checked in SnortStrnStr */
+                            {
+                                cookie_ptr->cookie_end = crlf + 2;
+                                p = crlf;
+                            }
+                            else
+                            {
+                                header_ptr->header.uri_end = cookie_ptr->cookie_end = end;                     
+                                return end;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        p++;
+    }
+
+    /* Never observed an end-of-field.  Maybe it's not there, but the header is long anyway: */
+    if(hi_eo_generate_event(Session, Session->server_conf->max_hdr_len)
+       && ((p - start) >= Session->server_conf->max_hdr_len))
+    {
+        hi_eo_client_event_log(Session, HI_EO_CLIENT_LONG_HDR, NULL, NULL);
+    }
+
+    header_ptr->header.uri_end = p;
+    return p;
+}
+
 #define CLR_POST(Client) \
     do { \
                 Client->request.post_raw = NULL;\
                 Client->request.post_raw_size = 0;\
                 Client->request.post_norm = NULL; \
+    } while(0);
+
+#define CLR_HEADER(Client) \
+    do { \
+                Client->request.header_raw = NULL;\
+                Client->request.header_raw_size = 0;\
+                Client->request.header_norm = NULL; \
+                Client->request.cookie.cookie = NULL;\
+                Client->request.cookie.cookie_end = NULL;\
+                Client->request.cookie.next = NULL;\
     } while(0);
 
 /*
@@ -1453,13 +1709,19 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     HTTPINSPECT_CONF *ServerConf;
     HTTPINSPECT_CONF *ClientConf;
     HI_CLIENT *Client;
+    URI_PTR method_ptr;
     URI_PTR uri_ptr;
     URI_PTR post_ptr;
+    HEADER_PTR header_ptr;
     const u_char *start;
     const u_char *end;
-    const u_char *ptr;
+    const u_char *ptr, *mthd;
+    const u_char *method_end = NULL;
+    int method_len;
     int iRet;
     int len;
+    char non_ascii_mthd = 0;
+    char sans_uri = 0;
 
     if(!Session || !data || dsize < 1)
     {
@@ -1482,6 +1744,8 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
 
     memset(&uri_ptr, 0x00, sizeof(URI_PTR));
     memset(&post_ptr, 0x00, sizeof(URI_PTR));
+    memset(&header_ptr, 0x00, sizeof(HEADER_PTR));
+    memset(&method_ptr, 0x00, sizeof(URI_PTR));
 
     /*
     **  We set the starting boundary depending on whether this request is
@@ -1529,20 +1793,48 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
         break;
     }
 
-    uri_ptr.uri = ptr;
-    uri_ptr.uri_end = end;
-
     len = end - ptr;
+
+    mthd = method_ptr.uri = ptr;
+
+    while(hi_util_in_bounds(start, end, mthd))
+    {
+        if (ServerConf->whitespace[*mthd] || (lookup_table[*mthd] == NextNonWhiteSpace))
+        {
+            method_end = mthd++;
+            break;
+        }
+
+        /* isascii returns non-zero if it is ascii */
+        if (isascii((int)*mthd) == 0)
+        {
+            /* Possible post data or something else strange... */
+            method_end = mthd++;
+            non_ascii_mthd = 1;
+            break;
+        }
+
+        mthd++;
+    }
+    if (method_end)
+    {
+        method_ptr.uri_end = method_end;
+    }
+    else
+    {
+        method_ptr.uri_end = end;
+    }
+    method_len = method_ptr.uri_end - method_ptr.uri;
 
     /* Need slightly special handling for POST requests 
      * Since we don't normalize on the request method itself,
      * just do a strcmp here and skip the characters below. */
-    if(len > 4 && !strncasecmp("POST", (const char *)ptr, 4)) 
+    if(method_len == 4 && !strncasecmp("POST", (const char *)method_ptr.uri, 4)) 
     {
         hi_stats.post++;
         Client->request.method = HI_POST_METHOD;
     }
-    else if(len > 3 && !strncasecmp("GET", (const char *)ptr, 3))
+    else if(method_len == 3 && !strncasecmp("GET", (const char *)method_ptr.uri, 3))
     {
         hi_stats.get++;
         Client->request.method = HI_GET_METHOD;
@@ -1552,10 +1844,45 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
         Client->request.method = HI_UNKNOWN_METHOD;
     }
 
-    /* This will set up the URI pointers - effectively extracting
-     * the URI. */
-    iRet = hi_client_extract_uri(
+    if (Client->request.method == HI_UNKNOWN_METHOD)
+    {
+        if (IsHttpVersion(&ptr, end))
+        {
+            sans_uri = 1;
+            iRet = URI_END;
+            method_ptr.uri = method_ptr.uri_end = NULL;
+        }
+        else if (method_len == len)
+        {
+            sans_uri = 1;
+            iRet = URI_END;
+            method_ptr.uri = method_ptr.uri_end = NULL;
+        }
+        else if (SnortStrnPbrk((const char *)method_ptr.uri, method_len, "()<>@,;:\\\"/[]?={} \t") != NULL)
+        {
+            /* Look for the seperator charactors as part of the method */
+            sans_uri = 1;
+            iRet = URI_END;
+            method_ptr.uri = method_ptr.uri_end = NULL;
+        }
+        else if (non_ascii_mthd == 1)
+        {
+            sans_uri = 1;
+            iRet = URI_END;
+            method_ptr.uri = method_ptr.uri_end = NULL;
+        }
+    }
+
+    if (!sans_uri )
+    {
+        uri_ptr.uri = ptr;
+        uri_ptr.uri_end = end;
+
+        /* This will set up the URI pointers - effectively extracting
+         * the URI. */
+        iRet = hi_client_extract_uri(
              Session, ServerConf, Client, start, end, ptr, &uri_ptr);
+    }
 
     /* Check if the URI exceeds the max header field length */
     /* Only check if we succesfully observed a GET or POST method, otherwise,
@@ -1570,9 +1897,52 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     if(iRet == URI_END && 
         (Client->request.method & (HI_POST_METHOD | HI_GET_METHOD)))
     {
+        Client->request.method_raw = method_ptr.uri;
+        Client->request.method_size = method_ptr.uri_end - method_ptr.uri;
+        ///XXX
+        ///Copy out the header into its own buffer...,
+        /// set ptr to end of header.
+        //
+        // uri_ptr.end points to end of URI & HTTP version identifier.
+        if (hi_util_in_bounds(start, end, uri_ptr.uri_end + 1))
+            ptr = hi_client_extract_header(Session, ServerConf, Client, &header_ptr, uri_ptr.uri_end+1, end);
+
+        if (header_ptr.header.uri)
+        {
+            Client->request.header_raw = header_ptr.header.uri;
+            Client->request.header_raw_size = header_ptr.header.uri_end - header_ptr.header.uri;
+            if ((int)Client->request.header_raw_size <= 0)
+            {
+                CLR_HEADER(Client);
+            }
+            else
+            {
+                hi_stats.headers++;
+                Client->request.header_norm = header_ptr.header.norm;
+                if (header_ptr.cookie.cookie)
+                {
+                    hi_stats.cookies++;
+                    Client->request.cookie.cookie = header_ptr.cookie.cookie;
+                    Client->request.cookie.cookie_end = header_ptr.cookie.cookie_end;
+                    Client->request.cookie.next = header_ptr.cookie.next;
+                }
+                else
+                {
+                    Client->request.cookie.cookie = NULL;
+                    Client->request.cookie.cookie_end = NULL;
+                    Client->request.cookie.next = NULL;
+                }
+            }
+        }
+        else
+        {
+            CLR_HEADER(Client);
+        }
+
         /* Need to skip over header and get to the body.
          * The unaptly named FindPipelineReq will do that. */
-        ptr = FindPipelineReq(Session, uri_ptr.delimiter, end); 
+        ptr = FindPipelineReq(Session, uri_ptr.delimiter, end);
+        //ptr = FindPipelineReq(Session, ptr, end);
 
         if(ptr)
         { 
@@ -1611,6 +1981,11 @@ static int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     else 
     {
         CLR_POST(Client);
+        if (method_ptr.uri)
+        {
+            Client->request.method_raw = method_ptr.uri;
+            Client->request.method_size = method_ptr.uri_end - method_ptr.uri;
+        }
         ptr = uri_ptr.delimiter;
     }
 

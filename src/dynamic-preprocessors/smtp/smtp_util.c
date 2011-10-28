@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Andy  Mullican
  *
@@ -147,7 +147,7 @@ const char * SMTP_PrintBuffer(SFSnortPacket *p)
 
     for (iorig = 0, inew = 0; iorig < len; iorig++, inew++)
     {
-        if (isprint((int)ptr[iorig]) || (ptr[iorig] == '\n'))
+        if ((isascii((int)ptr[iorig]) && isprint((int)ptr[iorig])) || (ptr[iorig] == '\n'))
         {
             smtp_print_buffer[inew] = ptr[iorig];
         }

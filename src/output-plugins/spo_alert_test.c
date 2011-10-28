@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1998-2008 Sourcefire
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -191,15 +191,10 @@ void AlertTest(Packet *p, char *msg, void *arg, Event *event)
     {
         if (IPH_IS_VALID(p))
         {
-#ifdef SUP_IP6
-            fprintf(data->file, "%s:%d-%s:%d\t",
-                    sfip_to_str(&p->ip4h.ip_src), p->sp,
-                    sfip_to_str(&p->ip4h.ip_dst), p->dp);
-#else
-            fprintf(data->file, "%s:%d-%s:%d\t",
-                    inet_ntoa(p->iph->ip_src), p->sp,
-                    inet_ntoa(p->iph->ip_dst), p->dp);
-#endif
+            fprintf(data->file, "%s:%d",
+                    inet_ntoa(GET_SRC_ADDR(p)), p->sp);
+            fprintf(data->file, "-%s:%d\t",
+                    inet_ntoa(GET_DST_ADDR(p)), p->dp);
         }
     }
 

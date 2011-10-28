@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -40,7 +41,7 @@
 #include <time.h>
 #include <errno.h>
 
-
+#include "sf_types.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "snort.h"
@@ -52,12 +53,10 @@
 /* built-in preprocessors */
 #include "preprocessors/spp_rpc_decode.h"
 #include "preprocessors/spp_bo.h"
-#include "preprocessors/spp_stream4.h"
 #include "preprocessors/spp_stream5.h"
 #include "preprocessors/spp_arpspoof.h"
 #include "preprocessors/spp_perfmonitor.h"
 #include "preprocessors/spp_httpinspect.h"
-#include "preprocessors/spp_flow.h"
 #include "preprocessors/spp_sfportscan.h"
 #include "preprocessors/spp_frag3.h"
 
@@ -129,24 +128,28 @@
 
 #include "output-plugins/spo_alert_test.h"
 
-PluginSignalFuncNode *PluginShutdownList;
-PluginSignalFuncNode *PluginCleanExitList;
-PluginSignalFuncNode *PluginRestartList;
-PluginSignalFuncNode *PluginPostConfigList;
+PluginSignalFuncNode *PluginShutdownList = NULL;
+PluginSignalFuncNode *PluginCleanExitList = NULL;
+PluginSignalFuncNode *PluginRestartList = NULL;
+PluginSignalFuncNode *PluginPostConfigList = NULL;
 
-PreprocSignalFuncNode *PreprocShutdownList;
-PreprocSignalFuncNode *PreprocCleanExitList;
-PreprocSignalFuncNode *PreprocRestartList;
-PreprocSignalFuncNode *PreprocResetList;
-PreprocSignalFuncNode *PreprocResetStatsList;
+PreprocSignalFuncNode *PreprocShutdownList = NULL;
+PreprocSignalFuncNode *PreprocCleanExitList = NULL;
+PreprocSignalFuncNode *PreprocRestartList = NULL;
+PreprocSignalFuncNode *PreprocResetList = NULL;
+PreprocSignalFuncNode *PreprocResetStatsList = NULL;
 PreprocGetReassemblyPktFuncNode *PreprocGetReassemblyPktList = NULL;
 
 extern int file_line;
 extern char *file_name;
 
+/* Mask of all preprocessor protocols in use */
+int preproc_proto_mask = 0;
+
 
 /**************************** Detection Plugin API ****************************/
-KeywordXlateList *KeywordList;
+KeywordXlateList *KeywordList = NULL;
+KeywordOverrideXlateList *KeywordOverrideList = NULL;
 
 void InitPlugIns()
 {
@@ -195,6 +198,53 @@ void InitPlugIns()
     SetupCvs();
 }
 
+void CleanupPlugInSigList(PluginSignalFuncNode *sig)
+{
+    PluginSignalFuncNode *tmpSig;
+    while (sig)
+    {
+        tmpSig = sig->next;
+        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        free(sig);
+        sig = tmpSig;
+    }
+}
+
+void CleanupPlugIns()
+{
+    KeywordXlateList *tmpIdx, *idx = KeywordList;
+    KeywordOverrideXlateList *tmpOIdx, *oidx = KeywordOverrideList;
+
+    while (idx)
+    {
+        tmpIdx = idx->next;
+        if (idx->entry.keyword)
+            free(idx->entry.keyword);
+        free(idx);
+        idx = tmpIdx;
+    }
+
+    while (oidx)
+    {
+        tmpOIdx = oidx->next;
+        if (oidx->entry.keyword)
+            free(oidx->entry.keyword);
+        free(oidx);
+        oidx = tmpOIdx;
+    }
+
+    CleanupPlugInSigList(PluginShutdownList);
+    PluginShutdownList = NULL;
+
+    CleanupPlugInSigList(PluginCleanExitList);
+    PluginCleanExitList = NULL;
+
+    CleanupPlugInSigList(PluginRestartList);
+    PluginRestartList = NULL;
+
+    CleanupPlugInSigList(PluginPostConfigList);
+    PluginPostConfigList = NULL;
+}
 
 /****************************************************************************
  * utils for translation from enum to char*
@@ -224,11 +274,11 @@ static const char* optTypeMap[OPT_TYPE_MAX] = {
  * Returns: void function
  *
  ***************************************************************************/
-void RegisterPlugin(
-    char *keyword,
-    void (*func) (char *, OptTreeNode *, int),
-    enum OptionType type
-) {
+void RegisterPlugin(char *keyword,
+                    RuleInitFunc func,
+                    RuleInitOverrideFunc overridefunc,
+                    enum OptionType type)
+{
     KeywordXlateList *idx;
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Registering keyword:func => %s/%s:%p\n",
@@ -268,8 +318,59 @@ void RegisterPlugin(
         idx->entry.func = func;
         idx->entry.type = type;
     }
+
+    if (overridefunc)
+    {
+        KeywordOverrideXlateList *oidx = KeywordOverrideList;
+        if (oidx == NULL)
+        {
+            KeywordOverrideList = (KeywordOverrideXlateList *)SnortAlloc(sizeof(KeywordOverrideXlateList));
+
+            KeywordOverrideList->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
+            SnortStrncpy(KeywordOverrideList->entry.keyword, keyword, strlen(keyword) + 1);
+
+            KeywordOverrideList->entry.func = overridefunc;
+            KeywordOverrideList->entry.type = type;
+        }
+        else
+        {
+            /* go to the end of the list */
+            while(oidx->next != NULL)
+            {
+                if(!strcasecmp(oidx->entry.keyword, keyword))
+                {
+                    FatalError("RegisterPlugin: Duplicate detection plugin keyword:"
+                            " (%s) (%s)!\n", oidx->entry.keyword, keyword);
+                }
+                oidx = oidx->next;
+            }
+    
+            oidx->next = (KeywordOverrideXlateList *)SnortAlloc(sizeof(KeywordOverrideXlateList));
+            oidx = oidx->next;
+    
+            oidx->entry.keyword = (char *)SnortAlloc((strlen(keyword) + 1) * sizeof(char));
+            SnortStrncpy(oidx->entry.keyword, keyword, strlen(keyword) + 1);
+         
+            oidx->entry.func = overridefunc;
+        }
+    }
 }
 
+void RegisterOverrideKeyword(char *keyword, char *option, RuleOverrideFunc func)
+{
+    KeywordOverrideXlateList *idx = KeywordOverrideList;
+
+    while (idx)
+    {
+        if (strcasecmp(idx->entry.keyword, keyword) == 0)
+        {
+            idx->entry.func(keyword, option, func);
+            break;
+        }
+
+        idx = idx->next;
+    }
+}
 
 /****************************************************************************
  *
@@ -291,15 +392,15 @@ void DumpPlugIns()
 
     idx = KeywordList;
 
-    printf("-------------------------------------------------\n");
-    printf(" Keyword     |      Plugin Registered @\n");
-    printf("-------------------------------------------------\n");
+    LogMessage("-------------------------------------------------\n");
+    LogMessage(" Keyword     |      Plugin Registered @\n");
+    LogMessage("-------------------------------------------------\n");
     while(idx != NULL)
     {
-        printf("%-13s:      %p\n", idx->entry.keyword, idx->entry.func);
+        LogMessage("%-13s:      %p\n", idx->entry.keyword, idx->entry.func);
         idx = idx->next;
     }
-    printf("-------------------------------------------------\n\n");
+    LogMessage("-------------------------------------------------\n\n");
 }
 
 
@@ -315,8 +416,9 @@ void DumpPlugIns()
  * Returns: void function
  *
  ***************************************************************************/
-OptFpList *AddOptFuncToList(int (*func) (Packet *, struct _OptTreeNode *, 
-            struct _OptFpList *), OptTreeNode * otn)
+OptFpList *AddOptFuncToList(
+            int (*func) (void *option_data, Packet *p), 
+            OptTreeNode * otn)
 {
     OptFpList *idx;     /* index pointer */
 
@@ -439,6 +541,8 @@ PreprocessKeywordList *PreprocessKeywords = NULL;
 PreprocessStatsList *PreprocessStats = NULL;
 PreprocessFuncNode *PreprocessList = NULL;
 PreprocessCheckConfigNode *PreprocessConfigCheckList = NULL;
+static SFGHASH *preprocIdTable = NULL;
+unsigned int num_preprocs = 0;
 
 void InitPreprocessors()
 {
@@ -448,15 +552,97 @@ void InitPreprocessors()
     }
     SetupRpcDecode();
     SetupBo();
-//    SetupTelNeg();
-    SetupStream4();
     SetupARPspoof();
     SetupHttpInspect();
     SetupPerfMonitor();
-    SetupFlow();
     SetupPsng();
     SetupFrag3();
     SetupStream5();
+}
+
+void CleanupPreprocessorSigList(PreprocSignalFuncNode *sig)
+{
+    PreprocSignalFuncNode *tmpSig;
+    while (sig)
+    {
+        tmpSig = sig->next;
+        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        free(sig);
+        sig = tmpSig;
+    }
+}
+
+void CleanupPreprocessors()
+{
+    PreprocessKeywordList *tmpIdx, *idx = PreprocessKeywords;
+    PreprocessCheckConfigNode *tmpConf, *conf = PreprocessConfigCheckList;
+    PreprocessStatsList *tmpStats, *stats = PreprocessStats;
+    PreprocessFuncNode *tmpFunc, *func = PreprocessList;
+    PreprocGetReassemblyPktFuncNode *tmpReass, *reass = PreprocGetReassemblyPktList;
+
+    while (idx)
+    {
+        tmpIdx = idx->next;
+        if (idx->entry.keyword)
+            free(idx->entry.keyword);
+        free(idx);
+        idx = tmpIdx;
+    }
+    PreprocessKeywords = NULL;
+
+    while (conf)
+    {
+        tmpConf = conf->next;
+        free(conf);
+        conf = tmpConf;
+    }
+    PreprocessConfigCheckList = NULL;
+
+    while (stats)
+    {
+        tmpStats = stats->next;
+        if (stats->entry.keyword)
+            free(stats->entry.keyword);
+        free(stats);
+        stats = tmpStats;
+    }
+    PreprocessStats = NULL;
+
+    while (func)
+    {
+        tmpFunc = func->next;
+        if (func->context)
+            free(func->context);
+        free(func);
+        func = tmpFunc;
+    }
+    PreprocessList = NULL;
+
+    CleanupPreprocessorSigList(PreprocShutdownList);
+    PreprocShutdownList = NULL;
+
+    CleanupPreprocessorSigList(PreprocCleanExitList);
+    PreprocCleanExitList = NULL;
+
+    CleanupPreprocessorSigList(PreprocRestartList);
+    PreprocRestartList = NULL;
+
+    CleanupPreprocessorSigList(PreprocResetList);
+    PreprocResetList = NULL;
+
+    CleanupPreprocessorSigList(PreprocResetStatsList);
+    PreprocResetStatsList = NULL;
+
+    while (reass)
+    {
+        tmpReass = reass->next;
+        free(reass);
+        reass = tmpReass;
+    }
+    PreprocGetReassemblyPktList = NULL;
+
+    if (preprocIdTable)
+        sfghash_delete(preprocIdTable);
 }
 
 void CheckPreprocessorsConfig()
@@ -671,19 +857,17 @@ void DumpPreprocessors()
         return;
     idx = PreprocessKeywords;
 
-    printf("-------------------------------------------------\n");
-    printf(" Keyword     |       Preprocessor @ \n");
-    printf("-------------------------------------------------\n");
+    LogMessage("-------------------------------------------------\n");
+    LogMessage(" Keyword     |       Preprocessor @ \n");
+    LogMessage("-------------------------------------------------\n");
     while(idx != NULL)
     {
-        printf("%-13s:       %p\n", idx->entry.keyword, idx->entry.func);
+        LogMessage("%-13s:       %p\n", idx->entry.keyword, idx->entry.func);
         idx = idx->next;
     }
-    printf("-------------------------------------------------\n\n");
+    LogMessage("-------------------------------------------------\n\n");
 }
 
-static SFGHASH *preprocIdTable = NULL;
-unsigned int num_preprocs = 0;
 int IsPreprocBitSet(Packet *p, unsigned int preproc_bit)
 {
 #if 0
@@ -736,9 +920,21 @@ int SetPreprocGetReassemblyPktBit(Packet *p, unsigned int preproc_id)
     return 0;
 }
 
+int IsPreprocEnabled(unsigned int preproc_id)
+{
+    PreprocessFuncNode *idx;
+
+    for (idx = PreprocessList; idx != NULL; idx = idx->next)
+    {
+        if ((int)idx->preproc_id == preproc_id)
+            return 1;
+    }
+
+    return 0;
+}
+
 PreprocessFuncNode *AddFuncToPreprocList(void (*func) (Packet *, void *),
-        unsigned short priority,
-        unsigned int preproc_id)
+        unsigned short priority, unsigned int preproc_id, uint32_t proto_mask)
 {
     PreprocessFuncNode *idx;
     PreprocessFuncNode *tmpNext;
@@ -749,6 +945,8 @@ PreprocessFuncNode *AddFuncToPreprocList(void (*func) (Packet *, void *),
          preproc_id, num_preprocs, priority););
     idx = PreprocessList;
 
+    assert(func != NULL);
+
     if(idx == NULL)
     {
         PreprocessList = (PreprocessFuncNode *)SnortAlloc(sizeof(PreprocessFuncNode));
@@ -757,6 +955,7 @@ PreprocessFuncNode *AddFuncToPreprocList(void (*func) (Packet *, void *),
         PreprocessList->priority = priority;
         PreprocessList->preproc_id = preproc_id;
         PreprocessList->preproc_bit = num_preprocs++;
+        PreprocessList->proto_mask = proto_mask;
 
         idx = PreprocessList;
     }
@@ -794,7 +993,10 @@ PreprocessFuncNode *AddFuncToPreprocList(void (*func) (Packet *, void *),
         idx->priority = priority;
         idx->preproc_id = preproc_id;
         idx->preproc_bit = num_preprocs++;
+        idx->proto_mask = proto_mask;
     }
+
+    preproc_proto_mask |= proto_mask;
 
     return idx;
 }
@@ -963,13 +1165,13 @@ PreprocSignalFuncNode *AddFuncToPreprocSignalList(void (*func) (int, void *), vo
 /************************ End Preprocessor Plugin API  ************************/
 
 /***************************** Output Plugin API  *****************************/
-OutputKeywordList *OutputKeywords;
-OutputFuncNode *AlertList;
-OutputFuncNode *LogList;
+OutputKeywordList *OutputKeywords = NULL;
+OutputFuncNode *AlertList = NULL;
+OutputFuncNode *LogList = NULL;
 OutputFuncNode *AppendOutputFuncList(void (*) (Packet *,char *,void *,Event*),
                 void *, OutputFuncNode *);
 
-void InitOutputPlugins()
+void InitOutputPlugins(void)
 {
     if(!pv.quiet_flag)
     {
@@ -1004,6 +1206,37 @@ void InitOutputPlugins()
 #endif
 
     AlertTestSetup();
+}
+
+void CleanupOutputPlugins(void)
+{
+    OutputKeywordList *tmpIdx, *idx = OutputKeywords;
+    OutputFuncNode *tmpAlert, *alert_node = AlertList;
+    OutputFuncNode *tmpLog, *log_node = LogList;
+    while (idx)
+    {
+        tmpIdx = idx->next;
+        if (idx->entry.keyword)
+            free(idx->entry.keyword);
+        free(idx);
+        idx = tmpIdx;
+    }
+
+    while (alert_node)
+    {
+        tmpAlert = alert_node->next;
+        free(alert_node);
+        alert_node = tmpAlert;
+    }
+    AlertList = NULL;
+
+    while (log_node)
+    {
+        tmpLog = log_node->next;
+        free(log_node);
+        log_node = tmpLog;
+    }
+    LogList = NULL;
 }
 
 int ActivateOutputPlugin(char *plugin_name, char *plugin_options)
@@ -1140,7 +1373,7 @@ void RegisterOutputPlugin(char *keyword, int type, OutputInitFunc func)
  * Returns: void function
  *
  ***************************************************************************/
-void DumpOutputPlugins()
+void DumpOutputPlugins(void)
 {
     OutputKeywordList *idx;
 
@@ -1149,15 +1382,15 @@ void DumpOutputPlugins()
 
     idx = OutputKeywords;
 
-    printf("-------------------------------------------------\n");
-    printf(" Keyword     |          Output @ \n");
-    printf("-------------------------------------------------\n");
+    LogMessage("-------------------------------------------------\n");
+    LogMessage(" Keyword     |          Output @ \n");
+    LogMessage("-------------------------------------------------\n");
     while(idx != NULL)
     {
-        printf("%-13s:       %p\n", idx->entry.keyword, idx->entry.func);
+        LogMessage("%-13s:       %p\n", idx->entry.keyword, idx->entry.func);
         idx = idx->next;
     }
-    printf("-------------------------------------------------\n\n");
+    LogMessage("-------------------------------------------------\n\n");
 }
 
 extern ListHead *head_tmp;
@@ -1271,8 +1504,6 @@ void SetOutputList(void (*func) (Packet *, char *, void *, Event *),
 
     return;
 }
-
-
 
 /*************************** End Output Plugin API  ***************************/
 
@@ -1583,7 +1814,7 @@ int GetLocalTimezone()
     time(&ut);
     ltm = localtime(&ut);
 
-#if defined(WIN32) || defined(SOLARIS) || defined(AIX)
+#if defined(WIN32) || defined(SOLARIS) || defined(AIX) || defined(HPUX)
     /* localtime() sets the global timezone variable,
        which is defined in <time.h> */
     seconds_away_from_utc = timezone;
@@ -1733,7 +1964,7 @@ char * base64(const u_char * xdata, int length)
  * Function: ascii(u_char *xdata, int length)
  *
  * Purpose: This function takes takes a buffer "xdata" and its length then
- *          returns a string of only the printible ASCII characters.
+ *          returns a string of only the printable ASCII characters.
  *
  * Arguments: xdata is the buffer, length is the length of the buffer in
  *            bytes

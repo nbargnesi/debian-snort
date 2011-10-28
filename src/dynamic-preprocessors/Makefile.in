@@ -56,7 +56,7 @@ RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl
+DIST_SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl dcerpc2
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -205,14 +205,19 @@ BUILT_SOURCES = \
 	include/pcap_pkthdr32.h \
 	include/stream_api.h \
 	include/str_search.h \
-	include/sf_types.h
+	include/sf_types.h \
+	include/sfrt.h \
+	include/sfrt.c \
+	include/sfrt_dir.h \
+	include/sfrt_dir.c \
+	include/sfrt_trie.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
 	    -e "s/->iph->ip_dst/->ip4_header->destination/" \
 	    -e "s/->iph->/->ip4_header->/" \
 	    -e "s/->iph$$/->ip4_header/" \
-	    -e "s/orig_iph/orig_ip4_header/" \
+	    -e "s/orig_iph/orig_ipv4h/" \
 	    -e "s/ip_verhl/version_headerlength/" \
 	    -e "s/ip_tos/type_service/" \
 	    -e "s/ip_len/data_length/" \
@@ -297,7 +302,7 @@ copy_headers = \
 		cp $$src_header $$dst_header; \
 	fi
 
-@HAVE_DYNAMIC_PLUGINS_TRUE@SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl
+@HAVE_DYNAMIC_PLUGINS_TRUE@SUBDIRS = libs ftptelnet smtp ssh dcerpc dns ssl dcerpc2
 EXTRA_DIST = \
 dynamic_preprocessors.dsp \
 sf_dynamic_initialize/sf_dynamic_initialize.dsp
@@ -711,6 +716,21 @@ include/sf_ipvar.h: $(srcdir)/../sfutil/sf_ipvar.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/sf_vartable.h: $(srcdir)/../sfutil/sf_vartable.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt.h: $(srcdir)/../sfutil/sfrt.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt.c: $(srcdir)/../sfutil/sfrt.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_dir.h: $(srcdir)/../sfutil/sfrt_dir.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_dir.c: $(srcdir)/../sfutil/sfrt_dir.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_trie.h: $(srcdir)/../sfutil/sfrt_trie.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins/sf_engine/examples

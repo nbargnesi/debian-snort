@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -55,12 +55,25 @@ __inline void __cputicks_msc(UINT64 *val)
 #include <unistd.h>
 
 /* INTEL LINUX/BSD/.. */
-#if (defined(__i386) || defined(__ia64) || defined(__amd64) )
+#if (defined(__i386) || defined(__amd64) || defined(__x86_64__))
 #define get_clockticks(val) \
 { \
     u_int32_t a, d; \
     __asm__ __volatile__ ("rdtsc" : "=a" (a), "=d" (d));  \
     val = ((UINT64)a) | (((UINT64)d) << 32);  \
+}
+#else
+#if (defined(__ia64) && defined(__GNUC__) )
+#define get_clockticks(val) \
+{ \
+    __asm__ __volatile__ ("mov %0=ar.itc" : "=r"(val)); \
+}
+#else
+#if (defined(__ia64) && defined(__hpux))
+#include <machine/sys/inline.h>
+#define get_clockticks(val) \
+{ \
+    val = _Asm_mov_from_ar (_AREG_ITC); \
 }
 #else
 /* POWER PC */
@@ -98,12 +111,14 @@ __inline void __cputicks_msc(UINT64 *val)
 #define get_clockticks(val)
 #endif /* SPARC */
 #endif /* POWERPC || PPC */
-#endif /* I386 || IA64 || AMD64 */
+#endif /* IA64 && HPUX */
+#endif /* IA64 && GNUC */
+#endif /* I386 || AMD64 || X86_64 */
 #endif /* WIN32 */
 
 static INLINE double get_ticks_per_usec ()
 {
-    UINT64 start, end;
+    UINT64 start = 0, end = 0;
     get_clockticks(start);
 
 #ifdef WIN32

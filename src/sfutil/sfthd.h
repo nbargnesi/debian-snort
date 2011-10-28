@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2008 Sourcefire, Inc.
+ * Copyright (C) 2003-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -40,6 +40,8 @@
 #define THD_MAX_GENID     8129
 #define THD_GEN_ID_1_ROWS 4096
 #define THD_GEN_ID_ROWS   512
+
+#define THD_NO_THRESHOLD -1
 
 #define THD_TOO_MANY_THDOBJ -15 
 
@@ -214,6 +216,7 @@ typedef struct {
  * Prototypes 
  */
 THD_STRUCT * sfthd_new( unsigned nbytes );
+void sfthd_free( THD_STRUCT * thd );
 
 int sfthd_create_threshold( THD_STRUCT * thd,
                        unsigned     gen_id,

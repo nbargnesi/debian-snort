@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -203,11 +203,7 @@ static void AlertFast(Packet *p, char *msg, void *arg, Event *event)
             /* just print the straight IP header */
             TextLog_Puts(data->log, inet_ntoa(GET_SRC_ADDR(p)));
             TextLog_Puts(data->log, " -> ");
-#ifdef SUP_IP6
-            TextLog_Puts(data->log, sfip_ntoa(GET_DST_ADDR(p)));
-#else
             TextLog_Puts(data->log, inet_ntoa(GET_DST_ADDR(p)));
-#endif
         }
         else
         {
@@ -238,12 +234,21 @@ static void AlertFast(Packet *p, char *msg, void *arg, Event *event)
         if (pv.data_flag && (p->dsize > 0))
         {
             if (p->packet_flags &
-                (PKT_DCE_RPKT | PKT_REBUILT_STREAM | PKT_REBUILT_FRAG))
+                (PKT_DCE_RPKT | PKT_REBUILT_STREAM | PKT_REBUILT_FRAG |
+                 PKT_SMB_SEG | PKT_DCE_SEG | PKT_DCE_FRAG | PKT_SMB_TRANS))
             {
                 TextLog_NewLine(data->log);
             }
 
-            if (p->packet_flags & PKT_DCE_RPKT)
+            if (p->packet_flags & PKT_SMB_SEG)
+                TextLog_Print(data->log, "%s", "SMB desegmented packet");
+            else if (p->packet_flags & PKT_DCE_SEG)
+                TextLog_Print(data->log, "%s", "DCE/RPC desegmented packet");
+            else if (p->packet_flags & PKT_DCE_FRAG)
+                TextLog_Print(data->log, "%s", "DCE/RPC defragmented packet");
+            else if (p->packet_flags & PKT_SMB_TRANS)
+                TextLog_Print(data->log, "%s", "SMB Transact reassembled packet");
+            else if (p->packet_flags & PKT_DCE_RPKT)
                 TextLog_Print(data->log, "%s", "DCE/RPC reassembled packet");
             else if (p->packet_flags & PKT_REBUILT_STREAM)
                 TextLog_Print(data->log, "%s", "Stream reassembled packet");

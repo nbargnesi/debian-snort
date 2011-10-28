@@ -2,7 +2,7 @@
 **
 **  spp_perfmonitor.c
 **
-**  Copyright (C) 2002-2008 Sourcefire, Inc.
+**  Copyright (C) 2002-2009 Sourcefire, Inc.
 **  Marc Norton <mnorton@sourcefire.com>
 **  Dan Roelker <droelker@sourcefire.com>
 **
@@ -94,7 +94,7 @@ static void PerfMonitorInit(char *args)
     ParsePerfMonitorArgs(args);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToPreprocList(ProcessPerfMonitor, PRIORITY_SCANNER, PP_PERFMONITOR);
+    AddFuncToPreprocList(ProcessPerfMonitor, PRIORITY_SCANNER, PP_PERFMONITOR, PROTO_BIT__ALL);
 
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("perfmon", &perfmonStats, 0, &totalPerfStats);

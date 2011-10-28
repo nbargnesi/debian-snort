@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -34,6 +34,7 @@
 #endif
 #include "sf_dynamic_meta.h"
 #include "ipv6_port.h"
+#include "sf_types.h"
 
 /* specifies that a function does not return 
  * used for quieting Visual Studio warnings
@@ -59,9 +60,14 @@
 
 #define PREPROCESSOR_DATA_VERSION 4
 
+#include "sf_dynamic_common.h"
+#include "sf_dynamic_engine.h"
+#include "stream_api.h"
+#include "str_search.h"
+
 #define MINIMUM_DYNAMIC_PREPROC_ID 10000
 typedef void (*PreprocessorInitFunc)(char *);
-typedef void * (*AddPreprocFunc)(void (*func)(void *, void *), unsigned short, unsigned int);
+typedef void * (*AddPreprocFunc)(void (*func)(void *, void *), unsigned short, unsigned int, uint32_t);
 typedef void (*AddPreprocExit)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
 typedef void (*AddPreprocRestart)(void (*func) (int, void *), void *arg, unsigned short, unsigned int);
 typedef void *(*AddPreprocConfCheck)(void (*func) (void));
@@ -88,11 +94,23 @@ typedef void (*AddPreprocResetStats)(void (*func) (int, void *), void *arg, unsi
 typedef void (*AddPreprocGetReassemblyPktFunc)(void * (*func)(void), unsigned int);
 typedef int (*SetPreprocGetReassemblyPktBitFunc)(void *, unsigned int);
 typedef void (*DisablePreprocessorsFunc)(void *);
-
+#ifdef TARGET_BASED
+typedef int16_t (*FindProtocolReferenceFunc)(char *);
+typedef int16_t (*AddProtocolReferenceFunc)(char *);
+typedef int (*IsAdaptiveConfiguredFunc)(void);
+#endif
 #ifdef SUP_IP6
 typedef void (*IP6BuildFunc)(void *, const void *, int);
-typedef void (*IP6SetCallbacksFunc)(void *, int);
+#define SET_CALLBACK_IP 0
+#define SET_CALLBACK_ICMP_ORIG 1
+typedef void (*IP6SetCallbacksFunc)(void *, int, char);
 #endif
+typedef void (*AddKeywordOverrideFunc)(char *, char *, PreprocOptionInit, PreprocOptionEval, PreprocOptionCleanup, PreprocOptionHash, PreprocOptionKeyCompare);
+
+typedef int (*IsPreprocEnabledFunc)(unsigned int);
+
+typedef int (*AlertQueueLog)(void *);
+typedef void (*AlertQueueReset)(void);
 
 /* Info Data passed to dynamic preprocessor plugin must include:
  * version
@@ -103,11 +121,6 @@ typedef void (*IP6SetCallbacksFunc)(void *, int);
  * Pointer to function to regsiter preprocessor configuration keyword
  * Pointer to function to create preprocessor alert
  */
-#include "sf_dynamic_common.h"
-#include "sf_dynamic_engine.h"
-#include "stream_api.h"
-#include "str_search.h"
-
 typedef struct _DynamicPreprocessorData
 {
     int version;
@@ -173,6 +186,18 @@ typedef struct _DynamicPreprocessorData
     IP6BuildFunc ip6Build;
     IP6SetCallbacksFunc ip6SetCallbacks;
 #endif
+
+    AlertQueueLog logAlerts;
+    AlertQueueReset resetAlerts;
+
+#ifdef TARGET_BASED
+    FindProtocolReferenceFunc findProtocolReference;
+    AddProtocolReferenceFunc addProtocolReference;
+    IsAdaptiveConfiguredFunc isAdaptiveConfigured;
+#endif
+
+    AddKeywordOverrideFunc preprocOptOverrideKeyword;
+    IsPreprocEnabledFunc isPreprocEnabled;
 
 } DynamicPreprocessorData;
 

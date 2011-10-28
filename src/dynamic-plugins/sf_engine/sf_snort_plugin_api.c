@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -40,8 +40,9 @@ extern DynamicEngineData _ded;
  *  return 1 if successful
  *  return < 0 if unsuccessful
  */
-int getBuffer(SFSnortPacket *p, int flags, const u_int8_t **start, const u_int8_t **end)
+ENGINE_LINKAGE int getBuffer(void *packet, int flags, const u_int8_t **start, const u_int8_t **end)
 {
+    SFSnortPacket *p = (SFSnortPacket *)packet;
     if ((flags & CONTENT_BUF_NORMALIZED) && (p->flags & FLAG_ALT_DECODE))
     {
         *start = _ded.altBuffer;
@@ -56,8 +57,56 @@ int getBuffer(SFSnortPacket *p, int flags, const u_int8_t **start, const u_int8_
     {
         if (p->flags & FLAG_HTTP_DECODE)
         {
-            *start = _ded.uriBuffers[0]->uriBuffer;
-            *end = *start + _ded.uriBuffers[0]->uriLength;
+            *start = _ded.uriBuffers[HTTP_BUFFER_URI]->uriBuffer;
+            *end = *start + _ded.uriBuffers[HTTP_BUFFER_URI]->uriLength;
+        }
+        else
+        {
+            return CONTENT_TYPE_MISMATCH;
+        }
+    }
+    else if (flags & CONTENT_BUF_HEADER)
+    {
+        if (p->flags & FLAG_HTTP_DECODE)
+        {
+            *start = _ded.uriBuffers[HTTP_BUFFER_HEADER]->uriBuffer;
+            *end = *start + _ded.uriBuffers[HTTP_BUFFER_HEADER]->uriLength;
+        }
+        else
+        {
+            return CONTENT_TYPE_MISMATCH;
+        }
+    }
+    else if (flags & CONTENT_BUF_POST)
+    {
+        if (p->flags & FLAG_HTTP_DECODE)
+        {
+            *start = _ded.uriBuffers[HTTP_BUFFER_CLIENT_BODY]->uriBuffer;
+            *end = *start + _ded.uriBuffers[HTTP_BUFFER_CLIENT_BODY]->uriLength;
+        }
+        else
+        {
+            return CONTENT_TYPE_MISMATCH;
+        }
+    }
+    else if (flags & CONTENT_BUF_METHOD)
+    {
+        if (p->flags & FLAG_HTTP_DECODE)
+        {
+            *start = _ded.uriBuffers[HTTP_BUFFER_METHOD]->uriBuffer;
+            *end = *start + _ded.uriBuffers[HTTP_BUFFER_METHOD]->uriLength;
+        }
+        else
+        {
+            return CONTENT_TYPE_MISMATCH;
+        }
+    }
+    else if (flags & CONTENT_BUF_COOKIE)
+    {
+        if (p->flags & FLAG_HTTP_DECODE)
+        {
+            *start = _ded.uriBuffers[HTTP_BUFFER_COOKIE]->uriBuffer;
+            *end = *start + _ded.uriBuffers[HTTP_BUFFER_COOKIE]->uriLength;
         }
         else
         {
@@ -254,13 +303,19 @@ ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags)
 {
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
-    if ((sp->flags & (flowFlags->flags & 0xFF)) != flowFlags->flags)
+#define FLOW_DIRECTION_FLAGS (FLOW_ESTABLISHED | FLOW_TO_CLIENT | FLOW_TO_SERVER)
+
+    /* Check that the flags set in the flow structure are the same ones
+     * set in the packet -- covers established, and to/from client/server */
+    if ((sp->flags & (flowFlags->flags & FLOW_DIRECTION_FLAGS)) != (flowFlags->flags & FLOW_DIRECTION_FLAGS))
         return RULE_NOMATCH;
 
-    if ((flowFlags->flags & FLOW_ONLY_REASSMBLED) &&
+    /* check if this rule only applies to reassembled */
+    if ((flowFlags->flags & FLOW_ONLY_REASSEMBLED) &&
         !(sp->flags & FLAG_REBUILT_STREAM))
         return RULE_NOMATCH;
 
+    /* check if this rule only applies to non-reassembled */
     if ((flowFlags->flags & FLOW_IGNORE_REASSEMBLED) &&
         (sp->flags & FLAG_REBUILT_STREAM))
         return RULE_NOMATCH;
@@ -473,6 +528,7 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
         case OPTION_TYPE_PCRE:
             thisPCREInfo = rule->options[optIndex]->option_u.pcre;
             origFlags = thisPCREInfo->flags;
+            origOffset = thisPCREInfo->offset;
             break;
         default:
             /* Other checks should not need to check again like
@@ -598,6 +654,10 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
                      * repeats but not easy to tell with PCRE.
                      */
                     tmpCursor = thisCursor;
+
+                    /* Start Adjust is the difference between the old
+                     * starting point and the 'next' starting point. */
+                    startAdjust = tmpCursor - startCursor;
                 }
 
                 nestedRetVal = ruleMatchInternal(p, rule, optIndex+1, &thisCursor);
@@ -633,7 +693,7 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
                     case OPTION_TYPE_CONTENT:
                         if (origFlags & CONTENT_RELATIVE)
                         {
-                            if ((int32_t)(origDepth - startAdjust) < (int32_t)thisContentInfo->patternByteFormLength)
+                            if ((int32_t)(origDepth - (startAdjust - origOffset)) < (int32_t)thisContentInfo->patternByteFormLength)
                             {
                                 /* Adjusted depth would be less than the content we're searching for?
                                  * we're done. */
@@ -661,14 +721,21 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
                         }
                         break;
                     case OPTION_TYPE_PCRE:
-                        /* Doesn't matter if it was already relative,
-                         * just make it relative anyway.
-                         */
-                        thisPCREInfo->flags |= CONTENT_RELATIVE;
-                        /* For PCREs that were not already relative, we use the cursor
-                         * that was returned at the end of the pattern to start searching
-                         * again. */
-                        thisCursor = tmpCursor;
+
+                        if (origFlags & CONTENT_RELATIVE)
+                        {
+                            thisCursor = startCursor;
+
+                            thisPCREInfo->offset = origOffset + startAdjust;
+                        }
+                        else
+                        {
+                            thisPCREInfo->flags |= CONTENT_RELATIVE;
+                            /* For PCREs that were not already relative, we use the cursor
+                             * that was returned at the end of the pattern to start searching
+                             * again. */
+                            thisCursor = tmpCursor;
+                        }
                         break;
                     }
                     continue;
@@ -714,6 +781,7 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
     if (thisPCREInfo)
     {
         thisPCREInfo->flags = origFlags;
+        thisPCREInfo->offset = origOffset;
     }
 
     return retVal;

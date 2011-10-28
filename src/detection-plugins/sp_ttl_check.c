@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -34,33 +34,33 @@
 #include "parser.h"
 #include "plugin_enum.h"
 #include "util.h"
+#include "sfhashfcn.h"
 
 #include "snort.h"
 #include "profiler.h"
 #ifdef PERF_PROFILING
-PreprocStats ttlEQPerfStats;
-PreprocStats ttlGTPerfStats;
-PreprocStats ttlLTPerfStats;
-PreprocStats ttlRangePerfStats;
+PreprocStats ttlCheckPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
+
+#define TTL_CHECK_EQ 1
+#define TTL_CHECK_GT 2
+#define TTL_CHECK_LT 3
+#define TTL_CHECK_RG 4
 
 typedef struct _TtlCheckData
 {
     int ttl;
     int h_ttl;
-
+    char oper;
 } TtlCheckData;
 
 void TtlCheckInit(char *, OptTreeNode *, int);
 void ParseTtl(char *, OptTreeNode *);
-int CheckTtlEq(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckTtlGT(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckTtlLT(Packet *, struct _OptTreeNode *, OptFpList *);
-int CheckTtlRG(Packet *, struct _OptTreeNode *, OptFpList *);
-
-
+int CheckTtl(void *option_data, Packet *p);
 
 /****************************************************************************
  * 
@@ -76,16 +76,48 @@ int CheckTtlRG(Packet *, struct _OptTreeNode *, OptFpList *);
 void SetupTtlCheck(void)
 {
     /* map the keyword to an initialization/processing function */
-    RegisterPlugin("ttl", TtlCheckInit, OPT_TYPE_DETECTION);
+    RegisterPlugin("ttl", TtlCheckInit, NULL, OPT_TYPE_DETECTION);
 #ifdef PERF_PROFILING
-    RegisterPreprocessorProfile("ttl_eq", &ttlEQPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("ttl_gt", &ttlGTPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("ttl_lt", &ttlLTPerfStats, 3, &ruleOTNEvalPerfStats);
-    RegisterPreprocessorProfile("ttl_range", &ttlRangePerfStats, 3, &ruleOTNEvalPerfStats);
+    RegisterPreprocessorProfile("ttl_check", &ttlCheckPerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Plugin: TTLCheck Initialized\n"););
 }
 
+u_int32_t TtlCheckHash(void *d)
+{
+    u_int32_t a,b,c;
+    TtlCheckData *data = (TtlCheckData *)d;
+
+    a = data->ttl;
+    b = data->h_ttl;
+    c = data->oper;
+
+    mix(a,b,c);
+
+    a += RULE_OPTION_TYPE_TTL;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int TtlCheckCompare(void *l, void *r)
+{
+    TtlCheckData *left = (TtlCheckData *)l;
+    TtlCheckData *right = (TtlCheckData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+    
+    if ((left->ttl == right->ttl) &&
+        (left->h_ttl == right->h_ttl) &&
+        (left->oper == right->oper))
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 /****************************************************************************
  * 
@@ -138,7 +170,9 @@ void TtlCheckInit(char *data, OptTreeNode *otn, int protocol)
  ****************************************************************************/
 void ParseTtl(char *data, OptTreeNode *otn)
 {
+    OptFpList *fpl = NULL;
     TtlCheckData *ds_ptr;  /* data struct pointer */
+    void *ds_ptr_dup;
     char ttlrel;
 
     /* set the ds pointer to make it easier to reference the option's
@@ -173,15 +207,19 @@ void ParseTtl(char *data, OptTreeNode *otn)
         data++;
         ttlrel = '-';
     }
-    switch (ttlrel) {
+    switch (ttlrel)
+    {
         case '>':
-            AddOptFuncToList(CheckTtlGT, otn);
+            fpl = AddOptFuncToList(CheckTtl, otn);
+            ds_ptr->oper = TTL_CHECK_GT;
             break;
         case '<':     
-            AddOptFuncToList(CheckTtlLT, otn);
+            fpl = AddOptFuncToList(CheckTtl, otn);
+            ds_ptr->oper = TTL_CHECK_LT;
             break;
         case '=':
-            AddOptFuncToList(CheckTtlEq, otn);
+            fpl = AddOptFuncToList(CheckTtl, otn);
+            ds_ptr->oper = TTL_CHECK_EQ;
             break;
         case '-':
             while(isspace((int)*data)) data++;
@@ -199,190 +237,97 @@ void ParseTtl(char *data, OptTreeNode *otn)
                 ds_ptr->h_ttl = ds_ptr->ttl;
                 ds_ptr->ttl   = atoi(data);
             }
-            AddOptFuncToList(CheckTtlRG, otn);
+            fpl = AddOptFuncToList(CheckTtl, otn);
+            ds_ptr->oper = TTL_CHECK_RG;
             break;
         default:
             /* wtf? */
             /* we need at least one statement after "default" or else Visual C++ issues a warning */
             break;
     }
-             
+
+    if (add_detection_option(RULE_OPTION_TYPE_TTL, (void *)ds_ptr, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(ds_ptr);
+        ds_ptr = otn->ds_list[PLUGIN_TTL_CHECK] = ds_ptr_dup;
+    }
+
+    if (fpl)
+    {
+        fpl->type = RULE_OPTION_TYPE_TTL;
+        fpl->context = ds_ptr;
+    }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Set TTL check value to %c%d (%d)\n", ttlrel, ds_ptr->ttl, ds_ptr->h_ttl););
 
 }
 
 
-/****************************************************************************
- * 
- * Function: CheckTtlEq(char *, OptTreeNode *)
- *
- * Purpose: Test if the packet TTL equals the rule option's ttl
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns:  0 on failure, return value of next list function on success
- *
- ****************************************************************************/
-int CheckTtlEq(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
+int CheckTtl(void *option_data, Packet *p)
 {
+    TtlCheckData *ttlCheckData = (TtlCheckData *)option_data;
+    int rval = DETECTION_OPTION_NO_MATCH;
     PROFILE_VARS;
 
-    PREPROC_PROFILE_START(ttlEQPerfStats);
+    if(!IPH_IS_VALID(p))
+        return rval;
 
-    if(IPH_IS_VALID(p) &&
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl == GET_IPH_TTL(p))
+    PREPROC_PROFILE_START(ttlCheckPerfStats);
+
+    switch (ttlCheckData->oper)
     {
-        /* call the next function in the function list recursively */
-        PREPROC_PROFILE_END(ttlEQPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
+        case TTL_CHECK_EQ:
+            if (ttlCheckData->ttl == GET_IPH_TTL(p))
+                rval = DETECTION_OPTION_MATCH;
 #ifdef DEBUG
-    else
-    {
-        /* you can put debug comments here or not */
-        DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not equal to %d\n",
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl);
-    }
+            else
+            {
+                DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not equal to %d\n",
+                    ttlCheckData->ttl);
+            }
 #endif
-
-    /* if the test isn't successful, return 0 */
-    PREPROC_PROFILE_END(ttlEQPerfStats);
-    return 0;
-}
-
-
-
-/****************************************************************************
- * 
- * Function: CheckTtlGT(char *, OptTreeNode *)
- *
- * Purpose: Test the packet's payload size against the rule payload size 
- *          value.  This test determines if the packet payload size is 
- *          greater than the rule ttl.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns:  0 on failure, return value of next list function on success
- *
- ****************************************************************************/
-int CheckTtlGT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(ttlGTPerfStats);
-
-    if(IPH_IS_VALID(p) &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl < GET_IPH_TTL(p))
-    {
-        /* call the next function in the function list recursively */
-        PREPROC_PROFILE_END(ttlGTPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
+            break;
+        case TTL_CHECK_GT:
+            if (ttlCheckData->ttl < GET_IPH_TTL(p))
+                rval = DETECTION_OPTION_MATCH;
 #ifdef DEBUG
-    else
-    {
-        /* you can put debug comments here or not */
-        DebugMessage(DEBUG_PLUGIN, "CheckTtlGt: Not greater than %d\n",
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl);
-    }
+            else
+            {
+                DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not greater than %d\n",
+                    ttlCheckData->ttl);
+            }
 #endif
-
-    /* if the test isn't successful, return 0 */
-    PREPROC_PROFILE_END(ttlGTPerfStats);
-    return 0;
-}
-
-
-
-
-/****************************************************************************
- * 
- * Function: CheckTtlLT(char *, OptTreeNode *)
- *
- * Purpose: Test the packet's payload size against the rule payload size 
- *          value.  This test determines if the packet payload size is 
- *          less than the rule ttl.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns:  0 on failure, return value of next list function on success
- *
- ****************************************************************************/
-int CheckTtlLT(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(ttlLTPerfStats);
-
-    if(IPH_IS_VALID(p) &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl > GET_IPH_TTL(p))
-    {
-        /* call the next function in the function list recursively */
-        PREPROC_PROFILE_END(ttlLTPerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
+            break;
+        case TTL_CHECK_LT:
+            if (ttlCheckData->ttl > GET_IPH_TTL(p))
+                rval = DETECTION_OPTION_MATCH;
 #ifdef DEBUG
-    else
-    {
-        /* you can put debug comments here or not */
-        DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Less than %d\n",
-        ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl);
-    }
+            else
+            {
+                DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not less than %d\n",
+                    ttlCheckData->ttl);
+            }
 #endif
-
-    /* if the test isn't successful, return 0 */
-    PREPROC_PROFILE_END(ttlLTPerfStats);
-    return 0;
-}
-
-
-
-
-
-/****************************************************************************
- * 
- * Function: CheckTtlRG(char *, OptTreeNode *)
- *
- * Purpose: Test the packet's payload size against the rule payload size 
- *          value.  This test determines if the packet payload size is 
- *          within the rule ttl.
- *
- * Arguments: data => argument data
- *            otn => pointer to the current rule's OTN
- *
- * Returns:  0 on failure, return value of next list function on success
- *
- ****************************************************************************/
-int CheckTtlRG(Packet *p, struct _OptTreeNode *otn, OptFpList *fp_list)
-{
-    PROFILE_VARS;
-
-    PREPROC_PROFILE_START(ttlRangePerfStats);
-
-    if(IPH_IS_VALID(p) &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl <= GET_IPH_TTL(p) &&
-         ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl >= GET_IPH_TTL(p))
-    {
-        /* call the next function in the function list recursively */
-        PREPROC_PROFILE_END(ttlRangePerfStats);
-        return fp_list->next->OptTestFunc(p, otn, fp_list->next);
-    }
+            break;
+         case TTL_CHECK_RG:
+            if ((ttlCheckData->ttl <= GET_IPH_TTL(p)) &&
+                (ttlCheckData->h_ttl >= GET_IPH_TTL(p)))
+                rval = DETECTION_OPTION_MATCH;
 #ifdef DEBUG
-    else if (IPH_IS_VALID(p))
-    {
-        /* you can put debug comments here or not */
-        DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n", 
-                     ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->ttl,
-                     ((TtlCheckData *)otn->ds_list[PLUGIN_TTL_CHECK])->h_ttl,
+            else
+            {
+                DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n", 
+                     ttlCheckData->ttl,
+                     ttlCheckData->h_ttl,
                      GET_IPH_TTL(p));
-    }
+            }
 #endif
+            break;
+        default:
+            break;
+    }
 
     /* if the test isn't successful, return 0 */
-    PREPROC_PROFILE_END(ttlRangePerfStats);
-    return 0;
+    PREPROC_PROFILE_END(ttlCheckPerfStats);
+    return rval;
 }

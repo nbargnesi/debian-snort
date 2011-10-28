@@ -1,11 +1,12 @@
 /*
  * spp_ftptelnet.c
  *
- * Copyright (C) 2004-2008 Sourcefire, Inc.
+ * Copyright (C) 2004-2009 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
- *
+ * Kevin Liu <kliu@sourcefire.com>
+ * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
  * published by the Free Software Foundation.  You may not use, modify or
@@ -132,17 +133,13 @@ static void FTPTelnetChecks(void *pkt, void *context)
      * Check for valid packet
      * if neither header or data is good, then we just abort.
      */
-    if(!p->ip4_header || !p->tcp_header || !p->payload || !p->payload_size)
-    {
+    if (!p->payload_size || !IsTCP(p) || (p->payload == NULL))
         return;
-    }
 
     /*
      * Pass in the configuration and the packet.
      */
     SnortFTPTelnet(&FTPTelnetGlobalConf, p);
-
-    return;
 }
 
 /*
@@ -185,16 +182,10 @@ void FTPTelnetCleanExit(int sig, void *args)
  */
 static void FTPTelnetInit(char *args)
 {
-    char ErrorString[ERRSTRLEN];
+    char ErrorString[ERRSTRLEN] = "";
     int  iErrStrLen = ERRSTRLEN;
     int  iRet;
     static int siFirstConfig = 1;
-
-#ifdef SUP_IP6
-    DynamicPreprocessorFatalMessage(
-        "FTPTelnet is not currently supported when IPv6 is enabled.\n"
-    );
-#endif
 
     if(siFirstConfig)
     {
@@ -254,7 +245,7 @@ static void FTPTelnetInit(char *args)
             /*
              * Non-fatal Error
              */
-            if(ErrorString)
+            if(*ErrorString)
             {
                 _dpd.errMsg("WARNING: %s(%d) => %s\n", 
                             *(_dpd.config_file), *(_dpd.config_line), ErrorString);
@@ -265,7 +256,7 @@ static void FTPTelnetInit(char *args)
             /*
              * Fatal Error, log error and exit.
              */
-            if(ErrorString)
+            if(*ErrorString)
             {
                 DynamicPreprocessorFatalMessage("%s(%d) => %s\n", 
                                                 *(_dpd.config_file), *(_dpd.config_line), ErrorString);
@@ -297,7 +288,7 @@ static void FTPTelnetInit(char *args)
         /*
          * Add FTPTelnet into the preprocessor list
          */
-        _dpd.addPreproc(FTPTelnetChecks, PRIORITY_APPLICATION, PP_FTPTELNET);
+        _dpd.addPreproc(FTPTelnetChecks, PRIORITY_APPLICATION, PP_FTPTELNET, PROTO_BIT__TCP);
         _dpd.addPreprocExit(FTPTelnetCleanExit, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
         _dpd.addPreprocReset(FTPTelnetReset, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
         _dpd.addPreprocResetStats(FTPTelnetResetStats, NULL, PRIORITY_APPLICATION, PP_FTPTELNET);
@@ -313,6 +304,15 @@ static void FTPTelnetInit(char *args)
         _dpd.addPreprocProfileFunc("ftptelnet_ftp", (void*)&ftpPerfStats, 0, _dpd.totalPerfStats);
         _dpd.addPreprocProfileFunc("ftptelnet_telnet", (void*)&telnetPerfStats, 0, _dpd.totalPerfStats);
 #endif
+#ifdef TARGET_BASED
+        /* Find and store the application ID for FTP & Telnet */
+        FTPTelnetGlobalConf.ftp_app_id = _dpd.addProtocolReference("ftp");
+        _dpd.streamAPI->set_service_filter_status(FTPTelnetGlobalConf.ftp_app_id, PORT_MONITOR_SESSION);
+
+        FTPTelnetGlobalConf.telnet_app_id = _dpd.addProtocolReference("telnet");
+        _dpd.streamAPI->set_service_filter_status(FTPTelnetGlobalConf.telnet_app_id, PORT_MONITOR_SESSION);
+#endif
+        //Add ports to port filter
     }
     
     return;
@@ -343,8 +343,8 @@ void SetupFTPTelnet()
 
 #ifdef DYNAMIC_PLUGIN
     /* Cleanup func is NULL -- free() will be used as necessary */
-    _dpd.preprocOptRegister("ftp.bounce", &FTPPBounceInit, &FTPPBounceEval, NULL);
-#endif
+    _dpd.preprocOptRegister("ftp.bounce", &FTPPBounceInit, &FTPPBounceEval, NULL, NULL, NULL);
+#endif  /* DYNAMIC_PLUGIN */
 
     DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET, "Preprocessor: FTPTelnet is "
                 "setup . . .\n"););

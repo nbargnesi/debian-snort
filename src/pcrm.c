@@ -3,7 +3,7 @@
 **
 **  pcrm.c
 **
-**  Copyright (C) 2002-2008 Sourcefire, Inc.
+**  Copyright (C) 2002-2009 Sourcefire, Inc.
 **  Marc Norton <mnorton@sourcefire.com>
 **  Dan Roelker <droelker@sourcefire.com>
 **
@@ -275,13 +275,31 @@ static void prmxFreeGroup(PORT_GROUP *pg)
      RULE_NODE * rn, *rx;
 
      rn = pg->pgHead;
-
      while( rn )
      {
-       rx = rn->rnNext;       
+       rx = rn->rnNext;
        free( rn ); 
        rn = rx;
-     }         
+     }
+     pg->pgHead = NULL;
+
+     rn = pg->pgHeadNC;
+     while( rn )
+     {
+       rx = rn->rnNext;
+       free( rn ); 
+       rn = rx;
+     }
+     pg->pgHeadNC = NULL;
+
+     rn = pg->pgUriHead;
+     while( rn )
+     {
+       rx = rn->rnNext;
+       free( rn ); 
+       rn = rx;
+     }
+     pg->pgUriHead = NULL;
 }
 
 /*
@@ -1144,7 +1162,7 @@ int prmFindRuleGroup( PORT_RULE_MAP * p, int dport, int sport, PORT_GROUP ** src
     }
 
     /* If no Src/Dst rules - use the generic set, if any exist  */
-    if( !stat &&  (p->prmGeneric > 0) ) 
+    if( !stat &&  ((p->prmGeneric != NULL) && (p->prmGeneric->pgCount > 0)) ) 
     {
        *gen  = p->prmGeneric;
         stat = 4;

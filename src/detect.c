@@ -1,7 +1,7 @@
 /* $Id$ */
 /*
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 **    Dan Roelker <droelker@sourcefire.com>
 **    Marc Norton <mnorton@sourcefire.com>
 **
@@ -56,9 +56,6 @@
 #include "ppm.h"
 #include "sf_types.h"
 
-/* XXX modularization violation */
-#include "preprocessors/spp_flow.h"
-
 #ifdef PORTLISTS
 #include "sfutil/sfportobject.h"
 #endif
@@ -67,6 +64,9 @@
 #ifdef PERF_PROFILING
 PreprocStats detectPerfStats;
 #endif
+
+extern uint8_t ip_proto_array[NUM_IP_PROTOS];
+extern int preproc_proto_mask;
 
 #ifdef TARGET_BASED
 #include "target-based/sftarget_protocol_reference.h"
@@ -121,7 +121,6 @@ PreprocStats eventqPerfStats;
 
 int Preprocess(Packet * p)
 {
-    PreprocessFuncNode *idx;
     int retval = 0;
     PROFILE_VARS;
 
@@ -155,7 +154,6 @@ int Preprocess(Packet * p)
     if(!p->csum_flags)
     {
         do_detect = do_detect_content = 1;
-        idx = PreprocessList;
 
         /*
         **  Reset the appropriate application-layer protocol fields
@@ -163,19 +161,29 @@ int Preprocess(Packet * p)
         p->uri_count = 0;
         UriBufs[0].decode_flags = 0;
 
-        /*
-        **  Turn on all preprocessors
-        */
-        boSetAllBits(p->preprocessor_bits);
-
-        while ((idx != NULL) && (!(p->packet_flags & PKT_PASS_RULE)))
+        /* Most preprocessor protocols are over TCP and 90+ percent of traffic in most
+         * environments is TCP so this check almost always passes.  Initial performance
+         * tests indicate this check hinders performance slightly, but keep it here
+         * commented in case initial performance tests are wrong.  Its main purpose is
+         * to filter out traffic that no preprocessors are going to look at thus
+         * avoiding iterating through each preprocessor */
+        //if (p->proto_bits & preproc_proto_mask)
         {
-            assert(idx->func != NULL);
-            if (IsPreprocBitSet(p, idx->preproc_bit))
+            PreprocessFuncNode *idx = PreprocessList;
+
+            /*
+             **  Turn on all preprocessors
+             */
+            boSetAllBits(p->preprocessor_bits);
+
+            for (; (idx != NULL) && !(p->packet_flags & PKT_PASS_RULE); idx = idx->next)
             {
-                idx->func(p, idx->context);
+                if (((p->proto_bits & idx->proto_mask) || (idx->proto_mask == PROTO_BIT__ALL)) &&
+                    IsPreprocBitSet(p, idx->preproc_bit))
+                {
+                    idx->func(p, idx->context);
+                }
             }
-            idx = idx->next;
         }
 
         check_tags_flag = 1;
@@ -208,53 +216,50 @@ int Preprocess(Packet * p)
     ** By checking tagging here, we make sure that we log the
     ** tagged packet whether it generates an alert or not.
     */
-    PREPROC_PROFILE_START(eventqPerfStats);
-    CheckTagging(p);
+    if (IPH_IS_VALID(p))
+        CheckTagging(p);
 
+    PREPROC_PROFILE_START(eventqPerfStats);
     retval = SnortEventqLog(p);
     SnortEventqReset();
-
     PREPROC_PROFILE_END(eventqPerfStats);
 
     /* Simulate above behavior for preprocessor reassembled packets */
-    if (do_detect && (p->bytes_to_inspect != -1))
+    if ((p->packet_flags & PKT_PREPROC_RPKT) && do_detect && (p->bytes_to_inspect != -1))
     {
-        if (p->packet_flags & PKT_PREPROC_RPKT)
+        PreprocGetReassemblyPktFuncNode *rpkt_idx = PreprocGetReassemblyPktList;
+
+        /* Loop through the preprocessors that have registered a 
+         * function to get a reassembled packet */
+        while (rpkt_idx != NULL)
         {
-            PreprocGetReassemblyPktFuncNode *rpkt_idx = PreprocGetReassemblyPktList;
+            Packet *pp = NULL;
 
-            /* Loop through the preprocessors that have registered a 
-             * function to get a reassembled packet */
-            while (rpkt_idx != NULL)
+            assert(rpkt_idx->func != NULL);
+
+            /* If the preprocessor bit is set, get the reassembled packet */
+            if (IsPreprocGetReassemblyPktBitSet(p, rpkt_idx->preproc_id))
+                pp = (Packet *)rpkt_idx->func();
+
+            if (pp != NULL)
             {
-                Packet *pp = NULL;
+                /* If the original packet's bytes to inspect is set,
+                 * set it for the reassembled packet */
+                if (p->bytes_to_inspect > 0)
+                    pp->dsize = (u_int16_t)p->bytes_to_inspect;
 
-                assert(rpkt_idx->func != NULL);
-
-                /* If the preprocessor bit is set, get the reassembled packet */
-                if (IsPreprocGetReassemblyPktBitSet(p, rpkt_idx->preproc_id))
-                    pp = (Packet *)rpkt_idx->func();
-
-                if (pp != NULL)
+                if (Detect(pp))
                 {
-                    /* If the original packet's bytes to inspect is set,
-                     * set it for the reassembled packet */
-                    if (p->bytes_to_inspect > 0)
-                        pp->dsize = (u_int16_t)p->bytes_to_inspect;
+                    PREPROC_PROFILE_START(eventqPerfStats);
 
-                    if (Detect(pp))
-                    {
-                        PREPROC_PROFILE_START(eventqPerfStats);
+                    retval |= SnortEventqLog(pp);
+                    SnortEventqReset();
 
-                        retval |= SnortEventqLog(pp);
-                        SnortEventqReset();
-
-                        PREPROC_PROFILE_END(eventqPerfStats);
-                    }
+                    PREPROC_PROFILE_END(eventqPerfStats);
                 }
-
-                rpkt_idx = rpkt_idx->next;
             }
+
+            rpkt_idx = rpkt_idx->next;
         }
     }
 
@@ -265,14 +270,8 @@ int Preprocess(Packet * p)
     **  the stream to make sure that we didn't miss any
     **  attacks before this packet.
     */
-    if(retval && stream_api)
+    if(retval && IsTCP(p) && stream_api)
         stream_api->alert_flush_stream(p);
-
-    /**
-     * See if we should go ahead and remove this flow from the
-     * flow_preprocessor -- cmg
-     */
-    CheckFlowShutdown(p);
 
 #ifdef PPM_MGR
     if( PPM_PKTS_ENABLED() )
@@ -300,8 +299,7 @@ int Preprocess(Packet * p)
      }
 #endif
 
-    
-    return retval;
+     return retval;
 }
 
 /*
@@ -357,10 +355,12 @@ void CallLogFuncs(Packet *p, char *message, ListHead *head, Event *event)
     /* set the event number */
     event->event_id = event_id | pv.event_log_id;
 
+#ifndef SUP_IP6
     if(BsdPseudoPacket) 
     {
         p = BsdPseudoPacket;
     }
+#endif
 
     if(head == NULL)
     {
@@ -446,10 +446,12 @@ void CallAlertFuncs(Packet * p, char *message, ListHead * head, Event *event)
     /* set the event reference info */
     event->event_reference = event->event_id;
 
+#ifndef SUP_IP6
     if(BsdPseudoPacket) 
     {
         p = BsdPseudoPacket;
     }
+#endif
 
     if(head == NULL)
     {
@@ -514,9 +516,37 @@ int Detect(Packet * p)
     int detected = 0;
     PROFILE_VARS;
 
-    if(p == NULL || !IPH_IS_VALID(p))
+    if ((p == NULL) || !IPH_IS_VALID(p))
     {
         return 0;
+    }
+
+    if (!ip_proto_array[GET_IPH_PROTO(p)])
+    {
+#ifdef GRE
+# ifdef SUP_IP6
+        switch (p->outer_family)
+        {
+            case AF_INET:
+                if (!ip_proto_array[p->outer_ip4h.ip_proto])
+                    return 0;
+                break;
+
+            case AF_INET6:
+                if (!ip_proto_array[p->outer_ip6h.next])
+                    return 0;
+                break;
+
+            default:
+                return 0;
+        }
+# else
+        if ((p->outer_iph == NULL) || !ip_proto_array[p->outer_iph->ip_proto])
+            return 0;
+# endif  /* SUP_IP6 */
+#else
+        return 0;
+#endif  /* GRE */
     }
 
     if (p->packet_flags & PKT_PASS_RULE)
@@ -596,7 +626,7 @@ int CheckAddrPort(
 
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "CheckAddrPort: "););
     /* set up the packet particulars */
-    if(mode & CHECK_SRC)
+    if(mode & CHECK_SRC_IP)
     {
         pkt_addr = GET_SRC_IP(p);
         pkt_port = p->sp;
@@ -744,8 +774,7 @@ bail:
 
 #ifdef PORTLISTS
 #ifdef TARGET_BASED
-    /* Always ignore ports if we are using attrubutes */
-    if( GetProtocolReference(p) > 0 )
+    if (!(mode & (CHECK_SRC_PORT | CHECK_DST_PORT)))
     {
         DEBUG_WRAP(
             DebugMessage(DEBUG_ATTRIBUTE, "detect.c: CheckAddrPort..."
@@ -1020,27 +1049,27 @@ void IntegrityCheck(RuleTreeNode * rtn_head, char *rulename, char *listname)
 #endif
 
 int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx, 
-        RuleFpList *fp_list)
+        RuleFpList *fp_list, int check_ports)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "Checking bidirectional rule...\n"););
 
     if(CheckAddrPort(rtn_idx->sip, CHECK_ADDR_SRC_ARGS(rtn_idx), p,
-                     rtn_idx->flags, CHECK_SRC))
+                     rtn_idx->flags, CHECK_SRC_IP | (check_ports ? CHECK_SRC_PORT : 0)))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   Src->Src check passed\n"););
         if(! CheckAddrPort(rtn_idx->dip, CHECK_ADDR_DST_ARGS(rtn_idx), p,
-                           rtn_idx->flags, CHECK_DST))
+                           rtn_idx->flags, CHECK_DST_IP | (check_ports ? CHECK_DST_PORT : 0)))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                                     "   Dst->Dst check failed,"
                                     " checking inverse combination\n"););
             if(CheckAddrPort(rtn_idx->dip, CHECK_ADDR_DST_ARGS(rtn_idx), p,
-                             rtn_idx->flags, (CHECK_SRC | INVERSE)))
+                             rtn_idx->flags, (CHECK_SRC_IP | INVERSE | (check_ports ? CHECK_SRC_PORT : 0))))
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                                     "   Inverse Dst->Src check passed\n"););
                 if(!CheckAddrPort(rtn_idx->sip, CHECK_ADDR_SRC_ARGS(rtn_idx), p,
-                                  rtn_idx->flags, (CHECK_DST | INVERSE)))
+                                  rtn_idx->flags, (CHECK_DST_IP | INVERSE | (check_ports ? CHECK_DST_PORT : 0))))
                 {
                     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                                     "   Inverse Src->Dst check failed\n"););
@@ -1068,13 +1097,13 @@ int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx,
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                                 "   Src->Src check failed, trying inverse test\n"););
         if(CheckAddrPort(rtn_idx->dip, CHECK_ADDR_DST_ARGS(rtn_idx), p,
-                         rtn_idx->flags, CHECK_SRC | INVERSE))
+                         rtn_idx->flags, CHECK_SRC_IP | INVERSE | (check_ports ? CHECK_SRC_PORT : 0)))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                         "   Dst->Src check passed\n"););
 
             if(!CheckAddrPort(rtn_idx->sip, CHECK_ADDR_SRC_ARGS(rtn_idx), p, 
-                        rtn_idx->flags, CHECK_DST | INVERSE))
+                        rtn_idx->flags, CHECK_DST_IP | INVERSE | (check_ports ? CHECK_DST_PORT : 0)))
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                             "   Src->Dst check failed\n"););
@@ -1112,7 +1141,7 @@ int CheckBidirectional(Packet *p, struct _RuleTreeNode *rtn_idx,
  * Returns: 0 on failure (no match), 1 on success (match)
  *
  ***************************************************************************/
-int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
+int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list, int check_ports)
 {
 #ifndef SUP_IP6
     int match = 0;
@@ -1145,7 +1174,7 @@ int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
 #endif
 
             /* the packet matches this test, proceed to the next test */
-            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
         }
     }
     else
@@ -1157,7 +1186,7 @@ int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
 
         if( sfvar_ip_in(rtn_idx->sip, GET_SRC_IP(p)) ) return 0;
 
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"  Mismatch on SIP\n"););
@@ -1186,7 +1215,7 @@ int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
             } 
 
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"  SIP match\n"););
-            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
         }
     
         while(pos_idx)              
@@ -1206,7 +1235,7 @@ int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
             else if(match)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"  SIP match\n"););
-                return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+                return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
             }
 
             if(!match) 
@@ -1245,7 +1274,7 @@ int CheckSrcIP(Packet * p, struct _RuleTreeNode * rtn_idx, RuleFpList * fp_list)
  * Returns: 0 on failure (no match), 1 on success (match)
  *
  ***************************************************************************/
-int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
+int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list, int check_ports)
 {
 #ifndef SUP_IP6
     IpAddrNode *pos_idx, *neg_idx;  /* ip address indexer */
@@ -1267,7 +1296,7 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
 // #endif
 
             /* the packet matches this test, proceed to the next test */
-            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
         }
     }
     else
@@ -1278,7 +1307,7 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
 
         if( sfvar_ip_in(rtn_idx->dip, GET_DST_IP(p)) ) return 0;
 
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
 
     return 0;
@@ -1304,7 +1333,7 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
             } 
 
             DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"  DIP match\n"););
-            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+            return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
         }
 
         while(pos_idx)              
@@ -1324,7 +1353,7 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
             else if(match)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "  DIP match\n"););
-                return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+                return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
             }
 
             if(!match) 
@@ -1349,20 +1378,20 @@ int CheckDstIP(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
 
 
 int CheckSrcPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx, 
-        RuleFpList *fp_list)
+        RuleFpList *fp_list, int check_ports)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"CheckSrcPortEqual: "););
 
 #ifdef PORTLISTS
 #ifdef TARGET_BASED
-    /* Always ignore ports if we are using attrubutes */
-    if( GetProtocolReference(p) > 0 )
+    /* Check if attributes provided match earlier */
+    if (check_ports == 0)
     {
         DEBUG_WRAP(
             DebugMessage(DEBUG_ATTRIBUTE, "detect.c: CheckSrcPortEq..."
                 "target-based-protocol=%d,ignoring ports\n",
                 GetProtocolReference(p)););
-        return 1;
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1378,7 +1407,7 @@ int CheckSrcPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx,
 #endif /* PORTLISTS */
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "  SP match!\n"););
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1389,20 +1418,20 @@ int CheckSrcPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx,
 }
 
 int CheckSrcPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx, 
-        RuleFpList *fp_list)
+        RuleFpList *fp_list, int check_ports)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"CheckSrcPortNotEq: "););
 
 #ifdef PORTLISTS
 #ifdef TARGET_BASED
-    /* Always ignore ports if we are using attrubutes */
-    if( GetProtocolReference(p) > 0 )
+    /* Check if attributes provided match earlier */
+    if (check_ports == 0)
     {
         DEBUG_WRAP(
             DebugMessage(DEBUG_ATTRIBUTE, "detect.c: CheckSrcPortNotEq..."
                 "target-based-protocol=%d,ignoring ports\n",
                 GetProtocolReference(p)););
-        return 1;
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1418,7 +1447,7 @@ int CheckSrcPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx,
 #endif /* PORTLISTS */
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "  !SP match!\n"););
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1429,20 +1458,20 @@ int CheckSrcPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx,
 }
 
 int CheckDstPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx, 
-        RuleFpList *fp_list)
+        RuleFpList *fp_list, int check_ports)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"CheckDstPortEqual: "););
 
 #ifdef PORTLISTS
 #ifdef TARGET_BASED
-    /* Always ignore ports if we are using attrubutes */
-    if( GetProtocolReference(p) > 0 )
+    /* Check if attributes provided match earlier */
+    if (check_ports == 0)
     {
         DEBUG_WRAP(
             DebugMessage(DEBUG_ATTRIBUTE, "detect.c: CheckDstPortEq..."
             "target-based-protocol=%d,ignoring ports\n",
             GetProtocolReference(p)););
-        return 1;
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1458,7 +1487,7 @@ int CheckDstPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx,
 #endif /* PORTLISTS */
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, " DP match!\n"););
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1469,20 +1498,20 @@ int CheckDstPortEqual(Packet *p, struct _RuleTreeNode *rtn_idx,
 
 
 int CheckDstPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx, 
-        RuleFpList *fp_list)
+        RuleFpList *fp_list, int check_ports)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"CheckDstPortNotEq: "););
 
 #ifdef PORTLISTS
 #ifdef TARGET_BASED
-    /* Always ignore ports if we are using attrubutes */
-    if( GetProtocolReference(p) > 0 )
+    /* Check if attributes provided match earlier */
+    if (check_ports == 0)
     {
         DEBUG_WRAP(
             DebugMessage(DEBUG_ATTRIBUTE, "detect.c: CheckDstPortNotEq..."
             "target-based-protocol=%d,ignoring ports\n",
             GetProtocolReference(p)););
-        return 1;
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1498,7 +1527,7 @@ int CheckDstPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx,
 #endif /* PORTLISTS */
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, " !DP match!\n"););
-        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next);
+        return fp_list->next->RuleHeadFunc(p, rtn_idx, fp_list->next, check_ports);
     }
     else
     {
@@ -1509,15 +1538,15 @@ int CheckDstPortNotEq(Packet *p, struct _RuleTreeNode *rtn_idx,
 }
 
 
-int RuleListEnd(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list)
+int RuleListEnd(Packet *p, struct _RuleTreeNode *rtn_idx, RuleFpList *fp_list, int check_ports)
 {
     return 1;
 }
 
 
-int OptListEnd(Packet *p, struct _OptTreeNode *otn_idx, OptFpList *fp_list)
+int OptListEnd(void *option_data, Packet *p)
 {
-    return 1;
+    return DETECTION_OPTION_MATCH;
 }
 
 /*

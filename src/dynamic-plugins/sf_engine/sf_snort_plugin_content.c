@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Marc Norton
  *         Steve Sturges
@@ -132,23 +132,39 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
         relative = 1;
     }
 
-    if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST))
+    if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST | CONTENT_BUF_HEADER | CONTENT_BUF_METHOD | CONTENT_BUF_COOKIE))
     {
-        for (i=0;i<sp->num_uris; i++)
+        for (i=0; i<sp->num_uris; i++)
         {
-            if ((content->flags & CONTENT_BUF_URI) && (i != HTTP_BUFFER_URI))
+            switch (i)
             {
-                /* Not looking at the "URI" buffer...
-                 * keep going. */
-                continue;
+                case HTTP_BUFFER_URI:
+                    if (!(content->flags & CONTENT_BUF_URI))
+                        continue; /* Go to next, not looking at URI buffer */
+                    break;
+                case HTTP_BUFFER_HEADER:
+                    if (!(content->flags & CONTENT_BUF_HEADER))
+                        continue; /* Go to next, not looking at HEADER buffer */
+                    break;
+                case HTTP_BUFFER_CLIENT_BODY:
+                    if (!(content->flags & CONTENT_BUF_POST))
+                        continue; /* Go to next, not looking at POST buffer */
+                    break;
+                case HTTP_BUFFER_METHOD:
+                    if (!(content->flags & CONTENT_BUF_METHOD))
+                        continue; /* Go to next, not looking at METHOD buffer */
+                    break;
+                case HTTP_BUFFER_COOKIE:
+                    if (!(content->flags & CONTENT_BUF_COOKIE))
+                        continue; /* Go to next, not looking at COOKIE buffer */
+                    break;
+                default:
+                    /* Uh, what buffer is this? */
+                    return CONTENT_NOMATCH;
             }
 
-            if ((content->flags & CONTENT_BUF_POST) && (i != HTTP_BUFFER_CLIENT_BODY))
-            {
-                /* Not looking at the "POST" buffer...
-                 * keep going. */
+            if (!_ded.uriBuffers[i]->uriBuffer || (_ded.uriBuffers[i]->uriLength == 0))
                 continue;
-            }
 
             if (relative)
             {
@@ -164,14 +180,7 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
                 buffer_start = _ded.uriBuffers[i]->uriBuffer + content->offset;
             }
 
-            if (_uri_buffer_end)
-            {
-                buffer_end = _uri_buffer_end;
-            }
-            else
-            {
-                buffer_end = _ded.uriBuffers[i]->uriBuffer + _ded.uriBuffers[i]->uriLength;
-            }
+            buffer_end = _ded.uriBuffers[i]->uriBuffer + _ded.uriBuffers[i]->uriLength;
 
             length = buffer_len = buffer_end - buffer_start;
 

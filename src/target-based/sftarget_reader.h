@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2008 Sourcefire, Inc.
+** Copyright (C) 2006-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -110,9 +110,12 @@ typedef struct _HostInfo
 #define SFAT_CLIENT 2
 typedef struct _HostAttributeEntry
 {
-    /* XXX: encapsulate w/IP Object of some kind */
+#ifdef SUP_IP6
+    sfip_t ipAddr;
+#else
     u_int32_t ipAddr;
     u_int8_t bits;
+#endif
 
     HostInfo hostInfo;
     ApplicationList *services;
@@ -124,7 +127,11 @@ int SFAT_AddMapEntry(MapEntry *);
 char *SFAT_LookupAttributeNameById(int id);
 HostAttributeEntry * SFAT_CreateHostEntry();
 int SFAT_AddHostEntryToMap();
+#ifdef SUP_IP6
+int SFAT_SetHostIp(char *);
+#else
 int SFAT_SetHostIp4(char *);
+#endif
 int SFAT_SetOSAttribute(AttributeData *data, int attribute);
 int SFAT_SetOSPolicy(char *policy_name, int attribute);
 ApplicationEntry * SFAT_CreateApplicationEntry();
@@ -155,8 +162,15 @@ void AttributeTableReloadCheck();
 u_int32_t SFAT_NumberOfHosts();
 
 /* API Lookup functions, to be called by Stream & Frag */
+#ifdef SUP_IP6
+HostAttributeEntry *SFAT_LookupHostEntryByIP(sfip_t *ipAddr);
+#else
 HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(u_int32_t ipAddr);
+#endif
 HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p);
 HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p);
+
+/* Returns whether this has been configured */
+int IsAdaptiveConfigured(void);
 
 #endif /* SF_TARGET_READER_H_ */

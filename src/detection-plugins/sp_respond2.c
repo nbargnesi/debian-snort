@@ -123,6 +123,8 @@ PreprocStats respond2PerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
+#include "sfhashfcn.h"
+#include "detection_options.h"
 
 typedef struct _RespondData
 {
@@ -198,6 +200,36 @@ static INLINE int respkey_make(RESPKEY *hashkey, Packet *p);
 
 
 /* ######## API section ######## */
+u_int32_t Respond2Hash(void *d)
+{
+    u_int32_t a,b,c,tmp;
+    int i,j,k,l;
+    RespondData *data = (RespondData *)d;
+
+    a = data->response_flag;
+    b = RULE_OPTION_TYPE_RESPOND2;
+    c = 0;
+
+    final(a,b,c);
+
+    return c;
+}
+
+int Respond2Compare(void *l, void *r)
+{
+    RespondData *left = (RespondData *)l;
+    RespondData *right = (RespondData *)r;
+
+    if (!left || !right)
+        return DETECTION_OPTION_NOT_EQUAL;
+
+    if (left->response_flag == right->response_flag)
+    {
+        return DETECTION_OPTION_EQUAL;
+    }
+
+    return DETECTION_OPTION_NOT_EQUAL;
+}
 
 /**
  * Initialize respond2 plugin
@@ -206,7 +238,7 @@ static INLINE int respkey_make(RESPKEY *hashkey, Packet *p);
  */
 void SetupRespond2(void)
 {
-    RegisterPlugin("resp", Respond2Init, OPT_TYPE_ACTION);
+    RegisterPlugin("resp", Respond2Init, NULL, OPT_TYPE_ACTION);
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("resp2", &respond2PerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
@@ -229,6 +261,7 @@ static void Respond2Init(char *data, OptTreeNode *otn, int protocol)
 {
     static int setup = 0;
     RespondData *rd = NULL;
+    void *idx_dup;
 
     if (!(protocol & (IPPROTO_ICMP | IPPROTO_TCP | IPPROTO_UDP)))
         FatalError("%s: %s(%d): Can't respond to IP protocol rules.\n", 
@@ -281,10 +314,14 @@ static void Respond2Init(char *data, OptTreeNode *otn, int protocol)
         );
     }
 
-
-
     rd->response_flag = ParseResponse2(data);
     
+    if (add_detection_option(RULE_OPTION_TYPE_RESPOND2, (void *)rd, &idx_dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(rd);
+        rd = idx_dup;
+     }
+
     AddRspFuncToList(Respond2, otn, (void *)rd);
     /* Restart and CleanExit function are identical */
     AddFuncToCleanExitList(Respond2Restart, &config);

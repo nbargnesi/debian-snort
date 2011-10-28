@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2008 Sourcefire, Inc.
+** Copyright (C) 2007-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -23,7 +23,7 @@
 **  @author      Taimur Aslam
 **  @author      Todd Wease
 ** 
-**  @brief       Decode and detect CVS vulnerabilies
+**  @brief       Decode and detect CVS vulnerabilities
 **
 **  This CVS detection plugin provides support for detecting published CVS vulnerabilities. The
 **  vulnerabilities that can be detected are:
@@ -86,7 +86,8 @@ typedef struct _CvsCommand
 
 /* global function prototypes */
 void SetupCvs(void);
-
+u_int32_t CvsHash(void *d);
+int CvsCompare(void *l, void *r);
 
 #endif
 

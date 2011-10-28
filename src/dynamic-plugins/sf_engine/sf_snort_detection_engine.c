@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -41,8 +41,8 @@
 #include "sf_dynamic_engine.h"
 
 #define MAJOR_VERSION   1
-#define MINOR_VERSION   8
-#define BUILD_VERSION   13
+#define MINOR_VERSION   10
+#define BUILD_VERSION   16
 #define DETECT_NAME     "SF_SNORT_DETECTION_ENGINE"
 
 #ifdef WIN32
@@ -111,6 +111,10 @@ ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
 #endif
     _ded.debugMsgFile = ded->debugMsgFile;
     _ded.debugMsgLine = ded->debugMsgLine;
+
+    _ded.pcreStudy = ded->pcreStudy;
+    _ded.pcreCompile = ded->pcreCompile;
+    _ded.pcreExec = ded->pcreExec;
 
     return 0;
 }
@@ -220,8 +224,8 @@ static int GetFPContent(void *r, int buf, FPContentInfo** contents, int maxNumCo
         if (option->optionType == OPTION_TYPE_CONTENT)
         {
             if ((option->option_u.content->flags & CONTENT_FAST_PATTERN) &&
-                (((option->option_u.content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST)) && (buf == FASTPATTERN_URI)) ||
-                 (!(option->option_u.content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST)) && (buf == FASTPATTERN_NORMAL)) ))
+                (((option->option_u.content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST | CONTENT_BUF_HEADER | CONTENT_BUF_METHOD)) && (buf == FASTPATTERN_URI)) ||
+                 (!(option->option_u.content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST | CONTENT_BUF_HEADER | CONTENT_BUF_METHOD)) && (buf == FASTPATTERN_NORMAL)) ))
             {
                 FPContentInfo *content = (FPContentInfo *)calloc(1, sizeof(FPContentInfo));
                 if (content == NULL)
@@ -505,7 +509,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
                 {
                     if (content->flags & CONTENT_FAST_PATTERN)
                     {
-                        if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST))
+                        if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST | CONTENT_BUF_HEADER | CONTENT_BUF_METHOD))
                             fpContentFlags |= FASTPATTERN_URI;
                         else
                             fpContentFlags |= FASTPATTERN_NORMAL;
@@ -531,7 +535,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
         case OPTION_TYPE_FLOWBIT:
             {
                 FlowBitsInfo *flowbits = option->option_u.flowBit;
-                flowbits->id = _ded.flowbitRegister(flowbits->flowBitsName, 0);
+                flowbits->id = _ded.flowbitRegister(flowbits->flowBitsName, flowbits->operation);
                 if (flowbits->operation & FLOWBIT_NOALERT)
                     rule->noAlert = 1;
             }
@@ -580,26 +584,71 @@ int RegisterOneRule(Rule *rule, int registerRule)
             {
                 PreprocessorOption *preprocOpt = option->option_u.preprocOpt;
                 PreprocOptionInit optionInit;
-                result = _ded.getPreprocOptFuncs(preprocOpt->optionName, &preprocOpt->optionInit,
-                                                 &preprocOpt->optionEval);
-                if (result)
+                char *option_name = NULL;
+                char *option_params = NULL;
+                char *tmp;
+
+                if (preprocOpt->optionName == NULL)
                 {
                     /* Don't initialize this rule */
                     rule->initialized = 0;
-                    return result;
+                    return -1;
+                }
+
+                result = _ded.getPreprocOptFuncs((char *)preprocOpt->optionName,
+                                                 &preprocOpt->optionInit,
+                                                 &preprocOpt->optionEval);
+                if (!result)
+                {
+                    /* Don't initialize this rule */
+                    rule->initialized = 0;
+                    return -1;
                 }
 
                 optionInit = (PreprocOptionInit)preprocOpt->optionInit;
 
-                result = optionInit(preprocOpt->optionName,
-                                    preprocOpt->optionParameters, &preprocOpt->dataPtr);
-                if (result)
+                option_name = strdup(preprocOpt->optionName);
+                if (option_name == NULL)
+                {
+                    DynamicEngineFatalMessage("Failed to allocate memory "
+                        "for so detection rule preprocessor rule option "
+                        "option name\n");
+                }
+
+                /* XXX Hack right now for override options where the rule
+                 * option is stored as <option> <override>, e.g.
+                 * "byte_test dce"
+                 * Since name is passed in to init function, the function
+                 * is expecting the first word in the option name and not
+                 * the whole string */
+                tmp = option_name;
+                while ((*tmp != '\0') && !isspace((int)*tmp)) tmp++;
+                *tmp = '\0';
+
+                if (preprocOpt->optionParameters != NULL)
+                {
+                    option_params = strdup(preprocOpt->optionParameters);
+                    if (option_params == NULL)
+                    {
+                        DynamicEngineFatalMessage("Failed to allocate memory "
+                            "for so detection rule preprocessor rule option "
+                            "parameters\n");
+                    }
+                }
+
+                result = optionInit(option_name, option_params, &preprocOpt->dataPtr);
+
+                if (option_name != NULL) free(option_name);
+                if (option_params != NULL) free(option_params);
+
+                if (!result)
                 {
                     /* Don't initialize this rule */
                     rule->initialized = 0;
-                    return result;
+                    return -1;
                 }
             }
+
             break;
 
         case OPTION_TYPE_BYTE_TEST:
@@ -621,7 +670,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
         {
             ContentInfo *content = option->option_u.content;
 
-            if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST))
+            if (content->flags & (CONTENT_BUF_URI | CONTENT_BUF_POST | CONTENT_BUF_HEADER | CONTENT_BUF_METHOD))
                 fpContentFlags |= FASTPATTERN_URI;
             else
                 fpContentFlags |= FASTPATTERN_NORMAL;
@@ -685,7 +734,8 @@ static int DumpRule(FILE *fp, Rule *rule)
     fprintf(fp, "sid:%d; ", rule->info.sigID);
     fprintf(fp, "gid:%d; ", rule->info.genID);
     fprintf(fp, "rev:%d; ", rule->info.revision);
-    fprintf(fp, "classtype:%s; ", rule->info.classification);
+    if (rule->info.classification != NULL)
+        fprintf(fp, "classtype:%s; ", rule->info.classification);
     if (rule->info.priority != 0)
         fprintf(fp, "priority:%d; ", rule->info.priority);
 
@@ -723,7 +773,10 @@ ENGINE_LINKAGE int RegisterRules(Rule **rules)
 
     for (i=0; rules[i] != NULL; i++)
     {
-        RegisterOneRule(rules[i], REGISTER_RULE);
+        if (rules[i]->initialized == 0)
+        {
+            RegisterOneRule(rules[i], REGISTER_RULE);
+        }
     }
 
     return 0;

@@ -3,7 +3,7 @@
 **
 **  fpdetect.c
 **
-**  Copyright (C) 2002-2008 Sourcefire,Inc
+**  Copyright (C) 2002-2009 Sourcefire, Inc.
 **  Author(s):  Dan Roelker <droelker@sourcefire.com>
 **              Marc Norton <mnorton@sourcefire.com>
 **              Andrew R. Baker <andrewb@snort.org>
@@ -107,59 +107,28 @@ extern OptTreeNode *otn_tmp;
 extern u_int8_t    DecodeBuffer[DECODE_BLEN];
 extern OptTreeNode *current_otn;
 extern SNORT_EVENT_QUEUE g_event_queue;
-/*              
-**  MATCH_INFO
-**  The events that are matched get held in this structure,
-**  and iMatchIndex gets set to the event that holds the
-**  highest priority.
-*/
-typedef struct {
-
- OTNX *MatchArray[MAX_EVENT_MATCH];
- int  iMatchCount;
- int  iMatchIndex;
- int  iMatchMaxLen;
- 
-}MATCH_INFO;
-
-/*
-**  OTNX_MATCH_DATA
-**  This structure holds information that is
-**  referenced during setwise pattern matches.
-**  It also contains information regarding the
-**  number of matches that have occurred and
-**  the event to log based on the event comparison
-**  function.
-*/
-typedef struct 
-{
-    PORT_GROUP * pg;
-    Packet * p;
-    int check_ports;
-
-    MATCH_INFO *matchInfo;
-    int iMatchInfoArraySize;
-} OTNX_MATCH_DATA;
+/* XXX it is not a good idea to allocate memory here */
+extern HttpUri  UriBufs[URI_COUNT]; /* decode.c */
 
 /*
 **  Static function prototypes
 */
-static INLINE int fpEvalOTN(OptTreeNode *List, Packet *p);
-static INLINE int fpEvalRTN(RuleTreeNode *rtn,Packet *p, int check_ports);
+int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports);
+#ifndef FPSW
 static INLINE int fpEvalHeader(PORT_GROUP *port_group, Packet *p, 
         int check_ports);
-static INLINE int fpEvalRTNSW(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p, 
-        int check_ports);
+#endif
 static INLINE int fpEvalHeaderIp(Packet *p, int ip_proto);
 static INLINE int fpEvalHeaderIcmp(Packet *p);
 static INLINE int fpEvalHeaderTcp(Packet *p);
 static INLINE int fpEvalHeaderUdp(Packet *p);
 static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, 
-        int check_ports);
-static int otnx_match (void* id, int index, void * data );               
-static INLINE int fpAddMatch( OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen );
-static INLINE int fpAddSessionAlert(Packet *p, OTNX *otnx);
-static INLINE int fpSessionAlerted(Packet *p, OTNX *otnx);
+        int check_ports, char ip_rule);
+static int rule_tree_match (void* id, void * tree, int index, void * data, void *neg_list );
+int fpAddMatch( OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen,
+    OptTreeNode *otn);
+static INLINE int fpAddSessionAlert(Packet *p, OptTreeNode *otn);
+static INLINE int fpSessionAlerted(Packet *p, OptTreeNode *otn);
         
 //static INLINE int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p);
 
@@ -169,14 +138,9 @@ static OTNX_MATCH_DATA omd;
 
 #ifdef PERF_PROFILING
 PreprocStats rulePerfStats;
+PreprocStats ncrulePerfStats;
 PreprocStats ruleRTNEvalPerfStats;
-PreprocStats ruleAddEventQPerfStats;
-PreprocStats ruleNQEventQPerfStats;
-PreprocStats ruleHeaderNoMatchPerfStats;
 PreprocStats ruleOTNEvalPerfStats;
-PreprocStats ruleCheckBitPerfStats;
-PreprocStats ruleSetBitPerfStats;
-PreprocStats ruleFailedFlowbitsPerfStats;
 #endif
 
 /* initialize the global OTNX_MATCH_DATA variable */
@@ -187,7 +151,14 @@ int OtnXMatchDataInitialize()
 
     return 0;
 }
-    
+
+void OtnxMatchDataCleanup()
+{
+    if (omd.matchInfo)
+        free(omd.matchInfo);
+    omd.matchInfo = NULL;
+}
+
 /*
 **  NAME
 **    fpSetDetectionOptions::
@@ -437,18 +408,20 @@ static INLINE void InitMatchInfo(OTNX_MATCH_DATA *o)
 **    OTNX_MATCH_DATA    * - the omd to add the event to.
 **    OTNX               * - the otnx to add.
 **    int pLen             - length of pattern that matched, 0 for no content
+**    OptTreeNode        * - the otn to add.
 **
 **  FORMAL OUTPUTS
 **    int - 1 max_events variable hit, 0 successful.
 **
 */
-static INLINE int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen )
+int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen,
+               OptTreeNode *otn)
 {
     MATCH_INFO * pmi;
     int evalIndex;
     int i;
 
-    evalIndex = otnx->otn->rtn->listhead->ruleListNode->evalIndex;
+    evalIndex = otn->rtn->listhead->ruleListNode->evalIndex;
     
     /* bounds check index */
     if( evalIndex >= omd_local->iMatchInfoArraySize )
@@ -470,7 +443,7 @@ static INLINE int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen )
     /* Check that we are not storing the same otn again */
     for( i=0; i< pmi->iMatchCount;i++ )
     {
-        if( pmi->MatchArray[ i  ]->otn == otnx->otn )
+        if( pmi->MatchArray[ i  ] == otn )
         {
             //LogMessage("fpAddMatch: storing the same otn...\n");
             return 0;
@@ -481,7 +454,7 @@ static INLINE int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen )
     /*
     **  Add the event to the appropriate list
     */
-    pmi->MatchArray[ pmi->iMatchCount ] = otnx;
+    pmi->MatchArray[ pmi->iMatchCount ] = otn;
 
     /*
     **  This means that we are adding a NC rule
@@ -511,124 +484,6 @@ static INLINE int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen )
 /*
 **
 **  NAME
-**    fpEvalOTN::
-**
-**  DESCRIPTION
-**    Evaluates an OTN against a Packet.
-**
-**  FORMAL INPUTS
-**    OptTreeNode * - the OTN to check
-**    Packet *      - Packet to evaluate against OTN
-**
-**  FORMAL OUTPUT
-**    int - 0 if no match, 1 if match.
-**
-*/
-static INLINE int fpEvalOTN(OptTreeNode *List, Packet *p)
-{
-    PROFILE_VARS;
-
-    if(List == NULL)
-        return 0;
-
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   => Checking SID %d\n",
-               List->sigInfo.id););
-
-    if(List->type == RULE_DYNAMIC && !List->active_flag)
-    {
-        return 0;
-    }
-
-    if(List->opt_func == NULL)
-    {
-        FatalError("List->opt_func was NULL on option #%d!\n", 
-                   List->chain_node_number);
-    }
-
-    if(snort_runtime.capabilities.stateful_inspection == 1)
-    {
-        if((List->established == 1) && !(p->packet_flags & PKT_STREAM_EST))
-        {
-            /*
-            **  We check to see if this packet may have been picked up in
-            **  midstream by stream4 on a timed out session.  If it was, then
-            **  we'll go ahead and inspect it anyway because it might be a 
-            **  packet that we dropped but the attacker has retransmitted after
-            **  the stream4 session timed out.
-            */
-            if(InlineMode())
-            {
-                switch(List->rtn->type)
-                {
-                    case RULE_DROP:
-                    case RULE_SDROP:
-                        
-                        if(stream_api && 
-			   !(stream_api->get_session_flags(p->ssnptr) & SSNFLAG_MIDSTREAM))
-                        {
-                            return 0;
-                        }
-                        break;
-
-                    default:
-                        return 0;
-                }
-            }
-            else
-            {
-                /* 
-                ** This OTN requires an established connection and it isn't
-                ** in that state yet, so continue to the next OTN
-                */
-                return 0;
-            }
-        }
-        else if((List->unestablished == 1) && (p->packet_flags & PKT_STREAM_EST))
-        {
-            /*
-            **  We're looking for an unestablished stream, and this is
-            **  established, so don't continue processing.
-            */
-            return 0;
-        }
-    }
-
-    OTN_PROFILE_START(List);
-
-    if(!List->opt_func->OptTestFunc(p, List, List->opt_func))
-    {
-#ifdef PERF_PROFILING
-        /* Handle the case where flowbits:noalert returns 0 to here
-         * but there was actually a match. */
-        if (List->noalerts)
-        {
-            OTN_PROFILE_END_MATCH(List);
-        }
-        else
-        {
-            OTN_PROFILE_END_NOMATCH(List);
-        }
-#endif
-        return 0;
-    }
-            
-    OTN_PROFILE_END_MATCH(List);
-
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-             "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"););
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   => SID %d OTN Matched!\n",
-                List->sigInfo.id););
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-            "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n"););
-    /* 
-    ** Rule match actions are called from EvalHeader. 
-    */
-    return 1;
-}
-
-/*
-**
-**  NAME
 **    fpEvalRTN::
 **
 **  DESCRIPTION
@@ -644,10 +499,15 @@ static INLINE int fpEvalOTN(OptTreeNode *List, Packet *p)
 **    int - 1 if match, 0 if match failed.
 **
 */
-static INLINE int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
+int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
 {
+    PROFILE_VARS;
+
+    PREPROC_PROFILE_START(ruleRTNEvalPerfStats);
+
     if(rtn == NULL)
     {
+        PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
         return 0;
     }
 
@@ -662,6 +522,7 @@ static INLINE int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
         if(!(rtn->flags & EXCEPT_DST_PORT) && !(rtn->flags & BIDIRECTIONAL) &&
                 (p->dp < rtn->ldp))
         {
+            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
             return 0;
         }
     }
@@ -670,11 +531,13 @@ static INLINE int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
     {
         if(!active_dynamic_nodes)
         {
+            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
             return 0;
         }
 
         if(rtn->active_flag == 0)
         {
+            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
             return 0;
         }
     }
@@ -682,12 +545,13 @@ static INLINE int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "[*] Rule Head %d\n", 
                 rtn->head_node_number);)
 
-    if(!rtn->rule_func->RuleHeadFunc(p, rtn, rtn->rule_func))
+    if(!rtn->rule_func->RuleHeadFunc(p, rtn, rtn->rule_func, check_ports))
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                     "   => Header check failed, checking next node\n"););
         DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
                     "   => returned from next node check\n"););
+        PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
         return 0;
     }
 
@@ -701,161 +565,19 @@ static INLINE int fpEvalRTN(RuleTreeNode *rtn, Packet *p, int check_ports)
     **  Return that there is a rule match and log the event outside
     **  of this routine.
     */
+    PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
     return 1;
 }
 
-/*
-**  NAME
-**    fpEvalRTNSW::
-**
-**  DESCRIPTION
-**    This function checks the RTN for validation first and then checks the
-**    OTN for a pattern match.
-**  
-**  FORMAL INPUTS
-**    RuleTreeNode * - rtn to inspect packet against
-**    OptTreeNode *  - otn to inspect packet against
-**    Packet *       - packet to inspect against
-**    int            - whether to check ports for this packet
-**
-**  FORMAL OUTPUTS
-**    int - 1 is successful match
-**          0 is no match
-**
-*/
-static INLINE int fpEvalRTNSW(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p, int check_ports)
+static int detection_option_tree_evaluate(detection_option_tree_root_t *root, detection_option_eval_data_t *eval_data)
 {
-    /*
-    **  This is set to one, because we already have
-    **  an OTN hit.
-    */
-    int rule_match = 0;
+    int i, rval = 0;
     PROFILE_VARS;
 
-    PREPROC_PROFILE_START(ruleRTNEvalPerfStats);
-
-    /*
-    **  Reset the last match offset for each OTN we touch... 
-    */
-    doe_ptr = NULL;
-
-
-    if(rtn == NULL)
-    {
-        PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
+    if (!root)
         return 0;
-    }
 
-#ifdef PORTLISTS
-    /* TODO: maybe add a port test here ... */
-#else
-    /*
-    **  Used to be a speed optimization.  Might still be.
-    */
-    if(check_ports)
-    {
-        if(!(rtn->flags & EXCEPT_DST_PORT) && !(rtn->flags & BIDIRECTIONAL) &&
-                (p->dp < rtn->ldp))
-        {
-            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
-            return 0;
-        }
-    }
-#endif
-
-    if(rtn->type == RULE_DYNAMIC)
-    {
-        if(!active_dynamic_nodes)
-        {
-            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
-            return 0;
-        }
-
-        if(rtn->active_flag == 0)
-        {
-            PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
-            return 0;
-        }
-    }
-
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "[*] Rule Head %d\n", 
-                rtn->head_node_number);)
-
-#ifdef PERF_PROFILING
-    ruleHeaderNoMatchPerfStats.checks++;
-    ruleHeaderNoMatchPerfStats.exits++;
-#endif
-    PREPROC_PROFILE_TMPSTART(ruleHeaderNoMatchPerfStats);
-    if(!rtn->rule_func->RuleHeadFunc(p, rtn, rtn->rule_func))
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
-                    "   => Header check failed, checking next node\n"););
-        DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-                    "   => returned from next node check\n"););
-        PREPROC_PROFILE_TMPEND(ruleHeaderNoMatchPerfStats);
-        PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
-        return 0;
-    }
-    PREPROC_PROFILE_TMPEND(ruleHeaderNoMatchPerfStats);
-
-    /*
-    **  RTN is validated, now check the OTN.
-    */
-    PREPROC_PROFILE_END(ruleRTNEvalPerfStats);
-
-    PREPROC_PROFILE_START(ruleOTNEvalPerfStats);
-    rule_match = fpEvalOTN(otn, p);
-    PREPROC_PROFILE_END(ruleOTNEvalPerfStats);
-
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-             "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"););
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, "   => RTN %d Matched!\n",
-                rtn->head_node_number););
-    DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-            "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n"););
-    return rule_match;
-}
-
-/*
-**
-**  NAME
-**    otnx_match::
-**
-**  DESCRIPTION
-**    When the pattern matcher finds a match, this routine
-**    is processed.  The match is checked to see whether the
-**    associated otn and rtn have already been validated for
-**    this packet, and if so does not do the check again.
-**    Otherwise, the otn/rtn validation occurs.
-**
-**  INPUTS
-**
-**    unsigned  id              : users first handle/ptr-whatever to this pattern
-**    int       index           : index in packet data
-**    void     *data            : user data passed in when pattern was loaded
-**
-**  RETURNS
-**     -1 - continue processing, but retest this sid/gid again
-**      0 - continue processing
-**      1 - stop processing this packet for patterns
-**
-**  7/23/07 - man - updated to return -1 to indicate we have to reprocess this rule
-**                  if it's a failed rule match on a flowbit rule.
-**
-*/
-static int otnx_match( void * id, int index, void * data)
-{
-    OTNX_MATCH_DATA  *pomd   = (OTNX_MATCH_DATA *)data;
-    PMX              *pmx    = (PMX*)id;
-    RULE_NODE        *rnNode = (RULE_NODE*)(pmx->RuleNode);
-
-    OTNX             *otnx   = (OTNX*)(rnNode->rnRuleData);
-    PatternMatchData *pmd    = (PatternMatchData*)pmx->PatternMatchData;
-    int               rval=0;
-    PROFILE_VARS;
-
-    /* set up the current otn pointer for the exception handler */
-    current_otn = otnx->otn;
+    PREPROC_PROFILE_START(ruleOTNEvalPerfStats); /* Not really OTN, but close */
 
 #ifdef PPM_MGR
     /* Start Rule Timer */
@@ -864,169 +586,177 @@ static int otnx_match( void * id, int index, void * data)
         PPM_GET_TIME();
         PPM_INIT_RULE_TIMER();
 
-        if( otnx->otn->rule_state == RULE_STATE_DISABLED )
+        if (root->tree_state == RULE_STATE_DISABLED)
         {
-            PPM_REENABLE_OTN(otnx->otn, pomd->p);
+            PPM_REENABLE_TREE(root, eval_data->p);
 
-            if( otnx->otn->rule_state == RULE_STATE_DISABLED )
+            if (root->tree_state == RULE_STATE_DISABLED)
             {
                 PPM_END_RULE_TIMER();
-                return rval;
+                return 0;
             }
         }
     }
 #endif
 
-    PREPROC_PROFILE_START(rulePerfStats);
-    PREPROC_PROFILE_START(ruleCheckBitPerfStats);
-    /*
-    **  This is where we check the RULE_NODE ID for
-    **  previous hits.
-    */
-    if(boIsBitSet(&(pomd->pg->boRuleNodeID), rnNode->iRuleNodeID))
+    for ( i = 0; i< root->num_children; i++)
     {
-        current_otn = 0;
-        PREPROC_PROFILE_END(ruleCheckBitPerfStats);
-        PREPROC_PROFILE_END(rulePerfStats);
-#ifdef PPM_MGR
-        PPM_END_RULE_TIMER(); 
-#endif
-        return rval;
-    }
-    PREPROC_PROFILE_END(ruleCheckBitPerfStats);
+        /* New tree, reset doe_ptr for safety */
+        doe_ptr = NULL;
 
-#ifdef TARGET_BASED
-#ifdef PORTLISTS
-    if ((otnx->otn->sigInfo.service_ordinal != 0) &&
-        (pomd->p->application_protocol_ordinal != 0))
-    {
-        if (pomd->p->application_protocol_ordinal != otnx->otn->sigInfo.service_ordinal)
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-                "[**] SID %d not matched because of service mismatch (%d!=%d [**]\n", 
-                otnx->otn->sigInfo.id,
-                pomd->p->application_protocol_ordinal,
-                otnx->otn->sigInfo.service_ordinal););
-            PREPROC_PROFILE_END(rulePerfStats);
-#ifdef PPM_MGR
-            PPM_END_RULE_TIMER(); 
-#endif
-            return rval;
-        }
-    }
-#endif
-#endif
-
-    if( fpEvalRTNSW(otnx->rtn, otnx->otn, pomd->p, pomd->check_ports) )
-    {
-        PREPROC_PROFILE_START(ruleAddEventQPerfStats);
-        /*
-        **  We have a qualified event
-        */
-        pomd->pg->pgQEvents++;
-        UpdateQEvents();
-
-        DEBUG_WRAP(DebugMessage(DEBUG_DETECT, 
-                "[**] SID %d added to event queue [**]\n", 
-                otnx->otn->sigInfo.id););
-
-        fpAddMatch(pomd, otnx, pmd->pattern_size );
-        PREPROC_PROFILE_END(ruleAddEventQPerfStats);
-    }
-    else
-    {
-        /*
-        ** This means that the event is non-qualified.
-        */
-        PREPROC_PROFILE_START(ruleNQEventQPerfStats);
-        pomd->pg->pgNQEvents++;
-        UpdateNQEvents();
-        PREPROC_PROFILE_END(ruleNQEventQPerfStats);
-    }
-     
-    /*
-    **  Here is where we set the bit array for each RULE_NODE that
-    **  we hit.
-    */
-    if ( !otnx->otn->failedCheckBits )
-    {
-        PREPROC_PROFILE_START(ruleSetBitPerfStats);
-        if(boSetBit(&(pomd->pg->boRuleNodeID), rnNode->iRuleNodeID))
-        {
-            /*
-            **  There was an error, don't do anything right now.
-            */
-        }   
-        PREPROC_PROFILE_END(ruleSetBitPerfStats);
-    }
-    else
-    {
-#ifdef PERF_PROFILING
-        ruleFailedFlowbitsPerfStats.checks++;
-        ruleFailedFlowbitsPerfStats.exits++;
-        ruleFailedFlowbitsPerfStats.ticks++;
-#endif
-        otnx->otn->failedCheckBits = 0;
-        rval = -1; /* we need to reevaluate this rule if we hit it again */
+        /* Increment number of events generated from that child */
+        rval += detection_option_node_evaluate(root->children[i], eval_data);
     }
 
 #ifdef PPM_MGR
     if( PPM_ENABLED() )
     {
-        PPM_GET_TIME(); 
+        PPM_GET_TIME();
+
         /* Rule test */
         if( PPM_RULES_ENABLED() )
         {
             if( PPM_PKTS_ENABLED() )
                 PPM_INC_PKT_RULE_TESTS();
 
-            PPM_RULE_TEST(otnx->otn, pomd->p);
+            PPM_RULE_TEST(root, eval_data->p);
             PPM_ACCUM_RULE_TIME();
-            PPM_END_RULE_TIMER(); 
-        }
-        /* Packet test */
-        if( PPM_PKTS_ENABLED() )
-        {
-            PPM_PACKET_TEST();
-            if( PPM_PACKET_ABORT_FLAG() )
-            {
-                /* bail if we exceeded time */
-                rval=1; 
-            }
+            PPM_END_RULE_TIMER();
         }
     }
 #endif
 
-    PREPROC_PROFILE_END(rulePerfStats);
-
-    current_otn = 0;
-
+    PREPROC_PROFILE_END(ruleOTNEvalPerfStats);
     return rval;
+}
+
+static int rule_tree_match( void * id, void *tree, int index, void * data, void * neg_list)
+{
+    OTNX_MATCH_DATA  *pomd   = (OTNX_MATCH_DATA *)data;
+    PMX              *pmx    = (PMX*)id;
+    RULE_NODE        *rnNode = (RULE_NODE*)(pmx->RuleNode);
+    OTNX             *otnx   = (OTNX*)(rnNode->rnRuleData);
+    PatternMatchData *pmd    = (PatternMatchData*)pmx->PatternMatchData;
+    detection_option_tree_root_t *root = (detection_option_tree_root_t *)tree;
+    detection_option_eval_data_t eval_data;
+    NCListNode *ncl;
+    int               rval=0;
+    PROFILE_VARS;
+
+    eval_data.pomd = pomd;
+    eval_data.otnx = otnx;
+    eval_data.p = pomd->p;
+    eval_data.pmd = pmd;
+    eval_data.flowbit_failed = 0;
+    eval_data.flowbit_noalert = 0;
+
+    PREPROC_PROFILE_START(rulePerfStats);
+
+    /* Set flag for not contents so they aren't evaluated */
+    for (ncl = (NCListNode *)neg_list; ncl != NULL; ncl = ncl->next)
+    {
+        PMX *neg_pmx = (PMX *)ncl->pmx;
+        PatternMatchData *neg_pmd = (PatternMatchData *)neg_pmx->PatternMatchData;
+
+        neg_pmd->last_check.ts.tv_sec = eval_data.p->pkth->ts.tv_sec;
+        neg_pmd->last_check.ts.tv_usec = eval_data.p->pkth->ts.tv_usec;
+        neg_pmd->last_check.packet_number = pc.total_from_pcap;
+        neg_pmd->last_check.rebuild_flag = (eval_data.p->packet_flags & REBUILD_FLAGS);
+    }
+
+    rval = detection_option_tree_evaluate(root, &eval_data);
+    if (rval)
+    {
+        /*
+        **  We have a qualified event from this tree 
+        */
+        pomd->pg->pgQEvents++;
+        UpdateQEvents();
+    }
+    else
+    {
+        /*
+        ** This means that the event is non-qualified.
+        */
+        pomd->pg->pgNQEvents++;
+        UpdateNQEvents();
+    }
+
+    PREPROC_PROFILE_END(rulePerfStats);
+    if (eval_data.flowbit_failed)
+    {
+        return -1;
+    }
+    
+#ifdef GRE
+    /* If this is for an IP rule set, evalute the rules from
+     * the inner IP offset as well */
+    if (eval_data.p->packet_flags & PKT_IP_RULE)
+    {
+        if (eval_data.p->outer_ip_data)
+        {
+            const u_int8_t *tmp_data = eval_data.p->data;
+            u_int16_t tmp_dsize = eval_data.p->dsize;
+            void *tmp_iph = (void *)eval_data.p->iph;
+#ifdef SUP_IP6
+            void *tmp_ip4h = (void *)eval_data.p->ip4h;
+            void *tmp_ip6h = (void *)eval_data.p->ip6h;
+#endif
+            eval_data.p->iph = eval_data.p->inner_iph;
+#ifdef SUP_IP6
+            eval_data.p->ip4h = &eval_data.p->inner_ip4h;
+            eval_data.p->ip6h = &eval_data.p->inner_ip6h;
+#endif
+            eval_data.p->data = eval_data.p->ip_data;
+            eval_data.p->dsize = eval_data.p->ip_dsize;
+
+            /* clear so we dont keep recursing */
+            eval_data.p->packet_flags &= ~PKT_IP_RULE; 
+            eval_data.p->packet_flags |= PKT_IP_RULE_2ND;
+            
+            /* Recurse, and evaluate with the inner IP */
+            rval = rule_tree_match(id, tree, index, data, NULL);
+
+            eval_data.p->packet_flags &= ~PKT_IP_RULE_2ND;
+            eval_data.p->packet_flags |= PKT_IP_RULE;
+
+            /* restore original data & dsize */
+            eval_data.p->iph = tmp_iph;
+#ifdef SUP_IP6
+            eval_data.p->ip4h = (IP4Hdr*)tmp_ip4h;
+            eval_data.p->ip6h = (IP6Hdr*)tmp_ip6h;
+#endif
+            eval_data.p->data = tmp_data;
+            eval_data.p->dsize = tmp_dsize;
+        }
+    }
+#endif
+    return 0;
 }
 
 static int sortOrderByPriority(const void *e1, const void *e2)
 {
-    OTNX *o1;
-    OTNX *o2;
+    OptTreeNode *otn1;
+    OptTreeNode *otn2;
 
-    if(!e1 || !e2)
+    if (!e1 || !e2)
         return 0;
 
-    o1 = *(OTNX **)e1;
-    o2 = *(OTNX **)e2;
+    otn1 = *(OptTreeNode **)e1;
+    otn2 = *(OptTreeNode **)e2;
 
-    if( o1->otn->sigInfo.priority < o2->otn->sigInfo.priority )
+    if( otn1->sigInfo.priority < otn2->sigInfo.priority )
         return +1;
 
-    if( o1->otn->sigInfo.priority > o2->otn->sigInfo.priority )
+    if( otn1->sigInfo.priority > otn2->sigInfo.priority )
         return -1;
 
 /* This improves stability of repeated tests */
 //#ifdef PORTLISTS
-    if( o1->otn->sigInfo.id < o2->otn->sigInfo.id )
+    if( otn1->sigInfo.id < otn2->sigInfo.id )
         return +1;
 
-    if( o1->otn->sigInfo.id > o2->otn->sigInfo.id )
+    if( otn1->sigInfo.id > otn2->sigInfo.id )
         return -1;
 //#endif
     return 0;
@@ -1034,65 +764,16 @@ static int sortOrderByPriority(const void *e1, const void *e2)
 
 static int sortOrderByContentLength(const void *e1, const void *e2)
 {
-    OTNX      *o1;
-    OTNX      *o2;
+    OptTreeNode *otn1;
+    OptTreeNode *otn2;
 
-    if(!e1 || !e2)
+    if (!e1 || !e2)
         return 0;
 
-    o1 = *(OTNX **)e1;
-    o2 = *(OTNX **)e2;
+    otn1 = *(OptTreeNode **)e1;
+    otn2 = *(OptTreeNode **)e2;
 
-    if( !o1 || !o2 )
-        return 0;
-
-#ifdef XXXX
-    if(!e1->rule_info && e2->rule_info)
-    {
-        /*
-        **  incoming event is not a rule, keep
-        **  looking.
-        */
-        return -1;
-    }
-    else if(e1->rule_info && !e2->rule_info)
-    {
-        /*
-        **  incoming event is a rule, event in queue
-        **  is not.  Put incoming here.
-        */
-        return +1;
-    }
-    else if(!e1->rule_info && !e2->rule_info)
-    {
-        /*
-        **  Neither event is a rule.  Use incoming as
-        **  priority.  Last one in goes at the end to
-        **  preserve rule order.
-        */
-        return 0;
-    }
-#endif
-    /*
-    **  We already know that these pointers aren't NULL by
-    **  the previous logic.
-    */
-
-    if(o1->content_length < o2->content_length)
-        return +1;
-
-    if(o1->content_length > o2->content_length)
-        return -1;
-    
-/* This improves stability of repeated tests */
-//ifdef PORTLISTS
-    if( o1->otn->sigInfo.id < o2->otn->sigInfo.id )
-        return +1;
-
-    if( o1->otn->sigInfo.id > o2->otn->sigInfo.id )
-        return -1;
-//endif 
-
+    /**** XXX: TODO for RULE_OPTION_TREE */
     return 0;
 }
 
@@ -1175,7 +856,7 @@ static INLINE int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
     int i;
     int j;
     int k;
-    OTNX *otnx;
+    OptTreeNode *otn;
     int   tcnt=0;
 
     for( i = 0; i < o->iMatchInfoArraySize; i++ )
@@ -1215,9 +896,9 @@ static INLINE int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
             /* Process each event in the action (alert,drop,log,...) groups */
             for(j=0; j < o->matchInfo[i].iMatchCount; j++)
             {
-                otnx = o->matchInfo[i].MatchArray[j];
+                otn = o->matchInfo[i].MatchArray[j];
 
-                if( otnx && otnx->otn && (otnx->otn->type == RULE_PASS) )
+                if( otn && (otn->type == RULE_PASS) )
                 {
                     /* Already acted on rules, so just don't act on anymore */
                     if( tcnt > 0 )
@@ -1230,44 +911,44 @@ static INLINE int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
                 */
                 for(k = 0; k < j; k++)
                 {
-                    if(o->matchInfo[i].MatchArray[k] == otnx)
+                    if(o->matchInfo[i].MatchArray[k] == otn)
                     {
-                        otnx = NULL; 
+                        otn = NULL; 
                         break;
                     }
                 }
 
-                if( otnx && otnx->otn && !fpSessionAlerted(p, otnx) &&
-                   !fpFragAlerted(p, otnx))
+                if( otn && !fpSessionAlerted(p, otn) &&
+                   !fpFragAlerted(p, otn))
                 {
                     /*
                     **  QueueEvent
                     */
-                    SnortEventqAdd(otnx->otn->sigInfo.generator, 
-                                   otnx->otn->sigInfo.id,
-                                   otnx->otn->sigInfo.rev,
-                                   otnx->otn->sigInfo.class_id,
-                                   otnx->otn->sigInfo.priority,
-                                   otnx->otn->sigInfo.message,
-                                   (void *)otnx);
+                    SnortEventqAdd(otn->sigInfo.generator, 
+                                   otn->sigInfo.id,
+                                   otn->sigInfo.rev,
+                                   otn->sigInfo.class_id,
+                                   otn->sigInfo.priority,
+                                   otn->sigInfo.message,
+                                   (void *)NULL);
                     tcnt++;
                 }
                 
                 if ( p->ssnptr )
                 {                     
-                    fpAddSessionAlert(p, otnx);
+                    fpAddSessionAlert(p, otn);
                 }
 
                 if ( p->fragtracker )
                 {
-                    fpAddFragAlert(p, otnx);
+                    fpAddFragAlert(p, otn);
                 }
 
                 if( tcnt >= g_event_queue.log_events )
                     return 1;
 
                 /* only log/count one pass */
-                if( otnx &&  otnx->otn && (otnx->otn->type == RULE_PASS) )
+                if( otn && (otn->type == RULE_PASS) )
                 {
                     p->packet_flags |= PKT_PASS_RULE;
                     return 1;
@@ -1296,22 +977,19 @@ static INLINE int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
 **          1 if flagged
 **
 */
-static INLINE int fpAddSessionAlert(Packet *p, OTNX *otnx)
+static INLINE int fpAddSessionAlert(Packet *p, OptTreeNode *otn)
 {
     if ( !p->ssnptr )
         return 0;
 
-    if ( !otnx )
-        return 0;
-
-    if ( !otnx->otn )
+    if ( !otn )
         return 0;
 
     /* Only track a certain number of alerts per session */
     if (stream_api)
         return !stream_api->add_session_alert(p->ssnptr, p,
-                                  otnx->otn->sigInfo.generator,
-                                  otnx->otn->sigInfo.id);
+                                  otn->sigInfo.generator,
+                                  otn->sigInfo.id);
     return 0;
 }
 
@@ -1333,9 +1011,9 @@ static INLINE int fpAddSessionAlert(Packet *p, OTNX *otnx)
 **          1 if alert previously generated
 **
 */
-static INLINE int fpSessionAlerted(Packet *p, OTNX *otnx)
+static INLINE int fpSessionAlerted(Packet *p, OptTreeNode *otn)
 {
-    SigInfo *si = &otnx->otn->sigInfo;
+    SigInfo *si = &otn->sigInfo;
 
     if ( !stream_api )
         return 0;
@@ -1348,6 +1026,7 @@ static INLINE int fpSessionAlerted(Packet *p, OTNX *otnx)
 }
 
 
+#ifndef FPSW
 /*
 **  fpEvalHeader::
 **
@@ -1423,6 +1102,7 @@ static INLINE int fpEvalHeader(PORT_GROUP *port_group, Packet *p, int check_port
 
     return 0;
 }
+#endif
 /*
  * Prints an OTN in a simple format with:
  *
@@ -1492,22 +1172,60 @@ void printRuleFmt1( OptTreeNode * otn )
 **    PORT_GROUP * - the port group to inspect
 **    Packet *     - the packet to inspect
 **    int          - whether src/dst ports should be checked (udp/tcp or icmp)
+**    char         - whether the rule is an IP rule (change the packet payload pointer)
 **
 **  FORMAL OUTPUTS
 **    int - 0 for failed pattern match
 **          1 for sucessful pattern match
 **
 */
-static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_ports)
+static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_ports, char ip_rule)
 {
     RULE_NODE *rnWalk;
-    OTNX *otnx = NULL;
     void * so;
     int start_state;
+    char http_buffer_checked = 0;
+    const u_int8_t *tmp_payload = p->data;
+    u_int16_t tmp_dsize = p->dsize;
+    void *tmp_iph = (void *)p->iph;
+#ifdef SUP_IP6
+    void *tmp_ip6h = (void *)p->ip6h;
+    void *tmp_ip4h = (void *)p->ip4h;
+#endif
+    char repeat = 0;
+    PROFILE_VARS;
     
-    /* XXX it is not a good idea to allocate memory here */
-    extern HttpUri  UriBufs[URI_COUNT]; /* decode.c */
-
+    if (ip_rule)
+    {
+        /* Set the packet payload pointers to that of IP,
+        ** since this is an IP rule. */
+#ifdef GRE
+        if (p->outer_ip_data)
+        {
+            p->iph = p->outer_iph;
+#ifdef SUP_IP6
+            p->ip6h = &p->outer_ip6h;
+            p->ip4h = &p->outer_ip4h;
+#endif
+            p->data = p->outer_ip_data;
+            p->dsize = p->outer_ip_dsize;
+            p->packet_flags |= PKT_IP_RULE;
+            repeat = 2;
+        }
+        else
+#endif  
+        if (p->ip_data)
+        {
+            p->data = p->ip_data;
+            p->dsize = p->ip_dsize;
+            p->packet_flags |= PKT_IP_RULE;
+        }
+    }
+    else
+    {
+        p->packet_flags &= ~PKT_IP_RULE;
+    }
+    
     /*
     **  Init the info for rule ordering selection
     */
@@ -1539,16 +1257,19 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
                 int i;
                 so = (void *)port_group->pgPatDataUri;
     
-                if( so ) /* Do we have any URI rules ? */
+                if( so && (mpseGetPatternCount(so) > 0)) /* Do we have any HTTP buffer rules ? */
                 {
                     mpseSetRuleMask( so, &port_group->boRuleNodeID ); 
     
                     /*
-                    **  Process all of the packet's URIs
+                    **  Process the packet's HTTP decoded buffers
                     */
-                    for( i=0; i<p->uri_count; i++)
+                    for( i=HTTP_BUFFER_URI; i<p->uri_count && i <= HTTP_BUFFER_METHOD; i++)
                     {
-                        if(UriBufs[i].uri == NULL)
+                        /* Only search the URI, Header, Client Body buffers,
+                        ** and only when they have data
+                        */
+                        if((UriBufs[i].uri == NULL) || (UriBufs[i].length == 0))
                             continue;
     
                         omd.pg = port_group;
@@ -1557,12 +1278,14 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
     
                         start_state = 0;
                         mpseSearch (so, UriBufs[i].uri, UriBufs[i].length, 
-                             otnx_match, &omd, &start_state );
+                             rule_tree_match, 
+                             &omd, &start_state );
+                        http_buffer_checked = 1;
 #ifdef PPM_MGR
                         if( PPM_PACKET_ABORT_FLAG() )
                             return 0; /* bail if we spent too much time already */
 #endif
-                    }   
+                    }
                 }
             }
     
@@ -1578,7 +1301,7 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
             */
             so = (void *)port_group->pgPatData;
     
-            if((p->packet_flags & PKT_ALT_DECODE) && so && p->alt_dsize) 
+            if((p->packet_flags & PKT_ALT_DECODE) && so && p->alt_dsize && (mpseGetPatternCount(so) > 0))
             {
                 mpseSetRuleMask( so, &port_group->boRuleNodeID ); 
     
@@ -1588,7 +1311,8 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
     
                 start_state = 0;
                 mpseSearch ( so, DecodeBuffer, p->alt_dsize, 
-                        otnx_match, &omd, &start_state );
+                             rule_tree_match, 
+                             &omd, &start_state );
 #ifdef PPM_MGR
                 if( PPM_PACKET_ABORT_FLAG() )
                     return 0; /* bail if we spent too much time already */
@@ -1611,20 +1335,44 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
             **    We may want to bail after the Content search if there
             **    has been a successful match.
             */
-            if( so && p->data && p->dsize) 
+            if( so && p->data && p->dsize && (mpseGetPatternCount(so) > 0))
             {
+                u_int16_t pattern_match_size = p->dsize;
                 mpseSetRuleMask( so, &port_group->boRuleNodeID ); 
     
                 omd.pg = port_group;
                 omd.p = p;
                 omd.check_ports= check_ports;
-    
+
                 start_state = 0;
-                mpseSearch ( so, p->data, p->dsize, otnx_match, &omd, 
-                            &start_state );
+
+                /* Only search alt_dsize if http_buffer_checked is set */
+                if (http_buffer_checked)
+                {
+                    pattern_match_size = p->alt_dsize;
+                }
+
+                mpseSearch ( so, p->data, pattern_match_size,
+                             rule_tree_match, 
+                             &omd, &start_state );
 #ifdef PPM_MGR
                 if( PPM_PACKET_ABORT_FLAG() )
+                {
+                    if (ip_rule)
+                    {
+                        /* Set the data & dsize back to original values. */
+                        p->iph = (IPHdr *)tmp_iph;
+#ifdef SUP_IP6
+                        p->ip6h = (IP6Hdr *)tmp_ip6h;
+                        p->ip4h = (IP4Hdr *)tmp_ip4h;
+#endif
+                        p->data = tmp_payload;
+                        p->dsize = tmp_dsize;
+                        p->packet_flags &= ~(PKT_IP_RULE| PKT_IP_RULE_2ND);
+                    }
+    
                     return 0; /* bail if we spent too much time already */
+                }
 #endif
             }
     
@@ -1657,132 +1405,73 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
     if( PPM_ENABLED() )
         PPM_GET_TIME();
 #endif
-    
-    for(rnWalk = port_group->pgHeadNC; rnWalk; rnWalk = rnWalk->rnNext)
+
+    do
     {
-        /*
-        **  Reset the last match offset for each OTN we touch... 
-        */
-        doe_ptr = NULL;
+    if (port_group->pgHeadNC)
+    {
+        detection_option_eval_data_t eval_data;
+        int rval;
+        rnWalk = port_group->pgHeadNC;
+        eval_data.pomd = &omd;
+        eval_data.otnx = rnWalk->rnRuleData;
+        eval_data.p = p;
+        eval_data.pmd = NULL;
+        eval_data.flowbit_failed = 0;
+        eval_data.flowbit_noalert = 0;
+        PREPROC_PROFILE_START(ncrulePerfStats);
+        rval = detection_option_tree_evaluate(port_group->pgNonContentTree, &eval_data);
+        PREPROC_PROFILE_END(ncrulePerfStats);
 
-        otnx = (OTNX *)rnWalk->rnRuleData;
-
-        if(fpDetectGetDebugPrintNcRules()) //PORTLISTS
+        if (rval)
         {
-            LogMessage("NC-fpEvalOTN-testing ");
-            printRuleFmt1( otnx->otn );
-        }
-    
-        /*
-        **  If this is a pipeline request don't do the no-content
-        **  rules since we already checked them during the first URI inspection.
-        */
-        if((UriBufs[HTTP_BUFFER_URI].decode_flags & HTTPURI_PIPELINE_REQ) && 
-           !otnx->otn->pcre_flag)
-            continue;
-
-#ifdef PPM_MGR 
-        if( PPM_RULES_ENABLED() )
-        {
-            /* Test if rule is suspended */
-            if( otnx->otn->rule_state != RULE_STATE_ENABLED )
-            {
-                /* Attempt to re-enable the rule */
-                PPM_REENABLE_OTN(otnx->otn, p);
-
-                /* If still not enabled forget it */
-                if( otnx->otn->rule_state != RULE_STATE_ENABLED )
-                    continue;
-            }
-
-            if( p->dsize )
-            {
-                PPM_INIT_RULE_TIMER(); 
-            }
-        }
-#endif
-        /*
-        **  Do the OTN check, if successful than we check
-        **  the RTN for validation purposes.
-        */
-        if(fpEvalOTN(otnx->otn, p))
-        {    
-            //PORTLISTS
-            if(fpDetectGetDebugPrintNcRules())
-                LogMessage("NC-fpEvalOTN- Matched %u:%u\n",otnx->otn->sigInfo.generator,otnx->otn->sigInfo.id);
             /*
-            *  OTN is match, check RTN
+            **  We have a qualified event from this tree 
             */
-            if(fpEvalRTN(otnx->rtn, p, check_ports))
-            {
-                //PORTLISTS
-                if(fpDetectGetDebugPrintNcRules())
-                    LogMessage("NC-fpEvalRTN- Matched %u:%u\n",otnx->otn->sigInfo.generator,otnx->otn->sigInfo.id);
-                port_group->pgQEvents++;
-                UpdateQEvents();
-
-                /*
-                **  If the array if filled for this type
-                **  of event, then it wasn't added and there
-                **  is no reason to select the events again.
-                */
-                if( fpAddMatch(&omd, otnx, 0) )
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                /*
-                **  This is a non-qualified event
-                */
-                //PORTLISTS
-                if(fpDetectGetDebugPrintNcRules())
-                    LogMessage("NC-fpEvalRTN- Failed to Match %u:%u\n",otnx->otn->sigInfo.generator,otnx->otn->sigInfo.id);
-                port_group->pgNQEvents++;
-                UpdateNQEvents();
-            }
-
-            continue;
+            port_group->pgQEvents++;
+            UpdateQEvents();
         }
-#ifdef PPM_MGR
-        //if( p->dsize  && otnx->otn->pcre_flag )
-        if( p->dsize && PPM_ENABLED() )
+        else
         {
-            PPM_GET_TIME(); 
- 
-            if( PPM_RULES_ENABLED() )
-            {
-                if( otnx->otn->pcre_flag )
-                {
-                    if( PPM_PKTS_ENABLED() )
-                        PPM_INC_PKT_PCRE_RULE_TESTS();
-                    PPM_ACCUM_PCRE_RULE_TIME();
-                }
-		else
-		{
-		    if( PPM_PKTS_ENABLED() )
-		        PPM_INC_PKT_NC_RULE_TESTS();
-		    PPM_ACCUM_NC_RULE_TIME();
-		}
-         
-	        /* Rule test */
-                PPM_RULE_TEST(otnx->otn, p);
-	        PPM_END_RULE_TIMER(); 
-	    }
- 
-            /* Packet test */
-            if( PPM_PKTS_ENABLED() )
-            {
-                PPM_PACKET_TEST();
-                if( PPM_PACKET_ABORT_FLAG() )
-                {
-                    /* bail if we exceeded the time limit */
-                    return 0; 
-                }
-            }
+            /*
+            ** This means that the event is non-qualified.
+            */
+            port_group->pgNQEvents++;
+            UpdateNQEvents();
         }
+    }
+
+#ifdef GRE
+        if (ip_rule && p->outer_ip_data)
+        {
+            /* Evaluate again with the inner IPs */
+            p->iph = p->inner_iph;
+#ifdef SUP_IP6
+            p->ip6h = &p->inner_ip6h;
+            p->ip4h = &p->inner_ip4h;
 #endif
+            p->data = p->ip_data;
+            p->dsize = p->ip_dsize;
+            p->packet_flags |= PKT_IP_RULE_2ND | PKT_IP_RULE;
+            repeat--;
+        }
+#else
+        repeat = 0;
+#endif
+    }
+    while(repeat != 0);
+
+    if (ip_rule)
+    {
+        /* Set the data & dsize back to original values. */
+        p->iph = tmp_iph;
+#ifdef SUP_IP6
+        p->ip6h = (IP6Hdr *)tmp_ip6h;
+        p->ip4h = (IP4Hdr *)tmp_ip4h;
+#endif
+        p->data = tmp_payload;
+        p->dsize = tmp_dsize;
+        p->packet_flags &= ~(PKT_IP_RULE| PKT_IP_RULE_2ND);
     }
 
     return 0;
@@ -1793,7 +1482,7 @@ static INLINE int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p, int check_po
 */
 static INLINE int fpEvalHeaderUdp(Packet *p)
 {
-    PORT_GROUP *src, *dst, *gen;
+    PORT_GROUP *src = NULL, *dst = NULL, *gen = NULL;
     int retval = 0;
     
 #if defined(TARGET_BASED) && defined(PORTLISTS)
@@ -1838,7 +1527,7 @@ static INLINE int fpEvalHeaderUdp(Packet *p)
             InitMatchInfo( &omd );
             
             /* destination groups */
-            if(fpEvalHeaderSW(dst, p, 1))
+            if(fpEvalHeaderSW(dst, p, 1, 0))
             {
                 return 1;
             }
@@ -1847,7 +1536,7 @@ static INLINE int fpEvalHeaderUdp(Packet *p)
             InitMatchInfo( &omd );
             
             /*  source groups */
-            if(fpEvalHeaderSW(src, p, 1))
+            if(fpEvalHeaderSW(src, p, 1, 0))
             {
                 return 1;
             }
@@ -1856,11 +1545,11 @@ static INLINE int fpEvalHeaderUdp(Packet *p)
             InitMatchInfo( &omd );
             
             /*  both ports */
-            if(fpEvalHeaderSW(dst, p, 1))
+            if(fpEvalHeaderSW(dst, p, 1, 0))
             {
                 return 1;
             }
-            if(fpEvalHeaderSW(src, p, 1))
+            if(fpEvalHeaderSW(src, p, 1, 0))
             {
                 return 1;
             }
@@ -1869,7 +1558,7 @@ static INLINE int fpEvalHeaderUdp(Packet *p)
             InitMatchInfo( &omd );
             
             /*  generic */
-            if(fpEvalHeaderSW(gen, p, 1))
+            if(fpEvalHeaderSW(gen, p, 1, 0))
             {
                 return 1;
             }
@@ -1943,7 +1632,7 @@ static INLINE int fpEvalHeaderTcp(Packet *p)
             InitMatchInfo( &omd );
             
             /* destination groups */
-            if(fpEvalHeaderSW(dst, p, 1))
+            if(fpEvalHeaderSW(dst, p, 1, 0))
             {
                 return 1;
             }
@@ -1952,7 +1641,7 @@ static INLINE int fpEvalHeaderTcp(Packet *p)
             InitMatchInfo( &omd );
 
             /* source groups */
-            if(fpEvalHeaderSW(src, p, 1))
+            if(fpEvalHeaderSW(src, p, 1, 0))
             {
                 return 1;
             }
@@ -1961,11 +1650,11 @@ static INLINE int fpEvalHeaderTcp(Packet *p)
             InitMatchInfo( &omd );
 
             /*  both ports */
-            if(fpEvalHeaderSW(dst, p, 1))
+            if(fpEvalHeaderSW(dst, p, 1, 0))
             {
                 return 1;
             }
-            if(fpEvalHeaderSW(src, p, 1))
+            if(fpEvalHeaderSW(src, p, 1, 0))
             {
                 return 1;
             }
@@ -1974,7 +1663,7 @@ static INLINE int fpEvalHeaderTcp(Packet *p)
             InitMatchInfo( &omd );
 
             /*  generic */
-            if(fpEvalHeaderSW(gen, p, 1))
+            if(fpEvalHeaderSW(gen, p, 1, 0))
             {
                 return 1;
             }
@@ -2008,7 +1697,7 @@ static INLINE int fpEvalHeaderIcmp(Packet *p)
             
             /* icmp type */
 #ifdef FPSW
-            if(fpEvalHeaderSW(type, p, 0))
+            if(fpEvalHeaderSW(type, p, 0, 0))
 #else
             if(fpEvalHeader(type, p, 0))
 #endif
@@ -2026,7 +1715,7 @@ static INLINE int fpEvalHeaderIcmp(Packet *p)
             
             /*  generic */
 #ifdef FPSW
-            if(fpEvalHeaderSW(gen, p, 0))
+            if(fpEvalHeaderSW(gen, p, 0, 0))
 #else
             if(fpEvalHeader(gen, p, 0))
 #endif
@@ -2064,7 +1753,7 @@ static INLINE int fpEvalHeaderIp(Packet *p, int ip_proto)
             
             /* ip_group */
 #ifdef FPSW
-            if(fpEvalHeaderSW(ip_group, p, 0))
+            if(fpEvalHeaderSW(ip_group, p, 0, 1))
 #else
             if(fpEvalHeader(ip_group, p, 0))
 #endif
@@ -2082,7 +1771,7 @@ static INLINE int fpEvalHeaderIp(Packet *p, int ip_proto)
             
             /* generic */
 #ifdef FPSW
-            if(fpEvalHeaderSW(gen, p, 0))
+            if(fpEvalHeaderSW(gen, p, 0, 1))
 #else
             if(fpEvalHeader(gen, p, 0))
 #endif

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2008 Sourcefire, Inc.
+** Copyright (C) 2002-2009 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,7 @@
 //#include "ubi_SplayTree.h"
 #include "bitop.h"
 #include "ipv6_port.h"
+#include "util.h"
 
 
 /*  D E F I N E S  ************************************************************/
@@ -62,6 +63,8 @@
 #define ETHERNET_TYPE_PPPoE_SESS      0x8864 /* session stage */
 #define ETHERNET_TYPE_8021Q           0x8100
 #define ETHERNET_TYPE_LOOP            0x9000
+#define ETHERNET_TYPE_MPLS_UNICAST    0x8847
+#define ETHERNET_TYPE_MPLS_MULTICAST  0x8848
 
 #define ETH_DSAP_SNA                  0x08    /* SNA */
 #define ETH_SSAP_SNA                  0x00    /* SNA */
@@ -196,6 +199,7 @@ struct enc_header {
 #define ICMP_HEADER_LEN         4
 
 #define IP_OPTMAX               40
+#define IP6_EXTMAX              40
 #define TCP_OPTLENMAX           40 /* (((2^4) - 1) * 4  - TCP_HEADER_LEN) */
 
 #ifndef IP_MAXPACKET
@@ -574,6 +578,15 @@ struct enc_header {
 #define PKT_PREPROC_RPKT     0x00010000  /* set in original packet to indicate a preprocessor
                                           * has a reassembled packet */
 #define PKT_DCE_RPKT         0x00020000  /* this packet is a DCE/RPC reassembled one */
+#define PKT_IP_RULE          0x00040000  /* this packet is being evaluated against an IP rule */
+#define PKT_IP_RULE_2ND      0x00080000  /* this packet is being evaluated against an IP rule */
+
+#define PKT_SMB_SEG          0x00100000  /* this is an SMB desegmented packet */
+#define PKT_DCE_SEG          0x00200000  /* this is a DCE/RPC desegmented packet */
+#define PKT_DCE_FRAG         0x00400000  /* this is a DCE/RPC defragmented packet */
+#define PKT_SMB_TRANS        0x00800000  /* this is an SMB Transact reassembled packet */
+#define PKT_DCE_PKT          0x01000000  /* this is a DCE packet processed by DCE/RPC preprocessor */
+
 #define PKT_STATELESS        0x10000000  /* Packet has matched a stateless rule */
 #define PKT_INLINE_DROP      0x20000000
 #define PKT_OBFUSCATED       0x40000000  /* this packet has been obfuscated */
@@ -895,6 +908,8 @@ typedef struct _WifiHdr
 #define SET_IP_VER(iph, value)  ((iph)->ip_verhl = (unsigned char)(((iph)->ip_verhl & 0x0f) | (value << 4)))
 #define SET_IP_HLEN(iph, value)  ((iph)->ip_verhl = (unsigned char)(((iph)->ip_verhl & 0xf0) | (value & 0x0f)))
 
+#define NUM_IP_PROTOS 256
+
 typedef struct _IPHdr
 {
     u_int8_t ip_verhl;      /* version & header length */
@@ -990,13 +1005,64 @@ typedef struct _IP6RawHdr
 #define IP_PROTO_IPV6       41
 #define IP_PROTO_IPIP       4
 
-#ifdef WORDS_BIGENDIAN
-#define IP6F_OFF_MASK       0xfff8  /* mask out offset from _offlg */
-#define IP6F_MORE_FRAG      0x0001  /* more-fragments flag */
-#else   /* BYTE_ORDER == LITTLE_ENDIAN */
-#define IP6F_OFF_MASK       0xf8ff  /* mask out offset from _offlg */
-#define IP6F_MORE_FRAG      0x0100  /* more-fragments flag */
-#endif
+#define IP6F_OFFSET_MASK    0xfff8  /* mask out offset from _offlg */
+#define IP6F_MF_MASK        0x0001  /* more-fragments flag */
+
+#define IP6F_OFFSET(fh) ((ntohs((fh)->ip6f_offlg) & IP6F_OFFSET_MASK) >> 3)
+#define IP6F_RES(fh) (fh)->ip6f_reserved
+#define IP6F_MF(fh) (ntohs((fh)->ip6f_offlg) & IP6F_MF_MASK )
+
+/* to store references to IP6 Extension Headers */
+typedef struct _IP6Option
+{
+    u_int8_t type;
+    const u_int8_t *data;
+} IP6Option;
+
+/* Generic Extension Header */
+typedef struct _IP6Extension
+{
+    u_int8_t ip6e_nxt;
+    u_int8_t ip6e_len;
+    /* options follow */
+    u_int8_t ip6e_pad[6];
+} IP6Extension;
+
+typedef struct _IP6HopByHop
+{
+    u_int8_t ip6hbh_nxt;
+    u_int8_t ip6hbh_len;
+    /* options follow */
+    u_int8_t ip6hbh_pad[6];
+} IP6HopByHop;
+
+typedef struct _IP6Dest
+{
+    u_int8_t ip6dest_nxt;
+    u_int8_t ip6dest_len;
+    /* options follow */
+    u_int8_t ip6dest_pad[6];
+} IP6Dest;
+
+typedef struct _IP6Route
+{
+    u_int8_t ip6rte_nxt;
+    u_int8_t ip6rte_len;
+    u_int8_t ip6rte_type;
+    u_int8_t ip6rte_seg_left;
+    /* type specific data follows */
+} IP6Route;
+
+typedef struct _IP6Route0
+{
+    u_int8_t ip6rte0_nxt;
+    u_int8_t ip6rte0_len;
+    u_int8_t ip6rte0_type;
+    u_int8_t ip6rte0_seg_left;
+    u_int8_t ip6rte0_reserved;
+    u_int8_t ip6rte0_bitmap[3];
+    struct in6_addr ip6rte0_addr[1];  /* Up to 23 IP6 addresses */
+} IP6Route0;
 
 /* Fragment header */
 typedef struct _IP6Frag
@@ -1012,7 +1078,6 @@ typedef struct _ICMP6
     u_int8_t type;
     u_int8_t code;
     u_int16_t csum;
-    u_int8_t *body;
 
 } ICMP6Hdr;
 
@@ -1035,7 +1100,7 @@ sfip_t *    ip4_ret_dst(struct _Packet *);
 u_int16_t   ip4_ret_tos(struct _Packet *);
 u_int8_t    ip4_ret_ttl(struct _Packet *);
 u_int16_t   ip4_ret_len(struct _Packet *);
-u_int16_t   ip4_ret_id(struct _Packet *);
+u_int32_t   ip4_ret_id(struct _Packet *);
 u_int8_t    ip4_ret_proto(struct _Packet *);
 u_int16_t   ip4_ret_off(struct _Packet *);
 u_int8_t    ip4_ret_ver(struct _Packet *);
@@ -1046,7 +1111,7 @@ sfip_t *    orig_ip4_ret_dst(struct _Packet *);
 u_int16_t   orig_ip4_ret_tos(struct _Packet *);
 u_int8_t    orig_ip4_ret_ttl(struct _Packet *);
 u_int16_t   orig_ip4_ret_len(struct _Packet *);
-u_int16_t   orig_ip4_ret_id(struct _Packet *);
+u_int32_t   orig_ip4_ret_id(struct _Packet *);
 u_int8_t    orig_ip4_ret_proto(struct _Packet *);
 u_int16_t   orig_ip4_ret_off(struct _Packet *);
 u_int8_t    orig_ip4_ret_ver(struct _Packet *);
@@ -1057,7 +1122,7 @@ sfip_t *    ip6_ret_dst(struct _Packet *);
 u_int16_t   ip6_ret_toc(struct _Packet *);
 u_int8_t    ip6_ret_hops(struct _Packet *);
 u_int16_t   ip6_ret_len(struct _Packet *);
-u_int16_t   ip6_ret_id(struct _Packet *);
+u_int32_t   ip6_ret_id(struct _Packet *);
 u_int8_t    ip6_ret_next(struct _Packet *);
 u_int16_t   ip6_ret_off(struct _Packet *);
 u_int8_t    ip6_ret_ver(struct _Packet *);
@@ -1068,7 +1133,7 @@ sfip_t *    orig_ip6_ret_dst(struct _Packet *);
 u_int16_t   orig_ip6_ret_toc(struct _Packet *);
 u_int8_t    orig_ip6_ret_hops(struct _Packet *);
 u_int16_t   orig_ip6_ret_len(struct _Packet *);
-u_int16_t   orig_ip6_ret_id(struct _Packet *);
+u_int32_t   orig_ip6_ret_id(struct _Packet *);
 u_int8_t    orig_ip6_ret_next(struct _Packet *);
 u_int16_t   orig_ip6_ret_off(struct _Packet *);
 u_int8_t    orig_ip6_ret_ver(struct _Packet *);
@@ -1081,7 +1146,7 @@ typedef struct _IPH_API
     u_int16_t   (*iph_ret_tos)(struct _Packet *);
     u_int8_t    (*iph_ret_ttl)(struct _Packet *);
     u_int16_t   (*iph_ret_len)(struct _Packet *);
-    u_int16_t   (*iph_ret_id)(struct _Packet *);
+    u_int32_t   (*iph_ret_id)(struct _Packet *);
     u_int8_t    (*iph_ret_proto)(struct _Packet *);
     u_int16_t   (*iph_ret_off)(struct _Packet *);
     u_int8_t    (*iph_ret_ver)(struct _Packet *);
@@ -1092,15 +1157,19 @@ typedef struct _IPH_API
     u_int16_t   (*orig_iph_ret_tos)(struct _Packet *);
     u_int8_t    (*orig_iph_ret_ttl)(struct _Packet *);
     u_int16_t   (*orig_iph_ret_len)(struct _Packet *);
-    u_int16_t   (*orig_iph_ret_id)(struct _Packet *);
+    u_int32_t   (*orig_iph_ret_id)(struct _Packet *);
     u_int8_t    (*orig_iph_ret_proto)(struct _Packet *);
     u_int16_t   (*orig_iph_ret_off)(struct _Packet *);
     u_int8_t    (*orig_iph_ret_ver)(struct _Packet *);
     u_int8_t    (*orig_iph_ret_hlen)(struct _Packet *);
+    char ver;
 } IPH_API;
 
 extern IPH_API ip4;
 extern IPH_API ip6;
+
+#define IPH_API_V4 4
+#define IPH_API_V6 6
 
 #define iph_is_valid(p) (p->family != NO_IP)
 #define NO_IP 0
@@ -1372,16 +1441,30 @@ typedef struct _PPPoE_Tag
 #define HTTPURI_PIPELINE_REQ 0x01
 
 #define HTTP_BUFFER_URI 0
-#define HTTP_BUFFER_CLIENT_BODY 1
+#define HTTP_BUFFER_HEADER 1
+#define HTTP_BUFFER_CLIENT_BODY 2
+#define HTTP_BUFFER_METHOD 3
+#define HTTP_BUFFER_COOKIE 4
+
+#define MPLS_HEADER_LEN    4
+#define NUM_RESERVED_LABELS    16
 
 typedef struct _HttpUri
 {
     const u_int8_t *uri;  /* static buffer for uri length */
     u_int16_t length;
-    u_int32_t decode_flags; 
+    u_int32_t decode_flags;
 } HttpUri;
 
 struct IPH_API;
+
+typedef struct _MplsHdr
+{
+    u_int32_t label;
+    u_int8_t  exp;
+    u_int8_t  bos;
+    u_int8_t  ttl;
+} MplsHdr;
 
 typedef struct _Packet
 {
@@ -1485,30 +1568,104 @@ typedef struct _Packet
 #endif
 
 #ifdef SUP_IP6
-    IP4Hdr ip4h, orig_ip4h;   /* and orig. headers for ICMP_*_UNREACH family */
-    IP6Hdr ip6h, orig_ip6h;   /* and orig. headers for ICMP_*_UNREACH family */
-    ICMPHdr *icmp6h, *orig_icmp6h;
+    IP4Hdr inner_ip4h, inner_orig_ip4h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IP6Hdr inner_ip6h, inner_orig_ip6h;   /* and orig. headers for ICMP_*_UNREACH family */
+    ICMP6Hdr *icmp6h, *orig_icmp6h;
     int family;
     int orig_family;
 
     IPH_API iph_api;
 #endif
 
+    int http_pipeline_count;  /* Counter for HTTP pipelined requests */
+    
+    const u_int8_t *ip_data;   /* IP payload pointer */
+    u_int16_t ip_dsize;        /* IP payload size */
+    const IPHdr *inner_iph;      /* if IP-in-IP, this will be the inner IP header */
+#ifdef GRE
+    const u_int8_t *outer_ip_data;  /* Outer IP payload pointer */
+    u_int16_t outer_ip_dsize;  /* Outer IP payload size */
+#endif
+
+#ifdef MPLS
+    u_int32_t *mpls;
+    MplsHdr    mplsHdr;
+#endif
+
+    IP6Option  ip6_extensions[IP6_EXTMAX];    /* IPv6 Extension References */
+    u_int8_t   ip6_extension_count;
+    u_int8_t   ip6_frag_index;
+    u_int16_t  ip_frag_len;
+    const u_int8_t  *ip_frag_start;
+
+#ifdef SUP_IP6
+    IP4Hdr outer_ip4h, outer_orig_ip4h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IP6Hdr outer_ip6h, outer_orig_ip6h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IPH_API outer_iph_api;
+    int outer_family;
+
+    IP4Hdr *ip4h, *orig_ip4h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IP6Hdr *ip6h, *orig_ip6h;   /* and orig. headers for ICMP_*_UNREACH family */
+    IPH_API orig_iph_api;
+    IPH_API outer_orig_iph_api;
+#endif
+
+    uint32_t proto_bits;
+
 } Packet;
+
+#define PROTO_BIT__NONE  0x00000000
+#define PROTO_BIT__IP    0x00000001
+#define PROTO_BIT__ARP   0x00000002
+#define PROTO_BIT__TCP   0x00000004
+#define PROTO_BIT__UDP   0x00000008
+#define PROTO_BIT__ICMP  0x00000010
+#define PROTO_BIT__ALL   0xffffffff
+
+#define IsIP(p) (IPH_IS_VALID(p))
+#define IsTCP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_TCP))
+#define IsUDP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_UDP))
+#define IsICMP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_ICMP))
 
 #ifdef SUP_IP6 
 /* Sets the callbacks to point at the family selected by 
  *  * "family".  "family" is either AF_INET or AF_INET6 */
-static INLINE void set_callbacks(struct _Packet *p, int family) {
-    if(!p) 
-        return;
-    
-    if(family == AF_INET)
-        p->iph_api = ip4;
-    else
-        p->iph_api = ip6;
+#define CALLBACK_IP 0
+#define CALLBACK_ICMP_ORIG 1
 
-    p->family = family;
+static INLINE void set_callbacks(struct _Packet *p, int family, char orig)
+{
+    if (p == NULL) 
+    {
+        ErrorMessage("%s(%d) Can't set iph api callback: Packet is NULL.\n",
+                     __FILE__, __LINE__);
+        return;
+    }
+
+    if (orig == CALLBACK_IP)
+    {
+        if(family == AF_INET)
+            p->iph_api = ip4;
+        else
+            p->iph_api = ip6;
+
+        p->family = family;
+    }
+    else if (orig == CALLBACK_ICMP_ORIG)
+    {
+        if(family == AF_INET)
+            p->orig_iph_api = ip4;
+        else
+            p->orig_iph_api = ip6;
+
+        p->orig_family = family;
+    }
+    else
+    {
+        ErrorMessage("%s(%d) Can't set iph api callback: Invalid callback "
+                     "type: %c.\n", __FILE__, __LINE__, orig);
+        return;
+    }
 }
 #endif
 
@@ -1615,5 +1772,14 @@ typedef struct _PortList
     int num_entries;
 
 } PortList;
+
+#ifdef MPLS
+int checkMplsHdr(u_int32_t label, u_int8_t exp, u_int8_t bos, u_int8_t ttl, Packet *p);
+int isPrivateIP(u_int32_t addr);
+void DecodeEthOverMPLS(Packet * p, const struct pcap_pkthdr * pkthdr, const u_int8_t * pkt);
+void DecodeMPLS(const u_int8_t * pkt, struct pcap_pkthdr * pkthdr, Packet * p);
+#endif
+
+#define SFTARGET_UNKNOWN_PROTOCOL -1
 
 #endif                /* __DECODE_H__ */

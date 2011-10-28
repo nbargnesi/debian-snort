@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1998-2008 Sourcefire, Inc.
+** Copyright (C) 1998-2009 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -31,31 +31,38 @@
 #include "sf_vartable.h"
 #include "util.h"
 
-vartable_t *sfvt_alloc_table() {
+vartable_t *sfvt_alloc_table()
+{
     return (vartable_t*)SnortAlloc(sizeof(vartable_t));
 }
 
 // XXX this implementation is just used to support
 // Snort's underlying implementation better
-SFIP_RET sfvt_define(vartable_t *table, char *name, char *value) {
+SFIP_RET sfvt_define(vartable_t *table, char *name, char *value)
+{
     char *buf;
     int len;
+    SFIP_RET ret;
 
     if(!name || !value) return SFIP_ARG_ERR;
 
     len = strlen(name) + strlen(value) + 2;
 
-    if((buf = (char*)malloc(len)) == NULL) {
+    if((buf = (char*)malloc(len)) == NULL)
+    {
         return SFIP_FAILURE;
     }
 
     SnortSnprintf(buf, len, "%s %s", name, value);
 
-    return sfvt_add_str(table, buf);
+    ret = sfvt_add_str(table, buf);
+    free(buf);
+    return ret;
 }
 
 /* Adds the variable described by "str" to the table "table" */
-SFIP_RET sfvt_add_str(vartable_t *table, char *str) {
+SFIP_RET sfvt_add_str(vartable_t *table, char *str)
+{
     sfip_var_t *var;
     sfip_var_t *swp;
     sfip_var_t *p;
@@ -65,24 +72,28 @@ SFIP_RET sfvt_add_str(vartable_t *table, char *str) {
     if(!table || !str) return SFIP_FAILURE;
 
     /* Creates the variable */
-    if( (var = sfvar_alloc(table, str, &status)) == NULL ) {
+    if( (var = sfvar_alloc(table, str, &status)) == NULL )
+    {
          return status;
     }
 
     /* Insertion sort */
     
-    if(!table->head) {
+    if(!table->head)
+    {
         table->head = var;
         return SFIP_SUCCESS;
     }
 
-    if((ret = strcmp(var->name, table->head->name)) < 0) {
+    if((ret = strcmp(var->name, table->head->name)) < 0)
+    {
         var->next = table->head;
         table->head = var;
         return SFIP_SUCCESS;
     }
     /* Redefinition */
-    else if(ret == 0) {
+    else if(ret == 0)
+    {
         var->next = table->head->next;
         sfvar_free(table->head);
         table->head = var;
@@ -91,19 +102,23 @@ SFIP_RET sfvt_add_str(vartable_t *table, char *str) {
     
     /* The loop below checks table->head->next->name in the first iteration.
      * Make sure there is a table->head->next first */
-    if(!table->head->next) {
+    if(!table->head->next)
+    {
         table->head->next = var;
         return SFIP_SUCCESS;
     } 
-    else if(!strcmp(var->name, table->head->next->name)) {
+    else if(!strcmp(var->name, table->head->next->name))
+    {
         var->next = table->head->next->next;
         sfvar_free(table->head->next);
         table->head->next = var;
         return SFIP_DUPLICATE;       
     }
 
-    for(p = table->head; p->next; p=p->next) {
-        if((ret = strcmp(var->name, p->next->name)) < 0) {
+    for(p = table->head; p->next; p=p->next)
+    {
+        if((ret = strcmp(var->name, p->next->name)) < 0)
+        {
             swp = p->next;
             p->next = var;
             var->next = swp;
@@ -111,7 +126,8 @@ SFIP_RET sfvt_add_str(vartable_t *table, char *str) {
             return SFIP_SUCCESS;
         }
         /* Redefinition */
-        else if(ret == 0) {
+        else if(ret == 0)
+        {
             var->next = p->next->next;
             sfvar_free(p->next);
             p->next = var;
@@ -125,7 +141,8 @@ SFIP_RET sfvt_add_str(vartable_t *table, char *str) {
 
 /* Adds the variable described by "src" to the variable "dst",
  * using the vartable for looking variables used within "src" */
-SFIP_RET sfvt_add_to_var(vartable_t *table, sfip_var_t *dst, char *src) {
+SFIP_RET sfvt_add_to_var(vartable_t *table, sfip_var_t *dst, char *src)
+{
     int ret;
 
     if(!table || !dst || !src) return SFIP_ARG_ERR;        
@@ -137,7 +154,8 @@ SFIP_RET sfvt_add_to_var(vartable_t *table, sfip_var_t *dst, char *src) {
 }
 
 /* Looks up a variable from the table by the variable's name  */
-sfip_var_t *sfvt_lookup_var(vartable_t *table, char *name) {
+sfip_var_t *sfvt_lookup_var(vartable_t *table, char *name)
+{
     sfip_var_t *p;
     int len;
     char *end;
@@ -153,21 +171,41 @@ sfip_var_t *sfvt_lookup_var(vartable_t *table, char *name) {
         end++) ;
     len = end - name;
 
-    for(p=table->head; len && p; p=p->next) {
-        if(!strncmp(p->name, name, len)) return p;
+    for(p=table->head; len && p; p=p->next)
+    {
+        int name_len = strlen(p->name);
+        if((name_len == len) && !strncmp(p->name, name, len)) return p;
     }
 
     return NULL;
 }
 
+void sfvt_free_table(vartable_t *table)
+{
+    sfip_var_t *p, *tmp;
+
+    if (!table) return;
+
+    p = table->head;
+    while (p)
+    {
+        tmp = p->next;
+        sfvar_free(p);
+        p = tmp;
+    }
+    free(table);
+}
+
 /* Prints a table's contents */
-void sfip_print_table(FILE *f, vartable_t *table) {
+void sfip_print_table(FILE *f, vartable_t *table)
+{
     sfip_var_t *p;
 
     if(!f || !table) return;
 
     fprintf(f, "(Table %p)\n", (void*)table);
-    for(p=table->head; p; p=p->next) {
+    for(p=table->head; p; p=p->next)
+    {
         sfvar_print(f, p);
         puts("");
     }
@@ -180,7 +218,8 @@ int failures = 0;
 #define TEST(x) if(x) printf("\tSuccess: line %d\n", __LINE__);\
                 else { printf("\tFAILURE: line %d\n", __LINE__); failures++; }
 
-int main() {
+int main()
+{
     vartable_t *table;
     sfip_var_t *var;
     sfip_t *ip;

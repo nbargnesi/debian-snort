@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2008 Sourcefire Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -30,7 +30,6 @@
 #include "sf_snort_plugin_api.h"
 
 extern int checkCursorSimple(const u_int8_t *cursor, int flags, const u_int8_t *start, const u_int8_t *end, int offset);
-extern int getBuffer(SFSnortPacket *p, int flags, const u_int8_t **start, const u_int8_t **end);
 extern int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor);
 
 #define BYTE_STRING_LEN     11
@@ -279,6 +278,8 @@ ENGINE_LINKAGE int byteJump(void *p, ByteData *byteData, const u_int8_t **cursor
     {
         jumpValue += byteData->bytes + byteData->offset;
     }
+
+    jumpValue += byteData->post_offset;
 
     ret = setCursorInternal(sp, byteData->flags, jumpValue, cursor);
     

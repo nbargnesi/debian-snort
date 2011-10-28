@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2008 Sourcefire, Inc.
+ ** Copyright (C) 2005-2009 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -23,6 +23,7 @@
 #include "sf_dynamic_preproc_lib.h"
 #include "sf_dynamic_meta.h"
 #include "sf_dynamic_preprocessor.h"
+#include "sf_dynamic_common.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -34,8 +35,6 @@
 extern void DynamicInitialize();
 
 DynamicPreprocessorData _dpd;
-
-#define STD_BUF 1024
 
 NORETURN void DynamicPreprocessorFatalMessage(const char *format, ...)
 {
@@ -122,6 +121,18 @@ PREPROC_LINKAGE int InitializePreprocessor(DynamicPreprocessorData *dpd)
     _dpd.ip6Build = dpd->ip6Build;
     _dpd.ip6SetCallbacks = dpd->ip6SetCallbacks;
 #endif
+
+    _dpd.logAlerts = dpd->logAlerts;
+    _dpd.resetAlerts = dpd->resetAlerts;
+
+#ifdef TARGET_BASED
+    _dpd.findProtocolReference = dpd->findProtocolReference;
+    _dpd.addProtocolReference = dpd->addProtocolReference;
+    _dpd.isAdaptiveConfigured = dpd->isAdaptiveConfigured;
+#endif
+
+    _dpd.preprocOptOverrideKeyword = dpd->preprocOptOverrideKeyword;
+    _dpd.isPreprocEnabled = dpd->isPreprocEnabled;
 
     DYNAMIC_PREPROC_SETUP();
     return 0;

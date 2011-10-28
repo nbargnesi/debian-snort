@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2008 Sourcefire, Inc.
+ * Copyright (C) 2005-2009 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -44,6 +44,13 @@ char Stream5GetReassemblyDirectionTcp(Stream5LWSession *lwssn);
 char Stream5SetReassemblyTcp(Stream5LWSession *lwssn, u_int8_t flush_policy, char dir, char flags);
 char Stream5GetReassemblyFlushPolicyTcp(Stream5LWSession *lwssn, char dir);
 char Stream5IsStreamSequencedTcp(Stream5LWSession *lwssn, char dir);
-char Stream5MissingInReassembledTcp(Stream5LWSession *lwssn, char dir);
+int Stream5MissingInReassembledTcp(Stream5LWSession *lwssn, char dir);
 char Stream5PacketsMissingTcp(Stream5LWSession *lwssn, char dir);
+void s5TcpSetPortFilterStatus(
+        unsigned short port, 
+        int status
+        );
+int s5TcpGetPortFilterStatus(
+        unsigned short port 
+        );
 #endif /* STREAM5_TCP_H_ */
