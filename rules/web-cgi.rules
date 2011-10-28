@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: web-cgi.rules,v 1.77.2.4 2005/01/12 15:46:06 bmc Exp $
+# $Id: web-cgi.rules,v 1.77.2.5 2005/02/10 01:11:14 bmc Exp $
 #--------------
 # WEB-CGI RULES
 #--------------
@@ -375,3 +375,4 @@ alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-CGI processit
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-CGI WhatsUpGold instancename overflow attempt"; flow:to_server,established; uricontent:"/_maincfgret.cgi"; nocase; pcre:"/instancename=[^&\x3b\r\n]{513}/smi"; reference:bugtraq,11043; reference:cve,2004-0798; classtype:web-application-attack; sid:2663; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-CGI ibillpm.pl access"; flow:to_server,established; uricontent:"/ibillpm.pl"; nocase; reference:bugtraq,3476; reference:nessus,11083; classtype:web-application-activity; sid:2669; rev:2;)
 alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-CGI NetScreen SA 5000 delhomepage.cgi access"; flow:to_server,established; uricontent:"/delhomepage.cgi"; reference:bugtraq,9791; classtype:web-application-activity; sid:3062; rev:1;)
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (msg:"WEB-CGI mailman directory traversal attempt"; flow:to_server,established; uricontent:"/mailman/"; uricontent:".../"; reference:cve,2005-0202; classtype:web-application-attack; sid:3131; rev:2;)

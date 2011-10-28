@@ -1,5 +1,5 @@
 /*
-** $Id: sp_flowbits.c,v 1.2 2004/06/03 20:11:06 jhewlett Exp $
+** $Id: sp_flowbits.c,v 1.2.4.1 2005/03/08 16:28:12 jhewlett Exp $
 **
 ** sp_flowbits
 ** 
@@ -316,7 +316,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
         id = flowbits_count;
         flowbits_count++;
 
-        if(flowbits_count >= giFlowbitSize)
+        if(flowbits_count >= (giFlowbitSize*8) )
         {
             FatalError("FLOWBITS ERROR: The number of flowbit IDs in the "
                        "current ruleset exceed the maximum number of IDs "

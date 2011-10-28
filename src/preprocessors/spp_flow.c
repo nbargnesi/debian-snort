@@ -75,7 +75,7 @@ static void FlowParseOption(SPPFLOW_CONFIG *config,
 static void DisplayFlowConfig(void);
 
 static int s_debug = 0;
-unsigned int giFlowbitSize = 32;
+unsigned int giFlowbitSize = 64;
 
 /** 
  * Add the Flow Preprocessor to the list of things that snort can

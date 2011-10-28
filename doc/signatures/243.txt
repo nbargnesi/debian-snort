@@ -6,6 +6,7 @@ Sid:
 
 --
 Summary:
+This event is generated when the mstream DDoS tool is used.
 
 --
 Impact:

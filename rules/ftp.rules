@@ -1,6 +1,6 @@
 # (C) Copyright 2001-2004, Martin Roesch, Brian Caswell, et al.
 #    All rights reserved.
-# $Id: ftp.rules,v 1.57.2.4 2005/01/12 15:46:05 bmc Exp $
+# $Id: ftp.rules,v 1.57.2.5 2005/03/01 18:57:08 bmc Exp $
 #----------
 # FTP RULES
 #----------
@@ -59,8 +59,8 @@ alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP CWD ~ attempt"; flow:to_se
 
 # vulnerabilities against specific implementations of ftp
 alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP serv-u directory transversal"; flow:to_server,established; content:".%20."; nocase; reference:bugtraq,2052; reference:cve,2001-0054; classtype:bad-unknown; sid:360; rev:7;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP wu-ftp bad file completion attempt ["; flow:to_server,established; content:"~"; content:"["; distance:1; reference:bugtraq,3581; reference:bugtraq,3707; reference:cve,2001-0550; reference:cve,2001-0886; classtype:misc-attack; sid:1377; rev:14;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP wu-ftp bad file completion attempt {"; flow:to_server,established; content:"~"; content:"{"; distance:1; reference:bugtraq,3581; reference:bugtraq,3707; reference:cve,2001-0550; reference:cve,2001-0886; classtype:misc-attack; sid:1378; rev:14;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP wu-ftp bad file completion attempt ["; flow:to_server,established; content:"~"; content:"["; distance:0; reference:bugtraq,3581; reference:bugtraq,3707; reference:cve,2001-0550; reference:cve,2001-0886; classtype:misc-attack; sid:1377; rev:15;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP wu-ftp bad file completion attempt {"; flow:to_server,established; content:"~"; content:"{"; distance:0; reference:bugtraq,3581; reference:bugtraq,3707; reference:cve,2001-0550; reference:cve,2001-0886; classtype:misc-attack; sid:1378; rev:15;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP RNFR ././ attempt"; flow:to_server,established; content:"RNFR "; nocase; content:" ././"; nocase; classtype:misc-attack; sid:1622; rev:5;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP command overflow attempt"; flow:to_server,established,no_stream; dsize:>100; reference:bugtraq,4638; reference:cve,2002-0606; classtype:protocol-command-decode; sid:1748; rev:8;)
 alert tcp $EXTERNAL_NET any -> $HOME_NET 21 (msg:"FTP LIST directory traversal attempt"; flow:to_server,established; content:"LIST"; nocase; content:".."; distance:1; content:".."; distance:1; reference:bugtraq,2618; reference:cve,2001-0680; reference:cve,2002-1054; reference:nessus,11112; classtype:protocol-command-decode; sid:1992; rev:8;)

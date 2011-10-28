@@ -83,9 +83,10 @@ static int PortscanPacketInit(void)
     if(!p->pkth)
         return -1;
 
-    p->pkth = (struct pcap_pkthdr *)(((u_char *)p->pkth) + 2);
+    p->pkth = (struct pcap_pkthdr *)(((u_char *)p->pkth));
 
-    p->pkt  = ((u_char *)p->pkth + sizeof(SnortPktHeader));
+    /* Add 2 to align iph struct members on 4 byte boundaries - for sparc, etc */
+    p->pkt  = ((u_char *)p->pkth + sizeof(SnortPktHeader) + 2);
     p->eh   = (EtherHdr *)p->pkt;
     p->iph  = (IPHdr *)(((u_char *)p->eh) + ETHERNET_HEADER_LEN);
     p->data = ((u_char *)p->iph) + sizeof(IPHdr);

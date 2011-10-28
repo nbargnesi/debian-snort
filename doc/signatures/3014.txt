@@ -3,12 +3,13 @@ Rule:
 --
 Sid: 
 3014
+
 -- 
 Summary: 
-This event is generated when the victim attempts to send a connection confirmation to the attacker using the Asylum 0.1 trojan.
+This event is generated when a victim host attempts to send a connection
+confirmation to an attacker using the Asylum 0.1 trojan.
 
 -- 
-
 Impact: 
 If successful, the attacker would gain unauthorized access to your system, enabling him to upload and execute files on your
 computer and reboot it at will, resulting in a full compromise of the victim's computer. 
