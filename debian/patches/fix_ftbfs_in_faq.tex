@@ -1,0 +1,33 @@
+Description: Fix FTBFS caused by html.sty being unavailable
+Author: Javier Fernandez-Sanguino Pen~a <jfs@computer.org>
+
+Origin: vendor
+Bug-Debian: http://bugs.debian.org/365872
+Last-Update: 2011-12-28
+
+
+--- snort-2.9.2.orig/doc/faq.tex
++++ snort-2.9.2/doc/faq.tex
+@@ -2,7 +2,7 @@
+ 
+ %latex2html -info 0 -local_icons -show_section_numbers -link 2 -split +1 faq.tex
+ \documentclass{article}
+-\usepackage{html}
++\usepackage{hyperref}
+ \usepackage{graphicx}
+ \usepackage{fancyhdr}
+ \usepackage{makeidx}
+@@ -98,11 +98,11 @@ book. (route++)
+ 
+ \newpage
+ 
+-\begin{latexonly}
++%\begin{latexonly}
+ \tableofcontents
+ 
+ \newpage
+-\end{latexonly}
++%\end{latexonly}
+ 
+ \section{Background}
+ 

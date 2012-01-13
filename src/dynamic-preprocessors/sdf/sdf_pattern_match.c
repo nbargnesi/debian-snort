@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -21,6 +21,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "sdf_pattern_match.h"
 #include "treenodes.h"
 #include "sf_dynamic_preprocessor.h"
@@ -134,7 +139,7 @@ static void ExpandBrackets(char **pii)
     /* By this point, the brackets all match up. */
     if (num_brackets == 0)
         return;
-        
+
     /* Allocate the new pii string. */
     new_pii_size = (strlen(*pii) + total_reps - 2*num_brackets + 1);
     new_pii = (char *) calloc(new_pii_size, sizeof(char));
@@ -159,7 +164,7 @@ static void ExpandBrackets(char **pii)
             repeated_section[1] = pii_position[0];
             pii_position++;
         }
-    
+
         if (pii_position[0] == '{')
         {
             reps = strtoul(pii_position+1, &endptr, 10);
@@ -195,7 +200,7 @@ int AddPii(sdf_tree_node *head, SDFOptionData *data)
  *   0: pattern did not go in this subtree
  *   1: pattern was added in this subtree
  */
-int AddPiiPiece(sdf_tree_node *node, char *new_pattern, SDFOptionData *data) 
+int AddPiiPiece(sdf_tree_node *node, char *new_pattern, SDFOptionData *data)
 {
     /* Potential cases:
         1) node->pattern and new_pattern overlap by some number of bytes,
@@ -502,7 +507,7 @@ static sdf_tree_node * FindPiiRecursively(sdf_tree_node *node, char *buf, uint16
            node_match )
     {
         /* Match a byte at a time. */
-        if ( *(node->pattern + pattern_index) == '\\' && 
+        if ( *(node->pattern + pattern_index) == '\\' &&
              *(node->pattern + pattern_index + 1) != '\0' )
         {
             /* Escape sequence found */
@@ -516,7 +521,7 @@ static sdf_tree_node * FindPiiRecursively(sdf_tree_node *node, char *buf, uint16
                 case '?':
                     node_match = (*(buf + *buf_index) == *(node->pattern + pattern_index));
                     break;
-               
+
                 /* \d : match digit */
                 case 'd':
                     node_match = isdigit( (int)(*(buf + *buf_index)) );
@@ -606,7 +611,7 @@ static sdf_tree_node * FindPiiRecursively(sdf_tree_node *node, char *buf, uint16
                 node_contains_matches = 1;
             }
         }
-        
+
         if (node_contains_matches)
             return node;
     }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #ifndef STREAM5_UDP_H_
 #define STREAM5_UDP_H_
 
@@ -36,8 +36,14 @@ void UdpUpdateDirection(Stream5LWSession *ssn, char dir,
                         snort_ip_p ip, uint16_t port);
 Stream5LWSession *GetLWUdpSession(SessionKey *key);
 void s5UdpSetPortFilterStatus(
-        unsigned short port, 
-        int status,
+        unsigned short port,
+        uint16_t status,
+        tSfPolicyId policyId,
+        int parsing
+        );
+void s5UdpUnsetPortFilterStatus(
+        unsigned short port,
+        uint16_t status,
         tSfPolicyId policyId,
         int parsing
         );
@@ -50,5 +56,5 @@ void Stream5UdpConfigFree(Stream5UdpConfig *);
 
 uint32_t Stream5GetUdpPrunes(void);
 void Stream5ResetUdpPrunes(void);
-
+void UdpSessionCleanup(Stream5LWSession *lwssn);
 #endif /* STREAM5_UDP_H_ */

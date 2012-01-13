@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -19,20 +19,20 @@
 */
 
 /* $Id$ */
-/* sp_icmp_id 
- * 
+/* sp_icmp_id
+ *
  * Purpose:
  *
- * Test the ID field of ICMP ECHO and ECHO_REPLY packets for specified 
+ * Test the ID field of ICMP ECHO and ECHO_REPLY packets for specified
  * values.  This is useful for detecting TFN attacks, amongst others.
  *
  * Arguments:
- *   
+ *
  * The ICMP ID plugin takes a number as an option argument.
  *
  * Effect:
  *
- * Tests ICMP ECHO and ECHO_REPLY packet ID field values and returns a 
+ * Tests ICMP ECHO and ECHO_REPLY packet ID field values and returns a
  * "positive" detection result (i.e. passthrough) upon a value match.
  *
  * Comments:
@@ -49,12 +49,13 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 
@@ -109,7 +110,7 @@ int IcmpIdCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupIcmpIdCheck()
  *
  * Purpose: Registers the configuration function and links it to a rule
@@ -134,7 +135,7 @@ void SetupIcmpIdCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IcmpIdCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Handles parsing the rule information and attaching the associated
@@ -154,7 +155,7 @@ void IcmpIdCheckInit(char *data, OptTreeNode *otn, int protocol)
         FatalError("%s(%d): ICMP Options on non-ICMP rule\n", file_name, file_line);
     }
 
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_ICMP_ID_CHECK])
     {
         FatalError("%s(%d): Multiple icmp id options in rule\n", file_name,
@@ -166,12 +167,12 @@ void IcmpIdCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_ICMP_ID_CHECK] = (IcmpIdCheckData *)
         SnortAlloc(sizeof(IcmpIdCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
 
     ParseIcmpId(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(IcmpIdCheck, otn);
     fpl->type = RULE_OPTION_TYPE_ICMP_ID;
@@ -181,7 +182,7 @@ void IcmpIdCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseIcmpId(char *, OptTreeNode *)
  *
  * Purpose: Convert the rule option argument to program data.
@@ -224,7 +225,7 @@ void ParseIcmpId(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IcmpIdCheck(char *, OptTreeNode *)
  *
  * Purpose: Compare the ICMP ID field to the rule value.
@@ -233,7 +234,7 @@ void ParseIcmpId(char *data, OptTreeNode *otn)
  *            otn => pointer to the current rule's OTN
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int IcmpIdCheck(void *option_data, Packet *p)
@@ -247,11 +248,11 @@ int IcmpIdCheck(void *option_data, Packet *p)
 
     PREPROC_PROFILE_START(icmpIdPerfStats);
 
-    if( (p->icmph->type == ICMP_ECHO || p->icmph->type == ICMP_ECHOREPLY) 
+    if( (p->icmph->type == ICMP_ECHO || p->icmph->type == ICMP_ECHOREPLY)
 #ifdef SUP_IP6
-        || (p->icmph->type == ICMP6_ECHO || p->icmph->type == ICMP6_REPLY) 
+        || (p->icmph->type == ICMP6_ECHO || p->icmph->type == ICMP6_REPLY)
 #endif
-      ) 
+      )
     {
         /* test the rule ID value against the ICMP extension ID field */
         if(icmpId->icmpid == p->icmph->s_icmp_id)

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2001 Brian Caswell <bmc@mitre.org>
 **
@@ -22,11 +22,11 @@
 /* $Id$ */
 
 /* spo_csv
- * 
+ *
  * Purpose:  output plugin for csv alerting
  *
  * Arguments:  alert file (eventually)
- *   
+ *
  * Effect:
  *
  * Alerts are written to a file in the snort csv alert format
@@ -58,7 +58,7 @@
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "mstring.h"
 #include "util.h"
 #include "log.h"
@@ -103,7 +103,7 @@ static void RealAlertCSV(
 /*
  * Function: SetupCSV()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -114,7 +114,7 @@ static void RealAlertCSV(
  */
 void AlertCSVSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("alert_CSV", OUTPUT_TYPE_FLAG__ALERT, AlertCSVInit);
 
@@ -195,7 +195,7 @@ static AlertCSVData *AlertCSVParseArgs(char *args)
                 if ( !strcasecmp("default", tok) )
                     data->csvargs = SnortStrdup(DEFAULT_CSV);
                 else
-                    data->csvargs = SnortStrdup(toks[i]); 
+                    data->csvargs = SnortStrdup(toks[i]);
                 break;
 
             case 2:
@@ -244,8 +244,8 @@ static void AlertCSVCleanup(int signal, void *arg, const char* msg)
     AlertCSVData *data = (AlertCSVData *)arg;
     /* close alert file */
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"%s\n", msg););
-    
-    if(data) 
+
+    if(data)
     {
         mSplitFree(&data->args, data->numargs);
         if (data->log) TextLog_Term(data->log);
@@ -269,7 +269,7 @@ static void AlertCSVRestart(int signal, void *arg)
 static void AlertCSV(Packet *p, char *msg, void *arg, Event *event)
 {
     AlertCSVData *data = (AlertCSVData *)arg;
-    RealAlertCSV(p, msg, data->args, data->numargs, event, data->log); 
+    RealAlertCSV(p, msg, data->args, data->numargs, event, data->log);
 }
 
 /*
@@ -280,29 +280,29 @@ static void AlertCSV(Packet *p, char *msg, void *arg, Event *event)
  *
  * Arguments:     p => packet. (could be NULL)
  *              msg => the message to send
- *             args => CSV output arguements 
+ *             args => CSV output arguements
  *          numargs => number of arguements
  *             log => Log
  * Returns: void function
  *
  */
-static void RealAlertCSV(Packet * p, char *msg, char **args, 
+static void RealAlertCSV(Packet * p, char *msg, char **args,
         int numargs, Event *event, TextLog* log)
 {
-    int num; 
+    int num;
     char *type;
     char tcpFlags[9];
 
     if(p == NULL)
         return;
 
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"Logging CSV Alert data\n");); 
+    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"Logging CSV Alert data\n"););
 
     for (num = 0; num < numargs; num++)
     {
         type = args[num];
 
-        DEBUG_WRAP(DebugMessage(DEBUG_LOG, "CSV Got type %s %d\n", type, num);); 
+        DEBUG_WRAP(DebugMessage(DEBUG_LOG, "CSV Got type %s %d\n", type, num););
 
         if (!strcasecmp("timestamp", type))
         {
@@ -355,7 +355,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
                         p->eh->ether_src[1], p->eh->ether_src[2], p->eh->ether_src[3],
                         p->eh->ether_src[4], p->eh->ether_src[5]);
             }
-        } 
+        }
         else if (!strcasecmp("ethdst", type))
         {
             if (p->eh != NULL)
@@ -399,7 +399,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
                         break;
                     default:
                         break;
-                }    
+                }
             }
         }
         else if (!strcasecmp("dstport", type))
@@ -414,7 +414,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
                         break;
                     default:
                         break;
-                }    
+                }
             }
         }
         else if (!strcasecmp("src", type))
@@ -425,7 +425,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
         else if (!strcasecmp("dst", type))
         {
             if (IPH_IS_VALID(p))
-                TextLog_Puts(log, inet_ntoa(GET_DST_ADDR(p))); 
+                TextLog_Puts(log, inet_ntoa(GET_DST_ADDR(p)));
         }
         else if (!strcasecmp("icmptype", type))
         {
@@ -440,7 +440,7 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
         else if (!strcasecmp("icmpid", type))
         {
             if (p->icmph != NULL)
-                TextLog_Print(log, "%d", ntohs(p->icmph->s_icmp_id));	   
+                TextLog_Print(log, "%d", ntohs(p->icmph->s_icmp_id));
         }
         else if (!strcasecmp("icmpseq", type))
         {
@@ -501,13 +501,13 @@ static void RealAlertCSV(Packet * p, char *msg, char **args,
         else if (!strcasecmp("tcpflags",type))
         {
             if (p->tcph != NULL)
-            {   
+            {
                 CreateTCPFlagString(p, tcpFlags);
                 TextLog_Print(log, "%s", tcpFlags);
             }
         }
 
-        if (num < numargs - 1) 
+        if (num < numargs - 1)
             TextLog_Putc(log, ',');
     }
 

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,8 +28,9 @@
 #include <strings.h>
 #endif
 
-#include "bounds.h"
-#include "debug.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "parser.h"
 #include "sp_replace.h"
@@ -54,7 +55,7 @@ void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
     {
         if ( !warned )
         {
-            LogMessage("Warning: payload replacements disabled because DAQ "
+            LogMessage("WARNING: payload replacements disabled because DAQ "
                 " can't replace packets.\n");
             warned = 1;
         }
@@ -63,7 +64,7 @@ void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
     if ( lastType ==  PLUGIN_PATTERN_MATCH_URI )
     {
         FatalError("%s(%d) => \"replace\" option is not supported "
-                "with uricontent, nor in conjunction with http_uri, " 
+                "with uricontent, nor in conjunction with http_uri, "
                 "http_header, http_method http_cookie,"
                 "http_raw_uri, http_raw_header, or "
                 "http_raw_cookie modifiers.\n",
@@ -181,28 +182,28 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
         switch(*idx)
         {
             case '|':
-            
+
                 DEBUG_WRAP(DebugMessage(DEBUG_PARSER, "Got bar... "););
-        
+
                 if(!literal)
                 {
-            
+
                     DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "not in literal mode... "););
-            
+
                     if(!hexmode)
                     {
-                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "Entering hexmode\n"););
 
                         hexmode = 1;
                     }
                     else
                     {
-                
-                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+
+                        DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "Exiting hexmode\n"););
-            
+
                         hexmode = 0;
                         pending = 0;
                     }
@@ -213,7 +214,7 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
                 else
                 {
 
-                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "literal set, Clearing\n"););
 
                     literal = 0;
@@ -224,21 +225,21 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
                 break;
 
             case '\\':
-        
+
                 DEBUG_WRAP(DebugMessage(DEBUG_PARSER, "Got literal char... "););
 
                 if(!literal)
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "Setting literal\n"););
-            
+
                     literal = 1;
                 }
                 else
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+                    DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                         "Clearing literal\n"););
-            
+
                     tmp_buf[dummy_size] = start_ptr[cnt];
                     literal = 0;
                     dummy_size++;
@@ -316,10 +317,10 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
                         {
                             tmp_buf[dummy_size] = start_ptr[cnt];
                             dummy_size++;
-                
-                            DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+
+                            DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                             "Clearing literal\n"););
-                
+
                             literal = 0;
                         }
                         else
@@ -364,7 +365,7 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
             file_name, file_line);
     }
 
-    ret = SafeMemcpy(ds_idx->replace_buf, tmp_buf, dummy_size, 
+    ret = SafeMemcpy(ds_idx->replace_buf, tmp_buf, dummy_size,
                      ds_idx->replace_buf, (ds_idx->replace_buf+dummy_size));
 
     if (ret == SAFEMEM_ERROR)
@@ -374,7 +375,7 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
 
     ds_idx->replace_size = dummy_size;
 
-    DEBUG_WRAP(DebugMessage(DEBUG_PARSER, 
+    DEBUG_WRAP(DebugMessage(DEBUG_PARSER,
                 "ds_idx (%p) replace_size(%d) replace_buf(%s)\n", ds_idx,
                 ds_idx->replace_size, ds_idx->replace_buf););
 
@@ -410,7 +411,7 @@ void Replace_QueueChange(PatternMatchData* pmd)
     r->depth = pmd->replace_depth;
 }
 
-static INLINE void Replace_ApplyChange(Packet *p, Replacement* r)
+static inline void Replace_ApplyChange(Packet *p, Replacement* r)
 {
     int err;
     int rsize;
@@ -426,7 +427,7 @@ static INLINE void Replace_ApplyChange(Packet *p, Replacement* r)
 
     if ( err == SAFEMEM_ERROR )
     {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                 "Replace_Apply() => SafeMemcpy() failed\n"););
         return;
     }

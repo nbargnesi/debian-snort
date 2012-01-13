@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,12 +18,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
  * @file   sf_textlog.c
  * @author Russ Combs <rcombs@sourcefire.com>
- * @date   
- * 
+ * @date
+ *
  * @brief  implements buffered text stream for logging
  */
 
@@ -32,6 +32,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 
 #include "sf_textlog.h"
 #include "log.h"
@@ -144,7 +150,7 @@ bool TextLog_Flush(TextLog* this)
 
     ok = fwrite(this->buf, this->pos, 1, this->file);
 
-    if ( ok == 1 ) 
+    if ( ok == 1 )
     {
         this->size += this->pos;
         TextLog_Reset(this);

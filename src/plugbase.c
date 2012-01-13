@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,7 @@
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "snort.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "log.h"
 #include "detect.h"
@@ -92,6 +92,7 @@
 #include "detection-plugins/sp_file_data.h"
 #include "detection-plugins/sp_base64_decode.h"
 #include "detection-plugins/sp_base64_data.h"
+#include "detection-plugins/sp_pkt_data.h"
 #include "detection-plugins/sp_asn1.h"
 #ifdef ENABLE_REACT
 #include "detection-plugins/sp_react.h"
@@ -147,11 +148,11 @@ extern PluginSignalFuncNode *plugin_clean_exit_funcs;
 extern PluginSignalFuncNode *plugin_restart_funcs;
 extern OutputFuncNode *AlertList;
 extern OutputFuncNode *LogList;
-
+extern PeriodicCheckFuncNode *periodic_check_funcs;
 
 /**************************** Detection Plugin API ****************************/
 /* For translation from enum to char* */
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
 static const char *optTypeMap[OPT_TYPE_MAX] =
 {
     "action",
@@ -162,7 +163,7 @@ static const char *optTypeMap[OPT_TYPE_MAX] =
 #define ENUM2STR(num, map) \
     ((num < sizeof(map)/sizeof(map[0])) ? map[num] : "undefined")
 #endif
- 
+
 
 void RegisterRuleOptions(void)
 {
@@ -189,6 +190,7 @@ void RegisterRuleOptions(void)
     SetupIpProto();
     SetupIpSameCheck();
     SetupClientServer();
+    SetupPktData();
     SetupByteTest();
     SetupByteJump();
     SetupByteExtract();
@@ -295,7 +297,7 @@ void RegisterRuleOption(char *opt_name, RuleOptConfigFunc ro_config_func,
                 tmp = tmp->next;
 
             } while (tmp != NULL);
-    
+
             last->next = node_override;
         }
 
@@ -327,7 +329,7 @@ void RegisterByteOrderKeyword(char *keyword, RuleOptByteOrderFunc roo_func)
     RuleOptByteOrderFuncNode *node = (RuleOptByteOrderFuncNode *)SnortAlloc(sizeof(RuleOptByteOrderFuncNode));
     RuleOptByteOrderFuncNode *list = rule_opt_byte_order_funcs;
     RuleOptByteOrderFuncNode *last;
-    
+
     node->keyword = SnortStrdup(keyword);
     node->func = roo_func;
     node->next = NULL;
@@ -401,7 +403,7 @@ void DumpRuleOptions(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: AddOptFuncToList(int (*func)(), OptTreeNode *)
  *
  * Purpose: Links the option detection module to the OTN
@@ -682,9 +684,9 @@ void RegisterPreprocessors(void)
  *
  ***************************************************************************/
 #ifndef SNORT_RELOAD
-void RegisterPreprocessor(char *keyword, PreprocConfigFunc pp_config_func)
+void RegisterPreprocessor(const char *keyword, PreprocConfigFunc pp_config_func)
 #else
-void RegisterPreprocessor(char *keyword, PreprocConfigFunc pp_config_func,
+void RegisterPreprocessor(const char *keyword, PreprocConfigFunc pp_config_func,
                           PreprocReloadFunc rfunc, PreprocReloadSwapFunc sfunc,
                           PreprocReloadSwapFreeFunc ffunc)
 #endif
@@ -757,7 +759,7 @@ PreprocConfigFunc GetPreprocConfigFunc(char *keyword)
     while (head != NULL)
     {
         if (strcasecmp(head->keyword, keyword) == 0)
-           return head->config_func; 
+           return head->config_func;
 
         head = head->next;
     }
@@ -778,7 +780,7 @@ PreprocConfigFunc GetPreprocConfigFunc(char *keyword)
  * Returns: void function
  *
  ***************************************************************************/
-void RegisterPreprocStats(char *keyword, PreprocStatsFunc pp_stats_func)
+void RegisterPreprocStats(const char *keyword, PreprocStatsFunc pp_stats_func)
 {
     PreprocStatsFuncNode *node;
 
@@ -944,6 +946,90 @@ PreprocEvalFuncNode * AddFuncToPreprocList(PreprocEvalFunc pp_eval_func, uint16_
     p->num_preprocs++;
     p->preproc_proto_mask |= proto_mask;
     p->preproc_bit_mask |= node->preproc_bit;
+
+    return node;
+}
+
+PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(
+    PreprocMetaEvalFunc pp_meta_eval_func,
+    uint16_t priority,
+    uint32_t preproc_id)
+{
+    PreprocMetaEvalFuncNode *node;
+    SnortConfig *sc = snort_conf_for_parsing;
+    tSfPolicyId policy_id = getParserPolicy();
+    SnortPolicy *p;
+
+    if (sc == NULL)
+    {
+        FatalError("%s(%d) Snort config for parsing is NULL.\n",
+                   __FILE__, __LINE__);
+    }
+
+#ifndef HAVE_DAQ_ACQUIRE_WITH_META
+    WarningMessage("Metadata not available for processing.  Not registering Preprocessor Meta Eval id %d\n", preproc_id);
+    return NULL; // Not supported
+#endif
+
+    p = sc->targeted_policies[policy_id];
+    if (p == NULL)
+        return NULL;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,
+                            "Adding preprocessor function ID %d/bit %d/pri %d to list\n",
+                            preproc_id, p->num_preprocs, priority););
+
+    node = (PreprocMetaEvalFuncNode *)SnortAlloc(sizeof(PreprocMetaEvalFuncNode));
+
+    if (p->preproc_meta_eval_funcs == NULL)
+    {
+        p->preproc_meta_eval_funcs = node;
+        SetupMetadataCallback();
+    }
+    else
+    {
+        PreprocMetaEvalFuncNode *tmp = p->preproc_meta_eval_funcs;
+        PreprocMetaEvalFuncNode *last = NULL;
+
+        do
+        {
+            if (tmp->preproc_id == preproc_id)
+            {
+                free(node);
+                FatalError("Preprocessor Meta Eval already registered with ID %d\n",
+                           preproc_id);
+            }
+
+            /* Insert higher priority preprocessors first.  Lower priority
+             * number means higher priority */
+            if (priority < tmp->priority)
+                break;
+
+            last = tmp;
+            tmp = tmp->next;
+
+        } while (tmp != NULL);
+
+        /* Priority higher than first item in list */
+        if (last == NULL)
+        {
+            node->next = tmp;
+            p->preproc_meta_eval_funcs = node;
+        }
+        else
+        {
+            node->next = tmp;
+            last->next = node;
+        }
+    }
+
+    node->func = pp_meta_eval_func;
+    node->priority = priority;
+    node->preproc_id = preproc_id;
+    node->preproc_bit = (1 << preproc_id);
+
+    p->num_meta_preprocs++;
+    p->preproc_meta_bit_mask |= node->preproc_bit;
 
     return node;
 }
@@ -1177,40 +1263,57 @@ static void AddFuncToPreprocSignalList(PreprocSignalFunc pp_sig_func, void *arg,
     node->priority = priority;
 }
 
-void AddFuncToPreprocReassemblyPktList(PreprocReassemblyPktFunc pp_reass_pkt_func, uint32_t preproc_id)
+void AddFuncToPeriodicCheckList(PeriodicFunc periodic_func, void *arg,
+        uint16_t priority, uint32_t preproc_id, uint32_t period )
 {
-    PreprocReassemblyPktFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
-    tSfPolicyId policy_id = getParserPolicy();
-    SnortPolicy *p;
+    PeriodicCheckFuncNode **list= &periodic_check_funcs;
+    PeriodicCheckFuncNode *node;
 
-    if (sc == NULL)
-    {
-        FatalError("%s(%d) Snort config for parsing is NULL.\n",
-                   __FILE__, __LINE__);
-    }
-
-    p = sc->targeted_policies[policy_id];
-    if (p == NULL)
+    if (list == NULL)
         return;
 
-    node = (PreprocReassemblyPktFuncNode *)SnortAlloc(sizeof(PreprocReassemblyPktFuncNode));
+    node = (PeriodicCheckFuncNode *)SnortAlloc(sizeof(PeriodicCheckFuncNode));
 
-    if (p->preproc_reassembly_pkt_funcs == NULL)
+    if (*list == NULL)
     {
-        p->preproc_reassembly_pkt_funcs = node;
+        *list = node;
     }
     else
     {
-        PreprocReassemblyPktFuncNode *tmp = p->preproc_reassembly_pkt_funcs;
+        PeriodicCheckFuncNode *tmp = *list;
+        PeriodicCheckFuncNode *last = NULL;
 
-        /* just insert at front of list */
-        p->preproc_reassembly_pkt_funcs = node;
-        node->next = tmp;
+        do
+        {
+            /* Insert higher priority stuff first.  Lower priority
+             * number means higher priority */
+            if (priority < tmp->priority)
+                break;
+
+            last = tmp;
+            tmp = tmp->next;
+
+        } while (tmp != NULL);
+
+        /* Priority higher than first item in list */
+        if (last == NULL)
+        {
+            node->next = tmp;
+            *list = node;
+        }
+        else
+        {
+            node->next = tmp;
+            last->next = node;
+        }
     }
 
-    node->func = pp_reass_pkt_func;
+    node->func = periodic_func;
+    node->arg = arg;
     node->preproc_id = preproc_id;
+    node->priority = priority;
+    node->period = period;
+    node->time_left = period;
 }
 
 void FreePreprocConfigFuncs(void)
@@ -1280,13 +1383,15 @@ void FreePreprocEvalFuncs(PreprocEvalFuncNode *head)
     }
 }
 
-void FreePreprocReassemblyPktFuncs(PreprocReassemblyPktFuncNode *head)
+void FreePreprocMetaEvalFuncs(PreprocMetaEvalFuncNode *head)
 {
-    PreprocReassemblyPktFuncNode *tmp;
+    PreprocMetaEvalFuncNode *tmp;
 
     while (head != NULL)
     {
         tmp = head->next;
+        //if (head->context)
+        //    free(head->context);
         free(head);
         head = tmp;
     }
@@ -1295,6 +1400,19 @@ void FreePreprocReassemblyPktFuncs(PreprocReassemblyPktFuncNode *head)
 void FreePreprocSigFuncs(PreprocSignalFuncNode *head)
 {
     PreprocSignalFuncNode *tmp;
+
+    while (head != NULL)
+    {
+        tmp = head->next;
+        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        free(head);
+        head = tmp;
+    }
+}
+
+void FreePeriodicFuncs(PeriodicCheckFuncNode *head)
+{
+    PeriodicCheckFuncNode *tmp;
 
     while (head != NULL)
     {
@@ -1420,7 +1538,7 @@ void RegisterOutputPlugin(char *keyword, int type_flags, OutputConfigFunc oc_fun
 {
     OutputConfigFuncNode *node = (OutputConfigFuncNode *)SnortAlloc(sizeof(OutputConfigFuncNode));
 
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Registering keyword:output => %s:%p\n", 
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Registering keyword:output => %s:%p\n",
                             keyword, oc_func););
 
     if (output_config_funcs == NULL)
@@ -1463,7 +1581,7 @@ OutputConfigFunc GetOutputConfigFunc(char *keyword)
     while (head != NULL)
     {
         if (strcasecmp(head->keyword, keyword) == 0)
-           return head->config_func; 
+           return head->config_func;
 
         head = head->next;
     }

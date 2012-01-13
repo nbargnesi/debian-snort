@@ -6214,9 +6214,9 @@ char *sfattext;
  */
 /*
  * Lex for Attribute Table
- */ 
+ */
 /* Definitions Section.
- * Definitions required by the rules section are in here prior to first  
+ * Definitions required by the rules section are in here prior to first
  * "%%" seperator
  */
 /* Include code between "%{ %}" separators at top of generated
@@ -6787,7 +6787,7 @@ YY_RULE_SETUP
 #line 154 "sf_attribute_table_parser.l"
 {
                             sfat_lval.numericValue = strtol( sfattext, NULL, 10 );
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,
                                 "Number Value: [%d]\n", sfat_lval.numericValue);
 #endif
@@ -6806,7 +6806,7 @@ YY_RULE_SETUP
                                 sfat_lval.stringValue[i] = sfattext[i];
                             }
                             sfat_lval.stringValue[i] = '\0';
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,
                                 "String Value: [%s]\n", sfat_lval.stringValue);
 #endif

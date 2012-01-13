@@ -1,6 +1,6 @@
 /****************************************************************************
- * 
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ *
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -46,6 +46,7 @@
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
 #include "mempool.h"
+#include "sf_email_attach_decode.h"
 
 #ifdef DEBUG
 #include "sf_types.h"
@@ -97,8 +98,16 @@
 #define SMTP_FLAG_GOT_BOUNDARY               0x00000010
 #define SMTP_FLAG_DATA_HEADER_CONT           0x00000020
 #define SMTP_FLAG_IN_CONT_TRANS_ENC          0x00000040
-#define SMTP_FLAG_BASE64_DATA                0x00000080
-#define SMTP_FLAG_MULTIPLE_BASE64            0x00000100
+#define SMTP_FLAG_EMAIL_ATTACH               0x00000080
+#define SMTP_FLAG_MULTIPLE_EMAIL_ATTACH      0x00000100
+#define SMTP_FLAG_IN_CONT_DISP               0x00000200
+#define SMTP_FLAG_IN_CONT_DISP_CONT          0x00000400
+
+/* log flags */
+#define SMTP_FLAG_MAIL_FROM_PRESENT          0x00000001
+#define SMTP_FLAG_RCPT_TO_PRESENT            0x00000002
+#define SMTP_FLAG_FILENAME_PRESENT           0x00000004
+#define SMTP_FLAG_EMAIL_HDRS_PRESENT         0x00000008
 
 /* session flags */
 #define SMTP_FLAG_XLINK2STATE_GOTFIRSTCHUNK  0x00000001
@@ -202,6 +211,7 @@ typedef enum _SMTPHdrEnum
 {
     HDR_CONTENT_TYPE = 0,
     HDR_CONT_TRANS_ENC,
+    HDR_CONT_DISP,
     HDR_LAST
 
 } SMTPHdrEnum;
@@ -239,32 +249,30 @@ typedef struct _SMTPPcre
 
 } SMTPPcre;
 
-typedef struct s_SMTP_DecodeState
+typedef struct s_SMTP_LogState
 {
-    uint8_t decode_present;
-    int prev_encoded_bytes;
-    unsigned char *prev_encoded_buf;
-    int encode_bytes_read;
-    int decode_bytes_read;
-    int encode_depth;
-    int decode_depth;
-    uint32_t decoded_bytes;
-    MemBucket *mime_bucket;
-    unsigned char *encodeBuf;
-    unsigned char *decodeBuf;
-
-} SMTP_DecodeState;
-
+    MemBucket *log_hdrs_bkt;
+    unsigned char *emailHdrs;
+    uint32_t log_depth;
+    uint32_t hdrs_logged;
+    uint8_t *recipients;
+    uint16_t rcpts_logged;
+    uint8_t *senders;
+    uint16_t snds_logged;
+    uint8_t *filenames;
+    uint16_t file_logged;
+} SMTP_LogState;
 
 typedef struct _SMTP
 {
     int state;
     int data_state;
     int state_flags;
+    int log_flags;
     int session_flags;
     int alert_mask;
     int reassembling;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     uint64_t session_number;
 #endif
 
@@ -273,8 +281,10 @@ typedef struct _SMTP
     int               cur_server_line_len;
     */
 
+    MemBucket *decode_bkt;
     SMTPMimeBoundary  mime_boundary;
-    SMTP_DecodeState *decode_state;
+    Email_DecodeState *decode_state;
+    SMTP_LogState *log_state;
 
     /* In future if we look at forwarded mail (message/rfc822) we may
      * need to keep track of additional mime boundaries
@@ -300,29 +310,12 @@ void SnortSMTP(SFSnortPacket *);
 int  SMTP_IsServer(uint16_t);
 void SMTP_FreeConfig(SMTPConfig *);
 void SMTP_FreeConfigs(tSfPolicyUserContextId);
+int SMTP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
+int SMTP_GetMailFrom(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
+int SMTP_GetRcptTo(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
+int SMTP_GetEmailHdrs(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 
 /**************************************************************************/
-
-static INLINE void ResetDecodeState(SMTP_DecodeState *ds)
-{
-    if (ds == NULL)
-        return;
-
-/*    memset(ds->mime_bucket->data, 0, ds->encode_depth + ds->decode_depth);*/
-    ds->prev_encoded_bytes = 0;
-    ds->prev_encoded_buf = NULL;
-    ds->encode_bytes_read = 0;
-    ds->decode_bytes_read = 0;
-    ds->decoded_bytes = 0;
-    ds->decode_present = 0;
-}
-
-static INLINE void ClearPrevEncode(SMTP_DecodeState *ds)
-{
-        ds->prev_encoded_bytes = 0; 
-        ds->prev_encoded_buf = NULL;
-}
-
 
 #endif  /* __SMTP_H__ */
 

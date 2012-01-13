@@ -1,8 +1,8 @@
-/* $Id$ 
+/* $Id$
 **
 **  spp_perfmonitor.c
 **
-**  Copyright (C) 2002-2010 Sourcefire, Inc.
+**  Copyright (C) 2002-2011 Sourcefire, Inc.
 **  Marc Norton <mnorton@sourcefire.com>
 **  Dan Roelker <droelker@sourcefire.com>
 **
@@ -29,16 +29,27 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "plugbase.h"
 #include "mstring.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "parser.h"
 #include "sfdaq.h"
 #include "snort.h"
 #include "perf.h"
 #include "perf-base.h"
 #include "profiler.h"
+
+#ifndef WIN32
+# include <unistd.h>
+# include <sys/stat.h>
+#endif
 
 SFPERF *perfmon_config = NULL;
 
@@ -52,6 +63,11 @@ static void PerfMonitorCleanExit(int, void *);
 static void PerfMonitorReset(int, void *);
 static void PerfMonitorResetStats(int, void *);
 static void PerfMonitorFreeConfig(SFPERF *);
+static void PerfMonitorOpenLogFiles(void *);
+
+#ifndef WIN32
+static void PerfMonitorChangeLogFilesPermission(void);
+#endif
 
 #ifdef SNORT_RELOAD
 SFPERF *perfmon_swap_config = NULL;
@@ -68,7 +84,7 @@ PreprocStats perfmonStats;
 /*
  * Function: SetupPerfMonitor()
  *
- * Purpose: Registers the preprocessor keyword and initialization 
+ * Purpose: Registers the preprocessor keyword and initialization
  *          function into the preprocessor list.  This is the function that
  *          gets called from InitPreprocessors() in plugbase.c.
  *
@@ -79,7 +95,7 @@ PreprocStats perfmonStats;
  */
 void SetupPerfMonitor(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
 #ifndef SNORT_RELOAD
     RegisterPreprocessor("PerfMonitor", PerfMonitorInit);
@@ -105,7 +121,7 @@ void SetupPerfMonitor(void)
 static void PerfMonitorInit(char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"Preprocessor: PerfMonitor Initialized\n"););
-    
+
     //not policy specific. Perf monitor configuration should be in the default
     //configuration file.
     if (getParserPolicy() != 0)
@@ -118,25 +134,18 @@ static void PerfMonitorInit(char *args)
 
     /* parse the argument list from the rules file */
     ParsePerfMonitorArgs(perfmon_config, args);
-
-    if (perfmon_config->file != NULL)
-    {
-        if (sfSetPerformanceStatisticsEx(perfmon_config, SFPERF_FILE, perfmon_config->file))
-            ParseError("Cannot open performance log file '%s'.", perfmon_config->file);
-    }
-
-    if (perfmon_config->flowip_file != NULL)
-    {
-        if (sfOpenFlowIPStatsFile(perfmon_config))
-            ParseError("Cannot open Flow-IP log file '%s'.", perfmon_config->flowip_file);
-    }
+    ResetPerfStats(perfmon_config);
+#ifndef WIN32
+    PerfMonitorChangeLogFilesPermission();
+#endif
 
     /* Set the preprocessor function into the function list */
     AddFuncToPreprocList(ProcessPerfMonitor, PRIORITY_SCANNER, PP_PERFMONITOR, PROTO_BIT__ALL);
     AddFuncToPreprocCleanExitList(PerfMonitorCleanExit, NULL, PRIORITY_LAST, PP_PERFMONITOR);
     AddFuncToPreprocResetList(PerfMonitorReset, NULL, PRIORITY_LAST, PP_PERFMONITOR);
     AddFuncToPreprocResetStatsList(PerfMonitorResetStats, NULL, PRIORITY_LAST, PP_PERFMONITOR);
-
+    AddFuncToPreprocPostConfigList(PerfMonitorOpenLogFiles, NULL);
+    
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("perfmon", &perfmonStats, 0, &totalPerfStats);
 #endif
@@ -145,9 +154,9 @@ static void PerfMonitorInit(char *args)
 /*
  * Function: ParsePerfMonitorArgs(char *)
  *
- * Purpose: Process the preprocessor arguements from the rules file and 
+ * Purpose: Process the preprocessor arguements from the rules file and
  *          initialize the preprocessor's data struct.  This function doesn't
- *          have to exist if it makes sense to parse the args in the init 
+ *          have to exist if it makes sense to parse the args in the init
  *          function.
  *
  * Arguments: args => argument list
@@ -184,7 +193,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
     {
        Tokens = mSplit(args, " \t", 0, &iTokenNum, 0);
     }
-    
+
     for( i = 0; i < iTokenNum; i++ )
     {
         /* Check for a 'time number' parameter */
@@ -209,7 +218,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
               i++;
               if( (i< iTokenNum) && Tokens[i] )
                   iFlowMaxPort= atoi(Tokens[i]);
-              
+
               if( iFlowMaxPort > SF_MAX_PORT )
                   iFlowMaxPort = SF_MAX_PORT;
 
@@ -224,7 +233,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
             **  troubleshooting and performance tuning.
             */
             iFlow = 1;
-        }       
+        }
         else if( strcasecmp( Tokens[i],"accumulate")==0)
         {
             iReset=0;
@@ -238,7 +247,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
             /*
             **  The events paramenter gives the total number
             **  of qualified and non-qualified events during
-            **  the processing sample time.  This allows 
+            **  the processing sample time.  This allows
             **  performance problems to be seen in a general
             **  manner.
             */
@@ -381,7 +390,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
 
     if (iMaxPerfStats)
         sfSetPerformanceStatistics(pconfig, SFPERF_BASE_MAX);
-     
+
     if (iConsole)
         sfSetPerformanceStatistics(pconfig, SFPERF_CONSOLE);
 
@@ -419,7 +428,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
                 pconfig->file = snortfile;
         }
     }
-    
+
     if (iPkts)
         sfSetPerformanceStatisticsEx(pconfig, SFPERF_PKTCNT, &iPkts);
 
@@ -436,20 +445,13 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
         LogMessage("       Flow IP File:    %s\n", flowipfile ? flowipfile : "INACTIVE");
     }
     LogMessage("    Event Stats:    %s\n", iEvents ? "ACTIVE" : "INACTIVE");
-    LogMessage("    Max Perf Stats: %s\n", 
-               iMaxPerfStats ? "ACTIVE" : "INACTIVE");
+    LogMessage("    Max Perf Stats: %s\n", iMaxPerfStats ? "ACTIVE" : "INACTIVE");
     LogMessage("    Console Mode:   %s\n", iConsole ? "ACTIVE" : "INACTIVE");
-    LogMessage("    File Mode:      %s\n", 
-               iFile ? file : "INACTIVE");
-    LogMessage("    SnortFile Mode: %s\n", 
-               iSnortFile ? snortfile : "INACTIVE");
+    LogMessage("    File Mode:      %s\n", iFile ? file : "INACTIVE");
+    LogMessage("    SnortFile Mode: %s\n", iSnortFile ? snortfile : "INACTIVE");
     LogMessage("    Packet Count:   %d\n", iPkts);
-    LogMessage("    Dump Summary:   %s\n", pconfig->perf_flags & SFPERF_SUMMARY ?
-               "Yes" : "No");
+    LogMessage("    Dump Summary:   %s\n", pconfig->perf_flags & SFPERF_SUMMARY ? "Yes" : "No");
     LogMessage("    Max file size:  %u\n", uiMaxFileSize);
-
-    if (pconfig->perf_flags & SFPERF_SUMMARY)
-        CheckSampleInterval(NULL, pconfig);
 }
 
 
@@ -461,7 +463,7 @@ static void ParsePerfMonitorArgs(SFPERF *pconfig, char *args)
  *          as you like.  Try not to destroy the performance of the whole
  *          system by trying to do too much....
  *
- * Arguments: p => pointer to the current packet data struct 
+ * Arguments: p => pointer to the current packet data struct
  *
  * Returns: void function
  *
@@ -480,7 +482,7 @@ static void ProcessPerfMonitor(Packet *p, void *context)
         first = 0;
     }
 
-    if(p == NULL) 
+    if(p == NULL)
     {
         return;
     }
@@ -488,7 +490,7 @@ static void ProcessPerfMonitor(Packet *p, void *context)
 
     PREPROC_PROFILE_START(perfmonStats);
     /*
-    *  Performance Statistics  
+    *  Performance Statistics
     */
     if (IsSetRotatePerfFileFlag())
     {
@@ -503,7 +505,7 @@ static void ProcessPerfMonitor(Packet *p, void *context)
             sfPerformanceStats(perfmon_config, p, p->packet_flags & PKT_REBUILT_STREAM);
         }
     }
-    
+
     if( p->tcph )
     {
         if((p->tcph->th_flags & TH_SYN) && !(p->tcph->th_flags & TH_ACK))
@@ -610,6 +612,70 @@ static void PerfMonitorResetStats(int signal, void *foo)
     ResetPerfStats(perfmon_config);
 }
 
+/* This function changes the perfmon log files permission if exists.
+   It is done in the  PerfMonitorInit() before Snort changed its user & group.
+ */
+#ifndef WIN32
+static void PerfMonitorChangeLogFilesPermission(void)
+{
+    struct stat pt;
+    mode_t mode =  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
+
+    if (perfmon_config == NULL)
+        return;
+
+    if (perfmon_config->file != NULL)
+    {
+        /*Check file before change permission*/
+        if (stat(perfmon_config->file, &pt) == 0)
+        {
+            /*Only change permission for file owned by root*/
+            if ((0 == pt.st_uid) || (0 == pt.st_gid))
+            {
+                chmod(perfmon_config->file, mode);
+                chown(perfmon_config->file, ScUid(), ScGid());
+            }
+        }
+    }
+
+    if (perfmon_config->flowip_file != NULL)
+    {
+        /*Check file before change permission*/
+        if (stat(perfmon_config->flowip_file, &pt) == 0)
+        {
+            /*Only change permission for file owned by root*/
+            if ((0 == pt.st_uid) || (0 == pt.st_gid))
+            {
+                chmod(perfmon_config->flowip_file, mode);
+                chown(perfmon_config->file, ScUid(), ScGid());
+            }
+        }
+
+    }
+}
+#endif
+/* This function opens the perfmon log files.
+   The logic was moved out of PerfMonitorInit() to avoid creating files
+   before Snort changed its user & group.
+*/
+static void PerfMonitorOpenLogFiles(void *data)
+{
+    if (perfmon_config == NULL)
+        return;
+
+    if (perfmon_config->file != NULL)
+    {
+        if (sfSetPerformanceStatisticsEx(perfmon_config, SFPERF_FILE, perfmon_config->file))
+            ParseError("Cannot open performance log file '%s'.", perfmon_config->file);
+    }
+
+    if (perfmon_config->flowip_file != NULL)
+    {
+        if (sfOpenFlowIPStatsFile(perfmon_config))
+            ParseError("Cannot open Flow-IP log file '%s'.", perfmon_config->flowip_file);
+    }
+}
+
 #ifdef SNORT_RELOAD
 static void PerfMonitorReload(char *args)
 {
@@ -635,10 +701,16 @@ static void PerfMonitorReload(char *args)
         perfmon_swap_config->perf_flags |= perfmon_config->perf_flags & SFPERF_FILE;
     }
 
+    /* Same goes for the FlowIP log file. */
+    if (perfmon_config->flowip_fh != NULL)
+    {
+        perfmon_swap_config->flowip_fh = perfmon_config->flowip_fh;
+    }
+
     AddFuncToPreprocList(ProcessPerfMonitor, PRIORITY_SCANNER, PP_PERFMONITOR, PROTO_BIT__ALL);
     AddFuncToPreprocReloadVerifyList(PerfmonReloadVerify);
 }
-    
+
 static int PerfmonReloadVerify(void)
 {
     if ((perfmon_config == NULL) || (perfmon_swap_config == NULL))
@@ -649,8 +721,7 @@ static int PerfmonReloadVerify(void)
         /* File - don't do case insensitive compare */
         if (strcmp(perfmon_config->file, perfmon_swap_config->file) != 0)
         {
-            ErrorMessage("Perfmonitor Reload: Changing the log file requires "
-                         "a restart.\n");
+            ErrorMessage("Perfmonitor Reload: Changing the log file requires a restart.\n");
             PerfMonitorFreeConfig(perfmon_swap_config);
             perfmon_swap_config = NULL;
             return -1;
@@ -658,8 +729,25 @@ static int PerfmonReloadVerify(void)
     }
     else if (perfmon_config->file != perfmon_swap_config->file)
     {
-        ErrorMessage("Perfmonitor Reload: Changing the log file requires "
-                     "a restart.\n");
+        ErrorMessage("Perfmonitor Reload: Changing the log file requires a restart.\n");
+        PerfMonitorFreeConfig(perfmon_swap_config);
+        perfmon_swap_config = NULL;
+        return -1;
+    }
+
+    if ((perfmon_config->flowip_file != NULL) && (perfmon_swap_config->flowip_file != NULL))
+    {
+        if (strcmp(perfmon_config->flowip_file, perfmon_swap_config->flowip_file) != 0)
+        {
+            ErrorMessage("Perfmonitor Reload: Changing the FlowIP log file requires a restart.\n");
+            PerfMonitorFreeConfig(perfmon_swap_config);
+            perfmon_swap_config = NULL;
+            return -1;
+        }
+    }
+    else if (perfmon_config->flowip_file != perfmon_swap_config->flowip_file)
+    {
+        ErrorMessage("Perfmonitor Reload: Changing the FlowIP log file requires a restart.\n");
         PerfMonitorFreeConfig(perfmon_swap_config);
         perfmon_swap_config = NULL;
         return -1;

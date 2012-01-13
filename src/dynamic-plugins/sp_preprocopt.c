@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -55,11 +55,12 @@
 #endif
 #include <errno.h>
 
+#include "sf_types.h"
 #include "plugbase.h"
 #include "rules.h"
 #include "treenodes.h"
 
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 
 #include "sf_dynamic_engine.h"
@@ -77,7 +78,7 @@
 PreprocStats preprocRuleOptionPerfStats;
 #endif
 
-extern const u_int8_t *doe_ptr;
+extern const uint8_t *doe_ptr;
 
 SFGHASH * PreprocessorRuleOptionsNew(void)
 {
@@ -204,16 +205,16 @@ int GetPreprocessorRuleOptionFuncs(
     return 1;
 }
 
-u_int32_t PreprocessorRuleOptionHash(void *d)
+uint32_t PreprocessorRuleOptionHash(void *d)
 {
-    u_int32_t a,b,c;
+    uint32_t a,b,c;
     PreprocessorOptionInfo *option_data = (PreprocessorOptionInfo *)d;
-            
+
 #if (defined(__ia64) || defined(__amd64) || defined(_LP64))
     {
         /* Cleanup warning because of cast from 64bit ptr to 32bit int
          * warning on 64bit OSs */
-        u_int64_t ptr; /* Addresses are 64bits */
+        uint64_t ptr; /* Addresses are 64bits */
 
         if (option_data->optionHash != NULL)
         {
@@ -222,18 +223,18 @@ u_int32_t PreprocessorRuleOptionHash(void *d)
         }
         else
         {
-            ptr = (u_int64_t)option_data->data;
+            ptr = (uint64_t)option_data->data;
             a = (ptr << 32) & 0XFFFFFFFF;
             b = (ptr & 0xFFFFFFFF);
         }
 
-        ptr = (u_int64_t)option_data->optionInit;
+        ptr = (uint64_t)option_data->optionInit;
         c = (ptr << 32) & 0XFFFFFFFF;
         mix(a,b,c);
 
         a += (ptr & 0xFFFFFFFF); /* mix in the last half of optionInit */
 
-        ptr = (u_int64_t)option_data->optionEval;
+        ptr = (uint64_t)option_data->optionEval;
         b += (ptr << 32) & 0XFFFFFFFF;
         c += (ptr & 0xFFFFFFFF);
 
@@ -243,16 +244,16 @@ u_int32_t PreprocessorRuleOptionHash(void *d)
     if (option_data->optionHash != NULL)
         a = option_data->optionHash(option_data->data);
     else
-        a = (u_int32_t)option_data->data;
+        a = (uint32_t)option_data->data;
 
-    b = (u_int32_t)option_data->optionInit;
-    c = (u_int32_t)option_data->optionEval;
+    b = (uint32_t)option_data->optionInit;
+    c = (uint32_t)option_data->optionEval;
     mix(a,b,c);
 #endif
     a += RULE_OPTION_TYPE_PREPROCESSOR;
 
     final(a,b,c);
-                                    
+
     return c;
 }
 
@@ -260,7 +261,7 @@ int PreprocessorRuleOptionCompare(void *l, void *r)
 {
     PreprocessorOptionInfo *left = (PreprocessorOptionInfo *)l;
     PreprocessorOptionInfo *right = (PreprocessorOptionInfo *)r;
-            
+
     if (!left || !right)
         return DETECTION_OPTION_NOT_EQUAL;
 
@@ -279,7 +280,7 @@ int PreprocessorRuleOptionCompare(void *l, void *r)
             return DETECTION_OPTION_EQUAL;
         }
     }
-                                                        
+
     return DETECTION_OPTION_NOT_EQUAL;
 }
 
@@ -287,7 +288,7 @@ int PreprocessorRuleOptionCompare(void *l, void *r)
 int PreprocessorOptionFunc(void *option_data, Packet *p)
 {
     PreprocessorOptionInfo *optionInfo = (PreprocessorOptionInfo *)option_data;
-    const u_int8_t *cursor = doe_ptr;
+    const uint8_t *cursor = doe_ptr;
     int       rval;
     PROFILE_VARS;
 
@@ -337,7 +338,7 @@ int AddPreprocessorRuleOption(char *optionName, OptTreeNode *otn, void *data, Pr
         return 0;
 
     optionInfo = sfghash_find(p->preproc_rule_options, optionName);
-    
+
     if (!optionInfo)
         return 0;
 

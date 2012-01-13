@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2010-2010 Sourcefire, Inc.
+ ** Copyright (C) 2010-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -29,6 +29,7 @@
 #include "parser.h"
 #include "plugbase.h"
 #include "profiler.h"
+#include "sf_types.h"
 #include "sfPolicy.h"
 #include "snort.h"
 #include "spp_normalize.h"
@@ -37,6 +38,7 @@
 static tSfPolicyUserContextId base_set = NULL;
 #ifdef SNORT_RELOAD
 static tSfPolicyUserContextId swap_set = NULL;
+static bool swap_pend = false;
 #endif
 
 #ifdef PERF_PROFILING
@@ -118,10 +120,12 @@ static NormalizerContext* Init_GetContext ()
     NormalizerContext* pc = NULL;
     tSfPolicyId policy_id = getParserPolicy();
 
+    if ( !ScInlineMode() )
+        return NULL;
+
     if ( !base_set )
     {
         base_set = sfPolicyConfigCreate();
-
         Preproc_Install();
     }
     sfPolicyUserPolicySet(base_set, policy_id);
@@ -138,53 +142,58 @@ static NormalizerContext* Init_GetContext ()
     return pc;
 }
 
-#define NOT_INLINE "WARNING: %s normalizations disabled because not inline"
+#define NOT_INLINE "WARNING: %s normalizations disabled because not inline.\n"
 
 static void Init_IP4 (char* args)
 {
     NormalizerContext* pc = Init_GetContext();
-    if ( pc && ScInlineMode() )
+
+    if ( pc )
         Parse_IP4(pc, args);
     else
-         LogMessage(NOT_INLINE, "ip4");
+        LogMessage(NOT_INLINE, "ip4");
 }
 
 static void Init_ICMP4 (char* args)
 {
     NormalizerContext* pc = Init_GetContext();
-    if ( pc && ScInlineMode() )
+
+    if ( pc )
         Parse_ICMP4(pc, args);
     else
-         LogMessage(NOT_INLINE, "icmp4");
+        LogMessage(NOT_INLINE, "icmp4");
 }
 
 #ifdef SUP_IP6
 static void Init_IP6 (char* args)
 {
     NormalizerContext* pc = Init_GetContext();
-    if ( pc && ScInlineMode() )
+
+    if ( pc )
         Parse_IP6(pc, args);
     else
-         LogMessage(NOT_INLINE, "ip6");
+        LogMessage(NOT_INLINE, "ip6");
 }
 
 static void Init_ICMP6 (char* args)
 {
     NormalizerContext* pc = Init_GetContext();
-    if ( pc && ScInlineMode() )
+
+    if ( pc )
         Parse_ICMP6(pc, args);
     else
-         LogMessage(NOT_INLINE, "icmp6");
+        LogMessage(NOT_INLINE, "icmp6");
 }
 #endif
 
 static void Init_TCP (char* args)
 {
     NormalizerContext* pc = Init_GetContext();
-    if ( pc && ScInlineMode() )
+
+    if ( pc )
         Parse_TCP(pc, args);
     else
-         LogMessage(NOT_INLINE, "tcp");
+        LogMessage(NOT_INLINE, "tcp");
 }
 
 //-------------------------------------------------------------------------
@@ -192,7 +201,7 @@ static void Init_TCP (char* args)
 //-------------------------------------------------------------------------
 
 // options may appear in any order separated by ',':
-// preprocessor normalize_ip4: [id] [df] [rf]
+// preprocessor normalize_ip4: [id] [df] [rf] [tos] [trim]
 static void Parse_IP4 (NormalizerContext* pc, char* args)
 {
     char** toks;
@@ -222,6 +231,14 @@ static void Parse_IP4 (NormalizerContext* pc, char* args)
         else if ( !strcasecmp(toks[i], "rf") )
         {
             Norm_Enable(pc, NORM_IP4_RF);
+        }
+        else if ( !strcasecmp(toks[i], "tos") )
+        {
+            Norm_Enable(pc, NORM_IP4_TOS);
+        }
+        else if ( !strcasecmp(toks[i], "trim") )
+        {
+            Norm_Enable(pc, NORM_IP4_TRIM);
         }
         else
         {
@@ -282,7 +299,7 @@ static void Parse_TCP (NormalizerContext* pc, char* args)
 {
     char **toks;
     int num_toks;
-    int i, state = 0, opts;
+    int i, state = 0, opts = 0;
 
     if ( !args ) args = "";
     toks = mSplit(args, ", ", 0, &num_toks, 0);
@@ -314,6 +331,10 @@ static void Parse_TCP (NormalizerContext* pc, char* args)
             else if ( !strcasecmp(toks[i], "ips") )
             {
                 Norm_Enable(pc, NORM_TCP_IPS);
+            }
+            else if ( !strcasecmp(toks[i], "trim") )
+            {
+                Norm_Enable(pc, NORM_TCP_TRIM);
             }
             else
             {
@@ -419,12 +440,12 @@ static void Parse_TCP (NormalizerContext* pc, char* args)
 #define ON "on"
 #define OFF "off"
 
-static INLINE void LogConf (const char* p, const char* s)
+static inline void LogConf (const char* p, const char* s)
 {
     LogMessage("%12s: %s\n", p, s);
 }
 
-static INLINE void LogFlag (
+static inline void LogFlag (
     const char* p, const NormalizerContext* nc, NormFlags nf)
 {
     const char* s = Norm_IsEnabled(nc, nf) ? ON : OFF;
@@ -441,6 +462,8 @@ static void Print_IP4 (const NormalizerContext* nc)
         //LogFlag("ip4::id", nc, NORM_IP4_ID);
         LogFlag("ip4::df", nc, NORM_IP4_DF);
         LogFlag("ip4::rf", nc, NORM_IP4_RF);
+        LogFlag("ip4::tos", nc, NORM_IP4_TOS);
+        LogFlag("ip4::trim", nc, NORM_IP4_TRIM);
 
         if ( Norm_IsEnabled(nc, NORM_IP4_TTL) )
         {
@@ -556,7 +579,7 @@ static void Preproc_Install (void)
     AddFuncToPreprocResetStatsList(
         Preproc_ResetStats, NULL, PRIORITY_FIRST, PP_NORMALIZE);
 
-    AddFuncToConfigCheckList(Preproc_CheckConfig );
+    AddFuncToConfigCheckList(Preproc_CheckConfig);
     AddFuncToPreprocPostConfigList(Preproc_PostConfigInit, NULL);
     RegisterPreprocStats("normalize", Preproc_PrintStats);
 }
@@ -565,7 +588,7 @@ static void Preproc_Install (void)
 
 static int Preproc_CheckPolicy (
     tSfPolicyUserContextId set,
-    tSfPolicyId pid, 
+    tSfPolicyId pid,
     void* pv)
 {
     //NormalizerContext* pc = (NormalizerContext*)pv;
@@ -582,11 +605,12 @@ static void Preproc_CheckConfig (void)
 
 static int Preproc_PostInit (
     tSfPolicyUserContextId set,
-    tSfPolicyId pid, 
+    tSfPolicyId pid,
     void* pv)
 {
     NormalizerContext *pc = (NormalizerContext *)pv;
-    SnortPolicy* policy = snort_conf_for_parsing->targeted_policies[pid];
+    SnortConfig* sc = snort_conf_for_parsing ? snort_conf_for_parsing : snort_conf;
+    SnortPolicy* policy = sc->targeted_policies[pid];
 
     if ( policy->new_ttl && policy->new_ttl < policy->min_ttl )
     {
@@ -631,7 +655,7 @@ static void Preproc_FreeContext (NormalizerContext* pc)
 
 static int Preproc_FreePolicy(
         tSfPolicyUserContextId set,
-        tSfPolicyId pid, 
+        tSfPolicyId pid,
         void* pv
         )
 {
@@ -686,10 +710,17 @@ static NormalizerContext* Reload_GetContext ()
     NormalizerContext* pc = NULL;
     tSfPolicyId policy_id = getParserPolicy();
 
+    swap_pend = true;
+
+    //if ( !ScInlineMode() )  // can't use this; need snort_conf_for_parsing
+    if ( !snort_conf_for_parsing ||
+        (snort_conf_for_parsing->targeted_policies[policy_id]->policy_mode
+        != POLICY_MODE__INLINE) )
+        return NULL;
+
     if ( !swap_set )
     {
         swap_set = sfPolicyConfigCreate();
-
         AddFuncToPreprocReloadVerifyList(Reload_Verify);
     }
     sfPolicyUserPolicySet(swap_set, policy_id);
@@ -709,45 +740,60 @@ static NormalizerContext* Reload_GetContext ()
 static void Reload_IP4 (char* args)
 {
     NormalizerContext* pc = Reload_GetContext();
+
     if ( pc )
         Parse_IP4(pc, args);
+    else
+        LogMessage(NOT_INLINE, "tcp");
 }
 
 static void Reload_ICMP4 (char* args)
 {
     NormalizerContext* pc = Reload_GetContext();
+
     if ( pc )
         Parse_ICMP4(pc, args);
+    else
+        LogMessage(NOT_INLINE, "tcp");
 }
 
 #ifdef SUP_IP6
 static void Reload_IP6 (char* args)
 {
     NormalizerContext* pc = Reload_GetContext();
+
     if ( pc )
         Parse_IP6(pc, args);
+    else
+        LogMessage(NOT_INLINE, "tcp");
 }
 
 static void Reload_ICMP6 (char* args)
 {
     NormalizerContext* pc = Reload_GetContext();
+
     if ( pc )
         Parse_ICMP6(pc, args);
+    else
+        LogMessage(NOT_INLINE, "tcp");
 }
 #endif
 
 static void Reload_TCP (char* args)
 {
     NormalizerContext* pc = Reload_GetContext();
+
     if ( pc )
         Parse_TCP(pc, args);
+    else
+        LogMessage(NOT_INLINE, "tcp");
 }
 
 //-------------------------------------------------------------------------
 
 static int Reload_VerifyPolicy (
     tSfPolicyUserContextId set,
-    tSfPolicyId pid, 
+    tSfPolicyId pid,
     void* pv
 ) {
     //NormalizerContext* pc = (NormalizerContext*)pv;
@@ -772,7 +818,7 @@ static int Reload_Verify(void)
 
 static int Reload_SwapPolicy (
     tSfPolicyUserContextId set,
-    tSfPolicyId pid, 
+    tSfPolicyId pid,
     void* pv)
 {
     NormalizerContext* pc = (NormalizerContext*)pv;
@@ -787,17 +833,23 @@ static void* Reload_Swap (void)
 {
     tSfPolicyUserContextId old_set = base_set;
 
-    if ( !swap_set )
+    if ( !swap_pend )
         return NULL;
 
     base_set = swap_set;
     swap_set = NULL;
+    swap_pend = false;
 
-    sfPolicyUserDataIterate(old_set, Reload_SwapPolicy);
+    if ( base_set )
+        sfPolicyUserDataIterate(base_set, Preproc_PostInit);
 
-    if ( !sfPolicyUserPolicyGetActive(old_set) )
-        return (void*)old_set;
+    if ( old_set )
+    {
+        sfPolicyUserDataIterate(old_set, Reload_SwapPolicy);
 
+        if ( !sfPolicyUserPolicyGetActive(old_set) )
+            return (void*)old_set;
+    }
     return NULL;
 }
 

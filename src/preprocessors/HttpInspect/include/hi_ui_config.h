@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,10 +18,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       hi_ui_config.h
-**  
+**
 **  @author     Daniel Roelker <droelker@sourcefire.com>
 **
 **  @brief      This file contains the internal configuration structures
@@ -36,6 +36,7 @@
 #define __HI_UI_CONFIG_H__
 
 #include "hi_include.h"
+#include "snort_bounds.h"
 #include "sfrt.h"
 #include "ipv6_port.h"
 #include "sf_ip.h"
@@ -51,6 +52,7 @@
 
 #define HI_UI_CONFIG_MAX_HDR_DEFAULT 0
 #define HI_UI_CONFIG_MAX_HEADERS_DEFAULT 0
+#define HI_UI_CONFIG_MAX_SPACES_DEFAULT 200 
 
 /*
 **  Special characters treated as whitespace before or after URI
@@ -84,7 +86,7 @@ typedef struct s_HTTPINSPECT_CONF_OPT
 
 /* The following are used to delineate server profiles for user output
  * and debugging information. */
-typedef enum e_PROFILES 
+typedef enum e_PROFILES
 {
     HI_ALL,
     HI_APACHE,
@@ -100,6 +102,13 @@ typedef struct s_HTTP_CMD_CONF
     char cmd_name[1];  // variable length array
 
 }  HTTP_CMD_CONF;
+
+typedef struct _HISmallChunkLength
+{
+    uint8_t size;
+    uint8_t num;
+
+} HISmallChunkLength;
 
 /**
 **  This is the configuration construct that holds the specific
@@ -123,24 +132,27 @@ typedef struct s_HTTPINSPECT_CONF
     int  iis_unicode_codepage;
 
     int  long_dir;
-    
+
     /*
     **  Chunk encoding anomaly detection
     */
     unsigned int chunk_length;
+    HISmallChunkLength small_chunk_length;
 
     char uri_only;
     char no_alerts;
     char enable_cookie;
     char inspect_response;
     char enable_xff;
+    char log_uri;
+    char log_hostname;
 
 #ifdef ZLIB
     char extract_gzip;
     char unlimited_decompress;
 #endif
-   
-   /* Support Extended ascii codes in the URI */ 
+
+   /* Support Extended ascii codes in the URI */
     char extended_ascii_uri;
     /*
     **  pipeline requests
@@ -164,13 +176,13 @@ typedef struct s_HTTPINSPECT_CONF
     char tab_uri_delimiter;
 
     /*
-    **  Normalize HTTP Headers if they exist.  
+    **  Normalize HTTP Headers if they exist.
     XXX Not sure what Apache & IIS do with respect to HTTP header 'uri' normalization.
     */
     char normalize_headers;
 
     /*
-    **  Normalize HTTP Headers if they exist.  
+    **  Normalize HTTP Headers if they exist.
     XXX Not sure what Apache & IIS do with respect to HTTP header 'uri' normalization.
     */
     char normalize_cookies;
@@ -179,6 +191,11 @@ typedef struct s_HTTPINSPECT_CONF
     **  Normalize multi-byte UTF charsets in HTTP server responses.
     */
     char normalize_utf;
+
+    /*
+     * Normalize Javascripts in HTTP server responses 
+     */
+    char normalize_javascript;
 
     /*
     **  Characters to be treated as whitespace bracketing a URI.
@@ -192,7 +209,6 @@ typedef struct s_HTTPINSPECT_CONF
     HTTPINSPECT_CONF_OPT double_decoding;
     HTTPINSPECT_CONF_OPT u_encoding;
     HTTPINSPECT_CONF_OPT bare_byte;
-    HTTPINSPECT_CONF_OPT base36;
     HTTPINSPECT_CONF_OPT utf_8;
     HTTPINSPECT_CONF_OPT iis_unicode;
     char                 non_rfc_chars[256];
@@ -208,15 +224,17 @@ typedef struct s_HTTPINSPECT_CONF
     HTTPINSPECT_CONF_OPT iis_delimiter;
     int max_hdr_len;
     int max_headers;
+    int max_spaces;
+    int max_js_ws;
 
     PROFILES profile;
     CMD_LOOKUP    *cmd_lookup;
-    
+
     /**Used to track references to this allocated data structure. Each additional
-     * reference should increment referenceCount. Each attempted free should 
-     * decrement it. When free is attempted and reference count is 0, then 
-     * this HTTPINSPECT_CONF should be actually freed. 
-     */ 
+     * reference should increment referenceCount. Each attempted free should
+     * decrement it. When free is attempted and reference count is 0, then
+     * this HTTPINSPECT_CONF should be actually freed.
+     */
     int referenceCount;
 
 }  HTTPINSPECT_CONF;
@@ -229,9 +247,7 @@ typedef struct s_HTTPINSPECT_CONF
 */
 typedef struct s_HTTPINSPECT_GLOBAL_CONF
 {
-#ifdef ZLIB
     int              disabled;
-#endif
     int              max_pipeline_requests;
     int              inspection_type;
     int              anomalous_servers;
@@ -248,8 +264,6 @@ typedef struct s_HTTPINSPECT_GLOBAL_CONF
     HTTPINSPECT_CONF *global_server;
     SERVER_LOOKUP    *server_lookup;
 
-    int hex_lookup[256];
-    int valid_lookup[256];
 
 #ifdef ZLIB
     int max_gzip_sessions;
@@ -257,8 +271,17 @@ typedef struct s_HTTPINSPECT_GLOBAL_CONF
     int compr_depth;
     int decompr_depth;
 #endif
+    int memcap;
+    uint32_t xtra_trueip_id;
+    uint32_t xtra_uri_id;
+    uint32_t xtra_hname_id;
+    uint32_t xtra_gzip_id;
+    uint32_t xtra_jsnorm_id;
 
-}  HTTPINSPECT_GLOBAL_CONF;    
+}  HTTPINSPECT_GLOBAL_CONF;
+
+#define INVALID_HEX_VAL -1
+#define HEX_VAL          1
 
 /*
 **  Functions
@@ -267,6 +290,7 @@ int hi_ui_config_init_global_conf(HTTPINSPECT_GLOBAL_CONF *GlobalConf);
 int hi_ui_config_default(HTTPINSPECT_CONF *GlobalConf);
 int hi_ui_config_reset_global(HTTPINSPECT_GLOBAL_CONF *GlobalConf);
 int hi_ui_config_reset_server(HTTPINSPECT_CONF *ServerConf);
+void hi_ui_config_reset_http_methods(HTTPINSPECT_CONF *ServerConf);
 
 int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
                             sfip_t *ServerIP,
@@ -278,4 +302,6 @@ int hi_ui_config_set_profile_iis_4or5(HTTPINSPECT_CONF *GlobalConf, int *);
 int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *GlobalConf, int *);
 void HttpInspectCleanupHttpMethodsConf(void *);
 
+extern int hex_lookup[256];
+extern int valid_lookup[256];
 #endif

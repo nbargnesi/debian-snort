@@ -7,6 +7,8 @@
 
  In order to create the database structure do:
 
+ - first create the database (see below 'CREATING THE DATABASE')
+
  - if using PostgreSQL
    $ cd /usr/share/doc/snort-pgsql/
    $  zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>
@@ -34,20 +36,23 @@
 -----------------------
 
   Notice that in order for the above to work you need to create first
-  a database. 
+  a database. The following section provides some quick examples
+  that should be sufficient to create a database for Snort.
 
-  Consider that you have defined the following information when asked
-  to in the Debconf dialogs when installing the package:
+  Note:  The following examples assume you have used the following information
+  when answering the questions related to database configuration when
+  installing the package:
 
-  Database User: snort
-  Database Password: snort-db
-  Database name: snort
+     * Database Username: snort
+     * Database Password: snort-db
+     * Database name: snort
+     * Database host: localhost
 
-  For Mysql you can do this:
+  To create the database in MySQL you can do the following:
 
   [ running as an mysql user with admin privileges ]
   $ mysql
-  mysql> CREATE DATABASE snort
+  mysql> CREATE DATABASE snort;
   mysql> grant CREATE, INSERT, SELECT, UPDATE on snort.* to snort@localhost;
   mysql> grant CREATE, INSERT, SELECT, UPDATE on snort.* to snort;
   mysql> SET PASSWORD FOR snort@localhost=PASSWORD('snort-db');
@@ -59,7 +64,7 @@
 
   $ zcat create_mysql.gz | mysql -u snort -D snort -psnort-db
 
-  For PosgreSQL you can do this:
+  To create the database in PosgreSQL you can do this:
 
   [ running as user 'posgres' ]
   $ psql template1
@@ -69,8 +74,8 @@
   $ zcat create_postgresql.gz | psql snort
   [ creates the database ]
 
-  If you are using authentication based on passwords in your Postgres
-  database use this:
+  If you are using authentication based on passwords in your PostgreSQL
+  database you will have to use this:
 
   $ psql snort 
   snort=# CREATE USER snort PASSWORD 'snort-db';
@@ -83,9 +88,11 @@
   snort=# SELECT * FROM pg_user WHERE usename='snort';
   snort=#\q
 
-  You should be able now to connect to the Postgres database with:
+  You should be able now to connect to the PostgreSQL database with:
 
   $ psql -U snort --password snort
+
+  [ introduce the password defined above when requested ]
 
   Alternatively, if the sensor is running on the same server as the database
   you could use 'ident' authentication, since the Snort sensor will be running
@@ -97,4 +104,4 @@ host   all        all        127.0.0.1        255.255.255.255   ident sameuser
 
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
-    Thu, 25 Aug 2005 16:44:46 +0200
+    Sun, 02 Jan 2011 01:53:56 +0100

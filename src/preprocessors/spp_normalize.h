@@ -1,7 +1,6 @@
 /* $Id$ */
-
 /*
-** Copyright (C) 2010-2010 Sourcefire, Inc.
+** Copyright (C) 2010-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -46,7 +45,10 @@ typedef enum {
     NORM_TCP_URP         = 0x00001000, // trim urp to dsize
     NORM_TCP_OPT         = 0x00002000, // nop over non-essential options
     NORM_TCP_IPS         = 0x00004000, // enable stream normalization/pre-ack flushing
-    NORM_ALL             = 0x00007FFF  // all normalizations on
+    NORM_IP4_TOS         = 0x00008000, // clear tos/diff-serv
+    NORM_IP4_TRIM        = 0x00010000, // enforce min frame
+    NORM_TCP_TRIM        = 0x00020000, // enforce min frame
+    NORM_ALL             = 0x0003FFFF  // all normalizations on
 } NormFlags;
 
 typedef uint64_t PegCount;

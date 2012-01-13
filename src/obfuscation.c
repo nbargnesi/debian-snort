@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2009-2010 Sourcefire, Inc.
+ * Copyright (C) 2009-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,13 +19,18 @@
  ******************************************************************************/
 
 #include <daq.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "obfuscation.h"
 #include "sf_types.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "util.h"
 #include "stream_api.h"
-#include "bounds.h"
+#include "snort_bounds.h"
 
 #ifdef OBFUSCATION_TEST_STANDALONE
 # ifndef OBFUSCATION_TEST
@@ -106,16 +111,16 @@ static ObfuscationStruct ob_struct;
 /*******************************************************************************
  * Private function prototypes
  ******************************************************************************/
-static INLINE int NumObfuscateMaxLenEntries(void);
-static INLINE int NumObfuscateSliceEntries(void);
-static INLINE ObRet ObfuscationEntryOverflow(ob_size_t);
-static INLINE int PayloadObfuscationRequired(Packet *);
-static INLINE void SetObfuscationEntry(ObfuscationEntry *, Packet *,
+static inline int NumObfuscateMaxLenEntries(void);
+static inline int NumObfuscateSliceEntries(void);
+static inline ObRet ObfuscationEntryOverflow(ob_size_t);
+static inline int PayloadObfuscationRequired(Packet *);
+static inline void SetObfuscationEntry(ObfuscationEntry *, Packet *,
         ob_size_t, ob_size_t, ob_char_t);
-static INLINE void SortObfuscationEntries(void);
-static INLINE void SetObfuscationCallbackData(
+static inline void SortObfuscationEntries(void);
+static inline void SetObfuscationCallbackData(
         ObfuscationCallbackData *, Packet *, ObfuscationCallback, void *);
-static INLINE void SetObfuscationStreamCallbackData(
+static inline void SetObfuscationStreamCallbackData(
         ObfuscationStreamCallbackData *, ObfuscationCallbackData *,
         Packet *, ObfuscationCallback, void *);
 
@@ -310,7 +315,7 @@ static void OB_API_PrintObfuscationEntries(int sorted)
  *  The number of current OB_LENGTH_MAX entries.
  *
  ******************************************************************************/
-static INLINE int NumObfuscateMaxLenEntries(void)
+static inline int NumObfuscateMaxLenEntries(void)
 {
     return ob_struct.num_maxlen_entries;
 }
@@ -327,7 +332,7 @@ static INLINE int NumObfuscateMaxLenEntries(void)
  *  The number of current slice entries.
  *
  ******************************************************************************/
-static INLINE int NumObfuscateSliceEntries(void)
+static inline int NumObfuscateSliceEntries(void)
 {
     return ob_struct.num_entries - ob_struct.num_maxlen_entries;
 }
@@ -348,7 +353,7 @@ static INLINE int NumObfuscateSliceEntries(void)
  *  OB_RET_OVERFLOW  if there isn't enough space to add another entry
  *
  ******************************************************************************/
-static INLINE ObRet ObfuscationEntryOverflow(ob_size_t length)
+static inline ObRet ObfuscationEntryOverflow(ob_size_t length)
 {
     if (length == OB_LENGTH_MAX)
     {
@@ -381,7 +386,7 @@ static INLINE ObRet ObfuscationEntryOverflow(ob_size_t length)
  *  1  if the packet has been flagged for obfuscation.
  *
  ******************************************************************************/
-static INLINE int PayloadObfuscationRequired(Packet *p)
+static inline int PayloadObfuscationRequired(Packet *p)
 {
     if ((p == NULL) || (p->pkth == NULL)
             || (p->pkt == NULL) || (p->data == NULL)
@@ -421,7 +426,7 @@ static INLINE int PayloadObfuscationRequired(Packet *p)
  *  None
  *
  ******************************************************************************/
-static INLINE void SetObfuscationEntry(ObfuscationEntry *entry,
+static inline void SetObfuscationEntry(ObfuscationEntry *entry,
         Packet *p, ob_size_t offset, ob_size_t length, ob_char_t ob_char)
 {
     if (entry == NULL)
@@ -454,7 +459,7 @@ static INLINE void SetObfuscationEntry(ObfuscationEntry *entry,
  *  None
  *
  ******************************************************************************/
-static INLINE void SetObfuscationCallbackData(
+static inline void SetObfuscationCallbackData(
         ObfuscationCallbackData *callback_data, Packet *packet,
         ObfuscationCallback user_callback, void *user_data)
 {
@@ -491,7 +496,7 @@ static INLINE void SetObfuscationCallbackData(
  *  None
  *
  ******************************************************************************/
-static INLINE void SetObfuscationStreamCallbackData(
+static inline void SetObfuscationStreamCallbackData(
         ObfuscationStreamCallbackData *stream_callback_data,
         ObfuscationCallbackData *callback_data, Packet *packet,
         ObfuscationCallback user_callback, void *user_data)
@@ -519,7 +524,7 @@ static INLINE void SetObfuscationStreamCallbackData(
  *  None
  *
  ******************************************************************************/
-static INLINE void SortObfuscationEntries(void)
+static inline void SortObfuscationEntries(void)
 {
     if (!ob_struct.sorted)
     {
@@ -1163,7 +1168,7 @@ static void ObTestAlloc(void **ptr, int ptr_size, int this_size)
             }
         }
     }
-} 
+}
 
 static void CreateObEntries(Packet *p, ob_char_t ob_char,
         ob_size_t ob_offset, ob_size_t ob_length, int reverse, int add_maxlen)

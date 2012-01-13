@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -45,14 +45,12 @@
 #endif
 
 #include <sys/types.h>
-
-#include "sf_types.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <pcre.h>
 
+#include "sf_types.h"
 #include "snort_smtp.h"
 #include "smtp_config.h"
 #include "smtp_normalize.h"
@@ -62,15 +60,15 @@
 
 #include "sf_snort_packet.h"
 #include "stream_api.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "profiler.h"
-#include "bounds.h"
+#include "snort_bounds.h"
 #include "sf_dynamic_preprocessor.h"
 #include "ssl.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
-
-#ifdef DEBUG
+#include "Unified2_common.h"
+#ifdef DEBUG_MSGS
 #include "sf_types.h"
 #endif
 
@@ -87,9 +85,9 @@ extern int smtpDetectCalled;
 extern tSfPolicyUserContextId smtp_config;
 extern SMTPConfig *smtp_eval_config;
 extern MemPool *smtp_mime_mempool;
-extern DynamicPreprocessorData _dpd;
+extern MemPool *smtp_mempool;
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
 extern char smtp_print_buffer[];
 #endif
 
@@ -176,6 +174,7 @@ const SMTPToken smtp_hdrs[] =
 {
     {"Content-type:", 13, HDR_CONTENT_TYPE},
     {"Content-Transfer-Encoding:", 26, HDR_CONT_TRANS_ENC},
+    {"Content-Disposition:", 20, HDR_CONT_DISP},
     {NULL,             0, 0}
 };
 
@@ -194,7 +193,7 @@ SMTPPcre mime_boundary_pcre;
 char smtp_normalizing;
 SMTPSearchInfo smtp_search_info;
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
 uint64_t smtp_session_counter = 0;
 #endif
 
@@ -246,26 +245,63 @@ static int SMTP_Inspect(SFSnortPacket *);
 static void SetSmtpBuffers(SMTP *ssn)
 {
     if ((ssn != NULL) && (ssn->decode_state == NULL)
-            && smtp_eval_config->enable_mime_decoding)
+            && (!SMTP_IsDecodingEnabled(smtp_eval_config)))
     {
         MemBucket *bkt = mempool_alloc(smtp_mime_mempool);
 
         if (bkt != NULL)
         {
-            ssn->decode_state = (SMTP_DecodeState *)calloc(1, sizeof(SMTP_DecodeState));
+            ssn->decode_state = (Email_DecodeState *)calloc(1, sizeof(Email_DecodeState));
             if( ssn->decode_state != NULL )
             {
-                ssn->decode_state->decode_present = 0;
-                ssn->decode_state->mime_bucket = bkt;
-                ssn->decode_state->encode_depth = smtp_eval_config->max_mime_depth;
-                ssn->decode_state->decode_depth = smtp_eval_config->max_mime_decode_bytes;
-                ssn->decode_state->encodeBuf = (unsigned char *)bkt->data;
-                ssn->decode_state->decodeBuf = (unsigned char *)bkt->data + smtp_eval_config->max_mime_depth;
-                ssn->decode_state->decoded_bytes = 0;
-                ssn->decode_state->prev_encoded_bytes = 0;
-                ssn->decode_state->prev_encoded_buf = NULL;
+                ssn->decode_bkt = bkt;
+                SetEmailDecodeState(ssn->decode_state, bkt->data, smtp_eval_config->max_depth,
+                        smtp_eval_config->b64_depth, smtp_eval_config->qp_depth,
+                        smtp_eval_config->uu_depth, smtp_eval_config->bitenc_depth);
             }
-                                                                                                                                    }
+            else
+            {
+                /*free mempool if calloc fails*/
+                mempool_free(smtp_mime_mempool, bkt);
+            }
+        }
+        else
+        {
+            SMTP_GenerateAlert(SMTP_DECODE_MEMCAP_EXCEEDED, "%s", SMTP_DECODE_MEMCAP_EXCEEDED_STR);
+        }
+    }
+}
+
+static void SetLogBuffers(SMTP *ssn)
+{
+    if((ssn != NULL) && (ssn->log_state == NULL)
+            && (smtp_eval_config->log_email_hdrs || smtp_eval_config->log_filename
+                || smtp_eval_config->log_mailfrom || smtp_eval_config->log_rcptto))
+    {
+        MemBucket *bkt = mempool_alloc(smtp_mempool);
+
+        if(bkt != NULL)
+        {
+            ssn->log_state = (SMTP_LogState *)calloc(1, sizeof(SMTP_LogState));
+            if(ssn->log_state != NULL)
+            {
+                ssn->log_state->log_hdrs_bkt = bkt;
+                ssn->log_state->log_depth = smtp_eval_config->email_hdrs_log_depth;
+                ssn->log_state->recipients = (uint8_t *)bkt->data;
+                ssn->log_state->rcpts_logged = 0;
+                ssn->log_state->senders = (uint8_t *)bkt->data + MAX_EMAIL;
+                ssn->log_state->snds_logged = 0;
+                ssn->log_state->filenames = (uint8_t *)bkt->data + (2*MAX_EMAIL);
+                ssn->log_state->file_logged = 0;
+                ssn->log_state->emailHdrs = (unsigned char *)bkt->data + (2*MAX_EMAIL) + MAX_FILE;
+                ssn->log_state->hdrs_logged = 0;
+            }
+            else
+            {
+                /*free bkt if calloc fails*/
+                mempool_free(smtp_mempool, bkt);
+            }
+        }
     }
 }
 
@@ -282,7 +318,7 @@ void SMTP_InitCmds(SMTPConfig *config)
     if (config->cmds == NULL)
     {
         DynamicPreprocessorFatalMessage("%s(%d) => failed to allocate memory for smtp "
-                                        "command structure\n", 
+                                        "command structure\n",
                                         *(_dpd.config_file), *(_dpd.config_line));
     }
 
@@ -295,7 +331,7 @@ void SMTP_InitCmds(SMTPConfig *config)
         if (config->cmds[tmp->search_id].name == NULL)
         {
             DynamicPreprocessorFatalMessage("%s(%d) => failed to allocate memory for smtp "
-                                            "command structure\n", 
+                                            "command structure\n",
                                             *(_dpd.config_file), *(_dpd.config_line));
         }
     }
@@ -305,7 +341,7 @@ void SMTP_InitCmds(SMTPConfig *config)
     if (config->cmd_search == NULL)
     {
         DynamicPreprocessorFatalMessage("%s(%d) => failed to allocate memory for smtp "
-                                        "command structure\n", 
+                                        "command structure\n",
                                         *(_dpd.config_file), *(_dpd.config_line));
     }
 
@@ -409,7 +445,7 @@ void SMTP_SearchInit(void)
     }
 }
 
-/* 
+/*
  * Initialize run-time boundary search
  */
 static int SMTP_BoundarySearchInit(void)
@@ -451,7 +487,7 @@ static void SMTP_ResetState(void)
     smtp_ssn->state = STATE_COMMAND;
     smtp_ssn->data_state = STATE_DATA_INIT;
     smtp_ssn->state_flags = 0;
-    ResetDecodeState(smtp_ssn->decode_state);
+    ClearEmailDecodeState(smtp_ssn->decode_state);
     memset(&smtp_ssn->mime_boundary, 0, sizeof(SMTPMimeBoundary));
 }
 
@@ -483,7 +519,7 @@ static SMTP * SMTP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
 
     if ((p->stream_session_ptr == NULL) || (pPolicyConfig->inspection_type == SMTP_STATELESS))
     {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
         if (p->stream_session_ptr == NULL)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Stream session pointer is NULL - "
@@ -507,10 +543,11 @@ static SMTP * SMTP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
         DynamicPreprocessorFatalMessage("Failed to allocate SMTP session data\n");
     }
 
-    SetSmtpBuffers(ssn);
-
+    smtp_ssn = ssn;
+    SetSmtpBuffers(smtp_ssn);
+    SetLogBuffers(smtp_ssn);
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_SMTP,
-                                         ssn, &SMTP_SessionFree);   
+                                         ssn, &SMTP_SessionFree);
 
     if (p->flags & SSNFLAG_MIDSTREAM)
     {
@@ -519,7 +556,7 @@ static SMTP * SMTP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
         ssn->state = STATE_UNKNOWN;
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     smtp_session_counter++;
     ssn->session_number = smtp_session_counter;
 #endif
@@ -560,7 +597,7 @@ static int SMTP_Setup(SFSnortPacket *p, SMTP *ssn)
     /* Figure out direction of packet */
     pkt_dir = SMTP_GetPacketDirection(p, flags);
 
-    DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Session number: "STDu64"\n", ssn->session_number);); 
+    DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Session number: "STDu64"\n", ssn->session_number););
 
     /* reset check ssl flag for new packet */
     if (!(ssn->session_flags & SMTP_FLAG_CHECK_SSL))
@@ -615,7 +652,7 @@ static int SMTP_Setup(SFSnortPacket *p, SMTP *ssn)
  * @return  none
  */
 static int SMTP_GetPacketDirection(SFSnortPacket *p, int flags)
-{    
+{
     int pkt_direction = SMTP_PKT_FROM_UNKNOWN;
 
     if (flags & SSNFLAG_MIDSTREAM)
@@ -707,8 +744,14 @@ static void SMTP_SessionFree(void *session_data)
 
     if(smtp->decode_state != NULL)
     {
-        mempool_free(smtp_mime_mempool, smtp->decode_state->mime_bucket);
+        mempool_free(smtp_mime_mempool, smtp->decode_bkt);
         free(smtp->decode_state);
+    }
+
+    if(smtp->log_state != NULL)
+    {
+        mempool_free(smtp_mempool, smtp->log_state->log_hdrs_bkt);
+        free(smtp->log_state);
     }
 
     free(smtp);
@@ -726,7 +769,7 @@ static void SMTP_NoSessionFree(void)
 
 static int SMTP_FreeConfigsPolicy(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {
@@ -825,6 +868,7 @@ static int SMTP_SearchStrFound(void *id, void *unused, int index, void *data, vo
     smtp_search_info.index = index;
     smtp_search_info.length = smtp_current_search[search_id].name_len;
 
+
     /* Returning non-zero stops search, which is okay since we only look for one at a time */
     return 1;
 }
@@ -865,7 +909,7 @@ static int SMTP_GetBoundary(const char *data, int data_len)
 
     mime_boundary = &smtp_ssn->mime_boundary.boundary[0];
     mime_boundary_len = &smtp_ssn->mime_boundary.boundary_len;
-    
+
     /* result will be the number of matches (including submatches) */
     result = pcre_exec(mime_boundary_pcre.re, mime_boundary_pcre.pe,
                        data, data_len, 0, 0, ovector, ovecsize);
@@ -927,7 +971,7 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
     /* calculate length of command line */
     cmd_line_len = eol - ptr;
 
-    /* check for command line exceeding maximum 
+    /* check for command line exceeding maximum
      * do this before checking for a command since this could overflow
      * some server's buffers without the presence of a known command */
     if ((smtp_eval_config->max_command_line_len != 0) &&
@@ -958,11 +1002,11 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
         while ((tmp < cmd_start) && isspace((int)*tmp))
             tmp++;
 
-        /* if not all spaces before command, we found a 
+        /* if not all spaces before command, we found a
          * substring */
         if (tmp != cmd_start)
             cmd_found = 0;
-        
+
         /* if we're before the end of line marker and the next
          * character is not whitespace, we found a substring */
         if ((cmd_end < eolm) && !isspace((int)*cmd_end))
@@ -995,7 +1039,7 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
                 if (smtp_eval_config->ignore_tls_data)
                 {
                     DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Ignoring encrypted data\n"););
-                    SetAltBuffer(p, 0);
+                    _dpd.SetAltDecode(0);
                 }
 
                 return end;
@@ -1075,6 +1119,11 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
          * caused the error */
         case CMD_MAIL:
             smtp_ssn->state_flags |= SMTP_FLAG_GOT_MAIL_CMD;
+            if( smtp_eval_config->log_mailfrom )
+            {
+                if(!SMTP_CopyEmailID(ptr, eolm - ptr, CMD_MAIL))
+                    smtp_ssn->log_flags |= SMTP_FLAG_MAIL_FROM_PRESENT;
+            }
 
             break;
 
@@ -1083,6 +1132,12 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
                 smtp_ssn->state == STATE_UNKNOWN)
             {
                 smtp_ssn->state_flags |= SMTP_FLAG_GOT_RCPT_CMD;
+            }
+
+            if( smtp_eval_config->log_rcptto)
+            {
+                if(!SMTP_CopyEmailID(ptr, eolm - ptr, CMD_RCPT))
+                    smtp_ssn->log_flags |= SMTP_FLAG_RCPT_TO_PRESENT;
             }
 
             break;
@@ -1113,7 +1168,7 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
                 /* bad BDAT command - needs chunk argument */
                 if (begin_chunk == eolm)
                     break;
-                    
+
                 end_chunk = begin_chunk;
                 while ((end_chunk < eolm) && isdigit((int)*end_chunk))
                     end_chunk++;
@@ -1171,7 +1226,7 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
                                         {
                                             break;
                                         }
-                                        
+
                                         smtp_ssn->bdat_last = 1;
                                     }
                                 }
@@ -1213,13 +1268,13 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
                 smtp_ssn->state = STATE_TLS_CLIENT_PEND;
 
             break;
-        
-        case CMD_X_LINK2STATE: 
+
+        case CMD_X_LINK2STATE:
             if (smtp_eval_config->alert_xlink2state)
                 ParseXLink2State(p, ptr + smtp_search_info.index);
 
             break;
-            
+
         default:
             break;
     }
@@ -1236,7 +1291,7 @@ static const uint8_t * SMTP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, 
         ret = SMTP_NormalizeCmd(p, ptr, eolm, eol);
         if (ret == -1)
             return NULL;
-    }                        
+    }
     else if (smtp_normalizing) /* Already normalizing */
     {
         ret = SMTP_CopyToAltBuffer(p, ptr, eol - ptr);
@@ -1254,6 +1309,7 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
     const uint8_t *data_end = NULL;
     int data_end_found;
     int ret;
+    uint16_t alt_decode_len = 0;
 
     /* if we've just entered the data state, check for a dot + end of line
      * if found, no data */
@@ -1267,7 +1323,7 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
 
             SMTP_GetEOL(ptr, end, &eol, &eolm);
 
-            /* this means we got a real end of line and not just end of payload 
+            /* this means we got a real end of line and not just end of payload
              * and that the dot is only char on line */
             if ((eolm != end) && (eolm == (ptr + 1)))
             {
@@ -1296,7 +1352,7 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
          * Postfix and Qmail will consider the start of data:
          * . text\r\n
          * .  text\r\n
-         * to be part of the header and the effect will be that of a 
+         * to be part of the header and the effect will be that of a
          * folded line with the '.' deleted.  Exchange will put the same
          * in the body which seems more reasonable. */
     }
@@ -1319,10 +1375,12 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
         data_end_marker = data_end = end;
     }
 
+    _dpd.setFileDataPtr((uint8_t*)ptr, (uint16_t)(data_end - ptr));
+
     if ((smtp_ssn->data_state == STATE_DATA_HEADER) ||
         (smtp_ssn->data_state == STATE_DATA_UNKNOWN))
     {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
         if (smtp_ssn->data_state == STATE_DATA_HEADER)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "DATA HEADER STATE ~~~~~~~~~~~~~~~~~~~~~~\n"););
@@ -1334,9 +1392,9 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
 #endif
 
         ptr = SMTP_HandleHeader(p, ptr, data_end_marker);
-        _dpd.setFileDataPtr(ptr, 0);
         if (ptr == NULL)
             return NULL;
+
     }
 
     /* if we're ignoring data and not already normalizing, copy everything
@@ -1361,17 +1419,29 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
 
     while ((ptr != NULL) && (ptr < data_end_marker))
     {
-        /* multiple base64 attachments in one single packet.
-         * Pipeline the base64 decoded data.*/
-        if ( smtp_ssn->state_flags & SMTP_FLAG_MULTIPLE_BASE64)
+        /* multiple MIME attachments in one single packet.
+         * Pipeline the MIME decoded data.*/
+        if ( smtp_ssn->state_flags & SMTP_FLAG_MULTIPLE_EMAIL_ATTACH)
         {
-            _dpd.setFileDataPtr(smtp_ssn->decode_state->decodeBuf, smtp_ssn->decode_state->decoded_bytes);
+            alt_decode_len = 0;
+            _dpd.setFileDataPtr(smtp_ssn->decode_state->decodePtr, (uint16_t)smtp_ssn->decode_state->decoded_bytes);
+            SMTP_LogFuncs(smtp_eval_config, p);
+            if (_dpd.Is_DetectFlag(SF_FLAG_ALT_DECODE))
+            {
+                alt_decode_len = _dpd.altBuffer->len;
+            }
             _dpd.detect(p);
-            smtp_ssn->state_flags &= ~SMTP_FLAG_MULTIPLE_BASE64;
-            smtp_ssn->decode_state->decode_present = 0;
-            smtp_ssn->decode_state->decoded_bytes = 0;
-            ClearPrevEncode(smtp_ssn->decode_state);
+            smtp_ssn->state_flags &= ~SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
+            ResetEmailDecodeState(smtp_ssn->decode_state);
             p->flags |=FLAG_ALLOW_MULTIPLE_DETECT;
+            /* Reset the log count when a packet goes through detection multiple times */
+            p->xtradata_mask = 0;
+            p->per_packet_xtradata = 0;
+            _dpd.DetectReset((uint8_t *)p->payload, p->payload_size);
+
+            /* There might be previously normalized data for this session which should not be cleared */
+            if(alt_decode_len)
+                _dpd.SetAltDecode(alt_decode_len);
         }
         switch (smtp_ssn->data_state)
         {
@@ -1386,13 +1456,12 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
         }
     }
 
-    /* We have either reached the end of MIME header or end of base64 encoded data*/
-    
-    if(smtp_ssn->decode_state)
+    /* We have either reached the end of MIME header or end of MIME encoded data*/
+
+    if(smtp_ssn->decode_state != NULL)
     {
-        _dpd.setFileDataPtr(smtp_ssn->decode_state->decodeBuf, smtp_ssn->decode_state->decoded_bytes);
-        smtp_ssn->decode_state->decode_present = 0;
-        smtp_ssn->decode_state->decoded_bytes = 0;
+        _dpd.setFileDataPtr(smtp_ssn->decode_state->decodePtr, (uint16_t)smtp_ssn->decode_state->decoded_bytes);
+        ResetDecodedBytes(smtp_ssn->decode_state);
     }
 
     /* if we got the data end reset state, otherwise we're probably still in the data
@@ -1423,6 +1492,7 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
     const uint8_t *colon;
     const uint8_t *content_type_ptr = NULL;
     const uint8_t *cont_trans_enc = NULL;
+    const uint8_t *cont_disp = NULL;
     int header_line_len;
     int header_found;
     int ret;
@@ -1435,9 +1505,12 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
      * folding, the boundary still needs to be checked for */
     if (smtp_ssn->state_flags & SMTP_FLAG_IN_CONTENT_TYPE)
         content_type_ptr = ptr;
-    
+
     if (smtp_ssn->state_flags & SMTP_FLAG_IN_CONT_TRANS_ENC)
         cont_trans_enc = ptr;
+
+    if (smtp_ssn->state_flags & SMTP_FLAG_IN_CONT_DISP)
+        cont_disp = ptr;
 
     while (ptr < data_end_marker)
     {
@@ -1449,7 +1522,7 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
             /* reset global header state values */
             smtp_ssn->state_flags &=
                 ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT
-                        | SMTP_FLAG_IN_CONT_TRANS_ENC );
+                        | SMTP_FLAG_IN_CONT_TRANS_ENC |SMTP_FLAG_IN_CONT_DISP );
 
             smtp_ssn->data_state = STATE_DATA_BODY;
 
@@ -1460,7 +1533,7 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 return eol;
         }
 
-        /* if we're not folding, see if we should interpret line as a data line 
+        /* if we're not folding, see if we should interpret line as a data line
          * instead of a header line */
         if (!(smtp_ssn->state_flags & (SMTP_FLAG_FOLDING | SMTP_FLAG_DATA_HEADER_CONT)))
         {
@@ -1475,7 +1548,7 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
             }
 
             /* look for header field colon - if we're not folding then we need
-             * to find a header which will be all printables (except colon) 
+             * to find a header which will be all printables (except colon)
              * followed by a colon */
             colon = ptr;
             while ((colon < eolm) && (*colon != ':'))
@@ -1503,50 +1576,69 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 /* no colon or got spaces in header name (won't be interpreted as a header)
                  * assume we're in the body */
                 smtp_ssn->state_flags &=
-                    ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT 
-                            |SMTP_FLAG_IN_CONT_TRANS_ENC);
+                    ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT
+                            |SMTP_FLAG_IN_CONT_TRANS_ENC | SMTP_FLAG_IN_CONT_DISP);
 
                 smtp_ssn->data_state = STATE_DATA_BODY;
 
                 return ptr;
             }
 
-            smtp_current_search = &smtp_hdr_search[0];
-            header_found = _dpd.searchAPI->search_instance_find
-                (smtp_hdr_search_mpse, (const char *)ptr,
-                 eolm - ptr, 1, SMTP_SearchStrFound);
-
-            /* Headers must start at beginning of line */
-            if ((header_found > 0) && (smtp_search_info.index == 0))
+            if(tolower((int)*ptr) == 'c')
             {
-                switch (smtp_search_info.id)
+
+                smtp_current_search = &smtp_hdr_search[0];
+                header_found = _dpd.searchAPI->search_instance_find
+                    (smtp_hdr_search_mpse, (const char *)ptr,
+                     eolm - ptr, 1, SMTP_SearchStrFound);
+                /* Headers must start at beginning of line */
+                if ((header_found > 0) && (smtp_search_info.index == 0))
                 {
-                    case HDR_CONTENT_TYPE:
-                        /* for now we're just looking for the boundary in the data
-                         * header section */
-                        if (smtp_ssn->data_state != STATE_MIME_HEADER)
-                        {
-                            content_type_ptr = ptr + smtp_search_info.length;
-                            smtp_ssn->state_flags |= SMTP_FLAG_IN_CONTENT_TYPE;
-                        }
+                    switch (smtp_search_info.id)
+                    {
+                        case HDR_CONTENT_TYPE:
+                            /* for now we're just looking for the boundary in the data
+                             * header section */
+                            if (smtp_ssn->data_state != STATE_MIME_HEADER)
+                            {
+                                content_type_ptr = ptr + smtp_search_info.length;
+                                smtp_ssn->state_flags |= SMTP_FLAG_IN_CONTENT_TYPE;
+                            }
 
-                        break;
-                    case HDR_CONT_TRANS_ENC:
-                        cont_trans_enc = ptr + smtp_search_info.length;
-                        smtp_ssn->state_flags |= SMTP_FLAG_IN_CONT_TRANS_ENC;
-                        break;
+                            break;
+                        case HDR_CONT_TRANS_ENC:
+                            cont_trans_enc = ptr + smtp_search_info.length;
+                            smtp_ssn->state_flags |= SMTP_FLAG_IN_CONT_TRANS_ENC;
+                            break;
+                        case HDR_CONT_DISP:
+                            cont_disp = ptr + smtp_search_info.length;
+                            smtp_ssn->state_flags |= SMTP_FLAG_IN_CONT_DISP;
+                            break;
 
-                        
                     default:
-                        break;
+                            break;
+                    }
                 }
             }
+            else if(tolower((int)*ptr) == 'e')
+            {
+                if( (eolm - ptr) >= 9 )
+                {
+                    if(strncasecmp((const char *)ptr, "Encoding:", 9) == 0)
+                    {
+                        cont_trans_enc = ptr + 9;
+                        smtp_ssn->state_flags |= SMTP_FLAG_IN_CONT_TRANS_ENC;
+                    }
+                }
+
+            }
+
         }
         else
         {
             smtp_ssn->state_flags &= ~SMTP_FLAG_DATA_HEADER_CONT;
         }
-        
+
         /* get length of header line */
         header_line_len = eol - ptr;
 
@@ -1564,7 +1656,7 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 smtp_ssn->data_state = STATE_DATA_BODY;
                 smtp_ssn->state_flags &=
                     ~(SMTP_FLAG_FOLDING | SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_DATA_HEADER_CONT
-                            | SMTP_FLAG_IN_CONT_TRANS_ENC);
+                            | SMTP_FLAG_IN_CONT_TRANS_ENC | SMTP_FLAG_IN_CONT_DISP);
                 return ptr;
             }
         }
@@ -1578,7 +1670,15 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 return NULL;
         }
 
-        /* check for folding 
+        if(smtp_eval_config->log_email_hdrs)
+        {
+            if(smtp_ssn->data_state == STATE_DATA_HEADER)
+            {
+                ret = SMTP_CopyEmailHdrs(ptr, eol - ptr);
+            }
+        }
+
+        /* check for folding
          * if char on next line is a space and not \n or \r\n, we are folding */
         if ((eol < data_end_marker) && isspace((int)eol[0]) && (eol[0] != '\n'))
         {
@@ -1624,21 +1724,28 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
         else if ((smtp_ssn->state_flags &
                 (SMTP_FLAG_IN_CONT_TRANS_ENC | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONT_TRANS_ENC)
         {
-            /* Check for Content-Transfer-Encoding : base64 */
-            if( smtp_eval_config->enable_mime_decoding )
+            /* Check for Content-Transfer-Encoding : */
+            if( (!SMTP_IsDecodingEnabled(smtp_eval_config)) && (smtp_ssn->decode_state != NULL))
             {
-                ret = SMTP_IsBase64Data((const char *)cont_trans_enc, eolm - cont_trans_enc );
-                if (ret != -1)
-                {
-                    /* Check to see if there is already an base64 decoded data*/
-                    smtp_ssn->state_flags |= SMTP_FLAG_BASE64_DATA;
-                    if( smtp_ssn->decode_state && smtp_ssn->decode_state->decode_present )
-                        smtp_ssn->state_flags |= SMTP_FLAG_MULTIPLE_BASE64;
-                }
+                SMTP_DecodeType((const char *)cont_trans_enc, eolm - cont_trans_enc );
+                smtp_ssn->state_flags |= SMTP_FLAG_EMAIL_ATTACH;
+                /* check to see if there are other attachments in this packet */
+                if( smtp_ssn->decode_state->decoded_bytes )
+                    smtp_ssn->state_flags |= SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
             }
             smtp_ssn->state_flags &= ~SMTP_FLAG_IN_CONT_TRANS_ENC;
 
             cont_trans_enc = NULL;
+        }
+        else if ((smtp_ssn->state_flags &
+                    (SMTP_FLAG_IN_CONT_DISP | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONT_DISP)
+        {
+            if( smtp_eval_config->log_filename )
+                SMTP_CopyFileName(cont_disp, eolm - cont_disp);
+            if (!(smtp_ssn->state_flags & SMTP_FLAG_IN_CONT_DISP_CONT))
+                smtp_ssn->state_flags &= ~SMTP_FLAG_IN_CONT_DISP;
+
+            cont_disp = NULL;
         }
 
         /* if state was unknown, at this point assume we know */
@@ -1669,11 +1776,11 @@ static const uint8_t * SMTP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
 {
     int boundary_found = 0;
     const uint8_t *boundary_ptr = NULL;
-    const uint8_t *base64_start = NULL;
-    const uint8_t *base64_end = NULL;
+    const uint8_t *attach_start = NULL;
+    const uint8_t *attach_end = NULL;
 
-    if ( smtp_ssn->state_flags & SMTP_FLAG_BASE64_DATA )
-        base64_start = ptr;
+    if ( smtp_ssn->state_flags & SMTP_FLAG_EMAIL_ATTACH )
+        attach_start = ptr;
     /* look for boundary */
     if (smtp_ssn->state_flags & SMTP_FLAG_GOT_BOUNDARY)
     {
@@ -1692,11 +1799,17 @@ static const uint8_t * SMTP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
                 const uint8_t *eolm;
                 const uint8_t *tmp;
 
-                if (smtp_ssn->state_flags & SMTP_FLAG_BASE64_DATA )
+                if (smtp_ssn->state_flags & SMTP_FLAG_EMAIL_ATTACH )
                 {
-                    base64_end = boundary_ptr-1;
-                    smtp_ssn->state_flags &= ~SMTP_FLAG_BASE64_DATA;
-                    SMTP_Base64Decode( base64_start, base64_end);
+                    attach_end = boundary_ptr-1;
+                    smtp_ssn->state_flags &= ~SMTP_FLAG_EMAIL_ATTACH;
+                    if( attach_start < attach_end )
+                    {
+                        if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) != DECODE_SUCCESS )
+                        {
+                            SMTP_DecodeAlert();
+                        }
+                    }
                 }
 
 
@@ -1730,12 +1843,18 @@ static const uint8_t * SMTP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
         }
     }
 
-    if ( smtp_ssn->state_flags & SMTP_FLAG_BASE64_DATA )
+    if ( smtp_ssn->state_flags & SMTP_FLAG_EMAIL_ATTACH )
     {
-        base64_end = data_end_marker;
-        SMTP_Base64Decode( base64_start, base64_end);
+        attach_end = data_end_marker;
+        if( attach_start < attach_end )
+        {
+            if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) != DECODE_SUCCESS )
+            {
+                SMTP_DecodeAlert();
+            }
+        }
     }
-        
+
     return data_end_marker;
 }
 
@@ -1779,7 +1898,7 @@ static void SMTP_ProcessClientPacket(SFSnortPacket *p)
         }
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     if (smtp_normalizing)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Normalized payload\n%s\n", SMTP_PrintBuffer(p)););
@@ -1788,8 +1907,8 @@ static void SMTP_ProcessClientPacket(SFSnortPacket *p)
 }
 
 
-/* very simplistic - just enough to say this is binary data - the rules will make a final 
- * judgement.  Should maybe add an option to the smtp configuration to enable the 
+/* very simplistic - just enough to say this is binary data - the rules will make a final
+ * judgement.  Should maybe add an option to the smtp configuration to enable the
  * continuing of command inspection like ftptelnet. */
 static int SMTP_IsTlsClientHello(const uint8_t *ptr, const uint8_t *end)
 {
@@ -1850,9 +1969,9 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
     const uint8_t *end;
     const uint8_t *eolm;
     const uint8_t *eol;
-    int do_flush = 0; 
+    int do_flush = 0;
     int resp_line_len;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     const uint8_t *dash;
 #endif
 
@@ -1871,19 +1990,19 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
             smtp_ssn->state = STATE_COMMAND;
         }
     }
-        
+
     if (smtp_ssn->state == STATE_TLS_DATA)
     {
         /* Ignore data */
         if (smtp_eval_config->ignore_tls_data)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Ignoring Server TLS encrypted data\n"););
-            SetAltBuffer(p, 0);
+            _dpd.SetAltDecode(0);
         }
 
         return 0;
     }
-    
+
     while (ptr < end)
     {
         SMTP_GetEOL(ptr, end, &eol, &eolm);
@@ -1895,7 +2014,7 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
         resp_found = _dpd.searchAPI->search_instance_find
             (smtp_resp_search_mpse, (const char *)ptr,
              resp_line_len, 1, SMTP_SearchStrFound);
-        
+
         if (resp_found > 0)
         {
             switch (smtp_search_info.id)
@@ -1920,13 +2039,13 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
                     break;
             }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             dash = ptr + smtp_search_info.index + smtp_search_info.length;
 
             /* only add response if not a dash after response code */
             if ((dash == eolm) || ((dash < eolm) && (*dash != '-')))
             {
-                DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Server sent %s response\n", 
+                DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Server sent %s response\n",
                                                     smtp_resps[smtp_search_info.id].name););
             }
 #endif
@@ -1946,7 +2065,7 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
                 if (smtp_eval_config->ignore_tls_data)
                 {
                     DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Ignoring Server TLS encrypted data\n"););
-                    SetAltBuffer(p, 0);
+                    _dpd.SetAltDecode(0);
                 }
 
                 return 0;
@@ -1963,7 +2082,7 @@ static int SMTP_ProcessServerPacket(SFSnortPacket *p)
             SMTP_GenerateAlert(SMTP_RESPONSE_OVERFLOW, "%s: %d chars",
                                SMTP_RESPONSE_OVERFLOW_STR, resp_line_len);
         }
-       
+
         ptr = eol;
     }
 
@@ -2002,7 +2121,7 @@ static int SMTP_Inspect(SFSnortPacket *p)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: No stream session.\n"););
 
-        if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+        if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) ||
             (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: Configured for this "
@@ -2030,7 +2149,7 @@ static int SMTP_Inspect(SFSnortPacket *p)
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: Unknown protocol for "
                                     "this session.  See if we're configured.\n"););
 
-            if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+            if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) ||
                 (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP: Target-based: SMTP port is configured."););
@@ -2043,7 +2162,7 @@ static int SMTP_Inspect(SFSnortPacket *p)
 
 #else
     /* Make sure it's traffic we're interested in */
-    if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) || 
+    if ((SMTP_IsServer(p->src_port) && (p->flags & FLAG_FROM_SERVER)) ||
         (SMTP_IsServer(p->dst_port) && (p->flags & FLAG_FROM_CLIENT)))
         return 1;
 
@@ -2067,11 +2186,12 @@ void SnortSMTP(SFSnortPacket *p)
 
     PROFILE_VARS;
 
-    smtp_eval_config = (SMTPConfig *)sfPolicyUserDataGetCurrent(smtp_config);
 
     smtp_ssn = (SMTP *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_SMTP);
     if (smtp_ssn != NULL)
         smtp_eval_config = (SMTPConfig *)sfPolicyUserDataGet(smtp_ssn->config, smtp_ssn->policy_id);
+    else
+        smtp_eval_config = (SMTPConfig *)sfPolicyUserDataGetCurrent(smtp_config);
 
     if (smtp_eval_config == NULL)
         return;
@@ -2090,7 +2210,7 @@ void SnortSMTP(SFSnortPacket *p)
 
     /* reset normalization stuff */
     smtp_normalizing = 0;
-    ResetAltBuffer(p);
+    _dpd.DetectFlag_Disable(SF_FLAG_ALT_DECODE);
     p->normalized_payload_size = 0;
 
     if (pkt_dir == SMTP_PKT_FROM_SERVER)
@@ -2110,7 +2230,7 @@ void SnortSMTP(SFSnortPacket *p)
     }
     else
     {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
         if (pkt_dir == SMTP_PKT_FROM_CLIENT)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP client packet\n"););
@@ -2144,7 +2264,7 @@ void SnortSMTP(SFSnortPacket *p)
             /* if we're ignoring tls data, set a zero length alt buffer */
             if (smtp_eval_config->ignore_tls_data)
             {
-                SetAltBuffer(p, 0);
+                _dpd.SetAltDecode(0);
             }
         }
         else
@@ -2157,11 +2277,11 @@ void SnortSMTP(SFSnortPacket *p)
             }
             else if (smtp_ssn->reassembling && !(p->flags & FLAG_REBUILT_STREAM))
             {
-                /* If this isn't a reassembled packet and didn't get 
+                /* If this isn't a reassembled packet and didn't get
                  * inserted into reassembly buffer, there could be a
                  * problem.  If we miss syn or syn-ack that had window
                  * scaling this packet might not have gotten inserted
-                 * into reassembly buffer because it fell outside of 
+                 * into reassembly buffer because it fell outside of
                  * window, because we aren't scaling it */
                 smtp_ssn->session_flags |= SMTP_FLAG_GOT_NON_REBUILT;
                 smtp_ssn->state = STATE_UNKNOWN;
@@ -2179,7 +2299,7 @@ void SnortSMTP(SFSnortPacket *p)
                 smtp_ssn->session_flags &= ~SMTP_FLAG_GOT_NON_REBUILT;
             }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             /* Interesting to see how often packets are rebuilt */
             DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Payload: %s\n%s\n",
                                     (p->flags & FLAG_REBUILT_STREAM) ?
@@ -2193,6 +2313,7 @@ void SnortSMTP(SFSnortPacket *p)
 
     PREPROC_PROFILE_START(smtpDetectPerfStats);
 
+    SMTP_LogFuncs(smtp_eval_config, p);
     detected = _dpd.detect(p);
 
 #ifdef PERF_PROFILING
@@ -2203,7 +2324,7 @@ void SnortSMTP(SFSnortPacket *p)
 
     /* Turn off detection since we've already done it. */
     SMTP_DisableDetect(p);
-     
+
     if (detected)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "SMTP vulnerability detected\n"););
@@ -2219,5 +2340,72 @@ static void SMTP_DisableDetect(SFSnortPacket *p)
     _dpd.setPreprocBit(p, PP_STREAM5);
     _dpd.setPreprocBit(p, PP_SDF);
 }
+
+
+static inline SMTP *SMTP_GetSession(void *data)
+{
+    if(data)
+        return (SMTP *)_dpd.streamAPI->get_application_data(data, PP_SMTP);
+
+    return NULL;
+}
+
+/* Callback to return the MIME attachment filenames accumulated */
+int SMTP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
+{
+    SMTP *ssn = SMTP_GetSession(data);
+
+    if(ssn == NULL)
+        return 0;
+
+    *buf = ssn->log_state->filenames;
+    *len = ssn->log_state->file_logged;
+    *type = EVENT_INFO_SMTP_FILENAME;
+    return 1;
+}
+
+/* Callback to return the email addresses accumulated from the MAIL FROM command */
+int SMTP_GetMailFrom(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
+{
+    SMTP *ssn = SMTP_GetSession(data);
+
+    if(ssn == NULL)
+        return 0;
+
+    *buf = ssn->log_state->senders;
+    *len = ssn->log_state->snds_logged;
+    *type = EVENT_INFO_SMTP_MAILFROM;
+    return 1;
+}
+
+/* Callback to return the email addresses accumulated from the RCP TO command */
+int SMTP_GetRcptTo(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
+{
+    SMTP *ssn = SMTP_GetSession(data);
+
+    if(ssn == NULL)
+        return 0;
+
+    *buf = ssn->log_state->recipients;
+    *len = ssn->log_state->rcpts_logged;
+    *type = EVENT_INFO_SMTP_RCPTTO;
+    return 1;
+}
+
+/* Calback to return the email headers */
+int SMTP_GetEmailHdrs(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
+{
+    SMTP *ssn = SMTP_GetSession(data);
+
+    if(ssn == NULL)
+        return 0;
+
+    *buf = ssn->log_state->emailHdrs;
+    *len = ssn->log_state->hdrs_logged;
+    *type = EVENT_INFO_SMTP_EMAIL_HDRS;
+    return 1;
+}
+
+
 
 

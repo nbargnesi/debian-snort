@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2009-2010 Sourcefire, Inc.
+ * Copyright (C) 2009-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -21,10 +21,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "intel-soft-cpm.h"
 #include "pm/cpa_pm_compile.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "fpcreate.h"
 
 /* MACROS *********************************************************************/
@@ -83,16 +88,16 @@ static IntelPmHandles *ipm_handles = NULL;
 
 
 /* PROTOTYPES *****************************************************************/
-static INLINE const char * GetCpaStatusStr(CpaStatus);
+static inline const char * GetCpaStatusStr(CpaStatus);
 static void IntelPmSearchCallback(const CpaInstanceHandle, CpaPmMatchCtx *);
-static INLINE void IntelPmInitQueue(IntelPmMatchQueue *);
-static INLINE int IntelPmAddQueue(IntelPmMatchQueue *, void *);
-static INLINE unsigned int IntelPmProcessQueue(IntelPmMatchQueue *, MatchFunc, void *);
+static inline void IntelPmInitQueue(IntelPmMatchQueue *);
+static inline int IntelPmAddQueue(IntelPmMatchQueue *, void *);
+static inline unsigned int IntelPmProcessQueue(IntelPmMatchQueue *, MatchFunc, void *);
 static void IntelPmRelease(IntelPmHandles *);
 
 
 /* FUNCTIONS ******************************************************************/
-static INLINE const char * GetCpaStatusStr(CpaStatus status)
+static inline const char * GetCpaStatusStr(CpaStatus status)
 {
     switch (status)
     {
@@ -115,13 +120,13 @@ static INLINE const char * GetCpaStatusStr(CpaStatus status)
     return "Unknown Cpa error";
 }
 
-static INLINE void IntelPmInitQueue(IntelPmMatchQueue *q)
+static inline void IntelPmInitQueue(IntelPmMatchQueue *q)
 {
     q->inq = 0;
     q->inq_flush = 0;
 }
 
-static INLINE int IntelPmAddQueue(IntelPmMatchQueue *q, void *p)
+static inline int IntelPmAddQueue(IntelPmMatchQueue *q, void *p)
 {
     int i;
 
@@ -140,7 +145,7 @@ static INLINE int IntelPmAddQueue(IntelPmMatchQueue *q, void *p)
     return 0;
 }
 
-static INLINE unsigned int IntelPmProcessQueue(IntelPmMatchQueue *q,
+static inline unsigned int IntelPmProcessQueue(IntelPmMatchQueue *q,
         MatchFunc match, void *data)
 {
     unsigned int i;
@@ -158,7 +163,7 @@ static INLINE unsigned int IntelPmProcessQueue(IntelPmMatchQueue *q,
         }
     }
 
-    q->inq = 0; 
+    q->inq = 0;
 
     return 0;
 }
@@ -547,7 +552,7 @@ static void IntelPmSearchCallback(const CpaInstanceHandle instanceHandle,
     for (i = 0; i < pMatchCtxList->numMatchResults; i++)
     {
         CpaPmMatchResult *result = &pMatchCtxList->pMatchResult[i];
- 
+
         //intel_pm_matches++;
 
         if (result->matchLength == 0)
@@ -579,7 +584,7 @@ int IntelPmSearch(IntelPm *ipm, unsigned char *buffer, int buffer_len,
     ipm->data = data;
     ipm->match = match;
 
-    /* Note: Search options 
+    /* Note: Search options
        CPA_PM_MATCH_OPTION_RESET_STREAM | CPA_PM_MATCH_OPTION_END_OF_STREAM
        specify a stateless search.  */
 

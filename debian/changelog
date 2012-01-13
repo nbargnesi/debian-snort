@@ -1,24 +1,110 @@
-snort (2.9.0.1-3) experimental; urgency=low
- 
-  [ Javier Fernandez-Sanguino ] 
-  * Forward port changes introduced in unstable package to experimental.
+snort (2.9.2-1) unstable; urgency=low
 
-  [ Andrew Pollow - <apollock@google.com> ] 
-  * Convert source package to 3.0 (quilt) format
-  * Migrate all patches from diff.gz to debian/patches
-      - community_rules: Include community rules
-      - configuration: Setup the configuration file for use in Debian
-      - document_database_changes: Document changes to the database
-      - dumbnet: Use the dumbnet library instead of dnet
-      - fix_manpage_typo: Fix typos in snort.8 manpage
-      - remove_builddep_on_latex2html: Have faq.tex use hyperref.sty instead of latex2html
-      - rules: Add GPL rules provided in earlier snort releases
-      - update_autotools: Update autotools
-      - upstream_historical_relnotes: Add historical Release Notes from older upstream
-        versions
-  * debian/control: s/gs-common/ghostscript/ in Build-Depends-Indep
+  [ Andrew Pollock ]
+  * New upstream release, upload to unstable
+     - Fixes CVE-2009-3641: DoS while printing specially-crafted IPv6 packet
+       using the -v option (Closes: 553584)
+     - The package no longer build-depends on iptables-dev and the negated list
+       of architectures is no longer used (Closes: 634660)
+  * Switch to dpkg-source 3.0 (quilt) format
+  * Port across all changes from Snort 2.8.5.2-5 and later in unstable
+  * debian/snort.postinst: create the directory that the checksum for
+    snort.debian.conf will be created in if it doesn't already exist
+  * debian/rules: tell dh_makeshlibs to not call ldconfig in the
+    preinst/postinst of snort-common-libraries
+  * debian/rules: don't install README.WIN32 into snort-doc
 
- -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 26 Dec 2010 13:22:52 +0100
+  [ Javier Fernandez-Sanguino Peña ]
+  * debian/rules:
+     - Set enable-zlib when configuring all packages to force it to be 
+       enabled as this is required by the http_inspect preprocessor which
+       is enabled by default (Closes: #631854)
+     - Included (commented) the patch provided by Clint Byrum and included in
+       Ubuntu to prevent snort from FTFS with libmysqlclient-dev which will be
+       multiarch in the future. The patch uses mysql_config to find libraries
+       to fix FTBFS with multiarch libmysqlclient. Not enabled since the
+       version of libmysqlclient in unstable currently does not support the
+       --variable=pkglibdir option
+  * debian/snort{,-inline}.config: Use LC_ALL=C when calling ifconfig to make 
+    the postinst work when ifconfig's output is internationalised (Closes: 577033)
+  * debian/control: Fix link in the rules package, point to 
+    http://www.snort.org/snort-rules/ (Closes: 646547)
+  * debian/my/snort-stat: Modify so that alerts with Priority but without classification
+    are analysed when parsing syslog information. Also set the class to 'Undefined'
+    instead of leaving it empty. (Closes: 590061)
+  * po-debconf translation updates:
+    - Danish, provided by Joe Dalton (Closes: 638678)
+    - Dutch, provided by Jeroen Schot (Closes: 654239)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Fri, 13 Jan 2012 21:54:25 +0100
+
+snort (2.8.5.2-9.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Empty dependency_libs in libtool la file(s).
+    http://wiki.debian.org/ReleaseGoals/LAFileRemoval Closes: #621859
+
+ -- Andreas Metzler <ametzler@debian.org>  Sat, 18 Jun 2011 14:08:33 +0200
+
+snort (2.8.5.2-9) unstable; urgency=low
+
+  * debian/rules: Change gs-common Build-Depends-Indep to ghostscript fo fix
+    FTBFS, thanks to Andreas Metzler for the solution.  (Closes: 618197)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 10 Apr 2011 10:57:55 +0200
+
+snort (2.8.5.2-8) unstable; urgency=low
+
+  * debian/snort{,-mysql,-pgsql}.config: Remove the '-o' from
+    DEBIAN_SNORT_OPTIONS that was prepended by the postinst script in
+    version 2.8.5.2-2 on upgrades.
+  * debian/snort{,-mysql,-pgsql}.prerm: Change /usr/sbin/nessus to /usr/sbin/snort
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Thu, 22 Jan 2011 12:18:03 +0100
+
+snort (2.8.5.2-7) unstable; urgency=low
+
+  * debian/snort{,-mysql,-pgsql}.config: Remove the '-p' from
+    DEBIAN_SNORT_OPTIONS that is prepended by the postinst script (if disable
+    promiscuous is set) before adding it to the debconf value to prevent this
+    option from being readded again and again on reinstall.  (Closes:  #608635)
+  * debian/snort{,-mysql,-pgsql}.postinst: Remove the temporary file used to
+    test if the configuration files has not been modified when upgrading to
+    a new version.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 02 Jan 2011 20:47:26 +0100
+
+snort (2.8.5.2-6) unstable; urgency=high
+
+  * debian/snort{,-mysql,-pgsql}.postinst: Introduce code to be able to manage
+     the situation in which a local admin has introduced changes in the
+     /etc/snort/snort.debian.conf configuration file manually. Keep the
+     local changes and leave the file untouched on upgrades. (Closes: #608590)
+  * debian/snort-{mysql,-pgsql}.postinst:
+       - Introduce code to be able to manage the situation in which a local
+         admin has introduced changes in /etc/snort/database.conf and has not
+         used dpkg-reconfigure. Keep the local changes and do not touch the
+         file on upgrades.
+       - Generate the database.conf regardless of the status of the
+         db-pending-config file as we need the configuration file in any case.
+  * debian/snort{,-mysql,-pgsql}.config: Read the values of the configuration
+     file /etc/snort/snort.debian.conf and use them to set to preseed all the
+     debconf values. This ensures that local changes are reloaded into debconf
+     if any changes are made in the file and makes it possible to regenerate
+     the file with dpkg-reconfigure.
+  * debian/snort{,-mysql,-inline,-pgsq}.config: Make it possible to debug the
+    scripts through the use of the  DEBIAN_SCRIPT_DEBUG environment variable
+  * debian/snort-{mysql,pgsql}.config: Fix error in call of template which
+    belongs to the snort package. Use the proper template now.
+  * debian/README-database.Debian: Fix syntax error in MySQL example calls and
+     reword the text a bit to clarify that the provided information are just
+     examples on how to setup the databases.
+  * debian/po/: Use debconf-updatepo to remove obsolete translations from PO
+    files.
+  * debian/NEWS: Remove the indication that database.conf should not be
+    manually edited.
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sat, 01 Jan 2011 23:40:30 +0100
 
 snort (2.8.5.2-5) unstable; urgency=high
 
@@ -35,10 +121,11 @@ snort (2.8.5.2-5) unstable; urgency=high
      * debian/control: Upgrade the Build-Depends on debhelper
      * src/parser.c: Typo fix argu*e*ment -> argument
      * src/preprocessors/spp_perfmonitor.c,
-       src/dynamic-preprocessors/dns/spp_dns.c: 
-        Typo fix: sep*e*rated --> separated
+       src/dynamic-preprocessors/dns/spp_dns.c:
+         Typo fix: sep*e*rated --> separated
   * rules/web-misc.rules: Limit the depth when searching for an HTTP version
     to prevent false positives from apt-get User-Agent string (LP: #258155)
+  * debian/snort.init.d: Separate warning message from main messages.
   * debian/TODO: review contents and update
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Sun, 26 Dec 2010 13:20:25 +0100
@@ -55,7 +142,7 @@ snort (2.9.0.1-2) experimental; urgency=low
 snort (2.8.5.2-4) unstable; urgency=high
 
   * [ The Merry Xmas and Merry RC bug fixing Release! ]
-  * debian/snort-common.preinst: 
+  * debian/snort-common.preinst:
       - Fix how the files are generated and use Perl instead of bash's echo
         as the latter will interpret content in the configuration file
         and will botch it
@@ -106,7 +193,7 @@ snort (2.9.0.1-1) experimental; urgency=low
   * debian/control: 
        - Make it Build-Depend on libdumbnet-dev since this release now requires
          it (it was previously optional)
-       - Remove iptables-dev (no longer required)
+       - Remove iptables-dev (no longer required) (Closes: 634660)
   * debian/rules: 
         - Do not use --enable-smbalerts (no longer available) when configuring
   * Remove the following documentation from the installation as it is no longer

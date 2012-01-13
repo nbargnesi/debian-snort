@@ -61,7 +61,8 @@ configure-stamp:
 # Standard package support
 	./configure $(CONFFLAGS) \
 		--without-mysql \
-		--without-postgresql 
+		--without-postgresql \
+		--enable-zlib
 	touch $@
 
 build-basic: build-basic-stamp
@@ -81,7 +82,8 @@ build-pgsql-stamp:
 	./configure $(CONFFLAGS) \
 		--without-mysql \
 		--with-postgresql \
-		--with-pgsql-includes=`pg_config --includedir` 
+		--with-pgsql-includes=`pg_config --includedir`  \
+		--enable-zlib
 	$(MAKE) 
 	cp src/snort src/snort-pgsql
 	touch $@
@@ -93,7 +95,10 @@ build-mysql-stamp:
 	# MySQL package:
 	./configure $(CONFFLAGS) \
 		--with-mysql \
-		--without-postgresql 
+		--without-postgresql \
+		--enable-zlib
+# Use this for mysql version in experimental
+#		--with-mysql-libraries=`mysql_config --variable=pkglibdir` 
 	$(MAKE) 
 	cp src/snort src/snort-mysql
 	touch $@
@@ -107,7 +112,8 @@ build-inline-stamp:
 		--without-mysql \
 		--without-postgresql \
 		--enable-inline \
-		--with-libipq-includes=/usr/include/libipq/ 
+		--with-libipq-includes=/usr/include/libipq/ \
+		--enable-zlib
 	$(MAKE) 
 	cp src/snort src/snort-inline
 	touch $@
@@ -145,7 +151,10 @@ install-arch:
 	dh_installdirs -s
 # Install the common binaries
 	$(MAKE) install prefix=$(TMP)/snort-common/usr/
-	rm -f  $(TMP)/snort-common/usr/sbin/snort 
+	rm -f  $(TMP)/snort-common/usr/sbin/snort
+	# clean dependency_libs
+	find $(TMP)/snort-common/usr/lib  -name "*.la" -exec \
+		sed -i -e "s,^dependency_libs=.*,dependency_libs=''," {} +
 # Snort binaries
 	install -m 755 -o root -g root src/snort-basic $(TMP)/snort/usr/sbin/snort
 	install -m 755 -o root -g root src/snort-mysql $(TMP)/snort-mysql/usr/sbin/snort
@@ -218,7 +227,7 @@ install-indep:
 binary-indep: build-indep install-indep
 	dh_testdir -i
 	dh_testroot -i
-	dh_installdocs -i
+	dh_installdocs -i -XREADME.WIN32
 	dh_installexamples -i
 	dh_installdebconf -i
 	dh_installman -i 
@@ -247,10 +256,10 @@ binary-indep: build-indep install-indep
 binary-arch: build-arch install-arch
 	dh_testdir -a
 	dh_testroot -a
-	dh_installdocs -a 
+	dh_installdocs -a
 	dh_installexamples -a
 	dh_installdebconf -a
-	dh_installman -a 
+	dh_installman -a
 	cp $(TMP)/snort-mysql/usr/share/doc/snort-mysql/copyright $(TMP)/snort/usr/share/doc/snort/
 	rm -f $(TMP)/snort-mysql/usr/share/man/man8/snort-stat.*
 	rm -f $(TMP)/snort-pgsql/usr/share/man/man8/snort-stat.*
@@ -267,7 +276,7 @@ binary-arch: build-arch install-arch
 	dh_strip -a
 	dh_compress -a
 	dh_fixperms -a
-	dh_makeshlibs -a
+	dh_makeshlibs -a -Xsnort-common-libraries
 	dh_installdeb -a
 	dh_perl -a
 	dh_shlibdeps -a

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Marc Norton
  *         Steve Sturges
@@ -27,27 +27,34 @@
  *
  * Content operations for dynamic rule engine
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "ctype.h"
 
 #include "sf_dynamic_define.h"
 #include "sf_snort_packet.h"
 #include "sf_snort_plugin_api.h"
 #include "sf_dynamic_engine.h"
+#include "sfghash.h"
+#include "sf_snort_detection_engine.h"
 
 #include "bmh.h"
 
-extern DynamicEngineData _ded; /* sf_detection_engine.c */
-extern int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor);
+extern int checkCursorInternal(void *p, int flags, int offset, const uint8_t *cursor);
 
-static const u_int8_t *_buffer_end = NULL;
-static const u_int8_t *_alt_buffer_end = NULL;
-static const u_int8_t *_uri_buffer_end = NULL;
+static const uint8_t *_buffer_end = NULL;
+static const uint8_t *_alt_buffer_end = NULL;
+static const uint8_t *_uri_buffer_end = NULL;
+static const uint8_t *_alt_detect_end = NULL;
 
 void ContentSetup(void)
 {
     _buffer_end = NULL;
     _alt_buffer_end = NULL;
     _uri_buffer_end = NULL;
+    _alt_detect_end = NULL;
 }
 
 /*
@@ -58,15 +65,17 @@ void ContentSetup(void)
  */
 int BoyerContentSetup(Rule *rule, ContentInfo *content)
 {
+    void *memoryLocation;
+
     /* XXX: need to precompile the B-M stuff */
-    
+
     if( !content->patternByteForm || !content->patternByteFormLength )
         return 0;
-    
+
     content->boyer_ptr = hbm_prep(content->patternByteForm,
-        content->patternByteFormLength, 
+        content->patternByteFormLength,
         content->flags & CONTENT_NOCASE);
-    
+
     if( !content->boyer_ptr )
     {
         /* error doing compilation. */
@@ -75,29 +84,70 @@ int BoyerContentSetup(Rule *rule, ContentInfo *content)
         return -1;
     }
 
+    /* Initialize byte_extract pointers */
+    if (content->offset_refId)
+    {
+        if (!rule->ruleData)
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       content->offset_refId, rule->info.genID, rule->info.sigID);
+        }
+
+        memoryLocation = sfghash_find((SFGHASH*)rule->ruleData, content->offset_refId);
+        if (memoryLocation)
+        {
+            content->offset_location = memoryLocation;
+        }
+        else
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       content->offset_refId, rule->info.genID, rule->info.sigID);
+        }
+    }
+
+    if (content->depth_refId)
+    {
+        if (!rule->ruleData)
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       content->depth_refId, rule->info.genID, rule->info.sigID);
+        }
+
+        memoryLocation = sfghash_find((SFGHASH*)rule->ruleData, content->depth_refId);
+        if (memoryLocation)
+        {
+            content->depth_location = memoryLocation;
+        }
+        else
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       content->depth_refId, rule->info.genID, rule->info.sigID);
+        }
+    }
+
     return 0;
 }
 
 
-/* 
+/*
  *  Content Option processing function
- * 
+ *
  *       p: packet data structure, same as the one found in snort.
  * content: data defined in the detection plugin for this rule content option
  *  cursor: updated to point the 1st byte after the match
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *    < 0 : error
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
- *    CONTENT_MATCH   -  if content specifier is found within buffer 
- *    CONTENT_NOMATCH -  if content specifier is not found within buffer 
- * 
+ *    CONTENT_MATCH   -  if content specifier is found within buffer
+ *    CONTENT_NOMATCH -  if content specifier is not found within buffer
+ *
  * Notes:
- *   For multiple URI buffers, we scan each buffer, if any one of them 
+ *   For multiple URI buffers, we scan each buffer, if any one of them
  *   contains the content we return a match. This is essentially an OR
  *   operation.
  *
@@ -111,13 +161,13 @@ int BoyerContentSetup(Rule *rule, ContentInfo *content)
  *      raw
  *      uri
  *      post
- *      
+ *
  */
-ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **cursor)
+ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const uint8_t **cursor)
 {
-    const u_int8_t * q = NULL;
-    const u_int8_t * buffer_start;
-    const u_int8_t * buffer_end = NULL;
+    const uint8_t * q = NULL;
+    const uint8_t * buffer_start = NULL;
+    const uint8_t * buffer_end = NULL;
     u_int  buffer_len;
     int    length;
     int    i;
@@ -134,8 +184,18 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
         if( !cursor || !(*cursor) )
         {
             return CONTENT_NOMATCH;
-        } 
+        }
         relative = 1;
+    }
+
+    /* Check for byte_extract variables and use them if present. */
+    if (content->offset_location)
+    {
+        content->offset = *content->offset_location;
+    }
+    if (content->depth_location)
+    {
+        content->depth = *content->depth_location;
     }
 
     if (content->flags & URI_CONTENT_BUFS)
@@ -214,7 +274,7 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
             {
                 continue;
             }
-            
+
             /* Don't bother looking deeper than depth */
             if ( content->depth != 0 && content->depth < buffer_len )
             {
@@ -247,15 +307,29 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
             return CONTENT_NOMATCH;
         }
 
-        if ((content->flags & CONTENT_BUF_NORMALIZED) && (sp->flags & FLAG_ALT_DECODE))
+        if ((content->flags & CONTENT_BUF_NORMALIZED) && _ded.Is_DetectFlag(SF_FLAG_DETECT_ALL))
         {
-            if (_alt_buffer_end)
+            if(_ded.Is_DetectFlag(SF_FLAG_ALT_DETECT))
             {
-                buffer_end = _alt_buffer_end;
+                if (_alt_detect_end)
+                {
+                    buffer_end = _alt_detect_end;
+                }
+                else
+                {
+                    buffer_end = _ded.altDetect->data + _ded.altDetect->len;
+                }
             }
-            else
-            {         
-                buffer_end = _ded.altBuffer->data + _ded.altBuffer->len;
+            else if(_ded.Is_DetectFlag(SF_FLAG_ALT_DECODE))
+            {
+                if (_alt_buffer_end)
+                {
+                    buffer_end = _alt_buffer_end;
+                }
+                else
+                {
+                    buffer_end = _ded.altBuffer->data + _ded.altBuffer->len;
+                }
             }
         }
         else
@@ -277,16 +351,31 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
     }
     else
     {
-        if ((content->flags & CONTENT_BUF_NORMALIZED) && (sp->flags & FLAG_ALT_DECODE))
+        if ((content->flags & CONTENT_BUF_NORMALIZED) && _ded.Is_DetectFlag(SF_FLAG_DETECT_ALL))
         {
-            buffer_start = _ded.altBuffer->data + content->offset;
-            if (_alt_buffer_end)
+            if(_ded.Is_DetectFlag(SF_FLAG_ALT_DETECT))
             {
-                buffer_end = _alt_buffer_end;
+                buffer_start = _ded.altDetect->data + content->offset;
+                if (_alt_detect_end)
+                {
+                    buffer_end = _alt_detect_end;
+                }
+                else
+                {
+                    buffer_end = _ded.altDetect->data + _ded.altDetect->len;
+                }
             }
-            else
+            else if(_ded.Is_DetectFlag(SF_FLAG_ALT_DECODE))
             {
-                buffer_end = _ded.altBuffer->data + _ded.altBuffer->len;
+                buffer_start = _ded.altBuffer->data + content->offset;
+                if (_alt_buffer_end)
+                {
+                    buffer_end = _alt_buffer_end;
+                }
+                else
+                {
+                    buffer_end = _ded.altBuffer->data + _ded.altBuffer->len;
+                }
             }
         }
         else
@@ -325,7 +414,11 @@ ENGINE_LINKAGE int contentMatch(void *p, ContentInfo* content, const u_int8_t **
     {
         if (content->flags & CONTENT_END_BUFFER)
         {
-            if ((content->flags & CONTENT_BUF_NORMALIZED) && (sp->flags & FLAG_ALT_DECODE))
+            if((content->flags & CONTENT_BUF_NORMALIZED) && _ded.Is_DetectFlag(SF_FLAG_ALT_DETECT))
+            {
+                _alt_detect_end = q;
+            }
+            else if ((content->flags & CONTENT_BUF_NORMALIZED) && _ded.Is_DetectFlag(SF_FLAG_ALT_DECODE))
             {
                 _alt_buffer_end = q;
             }

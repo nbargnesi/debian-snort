@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2010 Sourcefire, Inc.
+** Copyright (C) 2006-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -165,7 +165,7 @@ uint32_t SFAT_NumberOfHosts(void);
 #ifdef SUP_IP6
 HostAttributeEntry *SFAT_LookupHostEntryByIP(sfip_t *ipAddr);
 #else
-HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(uint32_t ipAddr);
+HostAttributeEntry *SFAT_LookupHostEntryByIP(uint32_t ipAddr);
 #endif
 HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p);
 HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p);
@@ -175,4 +175,9 @@ int IsAdaptiveConfigured(tSfPolicyId, int);
 
 void SFAT_StartReloadThread(void);
 
+#ifdef SUP_IP6
+void SFLAT_init(void);
+void SFLAT_fini(void);
+int  SFLAT_isEnabled(tSfPolicyId id, int parsing);
+#endif
 #endif /* SF_TARGET_READER_H_ */

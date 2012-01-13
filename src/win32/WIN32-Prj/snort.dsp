@@ -46,22 +46,23 @@ RSC=rc.exe
 # PROP BASE Intermediate_Dir "snort___Win32_MySQL_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_MySQL_Debug"
 # PROP Intermediate_Dir "snort___Win32_MySQL_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /FR /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /FR /YX /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib mysqlclient.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 MySQL Release"
 
@@ -71,22 +72,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_MySQL_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_MySQL_Release"
 # PROP Intermediate_Dir "snort___Win32_MySQL_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MYSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MYSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib mysqlclient.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 # SUBTRACT LINK32 /incremental:yes
 
 !ELSEIF  "$(CFG)" == "snort - Win32 SQLServer Debug"
@@ -97,22 +99,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_SQLServer_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_SQLServer_Debug"
 # PROP Intermediate_Dir "snort___Win32_SQLServer_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /Fr /YX"snort.h" /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /Fr /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib Ntwdblib.lib mysqlclient.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 SQLServer Release"
 
@@ -122,24 +125,24 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_SQLServer_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_SQLServer_Release"
 # PROP Intermediate_Dir "snort___Win32_SQLServer_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX"snort.pch" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_MSSQL" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX"snort.pch" /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MSSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX"snort.pch" /FD /c
-# SUBTRACT CPP /Fr
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MSSQL" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /Fr /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib Ntwdblib.lib mysqlclient.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 Oracle Debug"
 
@@ -149,22 +152,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_Oracle_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_Oracle_Debug"
 # PROP Intermediate_Dir "snort___Win32_Oracle_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "D:\oracle\ora92\oci\include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ORACLE" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /Fr /YX"snort.h" /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "D:\oracle\ora92\oci\include" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ORACLE" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /Fr /YX"snort.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /Fr /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib Ntwdblib.lib mysqlclient.lib libnetnt.lib odbc32.lib oci.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet" /libpath:"D:\oracle\ora92\oci\lib\msvc"
-# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 Oracle Release"
 
@@ -174,24 +178,24 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_Oracle_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_Oracle_Release"
 # PROP Intermediate_Dir "snort___Win32_Oracle_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "D:\oracle\ora92\oci\include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ORACLE" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX"snort.pch" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "D:\oracle\ora92\oci\include" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ORACLE" /D "ENABLE_MYSQL" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /YX"snort.pch" /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_ORACLE" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX"snort.pch" /FD /c
-# SUBTRACT CPP /Fr
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_ORACLE" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /Fr /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib Ntwdblib.lib mysqlclient.lib libnetnt.lib odbc32.lib oci.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet" /libpath:"D:\oracle\ora92\oci\lib\msvc"
-# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 MySQL IPv6 Debug"
 
@@ -201,22 +205,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_MySQL_IPv6_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_MySQL_IPv6_Debug"
 # PROP Intermediate_Dir "snort___Win32_MySQL_IPv6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "PERF_PROFILING" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /FR /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /FR /YX /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "PERF_PROFILING" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MYSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 mysqlclient.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 MySQL IPv6 Release"
 
@@ -226,22 +231,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_MySQL_IPv6_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_MySQL_IPv6_Release"
 # PROP Intermediate_Dir "snort___Win32_MySQL_IPv6_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_MYSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MYSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_MYSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MYSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 mysqlclient.lib odbc32.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 mysqlclient.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 Oracle IPv6 Debug"
 
@@ -251,22 +257,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_Oracle_IPv6_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_Oracle_IPv6_Debug"
 # PROP Intermediate_Dir "snort___Win32_Oracle_IPv6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "D:\oracle\ora92\oci\include" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /Fr /YX"snort.h" /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /Fr /YX"snort.h" /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "D:\oracle\ora92\oci\include" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /Fr /YX"snort.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_ORACLE" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /Fr /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Ntwdblib.lib oci.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet" /libpath:"D:\oracle\ora92\oci\lib\msvc"
-# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 Oracle IPv6 Release"
 
@@ -276,24 +283,24 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_Oracle_IPv6_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_Oracle_IPv6_Release"
 # PROP Intermediate_Dir "snort___Win32_Oracle_IPv6_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "D:\oracle\ora92\oci\include" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_ORACLE" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX"snort.pch" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "D:\oracle\ora92\oci\include" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_ORACLE" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX"snort.pch" /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_ORACLE" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX"snort.pch" /FD /c
-# SUBTRACT CPP /Fr
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_ORACLE" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /Fr /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Ntwdblib.lib oci.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet" /libpath:"D:\oracle\ora92\oci\lib\msvc"
-# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 Ntwdblib.lib oci.lib zlib1.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 SQLServer IPv6 Debug"
 
@@ -303,22 +310,23 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_SQLServer_IPv6_Debug"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "snort___Win32_SQLServer_IPv6_Debug"
 # PROP Intermediate_Dir "snort___Win32_SQLServer_IPv6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /Fr /YX"snort.h" /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /Fr /YX"snort.h" /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /Fr /YX"snort.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "_DEBUG" /D "DEBUG" /D "ENABLE_MSSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /Fr /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Ntwdblib.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"..\..\..\daq\Debug" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ELSEIF  "$(CFG)" == "snort - Win32 SQLServer IPv6 Release"
 
@@ -328,24 +336,24 @@ LINK32=link.exe
 # PROP BASE Intermediate_Dir "snort___Win32_SQLServer_IPv6_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
-# PROP Use_MFC 0
+# PROP Use_MFC 2
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "snort___Win32_SQLServer_IPv6_Release"
 # PROP Intermediate_Dir "snort___Win32_SQLServer_IPv6_Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_MSSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX"snort.pch" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\flow" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\flow\int-snort" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\FTPTelnet" /I "..\..\preprocessors\Stream5" /D "NDEBUG" /D "ENABLE_MSSQL" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "HAVE_CONFIG_H" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "DYNAMIC_PLUGIN" /YX"snort.pch" /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MSSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPONSE" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /YX"snort.pch" /FD /c
-# SUBTRACT CPP /Fr
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\Win32-Includes\zlib" /I "..\..\.." /I "..\.." /I "..\..\control" /I "..\..\sfutil" /I "..\..\target-based" /I "..\Win32-Includes" /I "..\Win32-Includes\mysql" /I "..\Win32-Includes\libnet" /I "..\Win32-Includes\WinPCAP" /I "..\..\output-plugins" /I "..\..\detection-plugins" /I "..\..\dynamic-plugins" /I "..\..\preprocessors" /I "..\..\preprocessors\portscan" /I "..\..\preprocessors\HttpInspect\Include" /I "..\..\preprocessors\Stream5" /I "..\..\..\daq\api" /I "..\..\..\daq\sfbpf" /I "..\Win32-Includes\libdnet" /D "NDEBUG" /D "ENABLE_MSSQL" /D "SUP_IP6" /D "_CONSOLE" /D __BEGIN_DECLS="" /D __END_DECLS="" /D "ENABLE_ODBC" /D "ENABLE_RESPOND" /D "ENABLE_WIN32_SERVICE" /D "PREPROCESSOR_AND_DECODER_RULE_EVENTS" /D "ZLIB" /D "ENABLE_RESPONSE3" /D "DYNAMIC_PLUGIN" /D "_WINDOWS" /D "_USRDLL" /D "ACTIVE_RESPONSE" /D "ENABLE_REACT" /D "GRE" /D "MPLS" /D "TARGET_BASED" /D "PERF_PROFILING" /D "ENABLE_PAF" /D "WIN32" /D "_MBCS" /D "HAVE_CONFIG_H" /D "_AFXDLL" /D SIGNAL_SNORT_READ_ATTR_TBL=30 /FD /c
+# SUBTRACT CPP /Fr /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Ntwdblib.lib user32.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib libnetnt.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libnet"
-# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib user32.lib iphlpapi.lib wsock32.lib pcre.lib wpcap.lib advapi32.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
+# ADD LINK32 zlib1.lib Ntwdblib.lib dnet.lib daq.lib Packet.lib iphlpapi.lib wsock32.lib advapi32.lib pcre.lib wpcap.lib odbc32.lib /nologo /subsystem:console /machine:I386 /libpath:"..\..\..\daq\Release" /libpath:"..\Win32-Libraries" /libpath:"..\Win32-Libraries\mysql" /libpath:"..\Win32-Libraries\libdnet"
 
 !ENDIF 
 
@@ -596,6 +604,14 @@ SOURCE="..\..\detection-plugins\sp_pcre.c"
 # Begin Source File
 
 SOURCE="..\..\detection-plugins\sp_pcre.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\detection-plugins\sp_pkt_data.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\detection-plugins\sp_pkt_data.h"
 # End Source File
 # Begin Source File
 
@@ -885,6 +901,10 @@ SOURCE=..\..\preprocessors\HttpInspect\include\hi_norm.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\HttpInspect\include\hi_paf.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\preprocessors\HttpInspect\include\hi_return_codes.h
 # End Source File
 # Begin Source File
@@ -989,6 +1009,10 @@ SOURCE=..\..\preprocessors\HttpInspect\utils\hi_cmd_lookup.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\HttpInspect\utils\hi_paf.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\preprocessors\HttpInspect\utils\hi_util_hbm.c
 # End Source File
 # Begin Source File
@@ -1011,6 +1035,14 @@ SOURCE=..\..\preprocessors\Stream5\snort_stream5_icmp.c
 # Begin Source File
 
 SOURCE=..\..\preprocessors\Stream5\snort_stream5_icmp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Stream5\snort_stream5_ip.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Stream5\snort_stream5_ip.h
 # End Source File
 # Begin Source File
 
@@ -1043,6 +1075,14 @@ SOURCE=..\..\preprocessors\Stream5\stream5_common.c
 # Begin Source File
 
 SOURCE=..\..\preprocessors\Stream5\stream5_common.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Stream5\stream5_paf.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Stream5\stream5_paf.h
 # End Source File
 # End Group
 # Begin Source File
@@ -1199,11 +1239,11 @@ SOURCE=..\..\preprocessors\stream_api.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\preprocessors\stream_ignore.c
+SOURCE=..\..\preprocessors\stream_expect.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\preprocessors\stream_ignore.h
+SOURCE=..\..\preprocessors\stream_expect.h
 # End Source File
 # End Group
 # Begin Group "SFUtil"
@@ -1324,6 +1364,14 @@ SOURCE=..\..\sfutil\sf_base64decode.c
 # Begin Source File
 
 SOURCE=..\..\sfutil\sf_base64decode.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\sf_email_attach_decode.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\sf_email_attach_decode.h
 # End Source File
 # Begin Source File
 
@@ -1523,6 +1571,14 @@ SOURCE=..\..\sfutil\Unified2_common.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\sfutil\util_jsnorm.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\util_jsnorm.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\sfutil\util_math.c
 # End Source File
 # Begin Source File
@@ -1544,6 +1600,14 @@ SOURCE=..\..\sfutil\util_str.c
 # Begin Source File
 
 SOURCE=..\..\sfutil\util_str.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\util_unfold.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\util_unfold.h
 # End Source File
 # Begin Source File
 
@@ -1983,6 +2047,26 @@ SOURCE="..\..\target-based\sftarget_reader.c"
 
 SOURCE="..\..\target-based\sftarget_reader.h"
 # End Source File
+# Begin Source File
+
+SOURCE="..\..\target-based\sftarget_reader_live.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\target-based\sftarget_reader_live.h"
+# End Source File
+# End Group
+# Begin Group "Control"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\control\sfcontrol.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\control\sfcontrol_funcs.h
+# End Source File
 # End Group
 # Begin Source File
 
@@ -2091,6 +2175,18 @@ SOURCE=..\..\fpdetect.h
 # Begin Source File
 
 SOURCE=..\..\generators.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\idle_processing.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\idle_processing.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\idle_processing_funcs.h
 # End Source File
 # Begin Source File
 
@@ -2211,6 +2307,10 @@ SOURCE=..\..\sf_sdlist.c
 # Begin Source File
 
 SOURCE=..\..\sf_sdlist.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sf_sdlist_types.h
 # End Source File
 # Begin Source File
 

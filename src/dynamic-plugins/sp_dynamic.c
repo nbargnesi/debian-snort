@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -57,13 +57,14 @@
 #endif
 #include <errno.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "bitop_funcs.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 #include "sp_dynamic.h"
@@ -75,6 +76,8 @@
 #include "sfhashfcn.h"
 #include "sp_preprocopt.h"
 #include "sfutil/sf_base64decode.h"
+#include "detection_util.h"
+#include "stream_api.h"
 
 #include "snort.h"
 #include "profiler.h"
@@ -87,7 +90,7 @@ extern PreprocStats ruleOTNEvalPerfStats;
 extern const unsigned int giFlowbitSize;
 extern SFGHASH *flowbits_hash;
 extern SF_QUEUE *flowbits_bit_queue;
-extern u_int32_t flowbits_count;
+extern uint32_t flowbits_count;
 extern int flowbits_toggle;
 extern volatile int snort_initializing;
 extern DynamicRuleNode *dynamic_rules;
@@ -97,47 +100,47 @@ void DynamicInit(char *, OptTreeNode *, int);
 void DynamicParse(char *, OptTreeNode *);
 int DynamicCheck(void *option_data, Packet *p);
 
-u_int32_t DynamicRuleHash(void *d)
+uint32_t DynamicRuleHash(void *d)
 {
-    u_int32_t a,b,c;
+    uint32_t a,b,c;
     DynamicData *dynData = (DynamicData *)d;
 #if (defined(__ia64) || defined(__amd64) || defined(_LP64))
     {
         /* Cleanup warning because of cast from 64bit ptr to 32bit int
          * warning on 64bit OSs */
-        u_int64_t ptr; /* Addresses are 64bits */
-        ptr = (u_int64_t)dynData->contextData;
+        uint64_t ptr; /* Addresses are 64bits */
+        ptr = (uint64_t)dynData->contextData;
         a = (ptr << 32) & 0XFFFFFFFF;
         b = (ptr & 0xFFFFFFFF);
-        
-        ptr = (u_int64_t)dynData->checkFunction;
+
+        ptr = (uint64_t)dynData->checkFunction;
         c = (ptr << 32) & 0XFFFFFFFF;
-        
+
         mix (a,b,c);
-        
+
         a += (ptr & 0xFFFFFFFF);
 
-        ptr = (u_int64_t)dynData->hasOptionFunction;
+        ptr = (uint64_t)dynData->hasOptionFunction;
         b += (ptr << 32) & 0XFFFFFFFF;
         c += (ptr & 0xFFFFFFFF);
 
-        ptr = (u_int64_t)dynData->getDynamicContents;
+        ptr = (uint64_t)dynData->getDynamicContents;
         a += (ptr << 32) & 0XFFFFFFFF;
         b += (ptr & 0xFFFFFFFF);
         c += dynData->contentFlags;
 
         mix (a,b,c);
-    
+
         a += RULE_OPTION_TYPE_DYNAMIC;
     }
 #else
     {
-        a = (u_int32_t)dynData->contextData;
-        b = (u_int32_t)dynData->checkFunction;
-        c = (u_int32_t)dynData->hasOptionFunction;
+        a = (uint32_t)dynData->contextData;
+        b = (uint32_t)dynData->checkFunction;
+        c = (uint32_t)dynData->hasOptionFunction;
         mix(a,b,c);
 
-        a += (u_int32_t)dynData->getDynamicContents;
+        a += (uint32_t)dynData->getDynamicContents;
         b += dynData->contentFlags;
         c += RULE_OPTION_TYPE_DYNAMIC;
     }
@@ -169,7 +172,7 @@ int DynamicRuleCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupDynamic()
  *
  * Purpose: Load it up
@@ -192,10 +195,10 @@ void SetupDynamic(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: DynamicInit(char *, OptTreeNode *)
  *
- * Purpose: Configuration function.  Handles parsing the rule 
+ * Purpose: Configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -230,7 +233,7 @@ void DynamicInit(char *data, OptTreeNode *otn, int protocol)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: DynamicCheck(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -241,7 +244,7 @@ void DynamicInit(char *data, OptTreeNode *otn, int protocol)
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int DynamicCheck(void *option_data, Packet *p)
@@ -286,8 +289,8 @@ void DynamicRuleListFree(DynamicRuleNode *head)
 }
 
 /****************************************************************************
- * 
- * Function: RegisterDynamicRule(u_int32_t, u_int32_t, char *, void *,
+ *
+ * Function: RegisterDynamicRule(uint32_t, uint32_t, char *, void *,
  *                               OTNCheckFunction, int, GetFPContentFunction)
  *
  * Purpose: A dynamically loaded detection engine library can use this
@@ -297,7 +300,7 @@ void DynamicRuleListFree(DynamicRuleNode *head)
  *          check the rule.
  *
  * Arguments: sid => Signature ID
- *            gid => Generator ID  
+ *            gid => Generator ID
  *            info => context specific data
  *            chkFunc => Function to call to check if the rule matches
  *            has*Funcs => Functions used to categorize this rule
@@ -308,8 +311,8 @@ void DynamicRuleListFree(DynamicRuleNode *head)
  *
  ****************************************************************************/
 int RegisterDynamicRule(
-    u_int32_t sid,
-    u_int32_t gid,
+    uint32_t sid,
+    uint32_t gid,
     void *info,
     OTNCheckFunction chkFunc,
     OTNHasFunction hasFunc,
@@ -371,7 +374,7 @@ int RegisterDynamicRule(
         }
         else
         {
-#ifndef SOURCEFIRE 
+#ifndef SOURCEFIRE
             LogMessage("DynamicPlugin: Rule [%u:%u] not enabled in "
                        "configuration, rule will not be used.\n", gid, sid);
 #endif
@@ -558,9 +561,9 @@ int DynamicPreprocRuleOptInit(void *opt)
     return 0;
 }
 
-u_int32_t DynamicFlowbitRegister(char *name, int op)
+uint32_t DynamicFlowbitRegister(char *name, int op)
 {
-    u_int32_t retFlowId; /* ID */
+    uint32_t retFlowId; /* ID */
     int hashRet;
     FLOWBITS_OBJECT *flowbits_item;
 
@@ -570,18 +573,18 @@ u_int32_t DynamicFlowbitRegister(char *name, int op)
 
     flowbits_item = sfghash_find(flowbits_hash, name);
 
-    if (flowbits_item != NULL) 
+    if (flowbits_item != NULL)
     {
         retFlowId = flowbits_item->id;
     }
     else
     {
-        flowbits_item = 
+        flowbits_item =
             (FLOWBITS_OBJECT *)SnortAlloc(sizeof(FLOWBITS_OBJECT));
 
         if (sfqueue_count(flowbits_bit_queue) > 0)
         {
-            retFlowId = (u_int32_t)(uintptr_t)sfqueue_remove(flowbits_bit_queue);
+            retFlowId = (uint32_t)(uintptr_t)sfqueue_remove(flowbits_bit_queue);
             flowbits_item->id = retFlowId;
         }
         else
@@ -590,7 +593,7 @@ u_int32_t DynamicFlowbitRegister(char *name, int op)
             flowbits_item->id = flowbits_count;
 
             hashRet = sfghash_add(flowbits_hash, name, flowbits_item);
-            if (hashRet != SFGHASH_OK) 
+            if (hashRet != SFGHASH_OK)
             {
                 FatalError("Could not add flowbits key (%s) to hash.\n", name);
             }
@@ -662,7 +665,7 @@ void DynamicFlowbitUnregister(char *name, int op)
     }
 }
 
-int DynamicFlowbitCheck(void *pkt, int op, u_int32_t id)
+int DynamicFlowbitCheck(void *pkt, int op, uint32_t id)
 {
     StreamFlowData *flowdata;
     Packet *p = (Packet *)pkt;
@@ -733,30 +736,51 @@ int DynamicFlowbitCheck(void *pkt, int op, u_int32_t id)
 }
 
 
-int DynamicAsn1Detect(void *pkt, void *ctxt, const u_int8_t *cursor)
+int DynamicAsn1Detect(void *pkt, void *ctxt, const uint8_t *cursor)
 {
     Packet *p    = (Packet *) pkt;
-    ASN1_CTXT *c = (ASN1_CTXT *) ctxt;   
-    
+    ASN1_CTXT *c = (ASN1_CTXT *) ctxt;
+
     /* Call same detection function that snort calls */
     return Asn1DoDetect(p->data, p->dsize, c, cursor);
 }
 
-int DynamicsfUnfold(const u_int8_t *inbuf, u_int32_t insize, u_int8_t *outbuf, u_int32_t outsize, u_int32_t *read)
+int DynamicsfUnfold(const uint8_t *inbuf, uint32_t insize, uint8_t *outbuf, uint32_t outsize, uint32_t *read)
 {
-    return sf_unfold_header(inbuf, insize, outbuf, outsize, read);
+    return sf_unfold_header(inbuf, insize, outbuf, outsize, read, 0, 0);
 }
 
-int Dynamicsfbase64decode(u_int8_t *inbuf, u_int32_t insize, u_int8_t *outbuf, u_int32_t outsize, u_int32_t *read)
+int Dynamicsfbase64decode(uint8_t *inbuf, uint32_t insize, uint8_t *outbuf, uint32_t outsize, uint32_t *read)
 {
     return sf_base64decode(inbuf, insize, outbuf, outsize, read);
 }
 
-static INLINE int DynamicHasOption(
+int DynamicGetAltDetect(uint8_t **bufPtr, uint16_t *altLenPtr)
+{
+    return GetAltDetect(bufPtr, altLenPtr);
+}
+
+void DynamicSetAltDetect(uint8_t *buf, uint16_t altLen)
+{
+    SetAltDetect(buf, altLen);
+}
+
+int DynamicIsDetectFlag(SFDetectFlagType df)
+{
+    return Is_DetectFlag((DetectFlagType)df);
+}
+
+void DynamicDetectFlagDisable(SFDetectFlagType df)
+{
+        DetectFlag_Disable((DetectFlagType)df);
+}
+
+
+static inline int DynamicHasOption(
     OptTreeNode *otn, DynamicOptionType optionType, int flowFlag
 ) {
     DynamicData *dynData;
-    
+
     dynData = (DynamicData *)otn->ds_list[PLUGIN_DYNAMIC];
     if (!dynData)
     {

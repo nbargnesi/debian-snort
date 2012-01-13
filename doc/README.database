@@ -1,3 +1,11 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! The database output plugins are considered deprecated as of Snort 2.9.2 and
+!! will be removed in Snort 2.9.3.
+!!
+!! The recommended approach to logging is to use unified2 with barnyard2
+!! or similar.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 I. Summary
 
 The database output plug-in enables snort to log to 

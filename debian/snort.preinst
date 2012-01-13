@@ -73,7 +73,7 @@ case "$1" in
 	usermod -c "Snort IDS" \
 		-d $LOGDIR \
 		-g $SNORTGROUP \
-		$SNORTUSER >/dev/null
+		$SNORTUSER > /dev/null
 	# 5. adjust file and directory permissions
 	if ! dpkg-statoverride --list $LOGDIR >/dev/null
 	then

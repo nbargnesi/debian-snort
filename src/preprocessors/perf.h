@@ -3,7 +3,7 @@
 **
 ** perf.h
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 **
 **
 **  DESCRIPTION
-**    These are the basic functions and structures that are needed to call 
+**    These are the basic functions and structures that are needed to call
 **    performance functions.
 **
 ** Dan Roelker
@@ -64,7 +64,8 @@
 #include "perf-base.h"
 #include "perf-flow.h"
 #include "perf-event.h"
-#include "debug.h"
+#include "sf_types.h"
+#include "snort_debug.h"
 #include "decode.h"
 
 #define LINUX_FILE_LIMIT    0x80000000  /* 2 GB */
@@ -112,17 +113,17 @@ int sfProcessPerfStats(SFPERF *);
 int CheckSampleInterval(Packet *, SFPERF *);
 int ResetPerfStats(SFPERF *);
 
-static INLINE void SetRotatePerfFileFlag(void)
+static inline void SetRotatePerfFileFlag(void)
 {
     perfmon_rotate_perf_file = 1;
 }
 
-static INLINE int IsSetRotatePerfFileFlag(void)
+static inline int IsSetRotatePerfFileFlag(void)
 {
     return perfmon_rotate_perf_file;
 }
 
-static INLINE void ClearRotatePerfFileFlag(void)
+static inline void ClearRotatePerfFileFlag(void)
 {
     perfmon_rotate_perf_file = 0;
 }

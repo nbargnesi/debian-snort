@@ -118,5 +118,7 @@ typedef uint64_t  u_int64_t;
 # endif
 #endif
 
+#define SIZE_MAX UINT32_MAX
+
 #endif  /* __STDINT_H__ */
 

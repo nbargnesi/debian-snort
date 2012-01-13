@@ -1,10 +1,7 @@
-update_autotools
-configuration
+config
+documentation
+fix_ftbfs_in_faq.tex
+fix_ftbfs_in_manual.tex
+fix_upstream_typos
 rules
-community_rules
-document_database_changes
-upstream_historical_relnotes
-remove_builddep_on_latex2html
-fix_manpage_typo
-dumbnet
-fix_typos_source
+signature_documentation

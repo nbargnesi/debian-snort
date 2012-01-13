@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2010 Sourcefire, Inc.
+ * Copyright (C) 2006-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -24,19 +24,16 @@
  * @author  Adam Keeton <akeeton@sourcefire.com>
  * @date    Thu July 20 10:16:26 EDT 2006
  *
- * The implementation uses an multibit-trie that is similar to Gupta et-al's 
+ * The implementation uses an multibit-trie that is similar to Gupta et-al's
  * DIR-n-m.
 */
 
 #ifndef SFRT_DIR_H_
 #define SFRT_DIR_H_
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 /*******************************************************************/
-/* DIR-n-m data structures 
- * Each table in the DIR-n-m method is represented by a 
+/* DIR-n-m data structures
+ * Each table in the DIR-n-m method is represented by a
  * dir_sub_table_t.  They are managed by a dir_table_t. */
 typedef struct
 {
@@ -44,10 +41,15 @@ typedef struct
     char *lengths;
     int num_entries; /* Number of entries in this table */
     int width;       /* width of this table. */
-                     /* While one determines the other, this way fewer 
+                     /* While one determines the other, this way fewer
                       * calculations are needed at runtime, since both
                       * are used. */
     int cur_num;     /* Present number of used nodes */
+
+    /** number of entries filled including chidren sub_tables. This is used
+     * for freeing sub_tables when all entried are freed by delete operation.
+     */
+    int filledEntries;    
 } dir_sub_table_t;
 
 /* Master data structure for the DIR-n-m derivative */
@@ -56,7 +58,7 @@ typedef struct
     int *dimensions;    /* DIR-n-m will consist of any number of arbitrarily
                          * long tables. This variable keeps track of the
                          * dimensions */
-    int dim_size;       /* And this variable keeps track of 'dimensions''s 
+    int dim_size;       /* And this variable keeps track of 'dimensions''s
                          * dimensions! */
     uint32_t mem_cap;  /* User-defined maximum memory that can be allocated
                          * for the DIR-n-m derivative */
@@ -76,6 +78,8 @@ tuple_t        sfrt_dir_lookup(IP ip, void *table);
 int            sfrt_dir_insert(IP ip, int len, word data_index,
                                int behavior, void *table);
 uint32_t      sfrt_dir_usage(void *table);
+void          sfrt_dir_print(void *table);
+word sfrt_dir_remove(IP ip, int len, int behavior, void *table);
 
 #endif /* SFRT_DIR_H_ */
 

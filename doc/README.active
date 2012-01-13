@@ -45,14 +45,20 @@ sent, iff attempts > 0.
 
     ./configure --enable-active-response
 
-    config response: [device <dev>] attempts <att>
+    config response: [device <dev>] [dst_mac <MAC address>] attempts <att>
 
     <dev> ::= ip | eth0 | etc.
     <att> ::= (1..20)
-
+    <MAC address> ::= nn:nn:nn:nn:nn:nn    
+     (n is a hex number from 0-F)
+     
 device ip will perform network layer injection.  It is probably a better choice
 to specify an interface and avoid kernel routing tables, etc.
 
+dst_mac will change response destination MAC address, if the device is eth0, eth1, eth2 etc.
+Otherwise, response destination MAC address is derived from packet.
+Example:
+    config response: device eth0 dst_mac 00:06:76:DD:5F:E3 attempts 2 
 
 FLEXRESP CHANGES
 ================

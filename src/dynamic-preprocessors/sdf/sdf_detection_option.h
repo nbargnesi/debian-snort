@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 #include "spp_sdf.h"
 
 int SDFOptionInit(char *name, char *args, void **data);
-int SDFOptionEval(void *p, const u_int8_t **cursor, void *data);
+int SDFOptionEval(void *p, const uint8_t **cursor, void *data);
 int SDFOtnHandler(void *potn);
 
 /* Struct for SDF option data */

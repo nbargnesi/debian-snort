@@ -2,8 +2,8 @@
 AUTOMAKE_OPTIONS=foreign no-dependencies
 
 BUILT_SOURCES = \
-	include/bounds.h \
-	include/debug.h \
+	include/snort_bounds.h \
+	include/snort_debug.h \
 	include/preprocids.h \
 	include/profiler.h \
 	include/cpuclock.h \
@@ -25,6 +25,7 @@ BUILT_SOURCES = \
 	include/sfsnort_dynamic_detection_lib.c \
 	include/sfsnort_dynamic_detection_lib.h \
 	include/sf_snort_packet.h \
+    include/sf_protocols.h \
 	include/sf_snort_plugin_api.h \
 	include/pcap_pkthdr32.h \
 	include/stream_api.h \
@@ -43,7 +44,10 @@ BUILT_SOURCES = \
 	include/plugin_enum.h \
 	include/obfuscation.h \
 	include/rule_option_types.h \
-	include/event.h
+	include/event.h \
+	include/attribute_table_api.h \
+	include/sfcontrol.h \
+	include/idle_processing.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
@@ -132,7 +136,7 @@ replace_policy_globals = \
 		        $$dst_header > $$dst_header.new; \
 		mv $$dst_header.new $$dst_header; \
 	fi
-    
+
 copy_headers = \
 	mkdir -p include; \
 	mkdir -p build; \
@@ -167,25 +171,25 @@ copy_treenode_header = \
 	fi
 
 # From main src tree
-include/debug.h: $(srcdir)/../debug.h 
+include/snort_debug.h: $(srcdir)/../snort_debug.h
 	@src_header=$?; dst_header=$@; $(copy_debug_header)
 
 include/preprocids.h: $(srcdir)/../preprocids.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
-    
+
 include/profiler.h: $(srcdir)/../profiler.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
-    
+
 include/cpuclock.h: $(srcdir)/../cpuclock.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
-    
+
 include/pcap_pkthdr32.h: $(srcdir)/../pcap_pkthdr32.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
-    
-include/bounds.h: $(srcdir)/../bounds.h 
+
+include/snort_bounds.h: $(srcdir)/../snort_bounds.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-include/ipv6_port.h: $(srcdir)/../ipv6_port.h 
+include/ipv6_port.h: $(srcdir)/../ipv6_port.h
 	@src_header=$?; dst_header=$@; $(massage_ipv6_headers)
 
 include/sf_types.h: $(srcdir)/../sf_types.h
@@ -198,6 +202,12 @@ include/rule_option_types.h: $(srcdir)/../rule_option_types.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/event.h: $(srcdir)/../event.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfcontrol.h: $(srcdir)/../control/sfcontrol.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/idle_processing.h: $(srcdir)/../idle_processing.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins
@@ -215,6 +225,9 @@ include/sf_dynamic_meta.h: $(srcdir)/../dynamic-plugins/sf_dynamic_meta.h
 
 include/sf_dynamic_preprocessor.h: $(srcdir)/../dynamic-plugins/sf_dynamic_preprocessor.h
 	@src_header=$?; dst_header=$@; $(massage_headers)
+
+include/attribute_table_api.h: $(srcdir)/../dynamic-plugins/attribute_table_api.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins/sf_preproc_example
 include/sf_dynamic_preproc_lib.c: $(srcdir)/../dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c
@@ -262,10 +275,10 @@ include/sfrt_trie.h: $(srcdir)/../sfutil/sfrt_trie.h
 
 include/sfPolicyUserData.c: $(srcdir)/../sfutil/sfPolicyUserData.c
 	@src_header=$?; dst_header=$@; $(copy_headers); $(replace_policy_globals)
-	
+
 include/sfPolicyUserData.h: $(srcdir)/../sfutil/sfPolicyUserData.h
 	@src_header=$?; dst_header=$@; $(copy_headers); $(replace_policy_globals)
-	
+
 include/sfPolicy.h: $(srcdir)/../sfutil/sfPolicy.h
 	@src_header=$?; dst_header=$@; $(copy_headers); $(replace_policy_globals)
 
@@ -278,6 +291,9 @@ include/sfsnort_dynamic_detection_lib.h: $(srcdir)/../dynamic-plugins/sf_engine/
 
 # From dynamic-plugins/sf_engine
 include/sf_snort_packet.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_packet.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_protocols.h: $(srcdir)/../sf_protocols.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/sf_snort_plugin_api.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_plugin_api.h
@@ -299,7 +315,7 @@ include/signature.h: $(srcdir)/../signature.h
 include/plugin_enum.h: $(srcdir)/../plugin_enum.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-INCLUDES = @INCLUDES@ 
+INCLUDES = @INCLUDES@
 
 if HAVE_DYNAMIC_PLUGINS
 if BUILD_DYNAMIC_EXAMPLES

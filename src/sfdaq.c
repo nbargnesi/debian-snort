@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -20,12 +20,20 @@
  *
  ****************************************************************************/
 
+// @file    sfdaq.c
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #include <string.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "sfdaq.h"
 #include "snort.h"
 #include "util.h"
 #include "sfutil/strvec.h"
+#include "sfcontrol_funcs.h"
 
 #define PKT_SNAPLEN  1514
 
@@ -43,13 +51,14 @@
 #endif
 #endif
 
-static char interface_spec[STD_BUF];
+static char* interface_spec = NULL;
 static const DAQ_Module_t* daq_mod = NULL;
 static void* daq_hand = NULL;
 static DAQ_Mode daq_mode = DAQ_MODE_PASSIVE;
 static uint32_t snap = PKT_SNAPLEN;
 static int daq_dlt = -1;
 static int loaded = 0;
+static int s_error = DAQ_SUCCESS;
 static DAQ_Stats_t daq_stats, tot_stats;
 
 static void DAQ_Accumulate(void);
@@ -165,7 +174,7 @@ static int DAQ_ValidateInstance ()
         return 1;
 
     if ( !(caps & DAQ_CAPA_BLOCK) )
-        LogMessage("Warning: inline mode configured but DAQ can't "
+        LogMessage("WARNING: inline mode configured but DAQ can't "
             "block packets.\n");
 
 #if 0
@@ -173,19 +182,43 @@ static int DAQ_ValidateInstance ()
     // and warned/disabled only if it was configured
     if ( !(caps & DAQ_CAPA_REPLACE) )
     {
-        LogMessage("Warning: normalizations/replacements disabled "
+        LogMessage("WARNING: normalizations/replacements disabled "
             " because DAQ can't replace packets.\n");
-    } 
+    }
 
     // this is checked in spp_stream5.c and active.c
     // and warned/disabled only if it was configured
     if ( !(caps & DAQ_CAPA_INJECT) )
-        LogMessage("Warning: inline mode configured but DAQ can't "
+        LogMessage("WARNING: inline mode configured but DAQ can't "
             "inject packets.\n");
 #endif
 
     return 1;
 }
+
+//--------------------------------------------------------------------
+
+#if HAVE_DAQ_HUP_APPLY
+static int DAQ_PreControl(uint16_t type, const uint8_t *data, uint32_t length, void **new_config)
+{
+    if (daq_mod && daq_hand)
+        return daq_hup_prep(daq_mod, daq_hand, new_config);
+    return -1;
+}
+
+static int DAQ_Control(uint16_t type, void *new_config, void **old_config)
+{
+    if (daq_mod && daq_hand)
+        return daq_hup_apply(daq_mod, daq_hand, new_config, old_config);
+    return -1;
+}
+
+static void DAQ_PostControl(uint16_t type, void *old_config)
+{
+    if (daq_mod && daq_hand)
+        daq_hup_post(daq_mod, daq_hand, old_config);
+}
+#endif
 
 //--------------------------------------------------------------------
 
@@ -214,13 +247,26 @@ void DAQ_Init (const SnortConfig* sc)
 
     LogMessage("%s DAQ configured to %s.\n",
         type, daq_mode_string(daq_mode));
+
+#if HAVE_DAQ_HUP_APPLY
+    if (ControlSocketRegisterHandler(CS_TYPE_HUP_DAQ, &DAQ_PreControl, &DAQ_Control, &DAQ_PostControl))
+    {
+        LogMessage("Failed to register the DAQ control handler.\n");
+    }
+#else
+    LogMessage("The DAQ version does not support reload.\n");
+#endif
 }
 
 void DAQ_Term ()
 {
+#ifndef WIN32
+# ifndef DISABLE_DLCLOSE_FOR_VALGRIND_TESTING
     if ( loaded )
         DAQ_Unload();
     daq_mod = NULL;
+# endif
+#endif
 }
 
 void DAQ_Abort ()
@@ -236,7 +282,7 @@ void DAQ_Abort ()
 
 const char* DAQ_GetInterfaceSpec (void)
 {
-    return interface_spec;
+    return interface_spec ? interface_spec : "";
 }
 
 const char* DAQ_GetType(void)
@@ -356,13 +402,12 @@ int DAQ_New (const SnortConfig* sc, const char* intf)
     if ( !daq_mod )
         FatalError("DAQ_Init not called!\n");
 
-    if ( !intf )
-        intf = "";
-
-    SnortStrncpy(interface_spec, intf, sizeof(interface_spec));
+    if ( intf )
+        interface_spec = SnortStrdup(intf);
+    intf = DAQ_GetInterfaceSpec();
 
     memset(&cfg, 0, sizeof(cfg));
-    cfg.name = interface_spec;
+    cfg.name = (char*)intf;
     cfg.snaplen = snap;
     cfg.timeout = PKT_TIMEOUT;
     cfg.mode = daq_mode;
@@ -379,12 +424,12 @@ int DAQ_New (const SnortConfig* sc, const char* intf)
 
     DAQ_Config(&cfg);
 
-    if ( !DAQ_ValidateInstance(sc) )
+    if ( !DAQ_ValidateInstance() )
         FatalError("DAQ configuration incompatible with intended operation.\n");
 
     if ( DAQ_UnprivilegedStart() )
         daq_dlt = daq_get_datalink_type(daq_mod, daq_hand);
- 
+
     if ( intf && *intf )
     {
         LogMessage("Acquiring network traffic from \"%s\".\n",
@@ -403,6 +448,11 @@ int DAQ_Delete(void)
         DAQ_Accumulate();
         daq_shutdown(daq_mod, daq_hand);
         daq_hand = NULL;
+    }
+    if ( interface_spec )
+    {
+        free(interface_spec);
+        interface_spec = NULL;
     }
     return 0;
 }
@@ -440,7 +490,7 @@ int DAQ_Stop ()
     int err = daq_stop(daq_mod, daq_hand);
 
     if ( err )
-        FatalError("Can't stop DAQ (%d) - %s!\n",
+        LogMessage("Can't stop DAQ (%d) - %s!\n",
             err, daq_get_error(daq_mod, daq_hand));
 
     return err;
@@ -448,14 +498,31 @@ int DAQ_Stop ()
 
 //--------------------------------------------------------------------
 
+#ifdef HAVE_DAQ_ACQUIRE_WITH_META
+static DAQ_Meta_Func_t daq_meta_callback = NULL;
+void DAQ_Set_MetaCallback(DAQ_Meta_Func_t meta_callback)
+{
+    daq_meta_callback = meta_callback;
+}
+#endif
+
 int DAQ_Acquire (int max, DAQ_Analysis_Func_t callback, uint8_t* user)
 {
+#if HAVE_DAQ_ACQUIRE_WITH_META
+    int err = daq_acquire_with_meta(daq_mod, daq_hand, max, callback, daq_meta_callback, user);
+#else
     int err = daq_acquire(daq_mod, daq_hand, max, callback, user);
+#endif
 
     if ( err && err != DAQ_READFILE_EOF )
         LogMessage("Can't acquire (%d) - %s!\n",
             err, daq_get_error(daq_mod, daq_hand));
 
+    if ( s_error != DAQ_SUCCESS )
+    {
+        err = s_error;
+        s_error = DAQ_SUCCESS;
+    }
     return err;
 }
 
@@ -470,8 +537,9 @@ int DAQ_Inject(const DAQ_PktHdr_t* h, int rev, const uint8_t* buf, uint32_t len)
     return err;
 }
 
-int DAQ_BreakLoop (void)
+int DAQ_BreakLoop (int error)
 {
+    s_error = error;
     return ( daq_breakloop(daq_mod, daq_hand) == DAQ_SUCCESS );
 }
 
@@ -511,9 +579,25 @@ const DAQ_Stats_t* DAQ_GetStats (void)
 
     if ( !daq_stats.hw_packets_received )
         // some DAQs don't provide hw numbers
-        // so we default hw rx to the pkt rx
-        daq_stats.hw_packets_received = daq_stats.packets_received;
+        // so we default hw rx to the sw equivalent
+        // (this means outstanding packets = 0)
+        daq_stats.hw_packets_received =
+            daq_stats.packets_received + daq_stats.packets_filtered;
 
     return &daq_stats;
 }
 
+//--------------------------------------------------------------------
+
+int DAQ_ModifyFlow(const void* h, uint32_t id)
+{
+#ifdef HAVE_DAQ_ACQUIRE_WITH_META
+    const DAQ_PktHdr_t *hdr = (DAQ_PktHdr_t*) h;
+    DAQ_ModFlow_t mod;
+
+    mod.opaque = id;
+    return daq_modify_flow(daq_mod, daq_hand, hdr, &mod);
+#else
+    return -1;
+#endif
+}

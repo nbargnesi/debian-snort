@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -20,14 +20,14 @@
 
 /* $Id$ */
 
-/* spo_log_tcpdump 
- * 
+/* spo_log_tcpdump
+ *
  * Purpose:
  *
  * This plugin generates tcpdump formatted binary log files
  *
  * Arguments:
- *   
+ *
  * filename of the output log (default: snort.log)
  *
  * Effect:
@@ -65,9 +65,10 @@
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "snort.h"
+#include "sfbpf_dlt.h"
 
 /* For the traversal of reassembled packets */
 #include "stream_api.h"
@@ -117,7 +118,7 @@ static LogTcpdumpData *log_tcpdump_ptr;
 /*
  * Function: SetupLogTcpdump()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -128,7 +129,7 @@ static LogTcpdumpData *log_tcpdump_ptr;
  */
 void LogTcpdumpSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("log_tcpdump", OUTPUT_TYPE_FLAG__LOG, LogTcpdumpInit);
 
@@ -254,7 +255,7 @@ static LogTcpdumpData *ParseTcpdumpArgs(char *args)
  *          as you like.  Try not to destroy the performance of the whole
  *          system by trying to do too much....
  *
- * Arguments: p => pointer to the current packet data struct 
+ * Arguments: p => pointer to the current packet data struct
  *
  * Returns: void function
  */
@@ -274,7 +275,7 @@ static void LogTcpdump(Packet *p, char *msg, void *arg, Event *event)
     }
 }
 
-static INLINE size_t SizeOf (const DAQ_PktHdr_t *pkth)
+static inline size_t SizeOf (const DAQ_PktHdr_t *pkth)
 {
     return PCAP_PKT_HDR_SZ + pkth->caplen;
 }
@@ -300,7 +301,7 @@ static void LogTcpdumpSingle(Packet *p, char *msg, void *arg, Event *event)
     data->size += dumpSize;
 
     if (!ScLineBufferedLogging())
-    { 
+    {
 #ifdef WIN32
         fflush( NULL );  /* flush all open output streams */
 #else
@@ -315,8 +316,8 @@ static int LogTcpdumpStreamCallback(DAQ_PktHdr_t *pkth,
 {
     LogTcpdumpData *data = (LogTcpdumpData *)userdata;
 
-    pcap_dump((u_char*)data->dumpd, 
-              (struct pcap_pkthdr*)pkth, 
+    pcap_dump((u_char*)data->dumpd,
+              (struct pcap_pkthdr*)pkth,
               (u_char*)packet_data);
 
     return 0;
@@ -339,7 +340,7 @@ static void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
     data->size += dumpSize;
 
     if (!ScLineBufferedLogging())
-    { 
+    {
 #ifdef WIN32
         fflush( NULL );  /* flush all open output streams */
 #else
@@ -359,7 +360,7 @@ static void TcpdumpInitLogFileFinalize(int unused, void *arg)
  *
  * Purpose: Initialize the tcpdump log file header
  *
- * Arguments: data => pointer to the plugin's reference data struct 
+ * Arguments: data => pointer to the plugin's reference data struct
  *
  * Returns: void function
  */
@@ -373,16 +374,16 @@ static void TcpdumpInitLogFile(LogTcpdumpData *data, int nostamps)
         if(data->filename[0] == '/')
             value = SnortSnprintf(data->logdir, STD_BUF, "%s", data->filename);
         else
-            value = SnortSnprintf(data->logdir, STD_BUF, "%s/%s", snort_conf->log_dir, 
+            value = SnortSnprintf(data->logdir, STD_BUF, "%s/%s", snort_conf->log_dir,
                                   data->filename);
     }
-    else 
+    else
     {
         if(data->filename[0] == '/')
-            value = SnortSnprintf(data->logdir, STD_BUF, "%s.%u", data->filename, 
+            value = SnortSnprintf(data->logdir, STD_BUF, "%s.%u", data->filename,
                                   (uint32_t)data->lastTime);
         else
-            value = SnortSnprintf(data->logdir, STD_BUF, "%s/%s.%u", snort_conf->log_dir, 
+            value = SnortSnprintf(data->logdir, STD_BUF, "%s/%s.%u", snort_conf->log_dir,
                                   data->filename, (uint32_t)data->lastTime);
     }
 
@@ -393,7 +394,15 @@ static void TcpdumpInitLogFile(LogTcpdumpData *data, int nostamps)
 
     if (!ScTestMode())
     {
-        pcap_t* pcap = pcap_open_dead(DAQ_GetBaseProtocol(), DAQ_GetSnapLen());
+        pcap_t* pcap;
+        int dlt = DAQ_GetBaseProtocol();
+
+        // convert these flavors of raw to the generic
+        // for compatibility with libpcap 1.0.0
+        if ( dlt == DLT_IPV4 || dlt == DLT_IPV6 )
+            dlt = DLT_RAW;
+
+        pcap = pcap_open_dead(dlt, DAQ_GetSnapLen());
         data->dumpd = pcap ? pcap_dump_open(pcap, data->logdir) : NULL;
 
         if(data->dumpd == NULL)
@@ -452,9 +461,9 @@ static void SpoLogTcpdumpCleanup(int signal, void *arg, const char* msg)
         data->dumpd = NULL;
     }
 
-    /* 
+    /*
      * if we haven't written any data, dump the output file so there aren't
-     * fragments all over the disk 
+     * fragments all over the disk
      */
     if(!ScTestMode() && *data->logdir &&
        (pc.alert_pkts == 0) && (pc.log_pkts == 0))

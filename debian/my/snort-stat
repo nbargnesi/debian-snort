@@ -72,7 +72,7 @@ while (<>) {
 	$line=<>;
       }
       if ( $line =~ m/^\[Priority\:\s(\d+)\]/ox) {
-        $alert->{PRIORITY} = $1;
+        $alert->{CLASS} = "Undefined"; $alert->{PRIORITY} = $1;
 	$line=<>;
       }
       if ( $line =~ m/^(\d+)\/(\d+)(?:\/\d+)?\-(\d+)\:(\d+)\:(\d+)\.(\d+)\s
@@ -83,6 +83,8 @@ while (<>) {
         $alert->{MIN} = $4;   $alert->{SEC} = $5;   $alert->{SADDR} = $7; 
         $alert->{SPORT} = $8; $alert->{DADDR} = $9; $alert->{DPORT} = $10; 
         $alert->{HOST} = "localhost"; 
+        $alert->{CLASS} = "Undefined" if ! defined ($alert->{CLASS});
+        $alert->{PRIORITY} = 0 if ! defined ($alert->{PRIORITY});
         process_data($alert); $lastwassnort = 1; next;
       }
     } else { 
@@ -125,7 +127,10 @@ while (<>) {
 	     (?:\[Priority\:\s(\d+)\])//x ) {
 	  $alert->{CLASS} = $1;  $alert->{PRIORITY} = $2;
         }
-	$alert->{TYPE} = "sys"; $alert->{PLUGIN} = "none";
+        if ( $alert->{SIG} =~ s/^\[Priority\:\s(\d+)\]//x ) {
+            $alert->{CLASS} = "Undefined"; $alert->{PRIORITY} = $1;
+        }
+        $alert->{TYPE} = "sys"; $alert->{PLUGIN} = "none";
 	process_data($alert); $lastwassnort = 1; next;
       }
     } else {

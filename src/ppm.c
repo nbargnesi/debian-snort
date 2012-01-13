@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2010 Sourcefire, Inc.
+ * Copyright (C) 2006-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -50,6 +50,10 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <time.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "snort.h"
 #include "rules.h"
@@ -384,7 +388,7 @@ void ppm_rule_log(ppm_cfg_t *ppm_cfg, uint64_t pktcnt, Packet *p)
             AlertAction(p, potn, &ev);
         }
 
-        if (ppm_cfg->rule_log & PPM_LOG_MESSAGE) 
+        if (ppm_cfg->rule_log & PPM_LOG_MESSAGE)
         {
             int i;
 

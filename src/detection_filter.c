@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,10 +19,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "mstring.h"
 #include "util.h"
@@ -101,7 +105,7 @@ void detection_filter_print_config(DetectionFilterConfig *df)
 }
 
 int detection_filter_test (
-    void* pv, 
+    void* pv,
     snort_ip_p sip, snort_ip_p dip,
     long curtime )
 {

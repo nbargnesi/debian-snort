@@ -3,7 +3,7 @@
 **
 **  sfprocpidstats.c
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,10 @@
 **    This file gets the correct CPU usage for SMP linux machines.
 **
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sfprocpidstats.h"
 
 #ifdef LINUX_SMP
@@ -128,7 +132,7 @@ static int GetCpuNum(void)
         }
 
         acCpuName[sizeof(acCpuName)-1] = 0x00;
-            
+
         if(strncmp(acCpuName, "cpu", 3))
         {
             break;
@@ -253,7 +257,7 @@ int sfProcessProcPidStats(SFPROCPIDSTATS *sfProcPidStats)
 
         if(gpStatCPUs_2[iCtr].user > gpStatCPUs[iCtr].user)
         {
-            sfProcPidStats->SysCPUs[iCtr].user = (((double)(gpStatCPUs_2[iCtr].user - 
+            sfProcPidStats->SysCPUs[iCtr].user = (((double)(gpStatCPUs_2[iCtr].user -
                                                  gpStatCPUs[iCtr].user)) /
                                                  ulCPUjiffies) * 100.0;
             if(sfProcPidStats->SysCPUs[iCtr].user < .01)
@@ -268,7 +272,7 @@ int sfProcessProcPidStats(SFPROCPIDSTATS *sfProcPidStats)
 
         if(gpStatCPUs_2[iCtr].sys > gpStatCPUs[iCtr].sys)
         {
-            sfProcPidStats->SysCPUs[iCtr].sys = (((double)(gpStatCPUs_2[iCtr].sys - 
+            sfProcPidStats->SysCPUs[iCtr].sys = (((double)(gpStatCPUs_2[iCtr].sys -
                                                 gpStatCPUs[iCtr].sys)) /
                                                 ulCPUjiffies) * 100.0;
             if(sfProcPidStats->SysCPUs[iCtr].sys < .01)
@@ -283,7 +287,7 @@ int sfProcessProcPidStats(SFPROCPIDSTATS *sfProcPidStats)
 
         if(gpStatCPUs_2[iCtr].idle > gpStatCPUs[iCtr].idle)
         {
-            sfProcPidStats->SysCPUs[iCtr].idle = (((double)(gpStatCPUs_2[iCtr].idle - 
+            sfProcPidStats->SysCPUs[iCtr].idle = (((double)(gpStatCPUs_2[iCtr].idle -
                                                  gpStatCPUs[iCtr].idle)) /
                                                  ulCPUjiffies) * 100.0;
             if(sfProcPidStats->SysCPUs[iCtr].idle < .01)

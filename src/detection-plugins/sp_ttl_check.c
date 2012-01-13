@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -27,10 +27,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugbase.h"
 #include "parser.h"
 #include "plugin_enum.h"
@@ -66,7 +67,7 @@ void ParseTtl(char *, OptTreeNode *);
 int CheckTtl(void *option_data, Packet *p);
 
 /****************************************************************************
- * 
+ *
  * Function: SetupTtlCheck()
  *
  * Purpose: Register the ttl option keyword with its setup function
@@ -111,7 +112,7 @@ int TtlCheckCompare(void *l, void *r)
 
     if (!left || !right)
         return DETECTION_OPTION_NOT_EQUAL;
-    
+
     if ((left->ttl == right->ttl) &&
         (left->h_ttl == right->h_ttl) &&
         (left->oper == right->oper))
@@ -123,7 +124,7 @@ int TtlCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: TtlCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Parse the ttl keyword arguments and link the detection module
@@ -137,7 +138,7 @@ int TtlCheckCompare(void *l, void *r)
  ****************************************************************************/
 void TtlCheckInit(char *data, OptTreeNode *otn, int protocol)
 {
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_TTL_CHECK])
     {
         FatalError("%s(%d): Multiple IP ttl options in rule\n", file_name,
@@ -149,7 +150,7 @@ void TtlCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_TTL_CHECK] = (TtlCheckData *)
             SnortAlloc(sizeof(TtlCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseTtl(data, otn);
 
@@ -160,7 +161,7 @@ void TtlCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseTtl(char *, OptTreeNode *)
  *
  * Purpose: Parse the TTL keyword's arguments
@@ -217,7 +218,7 @@ void ParseTtl(char *data, OptTreeNode *otn)
             data++;
             rel_present = 1;
             break;
-       default:     
+       default:
             ttlrel = '=';
     }
     while(isspace((int)*data)) data++;
@@ -257,7 +258,7 @@ void ParseTtl(char *data, OptTreeNode *otn)
             else
                 ds_ptr->oper = TTL_CHECK_GT;
             break;
-        case '<':     
+        case '<':
             fpl = AddOptFuncToList(CheckTtl, otn);
             if(equals_present)
                 ds_ptr->oper = TTL_CHECK_LT_EQ;
@@ -342,7 +343,7 @@ int CheckTtl(void *option_data, Packet *p)
         case TTL_CHECK_EQ:
             if (ttlCheckData->ttl == GET_IPH_TTL(p))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
                 DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not equal to %d\n",
@@ -353,7 +354,7 @@ int CheckTtl(void *option_data, Packet *p)
         case TTL_CHECK_GT:
             if (ttlCheckData->ttl < GET_IPH_TTL(p))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
                 DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not greater than %d\n",
@@ -364,7 +365,7 @@ int CheckTtl(void *option_data, Packet *p)
         case TTL_CHECK_LT:
             if (ttlCheckData->ttl > GET_IPH_TTL(p))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
                 DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not less than %d\n",
@@ -375,7 +376,7 @@ int CheckTtl(void *option_data, Packet *p)
         case TTL_CHECK_GT_EQ:
             if (ttlCheckData->ttl <= GET_IPH_TTL(p))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
                 DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not greater than or equal to %d\n",
@@ -386,7 +387,7 @@ int CheckTtl(void *option_data, Packet *p)
         case TTL_CHECK_LT_EQ:
             if (ttlCheckData->ttl >= GET_IPH_TTL(p))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
                 DebugMessage(DEBUG_PLUGIN, "CheckTtlEq: Not less than or equal to %d\n",
@@ -399,10 +400,10 @@ int CheckTtl(void *option_data, Packet *p)
             if ((ttlCheckData->ttl <= GET_IPH_TTL(p)) &&
                 (ttlCheckData->h_ttl >= GET_IPH_TTL(p)))
                 rval = DETECTION_OPTION_MATCH;
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             else
             {
-                DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n", 
+                DebugMessage(DEBUG_PLUGIN, "CheckTtlLT: Not Within the range %d - %d (%d)\n",
                      ttlCheckData->ttl,
                      ttlCheckData->h_ttl,
                      GET_IPH_TTL(p));

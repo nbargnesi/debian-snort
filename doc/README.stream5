@@ -44,6 +44,19 @@ option to the TCP configuration.  Some of these anomalies are
 detected on a per-target basis.  For example, a few operating systems
 allow data in TCP SYN packets, while others do not.
 
+Protocol Aware Flushing (PAF)
+-----------------------------
+Protocol aware flushing of HTTP, SMB and DCE/RPC can be enabled with this option:
+
+config paf_max: <max pdu>
+
+where <max-pdu> is between zero (off) and 63780.  This allows Snort to
+statefully scan a stream and reassemble a complete PDU regardless of 
+segmentation.  For example, multiple PDUs within a single TCP segment,
+as well as one PDU spanning multiple TCP segments will be reassembled 
+into one PDU per packet for each PDU.  PDUs larger than the configured
+maximum will be split into multiple packets.
+
 Rule Options
 ============
 Stream5 adds support for a few rule options described below.
@@ -233,6 +246,22 @@ is not bound to an IP address or network.
                               minimum of "2", and a maximum of "1073741824"
                               (1GB).  A message is written to console/syslog
                               when this limit is enforced.
+    small_segments <num1> bytes <num2> [ignore_ports port list]
+                            - Configure the maximum small segments queued.  
+                              This feature requires that detect_anomalies be enabled. 
+                              num1 is the number of consecutive segments that will
+                              trigger the detection rule. The default value is 
+                              "0" (disabled),with a maximum of "2048".  
+                              num2 is the minimum bytes for a segment to be 
+                              considered "small". The default value is "0" (disabled),
+                              with a maximum of "2048".  
+                              ignore_ports is optional, defines the list of
+                              ports in which will be ignored for this rule.
+                              The number of ports can be up to "65535".
+                              Example:
+                                small_segments 3 bytes 15 ignore_ports 33 44 55
+                              A message is written to console/syslog when this 
+                              limit is enforced. The generated alert is 129:12
     ports <client|server|both> [all|space separated port list] 
                             - Specify the client, server, or both and list of
                               ports in which to perform reassembly.  This can

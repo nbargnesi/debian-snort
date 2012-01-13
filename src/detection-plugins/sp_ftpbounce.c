@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2010 Sourcefire, Inc.
+ ** Copyright (C) 2005-2011 Sourcefire, Inc.
  ** Author: Steven Sturges
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -19,8 +19,8 @@
  ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-/* sp_ftpbounce 
- * 
+/* sp_ftpbounce
+ *
  * Purpose:
  *      Checks the address listed (a,b,c,d format) in the packet
  *      against the source address.
@@ -32,7 +32,7 @@
  *        None
  *      Optional:
  *        None
- *   
+ *
  *   sample rules:
  *   alert tcp any any -> any 21 (content: "PORT"; \
  *       ftpbounce;
@@ -60,13 +60,14 @@
 #endif
 #include <errno.h>
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 #include "mstring.h"
@@ -108,7 +109,7 @@ int FTPBounceCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupFTPBounce()
  *
  * Purpose: Load 'er up
@@ -132,10 +133,10 @@ void SetupFTPBounce(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FTPBounceInit(char *, OptTreeNode *)
  *
- * Purpose: Generic rule configuration function.  Handles parsing the rule 
+ * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -151,7 +152,7 @@ void FTPBounceInit(char *data, OptTreeNode *otn, int protocol)
     OptFpList *fpl;
     void *ds_ptr_dup;
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     FTPBounceParse(data, otn);
 
@@ -172,7 +173,7 @@ void FTPBounceInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FTPBounceParse(char *, void *, OptTreeNode *)
  *
  * Purpose: This is the function that is used to process the option keyword's
@@ -195,7 +196,7 @@ void FTPBounceParse(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FTPBounce(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -206,7 +207,7 @@ void FTPBounceParse(char *data, OptTreeNode *otn)
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int FTPBounce(void *option_data, Packet *p)
@@ -216,40 +217,31 @@ int FTPBounce(void *option_data, Packet *p)
     const uint8_t *this_param = doe_ptr;
 
     int dsize;
-    int use_alt_buffer = p->packet_flags & PKT_ALT_DECODE;
     const uint8_t *base_ptr, *end_ptr, *start_ptr;
     PROFILE_VARS;
 
     if (!doe_ptr)
     {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "[*] ftpbounce no doe_ptr set..\n"););
         return 0;
     }
 
     PREPROC_PROFILE_START(ftpBouncePerfStats);
-    
-    if( IsMimeDecodeBuf(doe_ptr) )
+
+    if (Is_DetectFlag(FLAG_ALT_DETECT))
     {
-        dsize = mime_decode_size;
-        start_ptr = file_data_ptr;
+        dsize = DetectBuffer.len;
+        start_ptr = DetectBuffer.data;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                    "Using MIME Decode buffer!\n"););
+            "Using Alternative Detect buffer!\n"););
     }
-    else if( IsBase64DecodeBuf(doe_ptr))
-    {
-        dsize = base64_decode_size;
-        start_ptr = base64_decode_buf;
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Using Base64 Decode buffer!\n"););
-    }
-    else if(use_alt_buffer)
+    else if(Is_DetectFlag(FLAG_ALT_DECODE))
     {
         dsize = DecodeBuffer.len;
-        start_ptr = DecodeBuffer.data;        
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
-                    "Using Alternative Decode buffer!\n"););
-
+        start_ptr = DecodeBuffer.data;
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                "Using Alternative Decode buffer!\n"););
     }
     else
     {
@@ -271,7 +263,7 @@ int FTPBounce(void *option_data, Packet *p)
 
     if(doe_ptr)
     {
-        /* @todo: possibly degrade to use the other buffer, seems non-intuitive*/        
+        /* @todo: possibly degrade to use the other buffer, seems non-intuitive*/
         if(!inBounds(start_ptr, end_ptr, doe_ptr))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
@@ -282,7 +274,7 @@ int FTPBounce(void *option_data, Packet *p)
     }
 
     while (isspace((int)*this_param) && (this_param < end_ptr)) this_param++;
-    
+
     do
     {
         int value = 0;

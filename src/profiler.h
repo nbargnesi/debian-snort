@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2010 Sourcefire, Inc.
+** Copyright (C) 2005-2011 Sourcefire, Inc.
 ** Author: Steven Sturges <ssturges@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,6 @@
 
 #ifdef PERF_PROFILING
 
-#include "sf_types.h"
 #include "cpuclock.h"
 
 /* Sort preferences for rule profiling */
@@ -95,38 +94,38 @@
         ppstat.checks++; \
         PROFILE_START; \
         ppstat.ticks_start = ticks_start; \
-    } 
+    }
 
 #define PREPROC_PROFILE_REENTER_START(ppstat) \
     if (PROFILING_PREPROCS) { \
         PROFILE_START; \
         ppstat.ticks_start = ticks_start; \
-    } 
+    }
 
 #define PREPROC_PROFILE_TMPSTART(ppstat) \
     if (PROFILING_PREPROCS) { \
         PROFILE_START; \
         ppstat.ticks_start = ticks_start; \
-    } 
+    }
 
 #define PREPROC_PROFILE_END(ppstat) \
     if (PROFILING_PREPROCS) { \
         PROFILE_END; \
         ppstat.exits++; \
         ppstat.ticks += ticks_end - ppstat.ticks_start; \
-    } 
+    }
 
 #define PREPROC_PROFILE_REENTER_END(ppstat) \
     if (PROFILING_PREPROCS) { \
         PROFILE_END; \
         ppstat.ticks += ticks_end - ppstat.ticks_start; \
-    } 
+    }
 
 #define PREPROC_PROFILE_TMPEND(ppstat) \
     if (PROFILING_PREPROCS) { \
         PROFILE_END; \
         ppstat.ticks += ticks_end - ppstat.ticks_start; \
-    } 
+    }
 
 /************** Profiling API ******************/
 void ShowRuleProfiles(void);
@@ -157,7 +156,7 @@ typedef struct _ProfileConfig
 
 } ProfileConfig;
 
-void RegisterPreprocessorProfile(char *keyword, PreprocStats *stats, int layer, PreprocStats *parent);
+void RegisterPreprocessorProfile(const char *keyword, PreprocStats *stats, int layer, PreprocStats *parent);
 void ShowPreprocProfiles(void);
 void ResetRuleProfiling(void);
 void ResetPreprocProfiling(void);

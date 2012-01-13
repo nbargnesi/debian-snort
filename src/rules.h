@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -57,8 +57,8 @@
 #define R_PSH          0x08
 #define R_ACK          0x10
 #define R_URG          0x20
-#define R_RES2         0x40
-#define R_RES1         0x80
+#define R_ECE          0x40  /* ECN echo, RFC 3168 */
+#define R_CWR          0x80  /* Congestion Window Reduced, RFC 3168 */
 
 #define MODE_EXIT_ON_MATCH   0
 #define MODE_FULL_SEARCH     1

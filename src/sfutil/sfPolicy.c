@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,22 +18,26 @@
  *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
 #include "sfPolicy.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sfrt.h"
 
 
-static INLINE int IsBound (
+static inline int IsBound (
     tSfPolicyId id
     )
 {
     return ( id != SF_VLAN_UNBOUND );
 }
 
-static INLINE int NotBound (
+static inline int NotBound (
     tSfPolicyId id
     )
 {
@@ -129,7 +133,7 @@ int sfPolicyAdd(tSfPolicyConfig *config, char *fileName)
                 config->ppPolicies[i]->refCount++;
                 return i;
             }
-        }  
+        }
         else if (emptyIndex == -1)
         {
             emptyIndex = i;
@@ -201,7 +205,7 @@ void sfPolicyDelete(tSfPolicyConfig *config, tSfPolicyId policyId)
             DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,
                                     "sfPolicyDelete: freed policyConfig policyId %d\n", policyId););
         }
-    }  
+    }
 }
 
 char * sfPolicyGet(tSfPolicyConfig *config, tSfPolicyId policyId)
@@ -246,7 +250,7 @@ int sfVlanAddBinding(tSfPolicyConfig *config, int vlanId, char *fileName)
 
     DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,
                             "Added  vlandId  %d, file %s, policyId: %d\n", vlanId, fileName, policyId););
-    return 0; 
+    return 0;
 }
 
 tSfPolicyId sfVlanGetBinding(tSfPolicyConfig *config, int vlanId)
@@ -278,7 +282,58 @@ void sfVlanDeleteBinding(tSfPolicyConfig *config, int vlanId)
     }
 }
 
-/**Get applicable policy given <vlan, srcIp, dstIp> of a packet. Vlan can be negative 
+int sfPolicyIdAddBinding(tSfPolicyConfig *config, int parsedPolicyId, char *fileName)
+{
+    tSfPolicyId policyId;
+
+    if (config == NULL)
+        return -1;
+
+    //create a policyId
+    policyId = sfPolicyAdd(config, fileName);
+
+    if ( NotBound(policyId) )
+    {
+        return -1;
+    }
+
+    config->policyIdBindings[parsedPolicyId] = policyId;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,
+                            "Added  parsedPolicyId  %d, file %s, policyId: %d\n", parsedPolicyId, fileName, policyId););
+    return 0;
+}
+
+tSfPolicyId sfPolicyIdGetBinding(tSfPolicyConfig *config, int parsedPolicyId)
+{
+    tSfPolicyId policyId = config->policyIdBindings[parsedPolicyId];
+
+    if ( NotBound(policyId) )
+    {
+        //return default policyId for uninitialized binding
+        return config->defaultPolicyId;
+    }
+
+    return policyId;
+}
+
+void sfPolicyIdDeleteBinding(tSfPolicyConfig *config, int parsedPolicyId)
+{
+    tSfPolicyId policyId;
+
+    if ((config == NULL) || (parsedPolicyId < 0))
+        return;
+
+    policyId = config->policyIdBindings[parsedPolicyId];
+
+    if ( IsBound(policyId) )
+    {
+        sfPolicyDelete(config, policyId);
+        config->vlanBindings[parsedPolicyId] = SF_VLAN_UNBOUND;
+    }
+}
+
+/**Get applicable policy given <vlan, srcIp, dstIp> of a packet. Vlan can be negative
  * number if vlan header is not present.
  *
  * Search policy bound to vlan if vlan is not negative. If matched polciy is default one,
@@ -322,7 +377,7 @@ tSfPolicyId sfGetApplicablePolicyId(
  */
 int sfNetworkAddBinding(
         tSfPolicyConfig *config,
-        sfip_t* Ip, 
+        sfip_t* Ip,
         char *fileName
         )
 {
@@ -377,7 +432,7 @@ int sfNetworkAddBinding(
         return -1;
     }
 
-    return 0; 
+    return 0;
 }
 
 unsigned int sfNetworkGetBinding(
@@ -477,8 +532,8 @@ void sfNetworkDeleteBinding(
  *     and therefore dynArray[0] will cause memory allocation.
  */
 int sfDynArrayCheckBounds (
-        void ** dynArray, 
-        unsigned int index, 
+        void ** dynArray,
+        unsigned int index,
         unsigned int *maxElements
         )
 {

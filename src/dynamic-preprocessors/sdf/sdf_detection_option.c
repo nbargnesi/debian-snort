@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,11 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "spp_sdf.h"
 #include "sdf_pattern_match.h"
 #include "sdf_detection_option.h"
@@ -32,7 +37,6 @@
 #include "sfPolicyUserData.h"
 #include "treenodes.h"
 
-extern DynamicPreprocessorData _dpd;
 extern tSfPolicyUserContextId sdf_context_id;
 extern sdf_tree_node *head_node;
 extern uint32_t num_patterns;
@@ -99,7 +103,7 @@ int SDFOptionInit(char *name, char *args, void **data)
                 " 1 - 255: %s\n", args);
     }
 
-    sdf_data->count = (u_int8_t)tmpcount;
+    sdf_data->count = (uint8_t)tmpcount;
 
     /* Take everything after the comma as a pattern. */
     token = endptr + 1;
@@ -297,7 +301,7 @@ void AddProtocolsToConf(SDFConfig *config, OptTreeNode *otn)
 }
 
 /* Stub function -- We're not evaluating SDF during rule-matching */
-int SDFOptionEval(void *p, const u_int8_t **cursor, void *data)
+int SDFOptionEval(void *p, const uint8_t **cursor, void *data)
 {
     return RULE_NOMATCH;
 }

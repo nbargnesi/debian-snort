@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -22,11 +22,11 @@
 /* $Id$ */
 
 /* spo_alert_fast
- * 
+ *
  * Purpose:  output plugin for fast alerting
  *
  * Arguments:  alert file
- *   
+ *
  * Effect:
  *
  * Alerts are written to a file in the snort fast alert format
@@ -59,7 +59,7 @@
 #include "spo_alert_fast.h"
 #include "event.h"
 #include "decode.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
@@ -102,7 +102,7 @@ static void AlertFast(Packet *, char *, void *, Event *);
 /*
  * Function: SetupAlertFast()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -113,7 +113,7 @@ static void AlertFast(Packet *, char *, void *, Event *);
  */
 void AlertFastSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("alert_fast", OUTPUT_TYPE_FLAG__ALERT, AlertFastInit);
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Output plugin: AlertFast is setup...\n"););
@@ -141,7 +141,7 @@ static void AlertFastInit(char *args)
     data = ParseAlertFastArgs(args);
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Linking AlertFast functions to call lists...\n"););
-    
+
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertFast, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertFastCleanExitFunc, data);
@@ -210,27 +210,34 @@ static void AlertFast(Packet *p, char *msg, void *arg, Event *event)
     {
         /* Log whether or not this is reassembled data - only indicate
          * if we're actually going to show any of the payload */
-        if (ScOutputAppData() && (p->dsize > 0))
+        if (ScOutputAppData() && (p->dsize > 0) && PacketWasCooked(p))
         {
-            if ( PacketWasCooked(p) )
-            {
-                TextLog_NewLine(data->log);
+            switch ( p->pseudo_type ) {
+            case PSEUDO_PKT_SMB_SEG:
+                TextLog_Print(data->log, "\n%s", "SMB desegmented packet");
+                break;
+            case PSEUDO_PKT_DCE_SEG:
+                TextLog_Print(data->log, "\n%s", "DCE/RPC desegmented packet");
+                break;
+            case PSEUDO_PKT_DCE_FRAG:
+                TextLog_Print(data->log, "\n%s", "DCE/RPC defragmented packet");
+                break;
+            case PSEUDO_PKT_SMB_TRANS:
+                TextLog_Print(data->log, "\n%s", "SMB Transact reassembled packet");
+                break;
+            case PSEUDO_PKT_DCE_RPKT:
+                TextLog_Print(data->log, "\n%s", "DCE/RPC reassembled packet");
+                break;
+            case PSEUDO_PKT_TCP:
+                TextLog_Print(data->log, "\n%s", "Stream reassembled packet");
+                break;
+            case PSEUDO_PKT_IP:
+                TextLog_Print(data->log, "\n%s", "Frag reassembled packet");
+                break;
+            default:
+                // FIXTHIS do we get here for portscan or sdf?
+                break;
             }
-
-            if (p->packet_flags & PKT_SMB_SEG)
-                TextLog_Print(data->log, "%s", "SMB desegmented packet");
-            else if (p->packet_flags & PKT_DCE_SEG)
-                TextLog_Print(data->log, "%s", "DCE/RPC desegmented packet");
-            else if (p->packet_flags & PKT_DCE_FRAG)
-                TextLog_Print(data->log, "%s", "DCE/RPC defragmented packet");
-            else if (p->packet_flags & PKT_SMB_TRANS)
-                TextLog_Print(data->log, "%s", "SMB Transact reassembled packet");
-            else if (p->packet_flags & PKT_DCE_RPKT)
-                TextLog_Print(data->log, "%s", "DCE/RPC reassembled packet");
-            else if (p->packet_flags & PKT_REBUILT_STREAM)
-                TextLog_Print(data->log, "%s", "Stream reassembled packet");
-            else if (p->packet_flags & PKT_REBUILT_FRAG)
-                TextLog_Print(data->log, "%s", "Frag reassembled packet");
         }
 
         TextLog_NewLine(data->log);

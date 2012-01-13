@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Author(s):   Andrew R. Baker <andrewb@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,6 @@
 #ifndef __SIGNATURE_H__
 #define __SIGNATURE_H__
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #ifdef OSF1
 #include <sys/bitypes.h>
 #endif

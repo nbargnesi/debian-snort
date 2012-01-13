@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2010 Sourcefire, Inc.
+** Copyright (C) 2007-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -19,20 +19,6 @@
 
 #ifndef __PCAP_PKTHDR32_H__
 #define __PCAP_PKTHDR32_H__
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#ifdef WIN32
-#include <winsock2.h>
-#else
-#include <sys/time.h>
-#endif
-
-#include <stdlib.h>
-#include <time.h>
-#include <sys/types.h>
 
 #include "sf_types.h"
 

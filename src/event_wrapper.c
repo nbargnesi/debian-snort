@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -20,19 +20,19 @@
 /**
  * @file   event_wrapper.c
  * @author Chris Green <cmg@sourcefire.com>
- *      
+ *
  * @date   Wed Jun 18 10:49:59 2003
- * 
+ *
  * @brief  generate a snort event
- * 
- * This is a wrapper around SetEvent,CallLogFuncs,CallEventFuncs 
+ *
+ * This is a wrapper around SetEvent,CallLogFuncs,CallEventFuncs
  *
  * Notes:
  *
- *   10/31/05 - Marc Norton 
+ *   10/31/05 - Marc Norton
  *   Changes to support every event being controlled via a rule.
- *   Modified GenerateSnortEvent() to re-route events to 'fpLogEvent' 
- *   if a suitable otn was found.  If no otn was found, than we do 
+ *   Modified GenerateSnortEvent() to re-route events to 'fpLogEvent'
+ *   if a suitable otn was found.  If no otn was found, than we do
  *   not log the event at all, as no rule was provided.
  *   Preprocessors are configured independently, and may detect
  *   an event, but the rule controls the alert/drop functionality.
@@ -42,13 +42,14 @@
 #include "config.h"
 #endif
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "signature.h"
 #include "util.h"
 #include "event_wrapper.h"
 #include "fpdetect.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sfPolicy.h"
 
 RuleTreeNode* GenerateSnortEventRtn (
@@ -96,7 +97,7 @@ OptTreeNode * GenerateSnortEventOtn(
    p->sigInfo.class_id = classification;
 
    p->generated = 1;
-            
+
    p->sigInfo.rule_type=SI_RULE_TYPE_PREPROC; /* TODO: could be detect ... */
    p->sigInfo.rule_flushing=SI_RULE_FLUSHING_OFF; /* only standard rules do this */
 
@@ -107,7 +108,7 @@ OptTreeNode * GenerateSnortEventOtn(
    p->event_data.priority = priority;
 
    rtn = GenerateSnortEventRtn(p, getRuntimePolicy());
-   
+
    if( !rtn )
    {
        free(p);
@@ -116,15 +117,15 @@ OptTreeNode * GenerateSnortEventOtn(
 
    DEBUG_WRAP(
            LogMessage("Generating OTN for GID: %u, SID: %u\n",gen_id,sig_id););
-   
+
    return p;
 }
 
 /*
  * This function has been updated to find an otn and route the call to fpLogEvent
- * if possible.  This requires a rule be written for each decoder event, 
- * and possibly some preporcessor events.  The bulk of eventing is handled vie the 
- * SnortEventqAdd() and SnortEventLog() functions - whichalready  route the events to 
+ * if possible.  This requires a rule be written for each decoder event,
+ * and possibly some preporcessor events.  The bulk of eventing is handled vie the
+ * SnortEventqAdd() and SnortEventLog() functions - whichalready  route the events to
  * the fpLogEvent()function.
  */
 uint32_t GenerateSnortEvent(Packet *p,
@@ -135,27 +136,27 @@ uint32_t GenerateSnortEvent(Packet *p,
                              uint32_t priority,
                              char *msg)
 {
-    struct _OptTreeNode * potn;    
+    struct _OptTreeNode * potn;
 
     if(!msg)
     {
         return 0;
     }
-    
-    /* 
+
+    /*
      * Check if we have a preprocessor or decoder event
      * Preprocessors and decoders may be configured to inspect
-     * and alert in their principle configuration (legacy code) 
-     * this test then checks if the rule otn says they should 
+     * and alert in their principle configuration (legacy code)
+     * this test then checks if the rule otn says they should
      * be enabled or not.  The rule itself will decide if it should
      * be an alert or a drop (sdrop) condition.
      */
-    
+
      /* every event should have a rule/otn  */
      potn = OtnLookup(snort_conf->otn_map, gen_id, sig_id);
-     /* 
-     * if no rule otn exists for this event, than it was 
-     * not enabled via rules 
+     /*
+     * if no rule otn exists for this event, than it was
+     * not enabled via rules
      */
      if (potn == NULL)
      {
@@ -172,7 +173,7 @@ uint32_t GenerateSnortEvent(Packet *p,
                                          msg);
         }
 #else
-        /* 
+        /*
          * Until we have official 'preprocessor/decoder rules' we
          * will add the rule to the otn_lookup , once enabled, remove
          * this call to gen the otn...  Once a preprocessor/decoder
@@ -186,7 +187,7 @@ uint32_t GenerateSnortEvent(Packet *p,
                                      priority,
                                      msg);
 #endif
-        if (potn != NULL)  
+        if (potn != NULL)
             OtnLookupAdd(snort_conf->otn_map, potn);
      }
 
@@ -201,9 +202,9 @@ uint32_t GenerateSnortEvent(Packet *p,
      return potn->event_data.event_id;
 }
 
-/** 
+/**
  * Log additional packet data using the same kinda mechanism tagging does.
- * 
+ *
  * @param p Packet to log
  * @param gen_id generator id
  * @param sig_id signature id
@@ -213,7 +214,7 @@ uint32_t GenerateSnortEvent(Packet *p,
  * @param event_ref reference of a previous event
  * @param ref_sec the tv_sec of that previous event
  * @param msg The message data txt
- * 
+ *
  * @return 1 on success, 0 on FAILURE ( note this is to stay the same as GenerateSnortEvent() )
  */
 int LogTagData(Packet *p,
@@ -225,20 +226,20 @@ int LogTagData(Packet *p,
                uint32_t event_ref,
                time_t ref_sec,
                char *msg)
-   
+
 {
     Event event;
-    
+
     if(!event_ref || !ref_sec)
         return 0;
 
     SetEvent(&event, gen_id, sig_id, sig_rev, classification, priority, event_ref);
 
     event.ref_time.tv_sec = (uint32_t)ref_sec;
-    
+
     if(p)
         CallLogFuncs(p, msg, NULL, &event);
 
     return 1;
 }
-                     
+

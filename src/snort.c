@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -91,7 +91,7 @@
 #include "rules.h"
 #include "treenodes.h"
 #include "plugbase.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "parser.h"
 #include "tag.h"
@@ -121,6 +121,9 @@
 #include "dynamic-plugins/sp_dynamic.h"
 #include "dynamic-plugins/sf_dynamic_define.h"
 #include "sfutil/strvec.h"
+#include "detection_util.h"
+#include "sfcontrol_funcs.h"
+#include "idle_processing_funcs.h"
 
 #ifdef HAVE_LIBPRELUDE
 # include "output-plugins/spo_alert_prelude.h"
@@ -137,6 +140,7 @@
 #ifdef TARGET_BASED
 # include "target-based/sftarget_reader.h"
 #endif
+#include "sftarget_reader_live.h"
 
 #ifdef EXIT_CHECK
 # include "cpuclock.h"
@@ -147,6 +151,7 @@
 #include "sfutil/intel-soft-cpm.h"
 #endif
 
+#include "stream5_common.h"
 /* Macros *********************************************************************/
 #ifndef DLT_LANE8023
 /*
@@ -179,13 +184,9 @@
 # define MPLS_PAYLOAD_OPT__ETHERNET  "ethernet"
 #endif
 
-/* Data types *****************************************************************/
+#define DEFAULT_PAF_MAX  16384
 
-enum
-{
-    SIGLOC_PARSE_RULES_FILE = 1,
-    SIGLOC_PCAP_LOOP
-};
+/* Data types *****************************************************************/
 
 typedef enum _GetOptArgType
 {
@@ -198,14 +199,13 @@ typedef enum _GetOptArgType
 /* Externs *******************************************************************/
 /* Undefine the one from sf_dynamic_preprocessor.h */
 #ifdef PERF_PROFILING
-extern PreprocStats detectPerfStats, decodePerfStats,
+extern PreprocStats detectPerfStats, decodePerfStats, metaPerfStats,
        totalPerfStats, eventqPerfStats, rulePerfStats, mpsePerfStats;
 extern PreprocStats ruleCheckBitPerfStats, ruleSetBitPerfStats, ruleFailedFlowbitsPerfStats;
 extern PreprocStats ruleRTNEvalPerfStats, ruleOTNEvalPerfStats, ruleHeaderNoMatchPerfStats;
 extern PreprocStats ruleAddEventQPerfStats, ruleNQEventQPerfStats;
 extern PreprocStats preprocRuleOptionPerfStats;
 #endif
-
 
 /* for getopt */
 extern char *optarg;
@@ -245,6 +245,10 @@ int reload_attribute_table_flags = 0;
 
 volatile int snort_initializing = 1;
 static volatile int snort_exiting = 0;
+static pid_t snort_main_thread_pid = 0;
+#ifndef WIN32
+static pthread_t snort_main_thread_id = 0;
+#endif
 
 #if defined(SNORT_RELOAD) && !defined(WIN32)
 static volatile int snort_reload = 0;
@@ -255,6 +259,9 @@ static pid_t snort_reload_thread_pid;
 #endif
 
 const struct timespec thread_sleep = { 0, 100 };
+#ifdef OPENBSD
+const struct timespec packet_sleep = { 0, 1 };
+#endif
 
 #ifdef HAVE_PCAP_LEX_DESTROY
 extern void pcap_lex_destroy(void);
@@ -280,6 +287,8 @@ PluginSignalFuncNode *plugin_restart_funcs = NULL;
 OutputFuncNode *AlertList = NULL;   /* Alert function list */
 OutputFuncNode *LogList = NULL;     /* Log function list */
 
+PeriodicCheckFuncNode *periodic_check_funcs = NULL;
+
 #ifdef DYNAMIC_PLUGIN
 DynamicRuleNode *dynamic_rules = NULL;
 #endif
@@ -300,24 +309,26 @@ static void * SnortPostInitThread(void *);
 static DAQ_Verdict IgnoreCallback (void*, const DAQ_PktHdr_t*, const uint8_t*);
 #endif
 
+static char signal_error_msg[STD_BUF];
 static int exit_signal = 0;
-static int usr_signal = 0;
-static int rotate_stats_signal = 0;
+static bool dump_stats_signal = false;
+static bool rotate_stats_signal = false;
 #ifdef TARGET_BASED
-static int no_attr_table_signal = 0;
+static bool no_attr_table_signal = false;
 #endif
 
 #ifndef SNORT_RELOAD
-static volatile int hup_signal = 0;
+static volatile bool reload_signal = false;
 #else
-/* hup_signal is incremented in the signal handler for SIGHUP which is handled
- * in the main thread.  The reload thread compares the hup_signal count to
- * reload_hups which it increments after an equality test between hup_signal
- * and reload_hups fails (which means we got a new SIGHUP).  They need to be
- * the same type and size to do this comparision.  See ReloadConfigThread() */
-typedef uint32_t snort_hup_t; 
-static volatile snort_hup_t hup_signal = 0;
-static snort_hup_t reload_hups = 0;
+/* reload_signal is incremented in the signal handler for SIGNAL_SNORT_RELOAD
+ * which is handled in the main thread.  The reload thread compares the
+ * reload_signal count to reload_total which it increments after an equality
+ * test between reload_signal and reload_total fails (which means we got a new
+ *  SIGNAL_SNORT_RELOAD).  They need to be the same type and size to do this
+ *  comparison.  See ReloadConfigThread() */
+typedef uint32_t snort_reload_t;
+static volatile snort_reload_t reload_signal = 0;
+static snort_reload_t reload_total = 0;
 #endif
 
 static int done_processing = 0;
@@ -331,7 +342,7 @@ static int snort_argc = 0;
 static char **snort_argv = NULL;
 
 /* command line options for getopt */
-static char *valid_options = 
+static char *valid_options =
     "?A:bB:c:CdDeEfF:"
 #ifndef WIN32
     "g:"
@@ -340,7 +351,7 @@ static char *valid_options =
 #ifndef WIN32
     "m:"
 #endif
-    "Mn:NoOpP:q"
+    "Mn:NOpP:q"
 #ifndef WIN32
     "Q"
 #endif
@@ -435,6 +446,8 @@ static struct option long_options[] =
 
    {"enable-inline-test", LONGOPT_ARG_NONE, NULL, ENABLE_INLINE_TEST},
 
+   {"cs-dir", LONGOPT_ARG_REQUIRED, NULL, ARG_CS_DIR},
+
    {0, 0, 0, 0}
 };
 
@@ -453,7 +466,7 @@ static const char* GetPacketSource(void);
 
 static void CleanExit(int);
 static void SnortInit(int, char **);
-static void InitPidChrootAndPrivs(void);
+static void InitPidChrootAndPrivs(pid_t);
 static void ParseCmdLine(int, char **);
 static int ShowUsage(char *);
 static void PrintVersion(void);
@@ -499,10 +512,13 @@ static void SnortStartThreads(void);
 #endif
 
 /* Signal handler declarations ************************************************/
-static void SigUsrHandler(int);
+static void SigDumpStatsHandler(int);
 static void SigExitHandler(int);
-static void SigHupHandler(int);
+static void SigReloadHandler(int);
 static void SigRotateStatsHandler(int);
+#ifdef CONTROL_SOCKET
+static void SigPipeHandler(int);
+#endif
 
 #ifdef TARGET_BASED
 static void SigNoAttributeTableHandler(int);
@@ -518,8 +534,19 @@ static int VerifyLibInfos(DynamicLibInfo *, DynamicLibInfo *);
 # endif  /* DYNAMIC_PLUGIN */
 #endif  /* SNORT_RELOAD */
 
-/* INLINE FUNCTION ************************************************************/
-static INLINE void CheckForReload(void)
+int InMainThread ()
+{
+    return ( 
+#ifndef WIN32
+		pthread_equal(snort_main_thread_id, pthread_self()) 
+#else
+		1
+#endif
+		);
+}
+
+/* inline FUNCTION ************************************************************/
+static inline void CheckForReload(void)
 {
 
 #if defined(SNORT_RELOAD) && !defined(WIN32)
@@ -632,7 +659,7 @@ static int InlineFailOpen (void)
  * Returns: 0 => normal exit, 1 => exit on error
  *
  */
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 #if defined(WIN32) && defined(ENABLE_WIN32_SERVICE)
     /* Do some sanity checking, because some people seem to forget to
@@ -677,6 +704,12 @@ int SnortMain(int argc, char *argv[])
     const char* intf;
     int daqInit;
 
+#ifndef WIN32
+    // must be done now in case of fatal error
+    // and again after daemonization
+    snort_main_thread_id = pthread_self();
+#endif
+
     SnortInit(argc, argv);
 
     intf = GetPacketSource();
@@ -691,7 +724,21 @@ int SnortMain(int argc, char *argv[])
     {
         GoDaemon();
     }
+
+    // this must follow daemonization
+    snort_main_thread_pid = getpid();
+#ifndef WIN32
+    snort_main_thread_id = pthread_self();
+#endif
+
+#ifndef WIN32
+    /* Change groups */
+    InitGroups(ScUid(), ScGid());
+#endif
+
 #if !defined(HAVE_LINUXTHREADS) && !defined(WIN32)
+    // this could be moved to linux threads location
+    // and only done there
     SnortStartThreads();
 #endif
 
@@ -715,7 +762,7 @@ int SnortMain(int argc, char *argv[])
     }
 
     PacketLoop();
-    
+
     // DAQ is shutdown in CleanExit() since we don't always return here
     CleanExit(0);
 
@@ -787,7 +834,7 @@ static void PrintAllInterfaces (void)
 
     for (dev = alldevs; dev != NULL; dev = dev->next, j++)
     {
-        u_int8_t *mac_addr = NULL;
+        uint8_t *mac_addr = NULL;
         for (i = 0; i<iftable->dwNumEntries; i++)
         {
             if (strncmp(dev->description, iftable->table[i].bDescr, iftable->table[i].dwDescrLen) == 0)
@@ -827,13 +874,13 @@ static void PrintAllInterfaces (void)
             {
                 printf("disabled\t");
             }
-            printf("%s\t%s\n", dev->name, dev->description);    
+            printf("%s\t%s\n", dev->name, dev->description);
         }
         else
         {
             printf("disabled\t%s\t%s\n", dev->name, dev->description);
         }
-        
+
     }
     pcap_freealldevs(alldevs);
     free(iftable);
@@ -952,6 +999,18 @@ static int PQ_CleanUp (void)
     return 0;
 }
 
+static void PQ_Show (const char* pcap)
+{
+    if ( !ScPcapShow() )
+        return;
+
+    if ( !strcmp(pcap, "-") ) pcap = "stdin";
+
+    fprintf(stdout,
+        "Reading network traffic from \"%s\" with snaplen = %d\n",
+        pcap, DAQ_GetSnapLen());
+}
+
 static const char* PQ_First (void)
 {
     const char* pcap = (char*)sfqueue_remove(pcap_queue);
@@ -962,14 +1021,6 @@ static const char* PQ_First (void)
     if ( sfqueue_add(pcap_save_queue, (NODE_DATA)pcap) == -1 )
         FatalError("Could not add pcap to saved list\n");
 
-    if (ScPcapShow())
-    {
-        if ( !strcmp(pcap, "-") ) pcap = "stdin";
-
-        fprintf(stdout,
-            "Reading network traffic from \"%s\" with snaplen = %d\n",
-            pcap, DAQ_GetSnapLen());
-    }
     return pcap;
 }
 
@@ -986,7 +1037,7 @@ static void PQ_Reset ()
         SnortReset();
 
     dlt = new_dlt;
-    
+
     /* open a new tcpdump file - necessary because the snaplen and
      * datalink could be different between pcaps */
     if (snort_conf->log_tcpdump)
@@ -1043,6 +1094,7 @@ static int PQ_Next (void)
         DAQ_Start();
 
         PQ_Reset();
+        PQ_Show(pcap);
         SetPktProcessor();
 
         return 1;
@@ -1094,8 +1146,9 @@ static const char* GetPacketSource (void)
     if ( ScReadMode() )
     {
         intf = PQ_First();
+        PQ_Show(intf);
     }
-    else if ( 
+    else if (
         !ScVersionMode()
 #ifdef DYNAMIC_PLUGIN
         && !ScRuleDumpMode()
@@ -1118,13 +1171,13 @@ static const char* GetPacketSource (void)
     return intf;
 }
 
-static void InitPidChrootAndPrivs(void)
+static void InitPidChrootAndPrivs(pid_t pid)
 {
     /* create the PID file */
-    if ( !ScReadMode() && 
+    if ( !ScReadMode() &&
         (ScDaemonMode() || *snort_conf->pidfile_suffix || ScCreatePidFile()))
     {
-        CreatePidFile(DAQ_GetInterfaceSpec());
+        CreatePidFile(DAQ_GetInterfaceSpec(), pid);
     }
 
 #ifndef WIN32
@@ -1202,7 +1255,7 @@ static void LoadDynamicPlugins(SnortConfig *sc)
             }
         }
     }
-    
+
     ValidateDynamicEngines();
     snort_conf_for_parsing = NULL;
 }
@@ -1225,7 +1278,7 @@ static void DisplayDynamicPluginVersions(void)
                    meta->uniqueName, meta->major, meta->minor, meta->build);
         lib = GetNextEnginePluginVersion(lib);
     }
-    
+
     lib = GetNextDetectionPluginVersion(NULL);
     while ( lib != NULL )
     {
@@ -1234,8 +1287,8 @@ static void DisplayDynamicPluginVersions(void)
         LogMessage("           Rules Object: %s  Version %d.%d  <Build %d>\n",
                    meta->uniqueName, meta->major, meta->minor, meta->build);
         lib = GetNextDetectionPluginVersion(lib);
-    }    
-    
+    }
+
     lib = GetNextPreprocessorPluginVersion(NULL);
     while ( lib != NULL )
     {
@@ -1244,7 +1297,7 @@ static void DisplayDynamicPluginVersions(void)
         LogMessage("           Preprocessor Object: %s  Version %d.%d  <Build %d>\n",
                    meta->uniqueName, meta->major, meta->minor, meta->build);
         lib = GetNextPreprocessorPluginVersion(lib);
-    }    
+    }
 }
 #endif
 
@@ -1261,7 +1314,7 @@ static void PrintVersion(void)
 
     snort_conf->logging_flags &= ~LOGGING_FLAG__QUIET;
     DisplayBanner();
-    
+
 #ifdef DYNAMIC_PLUGIN
     //  Get and print out library versions
     DisplayDynamicPluginVersions();
@@ -1270,7 +1323,7 @@ static void PrintVersion(void)
     snort_conf->logging_flags |= save_quiet_flag;
 }
 
-static void PrintSpiModules (SnortConfig* sc, char* dir)
+static void PrintDaqModules (SnortConfig* sc, char* dir)
 {
     if ( dir )
         ConfigDaqDir(sc, dir);
@@ -1289,7 +1342,7 @@ static void ExitCheckStart (void)
     {
         return;
     }
-    LogMessage("Exit Check: signaling at %ldth callback\n", pc.total_from_daq);
+    LogMessage("Exit Check: signaling at " STDu64 "callback\n", pc.total_from_daq);
     get_clockticks(exitTime);
 #ifndef WIN32
     kill(0, SIGINT);  // send to all processes in my process group
@@ -1319,6 +1372,57 @@ static void ExitCheckEnd (void)
 }
 #endif
 
+#ifdef HAVE_DAQ_ACQUIRE_WITH_META
+static int MetaCallback(
+    void* user, const DAQ_MetaHdr_t *metahdr, const uint8_t* data)
+{
+    tSfPolicyId policy_id = getRuntimePolicy();
+    SnortPolicy *policy = snort_conf->targeted_policies[policy_id];
+    PreprocMetaEvalFuncNode *idx;
+    PROFILE_VARS;
+    
+    /* First thing we do is process a Usr signal that we caught */
+    if (SignalCheck())
+    {
+#ifndef SNORT_RELOAD
+        /* Got SIGNAL_SNORT_RELOAD */
+        Restart();
+#endif
+    }
+
+    CheckForReload();
+
+    PREPROC_PROFILE_START(metaPerfStats);
+
+    idx = policy->preproc_meta_eval_funcs;
+    while (idx != NULL)
+    {
+        idx->func(metahdr->type, data);
+        idx = idx->next;
+    }
+
+    PREPROC_PROFILE_END(metaPerfStats);
+
+#if defined(WIN32) && defined(ENABLE_WIN32_SERVICE)
+    if (ScTerminateService() || ScPauseService())
+    {
+        return 0;  // time to go
+    }
+#endif
+
+    ControlSocketDoWork(0);
+
+    return 0;
+}
+#endif
+
+void SetupMetadataCallback(void)
+{
+#ifdef HAVE_DAQ_ACQUIRE_WITH_META
+    DAQ_Set_MetaCallback(&MetaCallback);
+#endif
+}
+
 static DAQ_Verdict PacketCallback(
     void* user, const DAQ_PktHdr_t* pkthdr, const uint8_t* pkt)
 {
@@ -1336,7 +1440,7 @@ static DAQ_Verdict PacketCallback(
     if (SignalCheck())
     {
 #ifndef SNORT_RELOAD
-        /* Got SIGHUP */
+        /* Got SIGNAL_SNORT_RELOAD */
         PREPROC_PROFILE_END(totalPerfStats);
         Restart();
 #endif
@@ -1354,7 +1458,7 @@ static DAQ_Verdict PacketCallback(
 
     CheckForReload();
 
-    /* Save off the time of each and every packet */ 
+    /* Save off the time of each and every packet */
     packet_time_update(pkthdr->ts.tv_sec);
 
     /* reset the thresholding subsystem checks for this packet */
@@ -1380,6 +1484,10 @@ static DAQ_Verdict PacketCallback(
 #endif
 
     verdict = ProcessPacket(user, pkthdr, pkt, NULL);
+
+    checkLWSessionTimeout(4, pkthdr->ts.tv_sec);
+
+    ControlSocketDoWork(0);
 
     PREPROC_PROFILE_END(totalPerfStats);
     return verdict;
@@ -1407,11 +1515,12 @@ static void PrintPacket(Packet *p)
 #endif  // NO_NON_ETHER_DECODER
 }
 
-int ProcessPacket(
+DAQ_Verdict ProcessPacket(
     void* user, const DAQ_PktHdr_t* pkthdr, const uint8_t* pkt, void* ft)
 {
     Packet p;
     DAQ_Verdict verdict = DAQ_VERDICT_PASS;
+    int inject = 0;
 
     setRuntimePolicy(getDefaultPolicy());
 
@@ -1430,10 +1539,10 @@ int ProcessPacket(
         DisableAllDetect(&p);
     }
 
-    // TBD why is this stuff done here when it could be done by frag3??
     if (ft)
     {
-        p.packet_flags |= PKT_REBUILT_FRAG;  // this is already done by frag3
+        p.packet_flags |= (PKT_PSEUDO | PKT_REBUILT_FRAG);
+        p.pseudo_type = PSEUDO_PKT_IP;
         p.fragtracker = ft;
     }
 
@@ -1472,58 +1581,68 @@ int ProcessPacket(
     {
         Active_DropAction(&p);
 
-        if ( ScInlineMode() )
+        if ( ScInlineMode() || Active_PacketForceDropped() )
             verdict = DAQ_VERDICT_BLACKLIST;
         else
             verdict = DAQ_VERDICT_IGNORE;
     }
+    if ( ft )
+    {
+        // we don't block, modify, pass, or count defrags
+        // if the defrag trigged a block, this verdict will
+        // be applied to the raw packet.
+        return verdict;
+    }
+
 #ifdef ACTIVE_RESPONSE
     if ( Active_ResponseQueued() )
     {
         Active_SendResponses(&p);
     }
 #endif
-
-    // we don't drop, modify, pass, or count defrags
-    if ( ft )
-    {
-        Active_Reset();
-        return verdict;
-    }
     if ( Active_PacketWasDropped() )
     {
         if ( verdict == DAQ_VERDICT_PASS )
             verdict = DAQ_VERDICT_BLOCK;
     }
     else
-    {    
+    {
         Replace_ModifyPacket(&p);
 
         if ( p.packet_flags & PKT_MODIFIED )
         {
             // this packet was normalized and/or has replacements
             Encode_Update(&p);
-
-#ifdef NORMALIZER
-            if ( p.packet_flags & PKT_RESIZED )
-            {
-                // we never increase, only trim, but
-                // daq doesn't support resizing wire packet
-                DAQ_Inject(p.pkth, 0, p.pkt, p.pkth->pktlen);
-                verdict = DAQ_VERDICT_BLOCK;
-            }
-            else
-#endif
-                verdict = DAQ_VERDICT_REPLACE;
+            verdict = DAQ_VERDICT_REPLACE;
         }
+#ifdef NORMALIZER
+        else if ( p.packet_flags & PKT_RESIZED )
+        {
+            // we never increase, only trim, but
+            // daq doesn't support resizing wire packet
+            if ( !DAQ_Inject(p.pkth, 0, p.pkt, p.pkth->pktlen) )
+            {
+                verdict = DAQ_VERDICT_BLOCK;
+                inject = 1;
+            }
+        }
+#endif
         else
         {
-            verdict = DAQ_VERDICT_PASS;
+            if ((p.packet_flags & PKT_IGNORE_PORT) ||
+                (stream_api && (stream_api->get_ignore_direction(p.ssnptr) == SSN_DIR_BOTH)))
+            {
+                verdict = DAQ_VERDICT_WHITELIST;
+            }
+            else
+            {
+                verdict = DAQ_VERDICT_PASS;
+            }
         }
     }
 
     /* Collect some "on the wire" stats about packet size, etc */
-    UpdateWireStats(&sfBase, pkthdr->caplen, Active_PacketWasDropped());
+    UpdateWireStats(&sfBase, pkthdr->caplen, Active_PacketWasDropped(), inject);
     Active_Reset();
     return verdict;
 }
@@ -1558,7 +1677,7 @@ static int ShowUsage(char *program_name)
 # define FPUTS_UNIX(msg)  NULL
 # define FPUTS_BOTH(msg)  fputs(msg,stdout)
 #else
-# define FPUTS_WIN32(msg) 
+# define FPUTS_WIN32(msg)
 # define FPUTS_UNIX(msg)  fputs(msg,stdout)
 # define FPUTS_BOTH(msg)  fputs(msg,stdout)
 #endif
@@ -1828,7 +1947,7 @@ static void ParseCmdLine(int argc, char **argv)
 
                 /* If daemon or logging to syslog use "snort" as identifier and
                  * start logging there now */
-                openlog("snort", LOG_PID | LOG_CONS, LOG_DAEMON); 
+                openlog("snort", LOG_PID | LOG_CONS, LOG_DAEMON);
 
                 sc->logging_flags |= LOGGING_FLAG__SYSLOG;
                 syslog_configured = 1;
@@ -1844,7 +1963,7 @@ static void ParseCmdLine(int argc, char **argv)
 
                 /* If daemon or logging to syslog use "snort" as identifier and
                  * start logging there now */
-                openlog("snort", LOG_PID | LOG_CONS, LOG_DAEMON); 
+                openlog("snort", LOG_PID | LOG_CONS, LOG_DAEMON);
 
                 ConfigDaemon(sc, optarg);
                 daemon_configured = 1;
@@ -1856,6 +1975,12 @@ static void ParseCmdLine(int argc, char **argv)
                  * be printed while parsing the command line before the quiet option
                  * is read won't be printed */
                 ConfigQuiet(sc, NULL);
+                break;
+
+            case '?':  /* show help and exit with 1 */
+                PrintVersion();
+                ShowUsage(argv[0]);
+                exit(1);
                 break;
 
             default:
@@ -1939,7 +2064,7 @@ static void ParseCmdLine(int argc, char **argv)
                     if ((errno == ERANGE) || (*endPtr != '\0'))
                         FatalError("--exit-check value must be non-negative integer\n");
 
-                    LogMessage("Exit Check: limit = %ld callbacks\n", sc->exit_check);
+                    LogMessage("Exit Check: limit = "STDu64" callbacks\n", sc->exit_check);
                 }
 
                 break;
@@ -1978,7 +2103,7 @@ static void ParseCmdLine(int argc, char **argv)
                 break;
 
             case ARG_DAQ_LIST:
-                PrintSpiModules(sc, optarg);
+                PrintDaqModules(sc, optarg);
                 exit(0);
                 break;
 
@@ -2120,7 +2245,7 @@ static void ParseCmdLine(int argc, char **argv)
 
                 break;
 
-            case 'h':  
+            case 'h':
                 /* set home network to x, this will help determine what to set
                  * logging diectories to */
                 ConfigReferenceNet(sc, optarg);
@@ -2179,7 +2304,7 @@ static void ParseCmdLine(int argc, char **argv)
                 {
                     FatalError("log_tcpdump file name \"%s\" has to be less "
                                "than or equal to 256 characters.\n", optarg);
-                }             
+                }
 
                 output_logging = 1;
                 break;
@@ -2188,7 +2313,7 @@ static void ParseCmdLine(int argc, char **argv)
                 /* This is parsed at the beginning so as to start logging
                  * to syslog right away */
                 break;
-                
+
 #ifndef WIN32
             case 'm':  /* set the umask for the output files */
                 ConfigUmask(sc, optarg);
@@ -2315,7 +2440,7 @@ static void ParseCmdLine(int argc, char **argv)
 
             case 'T':  /* test mode, verify that the rules load properly */
                 sc->run_mode_flags |= RUN_MODE_FLAG__TEST;
-                break;    
+                break;
 
 #ifndef WIN32
             case 'u':  /* setuid */
@@ -2352,11 +2477,11 @@ static void ParseCmdLine(int argc, char **argv)
             case 'X':  /* display verbose packet bytecode dumps */
                 ConfigDumpPayloadVerbose(sc, NULL);
                 break;
-                
+
             case 'x':
                 sc->run_flags |= RUN_FLAG__CONF_ERROR_OUT;
                 break;
-                
+
             case 'y':  /* Add year to timestamp in alert and log files */
                 ConfigShowYear(sc, NULL);
                 break;
@@ -2430,6 +2555,11 @@ static void ParseCmdLine(int argc, char **argv)
                 sc->run_flags |= RUN_FLAG__REQUIRE_RULE_SID;
                 break;
 
+            case ARG_CS_DIR:
+                if ( optarg != NULL )
+                    sc->cs_dir = SnortStrdup(optarg);
+                break;
+
             case '?':  /* show help and exit with 1 */
                 PrintVersion();
                 ShowUsage(argv[0]);
@@ -2453,7 +2583,7 @@ static void ParseCmdLine(int argc, char **argv)
                    "mode and then restart in daemon mode.\n");
     }
 
-    if ((sc->run_flags & RUN_FLAG__INLINE) && 
+    if ((sc->run_flags & RUN_FLAG__INLINE) &&
             (sc->run_flags & RUN_FLAG__INLINE_TEST))
     {
         FatalError("Cannot use inline adapter mode and inline test "
@@ -2589,7 +2719,62 @@ static int SetPktProcessor(void)
             grinder = DecodeEthPkt;
             break;
 
+#ifdef DLT_LOOP
+        case DLT_LOOP:
+#endif
+        case DLT_NULL:
+            /* loopback and stuff.. you wouldn't perform intrusion detection
+             * on it, but it's ok for testing. */
+            slink = "LoopBack";
+            extra = "Data link layer header parsing for this network type "
+                    "isn't implemented yet";
+            grinder = DecodeNullPkt;
+            break;
+
+        case DLT_RAW:
+        case DLT_IPV4:
+            slink = "Raw IP4";
+            extra = "There's no second layer header available for this datalink";
+            grinder = DecodeRawPkt;
+            break;
+
+        case DLT_IPV6:
+            slink = "Raw IP6";
+            extra = "There's no second layer header available for this datalink";
+            grinder = DecodeRawPkt6;
+            break;
+
+#ifdef DLT_I4L_IP
+        case DLT_I4L_IP:
+            slink = "I4L-ip";
+            grinder = DecodeEthPkt;
+            break;
+#endif
+
 #ifndef NO_NON_ETHER_DECODER
+#ifdef DLT_I4L_CISCOHDLC
+        case DLT_I4L_CISCOHDLC:
+            slink = "I4L-cisco-h";
+            grinder = DecodeI4LCiscoIPPkt;
+            break;
+#endif
+
+        case DLT_PPP:
+            slink = "PPP";
+            extra = "Second layer header parsing for this datalink "
+                    "isn't implemented yet";
+            grinder = DecodePppPkt;
+            break;
+
+#ifdef DLT_I4L_RAWIP
+        case DLT_I4L_RAWIP:
+            // you need the I4L modified version of libpcap to get this stuff
+            // working
+            slink = "I4L-rawip";
+            grinder = DecodeI4LRawIPPkt;
+            break;
+#endif
+
 #ifdef DLT_IEEE802_11
         case DLT_IEEE802_11:
             slink = "IEEE 802.11";
@@ -2628,16 +2813,7 @@ static int SetPktProcessor(void)
                     "isn't implemented yet\n";
             grinder = DecodeSlipPkt;
             break;
-#endif  // NO_NON_ETHER_DECODER
 
-        case DLT_PPP:
-            slink = "PPP";
-            extra = "Second layer header parsing for this datalink "
-                    "isn't implemented yet";
-            grinder = DecodePppPkt;
-            break;
-
-#ifndef NO_NON_ETHER_DECODER
 #ifdef DLT_PPP_SERIAL
         case DLT_PPP_SERIAL:         /* PPP with full HDLC header*/
             slink = "PPP Serial";
@@ -2667,48 +2843,7 @@ static int SetPktProcessor(void)
             grinder = DecodeOldPflog;
             break;
 #endif
-
-#ifdef DLT_LOOP
-        case DLT_LOOP:
-#endif
-#endif  // NON_ETHER_DECODER
-        case DLT_NULL:
-            /* loopback and stuff.. you wouldn't perform intrusion detection
-             * on it, but it's ok for testing. */
-            slink = "LoopBack";
-            extra = "Data link layer header parsing for this network type "
-                    "isn't implemented yet";
-            grinder = DecodeNullPkt;
-            break;
-
-        case DLT_RAW:
-            slink = "Raw IP";
-            extra = "There's no second layer header available for this datalink";
-            grinder = DecodeRawPkt;
-            break;
-
-#ifdef DLT_I4L_RAWIP
-        case DLT_I4L_RAWIP:
-            // you need the I4L modified version of libpcap to get this stuff
-            // working
-            slink = "I4L-rawip";
-            grinder = DecodeI4LRawIPPkt;
-            break;
-#endif
-
-#ifdef DLT_I4L_IP
-        case DLT_I4L_IP:
-            slink = "I4L-ip";
-            grinder = DecodeEthPkt;
-            break;
-#endif
-
-#ifdef DLT_I4L_CISCOHDLC
-        case DLT_I4L_CISCOHDLC:
-            slink = "I4L-cisco-h";
-            grinder = DecodeI4LCiscoIPPkt;
-            break;
-#endif
+#endif  // NO_NON_ETHER_DECODER
 
         default:
             /* oops, don't know how to handle this one */
@@ -2722,7 +2857,7 @@ static int SetPktProcessor(void)
     }
     if (extra && ScOutputDataLink())
     {
-        LogMessage("%s\n", extra); 
+        LogMessage("%s\n", extra);
         snort_conf->output_flags &= ~OUTPUT_FLAG__SHOW_DATA_LINK;
     }
 #ifdef ACTIVE_RESPONSE
@@ -2732,16 +2867,24 @@ static int SetPktProcessor(void)
 }
 
 /*
- *  Handle idle time checks in snort packet processing loop 
+ *  Handle idle time checks in snort packet processing loop
  */
 static void SnortIdle(void)
 {
-    /* Rollover of performance log */ 
+    /* Rollover of performance log */
     if (IsSetRotatePerfFileFlag())
     {
         sfRotatePerformanceStatisticsFile();
         ClearRotatePerfFileFlag();
     }
+#ifdef OPENBSD
+    else if (reload_signal != reload_total)
+        nanosleep(&packet_sleep, NULL);
+#endif
+
+    checkLWSessionTimeout(16384, time(NULL));
+    ControlSocketDoWork(1);
+    IdleProcessingExecute();
 }
 
 void PacketLoop (void)
@@ -2757,10 +2900,13 @@ void PacketLoop (void)
 
         if ( error )
         {
-            if ( error != DAQ_READFILE_EOF || !PQ_Next() )
+            if ( !ScReadMode() || !PQ_Next() )
+            {
+                /* If not read-mode or no next pcap, we're done */
                 break;
+            }
         }
-        /* Check for any pending signals when no packets are read*/        
+        /* Check for any pending signals when no packets are read*/
         else
         {
             // TBD SnortIdle() only checks for perf file rotation
@@ -2773,7 +2919,7 @@ void PacketLoop (void)
             if ( SignalCheck() )
             {
 #ifndef SNORT_RELOAD
-                // Got SIGHUP
+                // Got SIGNAL_SNORT_RELOAD
                 Restart();
 #endif
             }
@@ -2793,12 +2939,17 @@ void PacketLoop (void)
         SnortIdle();
     }
 
-    if ( !exit_logged && (error < 0) )
+    if ( !exit_logged && error )
     {
         if ( error == DAQ_READFILE_EOF )
             error = 0;
+        else if ( error > 0 ) 
+        {
+            DAQ_Abort();
+            exit(1);
+        }
         CleanExit(error);
-    } 
+    }
     done_processing = 1;
 }
 
@@ -2835,7 +2986,7 @@ static void SnortReset(void)
 #endif
 
     DropStats(0);
-    
+
     /* zero out packet count */
     memset(&pc, 0, sizeof(pc));
 
@@ -2922,35 +3073,35 @@ static void SigExitHandler(int signal)
     exit_signal = signal;
 }
 
-static void SigUsrHandler(int signal)
+static void SigDumpStatsHandler(int signal)
 {
-    if (usr_signal != 0)
-        return;
-    usr_signal = signal;
+    dump_stats_signal = true;
 }
 
 static void SigRotateStatsHandler(int signal)
 {
-    if (rotate_stats_signal != 0)
-        return;
-    rotate_stats_signal = signal;
+    rotate_stats_signal = true;
 }
 
-static void SigHupHandler(int signal)
+static void SigReloadHandler(int signal)
 {
 #if defined(SNORT_RELOAD) && !defined(WIN32)
-    hup_signal++;
+    reload_signal++;
 #else
-    hup_signal = signal;
+    reload_signal = true;
 #endif
 }
+
+#ifdef CONTROL_SOCKET
+static void SigPipeHandler(int signal)
+{
+}
+#endif
 
 #ifdef TARGET_BASED
 static void SigNoAttributeTableHandler(int signal)
 {
-    if (no_attr_table_signal != 0)
-        return;
-    no_attr_table_signal = signal;
+   no_attr_table_signal = true;
 }
 #endif
 
@@ -2969,6 +3120,14 @@ static void CleanExit(int exit_val)
 {
     SnortConfig tmp;
 
+#ifdef TARGET_BASED
+#ifdef DEBUG
+#if 0
+    SFLAT_dump();
+#endif
+#endif
+#endif
+
     /* Have to trick LogMessage to log correctly after snort_conf
      * is freed */
     memset(&tmp, 0, sizeof(tmp));
@@ -2980,7 +3139,7 @@ static void CleanExit(int exit_val)
 
         tmp.run_flags |= (snort_conf->run_flags & RUN_FLAG__DAEMON);
 
-        tmp.logging_flags |= 
+        tmp.logging_flags |=
             (snort_conf->logging_flags & LOGGING_FLAG__SYSLOG);
     }
 
@@ -3017,6 +3176,9 @@ static void SnortCleanup(int exit_val)
     snort_exiting = 1;
     snort_initializing = 0;  /* just in case we cut out early */
 
+    ControlSocketCleanUp();
+    IdleProcessingCleanUp();
+
     if ( DAQ_WasStarted() )
     {
 #ifdef EXIT_CHECK
@@ -3051,7 +3213,7 @@ static void SnortCleanup(int exit_val)
          * send VTALRM signal to pull it out of the idle sleep.
          * Thread exits normally on next iteration through its
          * loop.
-         * 
+         *
          * If its doing other processing, that continues post
          * interrupt and thread exits normally.
          */
@@ -3155,6 +3317,9 @@ static void SnortCleanup(int exit_val)
 
 #ifdef TARGET_BASED
     SFAT_Cleanup();
+#ifdef SUP_IP6
+    SFLAT_fini();
+#endif
 #endif
 
     PQ_CleanUp();
@@ -3207,6 +3372,8 @@ static void SnortCleanup(int exit_val)
     }
 #endif
 
+    EventTrace_Term();
+
     detection_filter_cleanup();
     sfthreshold_free();
     RateFilter_Cleanup();
@@ -3256,6 +3423,9 @@ static void SnortCleanup(int exit_val)
 
     FreePluginSigFuncs(plugin_restart_funcs);
     plugin_restart_funcs = NULL;
+
+    FreePeriodicFuncs(periodic_check_funcs);
+    periodic_check_funcs = NULL;
 
     ParserCleanup();
 
@@ -3319,7 +3489,7 @@ void Restart(void)
     if ((!ScReadMode() && (getuid() != 0)) ||
         (snort_conf->chroot_dir != NULL))
     {
-        LogMessage("Reload via Signal HUP does not work if you aren't root "
+        LogMessage("Reload via Signal Reload does not work if you aren't root "
                    "or are chroot'ed.\n");
 # ifdef SNORT_RELOAD
         /* We are restarting because of a configuration verification problem */
@@ -3401,7 +3571,7 @@ void print_packet_count(void)
 }
 
 /*
- *  Check for signal activity 
+ *  Check for signal activity
  */
 int SignalCheck(void)
 {
@@ -3412,7 +3582,7 @@ int SignalCheck(void)
             {
                 ErrorMessage("*** Caught Term-Signal\n");
                 exit_logged = 1;
-                if ( DAQ_BreakLoop() )
+                if ( DAQ_BreakLoop(DAQ_SUCCESS) )
                     return 0;
             }
             CleanExit(0);
@@ -3423,7 +3593,7 @@ int SignalCheck(void)
             {
                 ErrorMessage("*** Caught Int-Signal\n");
                 exit_logged = 1;
-                if ( DAQ_BreakLoop() )
+                if ( DAQ_BreakLoop(DAQ_SUCCESS) )
                     return 0;
             }
             CleanExit(0);
@@ -3434,7 +3604,7 @@ int SignalCheck(void)
             {
                 ErrorMessage("*** Caught Quit-Signal\n");
                 exit_logged = 1;
-                if ( DAQ_BreakLoop() )
+                if ( DAQ_BreakLoop(DAQ_SUCCESS) )
                     return 0;
             }
             CleanExit(0);
@@ -3446,15 +3616,15 @@ int SignalCheck(void)
 
     exit_signal = 0;
 
-    if (usr_signal == SIGUSR1)
+    if (dump_stats_signal)
     {
-        ErrorMessage("*** Caught Usr-Signal\n");
+        ErrorMessage("*** Caught Dump Stats-Signal\n");
         DropStats(0);
     }
 
-    usr_signal = 0;
+    dump_stats_signal = false;
 
-    if (rotate_stats_signal == SIGNAL_SNORT_ROTATE_STATS)
+    if (rotate_stats_signal)
     {
         ErrorMessage("*** Caught Signal: 'Rotate Perfmonitor Stats'\n");
 
@@ -3470,23 +3640,22 @@ int SignalCheck(void)
         }
     }
 
-    rotate_stats_signal = 0;
+    rotate_stats_signal = false;
 
 #ifdef TARGET_BASED
-    if (no_attr_table_signal == SIGNAL_SNORT_READ_ATTR_TBL)
+    if (no_attr_table_signal)
         ErrorMessage("!!! Cannot reload attribute table - Attribute table is not configured !!!\n");
-    no_attr_table_signal = 0;
+    no_attr_table_signal = false;
 #endif
 
 #ifndef SNORT_RELOAD
-    if (hup_signal == SIGHUP)
+    if (reload_signal )
     {
-        ErrorMessage("*** Caught Hup-Signal\n");
-        hup_signal = 0;
+        ErrorMessage("*** Caught Reload-Signal\n");
+        reload_signal = false;
         return 1;
     }
-
-    hup_signal = 0;
+    reload_signal = false;
 #endif
 
     return 0;
@@ -3510,7 +3679,8 @@ SnortConfig * SnortConfNew(void)
 
     sc->pkt_cnt = -1;
     sc->pkt_snaplen = -1;
-
+    /*user_id and group_id should be initialized to -1 by default, because
+     * chown() use this later, -1 means no change to user_id/group_id*/
     sc->user_id = -1;
     sc->group_id = -1;
 
@@ -3540,6 +3710,10 @@ SnortConfig * SnortConfNew(void)
 
     sc->targeted_policies = NULL;
     sc->num_policies_allocated = 0;
+
+#ifndef REG_TEST
+    sc->paf_max = DEFAULT_PAF_MAX;
+#endif
 
     return sc;
 }
@@ -3580,6 +3754,9 @@ void SnortConfFree(SnortConfig *sc)
 
     if (sc->bpf_filter != NULL)
         free(sc->bpf_filter);
+
+    if (sc->event_trace_file != NULL)
+        free(sc->event_trace_file);
 
 #ifdef PERF_PROFILING
     if (sc->profile_rules.filename != NULL)
@@ -3688,6 +3865,19 @@ void SnortConfFree(SnortConfig *sc)
     if ( sc->daq_dirs )
         StringVector_Delete(sc->daq_dirs);
 
+#ifdef ACTIVE_RESPONSE
+    if ( sc->respond_device )
+        free(sc->respond_device);
+
+     if (sc->eth_dst )
+        free(sc->eth_dst);
+#endif
+
+     if (sc->gtp_ports)
+        free(sc->gtp_ports);
+        
+     if(sc->cs_dir)
+        free(sc->cs_dir);
     free(sc);
 }
 
@@ -3840,12 +4030,13 @@ static void FreePreprocessors(SnortConfig *sc)
         if (p == NULL)
             continue;
 
-        FreePreprocReassemblyPktFuncs(p->preproc_reassembly_pkt_funcs);
-        p->preproc_reassembly_pkt_funcs = NULL;
-
         FreePreprocEvalFuncs(p->preproc_eval_funcs);
         p->preproc_eval_funcs = NULL;
         p->num_preprocs = 0;
+
+        FreePreprocMetaEvalFuncs(p->preproc_meta_eval_funcs);
+        p->preproc_meta_eval_funcs = NULL;
+        p->num_meta_preprocs = 0;
 
         FreeDetectionEvalFuncs(p->detect_eval_funcs);
         p->detect_eval_funcs = NULL;
@@ -3905,9 +4096,7 @@ static SnortConfig * MergeSnortConfs(SnortConfig *cmd_line, SnortConfig *config_
     }
 
     config_file->run_flags |= cmd_line->run_flags;
-
     config_file->output_flags |= cmd_line->output_flags;
-
     config_file->logging_flags |= cmd_line->logging_flags;
 
     /* Merge checksum flags.  If command line modified them, use from the
@@ -3935,7 +4124,6 @@ static SnortConfig * MergeSnortConfs(SnortConfig *cmd_line, SnortConfig *config_
             config_file->dynamic_rules_path = SnortStrdup(cmd_line->dynamic_rules_path);
         }
     }
-
 
 #ifdef DYNAMIC_PLUGIN
     if (cmd_line->dyn_engines != NULL)
@@ -4082,6 +4270,47 @@ static SnortConfig * MergeSnortConfs(SnortConfig *cmd_line, SnortConfig *config_
     if (cmd_line->run_flags & RUN_FLAG__PROCESS_ALL_EVENTS)
         config_file->event_queue_config->process_all_events = 1;
 
+    if (cmd_line->cs_dir != NULL)
+    {
+        if (config_file->cs_dir != NULL)
+            free(config_file->cs_dir);
+        config_file->cs_dir = SnortStrdup(cmd_line->cs_dir);    
+    }
+    if (config_file->cs_dir)
+    {
+
+#ifndef WIN32
+        /*
+         *  If an absolute path is specified, then use that.
+         *  otherwise, relative to pid path
+         */
+        if ((config_file->cs_dir[0] != '/') && config_file->pid_path && config_file->pid_path[0])
+        {
+
+            char fullpath[PATH_MAX];
+
+            if (config_file->pid_path[strlen(config_file->pid_path) - 1] == '/')
+            {
+                SnortSnprintf(fullpath, sizeof(fullpath),
+                        "%s%s", config_file->pid_path, config_file->cs_dir);
+            }
+            else
+            {
+                SnortSnprintf(fullpath, sizeof(fullpath),
+                        "%s/%s", config_file->pid_path, config_file->cs_dir);
+            }
+            free (config_file->cs_dir);
+            config_file->cs_dir = SnortStrdup(fullpath);
+
+        }
+#else
+        /*Not supported in WINDOWS*/
+        free (config_file->cs_dir);
+        config_file->cs_dir = NULL;
+#endif
+        ControlSocketConfigureDirectory(config_file->cs_dir);
+    }
+
     return config_file;
 }
 
@@ -4157,7 +4386,7 @@ void FreeVarList(VarNode *head)
     while (head != NULL)
     {
         VarNode *tmp = head;
-        
+
         head = head->next;
 
         if (tmp->name != NULL)
@@ -4224,6 +4453,11 @@ static void SnortInit(int argc, char **argv)
     LogMessage("\n");
     LogMessage("        --== Initializing Snort ==--\n");
 
+    if (SnortStrnlen(signal_error_msg, STD_BUF)> 0)
+    {
+        ErrorMessage("%s", signal_error_msg);
+    }
+
     if (!ScVersionMode())
     {
         /* Every run mode except version will potentially need output
@@ -4262,6 +4496,7 @@ static void SnortInit(int argc, char **argv)
         RegisterPreprocessorProfile("decode", &decodePerfStats, 0, &totalPerfStats);
         RegisterPreprocessorProfile("eventq", &eventqPerfStats, 0, &totalPerfStats);
         RegisterPreprocessorProfile("total", &totalPerfStats, 0, NULL);
+        RegisterPreprocessorProfile("daq meta", &metaPerfStats, 0, NULL);
 #endif
 
         LogMessage("Parsing Rules file \"%s\"\n", snort_conf_file);
@@ -4277,10 +4512,10 @@ static void SnortInit(int argc, char **argv)
 #ifdef TARGET_BASED
         /* Parse attribute table stuff here since config max_attribute_hosts
          * is apart from attribute table configuration.
-         * Only attribute table in default policy is processed. Attribute table in 
-         * other policies indicates that attribute table in default table should 
+         * Only attribute table in default policy is processed. Attribute table in
+         * other policies indicates that attribute table in default table should
          * be used. Filenames for attribute_table should be same across all policies.
-         */ 
+         */
         {
             tSfPolicyId defaultPolicyId = sfGetDefaultPolicy(snort_conf->policy_config);
             TargetBasedConfig *tbc = &snort_conf->targeted_policies[defaultPolicyId]->target_based_config;
@@ -4298,6 +4533,12 @@ static void SnortInit(int argc, char **argv)
                 file_name = saved_file_name;
                 file_line = saved_file_line;
             }
+
+            /**Live host updates is initialized even if adaptive policy is turned off.
+             */
+#ifdef SUP_IP6
+            SFLAT_init();
+#endif
         }
 #endif
 
@@ -4442,6 +4683,8 @@ static void SnortInit(int argc, char **argv)
     InitDynamicDetectionPlugins(snort_conf);
 #endif
 
+    EventTrace_Init();
+
     if (ScIdsMode() || ScTestMode())
     {
         detection_filter_print_config(snort_conf->detection_filter_config);
@@ -4452,9 +4695,9 @@ static void SnortInit(int argc, char **argv)
         /* Check rule state lists, enable/disabled
          * and err on 'special' GID without OTN.
          */
-        /* 
-         * Modified toi use sigInfo.shared in otn instead of the GENERATOR ID  - man 
-         */ 
+        /*
+         * Modified toi use sigInfo.shared in otn instead of the GENERATOR ID  - man
+         */
         SetRuleStates(snort_conf);
 
         /* Verify the preprocessors are configured properly */
@@ -4478,8 +4721,6 @@ static void SnortInit(int argc, char **argv)
                 __FILE__, __LINE__);
     }
 
-    // the jury is still out on this 2.9 location ...
-    // see comment in unpriv init for 2.8.X location
     fpCreateFastPacketDetection(snort_conf);
 
 #ifdef INTEL_SOFT_CPM
@@ -4491,6 +4732,7 @@ static void SnortInit(int argc, char **argv)
     PPM_PRINT_CFG(&snort_conf->ppm_cfg);
 #endif
 
+    ControlSocketInit();
 }
 
 #if defined(INLINE_FAILOPEN) && !defined(WIN32)
@@ -4540,6 +4782,14 @@ static DAQ_Verdict IgnoreCallback (
 // packets in a fail open mode in the main thread.  we don't want big delays
 // here to cause excess latency or dropped packets in that thread which may
 // be the case if all threads are pinned to a single cpu/core.
+//
+// clarification: once snort opens/starts the DAQ, packets are queued for snort
+// and must be disposed of quickly or the queue will overflow and packets will
+// be dropped so the fail open thread does the remaining initialization while
+// the main thread passes packets.  prior to opening and starting the DAQ,
+// packet passing is done by the driver/hardware.  the goal then is to put as
+// much initialization stuff in SnortInit() as possible and to restrict this
+// function to those things that depend on DAQ startup or non-root user/group.
 static void SnortUnprivilegedInit(void)
 {
 #ifdef ACTIVE_RESPONSE
@@ -4548,9 +4798,11 @@ static void SnortUnprivilegedInit(void)
     Active_Init(snort_conf);
 #endif
 
-    InitPidChrootAndPrivs();
+    InitPidChrootAndPrivs(snort_main_thread_pid);
 
 #if defined(HAVE_LINUXTHREADS) && !defined(WIN32)
+    // this must be done after dropping privs for linux threads
+    // to ensure that child threads can communicate with parent
     SnortStartThreads();
 #endif
 
@@ -4568,9 +4820,6 @@ static void SnortUnprivilegedInit(void)
     // to /var/log/snort.  in this case they must override log path.
     PostConfigInitPlugins(snort_conf->plugin_post_config_funcs);
 
-    // this is the 2.8.X location
-    //fpCreateFastPacketDetection(snort_conf);
-
     LogMessage("\n");
     LogMessage("        --== Initialization Complete ==--\n");
 
@@ -4585,7 +4834,7 @@ static void SnortUnprivilegedInit(void)
         CleanExit(0);
     }
 
-    LogMessage("Commencing packet processing (pid=%u)\n", getpid());
+    LogMessage("Commencing packet processing (pid=%u)\n", snort_main_thread_pid);
 
     snort_initializing = 0;
 }
@@ -4601,8 +4850,45 @@ static void SetNoCores(void)
 }
 #endif
 
+/* Add a signal handler
+ *
+ * If check needed, also check whether previous signal_handler is neither SIG_IGN nor SIG_DFL
+ *
+ * Return:
+ *     0: error
+ *     1: success
+ */
+int SnortAddSignal(int sig, sighandler_t signal_handler, int check_needed)
+{
+    sighandler_t pre_handler;
+
+#ifdef HAVE_SIGACTION
+    struct sigaction action;
+    struct sigaction old_action;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+    action.sa_handler = signal_handler;
+    sigaction(sig, &action, &old_action);
+    pre_handler = old_action.sa_handler;
+#else
+    pre_handler = signal(sig, signal_handler);
+#endif
+    if (SIG_ERR == pre_handler)
+    {
+        SnortSnprintfAppend(signal_error_msg, STD_BUF,
+                "Could not add handler for signal %d \n", sig);
+        return 0;
+    }
+    else if (check_needed && (SIG_IGN != pre_handler) && (SIG_DFL!= pre_handler))
+    {
+        SnortSnprintfAppend(signal_error_msg, STD_BUF,
+                "WARNING: Handler is already installed for signal %d.\n", sig);
+    }
+    return 1;
+}
 static void InitSignals(void)
 {
+
 #ifndef WIN32
 # if defined(LINUX) || defined(FREEBSD) || defined(OPENBSD) || \
      defined(SOLARIS) || defined(BSD) || defined(MACOS)
@@ -4624,17 +4910,22 @@ static void InitSignals(void)
      * Windows doesn't like all of these signals, and will
      * set errno for some.  Ignore/reset this error so it
      * doesn't interfere with later checks of errno value.  */
-    signal(SIGTERM, SigExitHandler);
-    signal(SIGINT, SigExitHandler);
-    signal(SIGQUIT, SigExitHandler);
-    signal(SIGUSR1, SigUsrHandler);
-    signal(SIGHUP, SigHupHandler);
-    signal(SIGNAL_SNORT_ROTATE_STATS, SigRotateStatsHandler);
+    signal_error_msg[0] = '\0';
+    SnortAddSignal(SIGTERM, SigExitHandler, 1);
+    SnortAddSignal(SIGINT, SigExitHandler, 1);
+    SnortAddSignal(SIGQUIT, SigExitHandler, 1);
+    SnortAddSignal(SIGNAL_SNORT_DUMP_STATS, SigDumpStatsHandler, 1);
+    SnortAddSignal(SIGNAL_SNORT_RELOAD, SigReloadHandler, 1);
+    SnortAddSignal(SIGNAL_SNORT_ROTATE_STATS, SigRotateStatsHandler, 1);
+
+#ifdef CONTROL_SOCKET
+    SnortAddSignal(SIGPIPE, SigPipeHandler, 1);
+#endif
 
 #ifdef TARGET_BASED
     /* Used to print warning if attribute table is not configured
      * When it is, it will set new signal handler */
-    signal(SIGNAL_SNORT_READ_ATTR_TBL, SigNoAttributeTableHandler);
+    SnortAddSignal(SIGNAL_SNORT_READ_ATTR_TBL, SigNoAttributeTableHandler, 1);
 #endif
 
     errno = 0;
@@ -4750,6 +5041,28 @@ static void FreeReferences(ReferenceSystemNode *head)
 }
 
 #if defined(SNORT_RELOAD) && !defined(WIN32)
+static void updatePeriodicCheck()
+{
+    PeriodicCheckFuncNode *checkFunc;
+
+    /* reset preprocessors */
+    checkFunc = periodic_check_funcs;
+    while (checkFunc != NULL)
+    {
+        if ( 0 == checkFunc->time_left )
+        {
+            checkFunc->func(-1, checkFunc->arg);
+            checkFunc->time_left = checkFunc->period;
+            //LogMessage("        --== Share Memory! ==--\n");
+        }
+        else
+            checkFunc->time_left--;
+
+        checkFunc = checkFunc->next;
+    }
+
+}
+
 static void * ReloadConfigThread(void *data)
 {
     sigset_t mtmask;
@@ -4766,10 +5079,10 @@ static void * ReloadConfigThread(void *data)
 
     while (!snort_exiting)
     {
-        if (hup_signal != reload_hups)
+        if (reload_signal != reload_total)
         {
             int reload_failed = 0;
-            reload_hups++;
+            reload_total++;
 
             LogMessage("\n");
             LogMessage("        --== Reloading Snort ==--\n");
@@ -4814,6 +5127,8 @@ static void * ReloadConfigThread(void *data)
                 LogMessage("\n");
             }
         }
+        /* Use the maintenance thread for periodic check*/
+        updatePeriodicCheck();
 
         sleep(1);
     }
@@ -5314,17 +5629,26 @@ static int VerifyOutputs(SnortConfig *old_config, SnortConfig *new_config)
     {
 
         for (new_output_config = new_config->output_configs;
-             new_output_config != NULL;
-             new_output_config = new_output_config->next)
+                new_output_config != NULL;
+                new_output_config = new_output_config->next)
         {
-            if ((strcasecmp(old_output_config->keyword,
-                            new_output_config->keyword) == 0) &&
-                (strcasecmp(old_output_config->opts,
-                            new_output_config->opts) == 0))
+            if (strcasecmp(old_output_config->keyword, new_output_config->keyword) == 0)
             {
-                new_outputs++;
-                break;
+                if ((old_output_config->opts != NULL) &&
+                        (new_output_config->opts != NULL) &&
+                        (strcasecmp(old_output_config->opts, new_output_config->opts) == 0))
+                {
+                    new_outputs++;
+                    break;
+                }
+                else if (old_output_config->opts == NULL &&
+                        new_output_config->opts == NULL)
+                {
+                    new_outputs++;
+                    break;
+                }
             }
+
         }
 
         old_outputs++;

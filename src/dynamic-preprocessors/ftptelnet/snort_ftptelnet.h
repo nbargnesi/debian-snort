@@ -1,7 +1,7 @@
 /*
  * snort_ftptelnet.h
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -74,10 +74,10 @@ void FTPTelnetCleanupFTPBounceTo(void *ftpBounce);
 void FTPTelnetCheckFTPServerConfigs(FTPTELNET_GLOBAL_CONF *);
 void _FTPTelnetAddPortsOfInterest(FTPTELNET_GLOBAL_CONF *, tSfPolicyId);
 
-int ProcessGlobalConf(FTPTELNET_GLOBAL_CONF *, char *, int);
+int ProcessFTPGlobalConf(FTPTELNET_GLOBAL_CONF *, char *, int);
 int ProcessTelnetConf(FTPTELNET_GLOBAL_CONF *, char *, int);
 int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *, char *, int);
 int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *, char *, int);
-int PrintGlobalConf(FTPTELNET_GLOBAL_CONF *);
+int PrintFTPGlobalConf(FTPTELNET_GLOBAL_CONF *);
 int FTPTelnetCheckConfigs( void* , tSfPolicyId );
 #endif

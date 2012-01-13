@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2010 Sourcefire, Inc.
+** Copyright (C) 2006-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -28,7 +28,7 @@
 #include "decode.h"
 #include "util.h"
 
-#define MAX_PROTOCOL_ORDINAL 8192 
+#define MAX_PROTOCOL_ORDINAL 8192
 
 typedef struct _SFTargetProtocolReference
 {
@@ -38,8 +38,8 @@ typedef struct _SFTargetProtocolReference
 
 void InitializeProtocolReferenceTable(void);
 void FreeProtoocolReferenceTable(void);
-int16_t AddProtocolReference(char *protocol);
-int16_t FindProtocolReference(char *protocol);
+int16_t AddProtocolReference(const char *protocol);
+int16_t FindProtocolReference(const char *protocol);
 
 int16_t GetProtocolReference(Packet *p);
 

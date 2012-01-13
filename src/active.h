@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,6 +19,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
+
+// @file    active.h
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #ifndef __ACTIVE_H__
 #define __ACTIVE_H__
 
@@ -56,55 +60,75 @@ int Active_IsEnabled(void);
 void Active_SetEnabled(int on_off);
 #endif // ACTIVE_RESPONSE
 
-extern int active_drop_pkt;
+typedef enum {
+    ACTIVE_ALLOW = 0,
+    ACTIVE_DROP = 1,
+    ACTIVE_WOULD_DROP = 2,
+    ACTIVE_FORCE_DROP = 3
+} tActiveDrop;
+extern tActiveDrop active_drop_pkt;
 extern int active_drop_ssn;
 #ifdef ACTIVE_RESPONSE
 extern int active_have_rsp;
 #endif
 
-static INLINE void Active_Reset (void)
+static inline void Active_Reset (void)
 {
-    active_drop_pkt = active_drop_ssn = 0;
+    active_drop_pkt = ACTIVE_ALLOW;
+    active_drop_ssn = 0;
 #ifdef ACTIVE_RESPONSE
     active_have_rsp = 0;
 #endif
 }
 
-static INLINE void Active_DropPacket (void)
+static inline void Active_ForceDropPacket (void)
 {
-    if ( ScInlineMode() )
+    active_drop_pkt = ACTIVE_FORCE_DROP;
+}
+
+static inline void Active_DropPacket (void)
+{
+    if ( active_drop_pkt != ACTIVE_FORCE_DROP )
     {
-        active_drop_pkt = 1;
-    }
-    else if (ScInlineTestMode())
-    {
-        active_drop_pkt = 2;
+        if ( ScInlineMode() )
+        {
+            active_drop_pkt = ACTIVE_DROP;
+        }
+        else if (ScInlineTestMode())
+        {
+            active_drop_pkt = ACTIVE_WOULD_DROP;
+        }
     }
 }
 
-static INLINE void Active_DropSession (void)
+static inline void Active_DropSession (void)
 {
     active_drop_ssn = 1;
     Active_DropPacket();
 }
 
-static INLINE int Active_PacketWasDropped (void)
+static inline int Active_PacketWouldBeDropped (void)
 {
-    return ( active_drop_pkt == 1 );
+    return (active_drop_pkt == ACTIVE_WOULD_DROP );
 }
 
-static INLINE int Active_PacketWouldBeDropped (void)
+static inline int Active_PacketForceDropped (void)
 {
-    return (active_drop_pkt == 2 );
+    return (active_drop_pkt == ACTIVE_FORCE_DROP );
 }
 
-static INLINE int Active_SessionWasDropped (void)
+static inline int Active_PacketWasDropped (void)
+{
+    return ( active_drop_pkt == ACTIVE_DROP ) || Active_PacketForceDropped();
+}
+
+static inline int Active_SessionWasDropped (void)
 {
     return ( active_drop_ssn != 0 );
 }
 
 #ifdef ACTIVE_RESPONSE
-static INLINE int Active_ResponseQueued (void)
+static inline int Active_ResponseQueued (void)
 {
     return ( active_have_rsp != 0 );
 }
@@ -117,6 +141,14 @@ int Active_DropAction(Packet*);
 // drops current session w/o active response invoked
 // for rules with custom response = resp3 | react
 int Active_IgnoreSession(Packet*);
+
+// force drops the current session w/o active response invoked
+// ignores policy/inline test mode and treat drop as alert
+int Active_ForceDropAction(Packet *p);
+
+// force drops the current session with active response invoked
+// ignores policy/inline test mode and treat drop as alert
+int Active_ForceDropResetAction(Packet *p);
 
 #endif // __ACTIVE_H__
 

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2007-2010 Sourcefire, Inc.
+ * Copyright (C) 2007-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -21,7 +21,11 @@
  ****************************************************************************/
 
 #include <string.h>
-#include "decode.h" 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "decode.h"
 
 #ifdef SUP_IP6
 
@@ -33,9 +37,9 @@
 #define IP6_VER(x) ((x) >> 28)
 
 /* The 'Packet' structure is almost always allocated on the stack.
- * Likewise, return buffers will almost always be aswell. 
+ * Likewise, return buffers will almost always be aswell.
  * So, for performance reasons, argument validation can be disabled
- * and removed from the code at compile time to prevent unecessary extra 
+ * and removed from the code at compile time to prevent unecessary extra
  * conditionals from being checked at run-time. */
 #define ERR_CHK_LVL  0
 #if ERR_CHK_LVL == 2
@@ -46,21 +50,21 @@
 #define VALIDATE(x,y)
 #endif
 
-sfip_t *ip6_ret_src(Packet *p)
+sfip_t *ip6_ret_src(const Packet *p)
 {
     VALIDATE(p, 1);
 
     return &p->ip6h->ip_src;
 }
 
-sfip_t *orig_ip6_ret_src(Packet *p)
+sfip_t *orig_ip6_ret_src(const Packet *p)
 {
     VALIDATE(p, 1);
 
     return &p->orig_ip6h->ip_src;
 }
 
-sfip_t *ip6_ret_dst(Packet *p)
+sfip_t *ip6_ret_dst(const Packet *p)
 {
     VALIDATE(p, 1);
 
@@ -68,14 +72,14 @@ sfip_t *ip6_ret_dst(Packet *p)
 }
 
 
-sfip_t *orig_ip6_ret_dst(Packet *p)
+sfip_t *orig_ip6_ret_dst(const Packet *p)
 {
     VALIDATE(p, 1);
 
     return &p->orig_ip6h->ip_dst;
 }
 
-uint16_t ip6_ret_toc(Packet *p)
+uint16_t ip6_ret_toc(const Packet *p)
 {
     uint16_t toc;
     VALIDATE(p,1);
@@ -85,7 +89,7 @@ uint16_t ip6_ret_toc(Packet *p)
     return toc;
 }
 
-uint16_t orig_ip6_ret_toc(Packet *p)
+uint16_t orig_ip6_ret_toc(const Packet *p)
 {
     uint16_t toc;
     VALIDATE(p,1);
@@ -94,20 +98,20 @@ uint16_t orig_ip6_ret_toc(Packet *p)
     return toc;
 }
 
-uint8_t ip6_ret_hops(Packet *p)
+uint8_t ip6_ret_hops(const Packet *p)
 {
 //    VALIDATE(p,1);
 
     return p->ip6h->hop_lmt;
 }
-uint8_t orig_ip6_ret_hops(Packet *p)
+uint8_t orig_ip6_ret_hops(const Packet *p)
 {
 //    VALIDATE(p,1);
 
     return p->orig_ip6h->hop_lmt;
 }
 
-uint16_t ip6_ret_len(Packet *p)
+uint16_t ip6_ret_len(const Packet *p)
 {
     VALIDATE(p,1);
 
@@ -117,14 +121,14 @@ uint16_t ip6_ret_len(Packet *p)
     return p->ip6h->len;
 }
 
-uint16_t orig_ip6_ret_len(Packet *p)
+uint16_t orig_ip6_ret_len(const Packet *p)
 {
     VALIDATE(p,1);
 
     return p->orig_ip6h->len;
 }
 
-uint32_t ip6_ret_id(Packet *p)
+uint32_t ip6_ret_id(const Packet *p)
 {
     IP6Frag *frag_hdr;
     if (p->ip6_extension_count == 0)
@@ -135,25 +139,25 @@ uint32_t ip6_ret_id(Packet *p)
     return frag_hdr->ip6f_ident;
 }
 
-uint32_t orig_ip6_ret_id(Packet *p)
+uint32_t orig_ip6_ret_id(const Packet *p)
 {
 // XXX-IPv6 "NOT YET IMPLEMENTED - IP6 identification"
     return 0;
 }
 
-uint8_t ip6_ret_next(Packet *p)
+uint8_t ip6_ret_next(const Packet *p)
 {
     VALIDATE(p,1);
     return p->ip6h->next;
 }
 
-uint8_t orig_ip6_ret_next(Packet *p)
+uint8_t orig_ip6_ret_next(const Packet *p)
 {
     VALIDATE(p,1);
     return p->orig_ip6h->next;
 }
 
-uint16_t ip6_ret_off(Packet *p)
+uint16_t ip6_ret_off(const Packet *p)
 {
     IP6Frag *frag_hdr;
     if (p->ip6_extension_count == 0)
@@ -164,153 +168,153 @@ uint16_t ip6_ret_off(Packet *p)
     return frag_hdr->ip6f_offlg;
 }
 
-uint16_t orig_ip6_ret_off(Packet *p)
+uint16_t orig_ip6_ret_off(const Packet *p)
 {
 // XXX-IPv6 "NOT YET IMPLEMENTED - IP6 frag offset"
     return 0;
 }
 
-uint8_t ip6_ret_ver(Packet *p)
+uint8_t ip6_ret_ver(const Packet *p)
 {
-    return (uint8_t)IP6_VER(p->ip6h->vcl); 
+    return (uint8_t)IP6_VER(p->ip6h->vcl);
 }
 
-uint8_t orig_ip6_ret_ver(Packet *p)
+uint8_t orig_ip6_ret_ver(const Packet *p)
 {
-    return (uint8_t)IP6_VER(p->orig_ip6h->vcl); 
+    return (uint8_t)IP6_VER(p->orig_ip6h->vcl);
 }
 
-sfip_t *ip4_ret_dst(Packet *p)
+sfip_t *ip4_ret_dst(const Packet *p)
 {
     VALIDATE(p,1);
     return &p->ip4h->ip_dst;
 }
 
-sfip_t *orig_ip4_ret_dst(Packet *p)
+sfip_t *orig_ip4_ret_dst(const Packet *p)
 {
     VALIDATE(p,1);
     return &p->orig_ip4h->ip_dst;
 }
 
-sfip_t *ip4_ret_src(Packet *p)
+sfip_t *ip4_ret_src(const Packet *p)
 {
     VALIDATE(p,1);
     return &p->ip4h->ip_src;
 }
 
-sfip_t *orig_ip4_ret_src(Packet *p)
+sfip_t *orig_ip4_ret_src(const Packet *p)
 {
     VALIDATE(p,1);
     return &p->orig_ip4h->ip_src;
 }
 
-uint16_t ip4_ret_tos(Packet *p)
+uint16_t ip4_ret_tos(const Packet *p)
 {
    VALIDATE(p,1);
 
    return p->ip4h->ip_tos;
 }
 
-uint16_t orig_ip4_ret_tos(Packet *p)
+uint16_t orig_ip4_ret_tos(const Packet *p)
 {
    VALIDATE(p,1);
 
    return p->orig_ip4h->ip_tos;
 }
 
-uint8_t ip4_ret_ttl(Packet *p)
+uint8_t ip4_ret_ttl(const Packet *p)
 {
     VALIDATE(p,1);
 
     return p->ip4h->ip_ttl;
 }
 
-uint8_t orig_ip4_ret_ttl(Packet *p)
+uint8_t orig_ip4_ret_ttl(const Packet *p)
 {
     VALIDATE(p,1);
 
     return p->orig_ip4h->ip_ttl;
 }
 
-uint16_t ip4_ret_len(Packet *p)
+uint16_t ip4_ret_len(const Packet *p)
 {
     VALIDATE(p,1);
 
     return p->ip4h->ip_len;
 }
 
-uint16_t orig_ip4_ret_len(Packet *p)
+uint16_t orig_ip4_ret_len(const Packet *p)
 {
     VALIDATE(p,1);
 
     return p->orig_ip4h->ip_len;
 }
 
-uint32_t ip4_ret_id(Packet *p)
+uint32_t ip4_ret_id(const Packet *p)
 {
     VALIDATE(p,1);
-    
+
     return (uint32_t)p->ip4h->ip_id;
 }
 
-uint32_t orig_ip4_ret_id(Packet *p)
+uint32_t orig_ip4_ret_id(const Packet *p)
 {
     VALIDATE(p,1);
-    
+
     return (uint32_t)p->orig_ip4h->ip_id;
 }
 
-uint8_t ip4_ret_proto(Packet *p)
+uint8_t ip4_ret_proto(const Packet *p)
 {
     // VALIDATION()
-    
+
     return p->ip4h->ip_proto;
 }
 
-uint8_t orig_ip4_ret_proto(Packet *p)
+uint8_t orig_ip4_ret_proto(const Packet *p)
 {
     // VALIDATION()
-    
+
     return p->orig_ip4h->ip_proto;
 }
 
-uint16_t ip4_ret_off(Packet *p)
+uint16_t ip4_ret_off(const Packet *p)
 {
     return p->ip4h->ip_off;
 }
 
-uint16_t orig_ip4_ret_off(Packet *p)
+uint16_t orig_ip4_ret_off(const Packet *p)
 {
     return p->orig_ip4h->ip_off;
 }
 
-uint8_t ip4_ret_ver(Packet *p)
+uint8_t ip4_ret_ver(const Packet *p)
 {
-    return IP_VER(p->iph); 
+    return IP_VER(p->iph);
 }
 
-uint8_t orig_ip4_ret_ver(Packet *p)
+uint8_t orig_ip4_ret_ver(const Packet *p)
 {
     return IP_VER(p->orig_iph);
 }
 
-uint8_t ip4_ret_hlen(Packet *p)
+uint8_t ip4_ret_hlen(const Packet *p)
 {
     return IP_HLEN(p->iph);
 }
 
-uint8_t orig_ip4_ret_hlen(Packet *p)
+uint8_t orig_ip4_ret_hlen(const Packet *p)
 {
     return IP_HLEN(p->orig_iph);
 }
 
-uint8_t ip6_ret_hlen(Packet *p)
+uint8_t ip6_ret_hlen(const Packet *p)
 {
     /* Snort is expecting this number to be in terms of 32 bit words */
     return IP6_HDR_LEN / 4 ;
 }
 
-uint8_t orig_ip6_ret_hlen(Packet *p)
+uint8_t orig_ip6_ret_hlen(const Packet *p)
 {
     return IP6_HDR_LEN / 4;
 }
@@ -342,7 +346,7 @@ void sfiph_build(Packet *p, const void *hdr, int family)
     {
         hdr4 = (IPHdr*)hdr;
 
-        /* The struct Snort uses is identical to the actual IP6 struct, 
+        /* The struct Snort uses is identical to the actual IP6 struct,
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
         memcpy(&p->inner_ip4h, hdr4, sizeof(IPHdr) - 8);
@@ -354,8 +358,8 @@ void sfiph_build(Packet *p, const void *hdr, int family)
     else
     {
         hdr6 = (IP6RawHdr*)hdr;
-           
-        /* The struct Snort uses is identical to the actual IP6 struct, 
+
+        /* The struct Snort uses is identical to the actual IP6 struct,
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
         memcpy(&p->inner_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
@@ -393,7 +397,7 @@ void sfiph_orig_build(Packet *p, const void *hdr, int family)
     {
         hdr4 = (IPHdr*)hdr;
 
-        /* The struct Snort uses is identical to the actual IP6 struct, 
+        /* The struct Snort uses is identical to the actual IP6 struct,
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
         memcpy(&p->inner_orig_ip4h, hdr4, sizeof(IPHdr) - 8);
@@ -405,8 +409,8 @@ void sfiph_orig_build(Packet *p, const void *hdr, int family)
     else
     {
         hdr6 = (IP6RawHdr*)hdr;
-           
-        /* The struct Snort uses is identical to the actual IP6 struct, 
+
+        /* The struct Snort uses is identical to the actual IP6 struct,
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
         memcpy(&p->inner_orig_ip6h, hdr6, sizeof(IP6RawHdr) - 32);

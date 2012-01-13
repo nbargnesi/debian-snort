@@ -127,3 +127,8 @@ preprocessor stream5_global
  track_udp
  track_icmp
 
+
+Caveats:
+========
+
+When Snort is run on the primary network interface of an OpenBSD system, the reload and failopen operations may not function as expected.

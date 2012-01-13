@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2010 Sourcefire, Inc.
+ * Copyright (C) 2002-2011 Sourcefire, Inc.
  * Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  * Author: Adam Keeton
  *
@@ -19,6 +19,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef WIN32
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,6 +34,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
+#ifdef HAVE_UUID_UUID_H
+#include<uuid/uuid.h>
+#endif
 
 #include "Unified2_common.h"
 
@@ -34,11 +45,71 @@
 #define STEVE -1
 #define FAILURE STEVE
 
-
+#ifndef WIN32
 #ifndef uint32_t
 typedef unsigned int uint32_t;
 typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
+#endif
+#else
+void inet_ntop(int family, const void *ip_raw, char *buf, int bufsize) {
+    int i;
+
+    if(!ip_raw || !buf || !bufsize ||
+       (family != AF_INET && family != AF_INET6) ||
+       /* Make sure if it's IPv6 that the buf is large enough. */
+       /* Need atleast a max of 8 fields of 4 bytes plus 7 for colons in
+        * between.  Need 1 more byte for null. */
+       (family == AF_INET6 && bufsize < 8*4 + 7 + 1) ||
+       /* Make sure if it's IPv4 that the buf is large enough. */
+       /* 4 fields of 3 numbers, plus 3 dots and a null byte */
+       (family == AF_INET && bufsize < 3*4 + 4) )
+    {
+        if(buf && bufsize > 0) buf[0] = 0;
+        return;
+    }
+
+    /* 4 fields of at most 3 characters each */
+    if(family == AF_INET) {
+        u_int8_t *p = (u_int8_t*)ip_raw;
+
+        for(i=0; p < ((u_int8_t*)ip_raw) + 4; p++) {
+            i += sprintf(&buf[i], "%d", *p);
+
+            /* If this is the last iteration, this could technically cause one
+             *  extra byte to be written past the end. */
+            if(i < bufsize && ((p + 1) < ((u_int8_t*)ip_raw+4)))
+                buf[i] = '.';
+
+            i++;
+        }
+
+    /* Check if this is really just an IPv4 address represented as 6,
+     * in compatible format */
+#if 0
+    }
+    else if(!field[0] && !field[1] && !field[2]) {
+        unsigned char *p = (unsigned char *)(&ip->ip[12]);
+
+        for(i=0; p < &ip->ip[16]; p++)
+             i += sprintf(&buf[i], "%d.", *p);
+#endif
+    }
+    else {
+        u_int16_t *p = (u_int16_t*)ip_raw;
+
+        for(i=0; p < ((u_int16_t*)ip_raw) + 8; p++) {
+            i += sprintf(&buf[i], "%04x", ntohs(*p));
+
+            /* If this is the last iteration, this could technically cause one
+             *  extra byte to be written past the end. */
+            if(i < bufsize && ((p + 1) < ((u_int16_t*)ip_raw) + 8))
+                buf[i] = ':';
+
+            i++;
+        }
+    }
+}
 #endif
 
 typedef struct _record {
@@ -60,7 +131,7 @@ u2iterator *new_iterator(char *filename) {
     u2iterator *ret;
 
     if(!f) {
-        printf("new_iterator: Failed to open file: %s\n\tErrno: %s\n", 
+        printf("new_iterator: Failed to open file: %s\n\tErrno: %s\n",
           filename, strerror(errno));
         return NULL;
     }
@@ -68,10 +139,10 @@ u2iterator *new_iterator(char *filename) {
     ret = (u2iterator*)malloc(sizeof(u2iterator));
 
     if(!ret) {
-        printf("new_iterator: Failed to malloc %lu bytes.\n", sizeof(u2iterator));
+        printf("new_iterator: Failed to malloc %lu bytes.\n", (unsigned long)sizeof(u2iterator));
         return NULL;
     }
-            
+
     ret->file = f;
     ret->filename = strdup(filename);
     return ret;
@@ -84,7 +155,7 @@ void free_iterator(u2iterator *it) {
 }
 
 int get_record(u2iterator *it, u2record *record) {
-    uint bytes_read;
+    uint32_t bytes_read;
 
     if(!it || !it->file) return FAILURE;
 
@@ -96,7 +167,7 @@ int get_record(u2iterator *it, u2record *record) {
     }
 
     /* read type and length */
-    bytes_read = fread(record, 1, sizeof(uint) * 2, it->file);
+    bytes_read = fread(record, 1, sizeof(uint32_t) * 2, it->file);
     /* But they're in network order! */
     record->type= ntohl(record->type);
     record->length= ntohl(record->length);
@@ -107,9 +178,9 @@ int get_record(u2iterator *it, u2record *record) {
        /* EOF */
        return FAILURE;
 
-    if(bytes_read != sizeof(uint)*2) {
+    if(bytes_read != sizeof(uint32_t)*2) {
         puts("get_record: (1) Failed to read all of record.");
-        printf("\tRead %u of %lu bytes\n", bytes_read, sizeof(uint)*2);
+        printf("\tRead %u of %lu bytes\n", bytes_read, (unsigned long)sizeof(uint32_t)*2);
         return FAILURE;
     }
 
@@ -119,18 +190,22 @@ int get_record(u2iterator *it, u2record *record) {
     if(bytes_read != record->length) {
         puts("get_record: (2) Failed to read all of record data.");
         printf("\tRead %u of %u bytes\n", bytes_read, record->length);
-        return FAILURE;      
+        return FAILURE;
     }
 
     return SUCCESS;
 }
 
 void extradata_dump(u2record *record) {
-    uint8_t *field;
+    uint8_t *field, *data;
     int i;
+    int len = 0;
     SerialUnified2ExtraData event;
     Unified2ExtraDataHdr eventHdr;
-    
+    uint32_t ip;
+    char ip6buf[INET6_ADDRSTRLEN+1];
+    struct in6_addr ipAddr;
+
     memcpy(&eventHdr, record->data, sizeof(Unified2ExtraDataHdr));
 
     memcpy(&event, record->data + sizeof(Unified2ExtraDataHdr) , sizeof(SerialUnified2ExtraData));
@@ -159,32 +234,88 @@ void extradata_dump(u2record *record) {
              event.event_second, event.type,
              event.data_type, event.blob_length);
 
-    if(event.type & EVENT_INFO_XFF_IPV4)
+    len = event.blob_length - sizeof(event.blob_length) - sizeof(event.data_type);
+
+    switch(event.type)
     {
-        uint32_t ip;
-        memcpy(&ip, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(uint32_t));
+        case EVENT_INFO_XFF_IPV4:
+            memcpy(&ip, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(uint32_t));
+            ip = ntohl(ip);
+            printf("Original Client IP: %u.%u.%u.%u\n",
+                    TO_IP(ip));
+            break;
 
-        ip = ntohl(ip);
-        printf("Original Client IP: %u.%u.%u.%u\n",
-                TO_IP(ip));
-    }
-    else if(event.type &  EVENT_INFO_XFF_IPV6)
-    {
-        char ip6buf[INET6_ADDRSTRLEN+1];
-        struct in6_addr ipAddr;
+        case EVENT_INFO_XFF_IPV6:
+            memcpy(&ipAddr, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(struct in6_addr));
+            inet_ntop(AF_INET6, &ipAddr, ip6buf, INET6_ADDRSTRLEN);
+            printf("Original Client IP: %s\n",
+                    ip6buf);
+            break;
 
-        memcpy(&ipAddr, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(struct in6_addr));
+        case EVENT_INFO_GZIP_DATA:
+            printf("GZIP Decompressed Data: %.*s\n",
+                len, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
 
-        inet_ntop(AF_INET6, &ipAddr, ip6buf, INET6_ADDRSTRLEN);
+        case EVENT_INFO_JSNORM_DATA:
+            printf("Normalized JavaScript Data: %.*s\n",
+                len, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
 
-        printf("Original Client IP: %s\n",
-                ip6buf);
-        
-    }
-    else if(event.type & EVENT_INFO_GZIP_DATA)
-    {
-        printf("GZIP Decompressed Data: %s\n",
-                record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+        case EVENT_INFO_SMTP_FILENAME:
+            printf("SMTP Attachment Filename: %.*s\n",
+                len,record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
+
+        case EVENT_INFO_SMTP_MAILFROM:
+            printf("SMTP MAIL FROM Addresses: %.*s\n",
+                    len,record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
+
+        case EVENT_INFO_SMTP_RCPTTO:
+            printf("SMTP RCPT TO Addresses: %.*s\n",
+                len, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
+
+        case EVENT_INFO_SMTP_EMAIL_HDRS:
+            printf("SMTP EMAIL HEADERS: \n%.*s\n",
+                len, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
+
+        case EVENT_INFO_HTTP_URI:
+            printf("HTTP URI: %.*s\n",
+                len, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData));
+            break;
+
+        case EVENT_INFO_HTTP_HOSTNAME:
+            printf("HTTP Hostname: ");
+            data = record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData);
+            for(i=0; i < len; i++)
+            {
+                if(iscntrl(data[i]))
+                    printf("%c",'.');
+                else
+                    printf("%c",data[i]);
+            }
+            printf("\n");
+            break;
+
+        case EVENT_INFO_IPV6_SRC:
+            memcpy(&ipAddr, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(struct in6_addr));
+            inet_ntop(AF_INET6, &ipAddr, ip6buf, INET6_ADDRSTRLEN);
+            printf("IPv6 Source Address: %s\n",
+                    ip6buf);
+            break;
+
+        case EVENT_INFO_IPV6_DST:
+            memcpy(&ipAddr, record->data + sizeof(Unified2ExtraDataHdr) + sizeof(SerialUnified2ExtraData), sizeof(struct in6_addr));
+            inet_ntop(AF_INET6, &ipAddr, ip6buf, INET6_ADDRSTRLEN);
+            printf("IPv6 Destination Address: %s\n",
+                    ip6buf);
+            break;
+
+        default :
+            break;
     }
 
 }
@@ -209,7 +340,7 @@ void event_dump(u2record *record) {
     field += 2;
     *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
     /* done changing the network ordering */
-    
+
 
     printf("\n(Event)\n"
             "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
@@ -231,7 +362,7 @@ void event6_dump(u2record *record) {
     int i;
     Serial_Unified2IDSEventIPv6_legacy event;
     char ip6buf[INET6_ADDRSTRLEN+1];
-    
+
     memcpy(&event, record->data, sizeof(Serial_Unified2IDSEventIPv6_legacy));
 
     /* network to host ordering */
@@ -278,7 +409,7 @@ void event2_dump(u2record *record) {
     int i;
 
     Serial_Unified2IDSEvent event;
-   
+
     memcpy(&event, record->data, sizeof(Serial_Unified2IDSEvent));
 
     /* network to host ordering */
@@ -294,14 +425,14 @@ void event2_dump(u2record *record) {
     field += 2;
     *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
     field +=6;
-    *(uint32_t*)field = ntohs(*(uint32_t*)field); /* mpls_label */
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
     field += 4;
     /* policy_id and vlanid */
     for(i=0; i<2; i++, field+=2) {
         *(uint16_t*)field = ntohs(*(uint16_t*)field);
     }
     /* done changing the network ordering */
-    
+
 
     printf("\n(Event)\n"
             "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
@@ -344,7 +475,7 @@ void event2_6_dump(u2record *record) {
     field += 2;
     *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
     field +=6;
-    *(uint32_t*)field = ntohs(*(uint32_t*)field); /* mpls_label */
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
     field += 4;
     /* policy_id and vlanid */
     for(i=0; i<2; i++, field+=2) {
@@ -376,6 +507,201 @@ void event2_6_dump(u2record *record) {
 
 }
 
+static inline void print_uuid (const char* label, uint8_t* data)
+{
+#ifdef HAVE_LIBUUID
+    char buf[37];
+    uuid_unparse(data, buf);
+    printf("%s: %s\n", label, buf);
+#else
+    printf("%s: %.*s\n", label, 16, data);
+#endif
+}
+
+void eventng_dump(u2record *record) {
+    uint8_t *field;
+    int i;
+
+    Unified2IDSEventNG event;
+
+    memcpy(&event, record->data, sizeof(Unified2IDSEventNG));
+
+    /* network to host ordering */
+    /* In the event structure, only the last 40 bits are not 32 bit fields */
+    /* The first 11 fields need to be convertted */
+    field = (uint8_t*)&event;
+    for(i=0; i<11; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    /* last 3 fields, with the exception of the last most since it's just one byte */
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
+    field += 2;
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
+    field +=6;
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
+    field += 4;
+    /* vlanid */
+    *(uint16_t*)field = ntohs(*(uint16_t*)field);
+    field+=4;
+
+    /* done changing the network ordering */
+
+
+    printf("\n(Event NG)\n"
+            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
+            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
+            "\tpriority: %u\tip source: %u.%u.%u.%u\tip destination: %u.%u.%u.%u\n"
+            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
+            "\tmpls label: %u\tvland id: %u\n",
+             event.sensor_id, event.event_id,
+             event.event_second, event.event_microsecond,
+             event.signature_id, event.generator_id,
+             event.signature_revision, event.classification_id,
+             event.priority_id, TO_IP(event.ip_source),
+             TO_IP(event.ip_destination), event.sport_itype,
+             event.dport_icode, event.protocol,
+             event.impact_flag, event.blocked,
+             event.mpls_label, event.vlanId);
+
+
+    print_uuid("\tpolicy UUID", field);
+    field+=16;
+
+    for(i=0; i<5; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    printf("\tuser id: %u\t web application id: %u\n",
+                event.user_id, event.web_application_id);
+
+    printf("\tclient application id: %u\tapplication protocol id%u\tpolicy engine rule id: %u\n",
+            event.client_application_id, event.application_protocol_id, event.policyengine_rule_id);
+
+    print_uuid("\tpolicy engine policy uuid", field);
+    field+=16;
+
+    print_uuid("\tinterface ingress uuid", field);
+    field+=16;
+
+    print_uuid("\tinterface engress uuid", field);
+    field+=16;
+
+    print_uuid("\tsecurity zone ingress uuid", field);
+    field+=16;
+
+    print_uuid("\tsecurity zone egress uuid", field);
+}
+
+void eventng_6_dump(u2record *record) {
+    uint8_t *field;
+    int i;
+    char ip6buf[INET6_ADDRSTRLEN+1];
+    Unified2IDSEventIPv6_NG event;
+
+    memcpy(&event, record->data, sizeof(Unified2IDSEventIPv6_NG));
+
+    /* network to host ordering */
+    /* In the event structure, only the last 40 bits are not 32 bit fields */
+    /* The first fields need to be convertted */
+    field = (uint8_t*)&event;
+    for(i=0; i<9; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    field = field + 2*sizeof(struct in6_addr);
+
+    /* last 3 fields, with the exception of the last most since it's just one byte */
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
+    field += 2;
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
+    field +=6;
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
+    field += 4;
+    *(uint16_t*)field = ntohs(*(uint16_t*)field);
+    field += 4;
+    /* done changing the network ordering */
+
+    inet_ntop(AF_INET6, &event.ip_source, ip6buf, INET6_ADDRSTRLEN);
+
+    printf("\n(IPv6 NGFW Event)\n"
+            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
+            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
+            "\tpriority: %u\tip source: %s\t",
+             event.sensor_id, event.event_id,
+             event.event_second, event.event_microsecond,
+             event.signature_id, event.generator_id,
+             event.signature_revision, event.classification_id,
+             event.priority_id, ip6buf);
+
+
+    inet_ntop(AF_INET6, &event.ip_destination, ip6buf, INET6_ADDRSTRLEN);
+    printf("ip destination: %s\n"
+            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
+            "\tmpls label: %u\tvland id: %u\n",
+             ip6buf, event.sport_itype,
+             event.dport_icode, event.protocol,
+             event.impact_flag, event.blocked,
+             event.mpls_label, event.vlanId);
+
+    print_uuid("\tpolicy UUID", field);
+    field+=16;
+
+    for(i=0; i<5; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    printf("\tuser id: %u\t web application id: %u\n",
+                event.user_id, event.web_application_id);
+
+    printf("\tclient application id: %u\tapplication protocol id%u\tpolicy engine rule id: %u\n",
+            event.client_application_id, event.application_protocol_id, event.policyengine_rule_id);
+
+    print_uuid("\tpolicy engine policy uuid", field);
+    field+=16;
+
+    print_uuid("\tinterface ingress uuid", field);
+    field+=16;
+
+    print_uuid("\tinterface engress uuid", field);
+    field+=16;
+
+    print_uuid("\tsecurity zone ingress uuid", field);
+    field+=16;
+
+    print_uuid("\tsecurity zone egress uuid", field);
+
+}
+
+#define LOG_CHARS 16
+
+static void LogBuffer (const uint8_t* p, unsigned n)
+{
+    char hex[(3*LOG_CHARS)+1];
+    char txt[LOG_CHARS+1];
+    unsigned odx = 0, idx = 0, at = 0;
+
+    for ( idx = 0; idx < n; idx++)
+    {
+        uint8_t byte = p[idx];
+        sprintf(hex + 3*odx, "%2.02X ", byte);
+        txt[odx++] = isprint(byte) ? byte : '.';
+
+        if ( odx == LOG_CHARS )
+        {
+            txt[odx] = hex[3*odx] = '\0';
+            printf("[%5u] %s %s\n", at, hex, txt);
+            at = idx + 1;
+            odx = 0;
+        }
+    }
+    if ( odx )
+    {
+        txt[odx] = hex[3*odx] = '\0';
+        printf("[%5u] %-48.48s %s\n", at, hex, txt);
+    }
+}
+
 void packet_dump(u2record *record) {
     uint32_t counter;
     uint8_t *field;
@@ -389,21 +715,16 @@ void packet_dump(u2record *record) {
         *(uint32_t*)field = ntohl(*(uint32_t*)field);
     }
     /* done changing from network ordering */
- 
+
     printf("\nPacket\n"
             "\tsensor id: %u\tevent id: %u\tevent second: %u\n"
             "\tpacket second: %u\tpacket microsecond: %u\n"
             "\tlinktype: %u\tpacket_length: %u\n",
-            packet.sensor_id, packet.event_id, packet.event_second, 
-            packet.packet_second, packet.packet_microsecond, packet.linktype, 
+            packet.sensor_id, packet.event_id, packet.event_second,
+            packet.packet_second, packet.packet_microsecond, packet.linktype,
             packet.packet_length);
-    
-    for(counter = 0; counter < packet.packet_length; counter++) {
-        printf("%2.02X ", record->data[sizeof(Serial_Unified2Packet)-4 + counter]);
-        if( !((counter+1)%16) ) puts("");
-        else if( !((counter+1)%4) ) printf("| ");
-    }
-    puts("");
+
+    LogBuffer(record->data+sizeof(Serial_Unified2Packet)-4, packet.packet_length);
 }
 
 int u2dump(char *file) {
@@ -411,7 +732,7 @@ int u2dump(char *file) {
     u2iterator *it = new_iterator(file);
 
     memset(&record, 0, sizeof(record));
-    
+
     if(!it) {
         printf("u2dump: Failed to create new iterator with file: %s\n", file);
         return -1;
@@ -424,6 +745,8 @@ int u2dump(char *file) {
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6) event6_dump(&record);
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6_VLAN) event2_6_dump(&record);
         else if(record.type == UNIFIED2_EXTRA_DATA) extradata_dump(&record);
+        else if(record.type == UNIFIED2_IDS_EVENT_NG) eventng_dump(&record);
+        else if(record.type == UNIFIED2_IDS_EVENT_IPV6_NG) eventng_6_dump(&record);
     }
 
     free_iterator(it);
@@ -437,7 +760,7 @@ int main(int argc, char **argv) {
     if(argc != 2) {
         puts("usage: u2eventdump <file>");
         return 1;
-    } 
-    
+    }
+
     return u2dump(argv[1]);
 }

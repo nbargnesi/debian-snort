@@ -1,8 +1,8 @@
-/*             
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+/*
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000-2001 Andrew R. Baker <andrewb@uab.edu>
-**             
+**
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
 ** published by the Free Software Foundation.  You may not use, modify or
@@ -13,11 +13,11 @@
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
 ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ** GNU General Public License for more details.
-**     
+**
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-*/  
+*/
 
 /* $Id$ */
 #ifndef __PARSER_H__
@@ -89,6 +89,7 @@
 #define CONFIG_OPT__CLASSIFICATION                  "classification"
 #define CONFIG_OPT__DAEMON                          "daemon"
 #define CONFIG_OPT__DECODE_DATA_LINK                "decode_data_link"
+#define CONFIG_OPT__DECODE_ESP                      "decode_esp"
 #define CONFIG_OPT__DEFAULT_RULE_STATE              "default_rule_state"
 #define CONFIG_OPT__DETECTION                       "detection"
 #define CONFIG_OPT__DETECTION_FILTER                "detection_filter"
@@ -115,6 +116,7 @@
 #define CONFIG_OPT__ENABLE_DECODE_OVERSIZED_ALERTS  "enable_decode_oversized_alerts"
 #define CONFIG_OPT__ENABLE_DECODE_OVERSIZED_DROPS   "enable_decode_oversized_drops"
 #define CONFIG_OPT__ENABLE_DEEP_TEREDO_INSPECTION   "enable_deep_teredo_inspection"
+#define CONFIG_OPT__ENABLE_GTP_DECODING             "enable_gtp"
 #define CONFIG_OPT__ENABLE_IP_OPT_DROPS             "enable_ipopt_drops"
 #ifdef MPLS
 # define CONFIG_OPT__ENABLE_MPLS_MULTICAST          "enable_mpls_multicast"
@@ -127,6 +129,7 @@
 #define CONFIG_OPT__ENABLE_TCP_OPT_TTCP_DROPS       "enable_tcpopt_ttcp_drops"
 #define CONFIG_OPT__EVENT_FILTER                    "event_filter"
 #define CONFIG_OPT__EVENT_QUEUE                     "event_queue"
+#define CONFIG_OPT__EVENT_TRACE                     "event_trace"
 # define CONFIG_OPT__REACT                          "react"
 #ifdef ENABLE_RESPONSE3
 # define CONFIG_OPT__FLEXRESP2_INTERFACE            "flexresp2_interface"
@@ -166,6 +169,7 @@
 #define CONFIG_OPT__NO_PROMISCUOUS                  "no_promisc"
 #define CONFIG_OPT__OBFUSCATE                       "obfuscate"
 #define CONFIG_OPT__ORDER                           "order"
+#define CONFIG_OPT__PAF_MAX                         "paf_max"
 #define CONFIG_OPT__PCRE_MATCH_LIMIT                "pcre_match_limit"
 #define CONFIG_OPT__PCRE_MATCH_LIMIT_RECURSION      "pcre_match_limit_recursion"
 #define CONFIG_OPT__PKT_COUNT                       "pkt_count"
@@ -196,16 +200,19 @@
 #define CONFIG_OPT__UMASK                           "umask"
 #define CONFIG_OPT__UTC                             "utc"
 #define CONFIG_OPT__VERBOSE                         "verbose"
+#define CONFIG_OPT__VLAN_AGNOSTIC                   "vlan_agnostic"
+#define CONFIG_OPT__LOG_IPV6_EXTRA                  "log_ipv6_extra_data"
 #ifdef DYNAMIC_PLUGIN
 #define CONFIG_OPT__DUMP_DYNAMIC_RULES_PATH         "dump-dynamic-rules-path"
 #endif
-
+#define CONFIG_OPT__CONTROL_SOCKET_DIR              "cs_dir"
 
 extern SnortConfig *snort_conf_for_parsing;
 
 /* exported values */
 extern char *file_name;
 extern int file_line;
+
 
 /* rule setup funcs */
 SnortConfig * ParseSnortConf(void);
@@ -275,6 +282,8 @@ void ConfigEnableDecodeDrops(SnortConfig *, char *);
 void ConfigEnableDecodeOversizedAlerts(SnortConfig *, char *);
 void ConfigEnableDecodeOversizedDrops(SnortConfig *, char *);
 void ConfigEnableDeepTeredoInspection(SnortConfig *sc, char *args);
+void ConfigEnableGTPDecoding(SnortConfig *sc, char *args);
+void ConfigEnableEspDecoding(SnortConfig *sc, char *args);
 void ConfigEnableIpOptDrops(SnortConfig *, char *);
 #ifdef MPLS
 void ConfigEnableMplsMulticast(SnortConfig *, char *);
@@ -286,6 +295,7 @@ void ConfigEnableTcpOptObsoleteDrops(SnortConfig *, char *);
 void ConfigEnableTTcpDrops(SnortConfig *, char *);
 void ConfigEventFilter(SnortConfig *, char *);
 void ConfigEventQueue(SnortConfig *, char *);
+void ConfigEventTrace(SnortConfig *, char *);
 #ifdef ENABLE_RESPONSE3
 void ConfigFlexresp2Interface(SnortConfig *, char *);
 void ConfigFlexresp2Attempts(SnortConfig *, char *);
@@ -326,6 +336,7 @@ void ConfigNoPcre(SnortConfig *, char *);
 void ConfigNoPromiscuous(SnortConfig *, char *);
 void ConfigObfuscate(SnortConfig *, char *);
 void ConfigObfuscationMask(SnortConfig *, char *);
+void ConfigPafMax(SnortConfig *, char *);
 void ConfigRateFilter(SnortConfig *, char *);
 void ConfigRuleListOrder(SnortConfig *, char *);
 void ConfigPacketCount(SnortConfig *, char *);
@@ -364,18 +375,21 @@ void ConfigTreatDropAsIgnore(SnortConfig *, char *);
 void ConfigUmask(SnortConfig *, char *);
 void ConfigUtc(SnortConfig *, char *);
 void ConfigVerbose(SnortConfig *, char *);
+void ConfigVlanAgnostic(SnortConfig *, char *);
+void ConfigLogIPv6Extra(SnortConfig *, char *);
 #ifdef DYNAMIC_PLUGIN
 void ConfigDumpDynamicRulesPath(SnortConfig *, char *);
 #endif
+void ConfigControlSocketDirectory(SnortConfig *, char *);
 
 int addRtnToOtn(
-        OptTreeNode *otn, 
+        OptTreeNode *otn,
         tSfPolicyId policyId,
         RuleTreeNode *rtn
         );
 
 RuleTreeNode* deleteRtnFromOtn(
-        OptTreeNode *otn, 
+        OptTreeNode *otn,
         tSfPolicyId policyId
         );
 
@@ -392,7 +406,7 @@ void GetNameValue (char* arg, char** nam, char** val, const char* err);
  *
  * @return pointer to deleted RTN, NULL otherwise.
  */
-static INLINE RuleTreeNode *getRtnFromOtn(OptTreeNode *otn, tSfPolicyId policyId)
+static inline RuleTreeNode *getRtnFromOtn(OptTreeNode *otn, tSfPolicyId policyId)
 {
     if (otn && otn->proto_nodes && (otn->proto_node_num > (unsigned)policyId))
     {
@@ -404,12 +418,12 @@ static INLINE RuleTreeNode *getRtnFromOtn(OptTreeNode *otn, tSfPolicyId policyId
 
 /**Get rtn from otn for the current policy.
  */
-static INLINE RuleTreeNode *getParserRtnFromOtn(OptTreeNode *otn)
+static inline RuleTreeNode *getParserRtnFromOtn(OptTreeNode *otn)
 {
     return getRtnFromOtn(otn, getParserPolicy());
 }
 
-static INLINE RuleTreeNode *getRuntimeRtnFromOtn(OptTreeNode *otn)
+static inline RuleTreeNode *getRuntimeRtnFromOtn(OptTreeNode *otn)
 {
     return getRtnFromOtn(otn, getRuntimePolicy());
 }

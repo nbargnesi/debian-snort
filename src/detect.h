@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 #include "config.h"
 #endif
 
-#include "debug.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "rules.h"
 #include "treenodes.h"
@@ -40,6 +40,7 @@
 /*  P R O T O T Y P E S  ******************************************************/
 extern int do_detect;
 extern int do_detect_content;
+extern uint16_t event_id;
 
 /* rule match action functions */
 int PassAction(void);
@@ -84,13 +85,13 @@ void CallAlertPlugins(Packet *, char *, void *, Event *);
 void CallLogFuncs(Packet *, char *, ListHead *, Event *);
 void CallAlertFuncs(Packet *, char *, ListHead *, Event *);
 
-static INLINE void DisableDetect(Packet *p)
+static inline void DisableDetect(Packet *p)
 {
     DisablePreprocessors(p);
     do_detect_content = 0;
 }
 
-static INLINE void DisableAllDetect(Packet *p)
+static inline void DisableAllDetect(Packet *p)
 {
     DisablePreprocessors(p);
     do_detect = do_detect_content = 0;

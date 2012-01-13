@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2009-2010 Sourcefire, Inc.
+ * Copyright (C) 2009-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,8 +18,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #include <stdlib.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "strvec.h"
 #include "util.h"
 

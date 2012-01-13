@@ -85,7 +85,7 @@
 #include "util.h"
 #include "sftarget_reader.h"
 #include "log.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sf_types.h"
 
 #define YYSTACK_USE_ALLOCA 0
@@ -502,9 +502,9 @@ union yyalloc
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  54
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  82
+#define YYNRULES  83
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  151
+#define YYNSTATES  152
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
@@ -559,11 +559,11 @@ static const yytype_uint8 yyprhs[] =
       28,    30,    33,    37,    41,    45,    46,    49,    53,    55,
       57,    62,    66,    70,    73,    77,    81,    83,    86,    88,
       90,    92,    94,    96,   100,   104,   108,   112,   116,   118,
-     121,   124,   126,   129,   131,   135,   139,   143,   147,   151,
-     153,   155,   156,   159,   163,   165,   167,   169,   172,   176,
-     180,   184,   188,   192,   196,   200,   204,   208,   212,   217,
-     221,   225,   227,   229,   230,   233,   237,   239,   241,   243,
-     246,   248,   251
+     121,   124,   126,   129,   131,   135,   138,   142,   146,   150,
+     154,   156,   158,   159,   162,   166,   168,   170,   172,   175,
+     179,   183,   187,   191,   195,   199,   203,   207,   211,   215,
+     220,   224,   228,   230,   232,   233,   236,   240,   242,   244,
+     246,   249,   251,   254
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
@@ -582,19 +582,19 @@ static const yytype_int8 yyrhs[] =
       35,    85,    36,    -1,    37,    85,    38,    -1,    39,    21,
       40,    -1,    41,    21,    42,    -1,    86,    -1,    86,    89,
       -1,    87,    89,    -1,    87,    -1,    88,    89,    -1,    88,
-      -1,    27,    21,    28,    -1,    27,    22,    28,    -1,    29,
-      22,    30,    -1,    31,    22,    32,    -1,    91,    93,    92,
-      -1,    43,    -1,    44,    -1,    -1,    94,    93,    -1,    95,
-      97,    96,    -1,    45,    -1,    46,    -1,    98,    -1,    98,
-     102,    -1,    99,   100,   101,    -1,    99,   101,   100,    -1,
-     100,    99,   101,    -1,   100,   101,    99,    -1,   101,   100,
-      99,    -1,   101,    99,   100,    -1,    51,    85,    52,    -1,
-      55,    85,    56,    -1,    53,    85,    54,    -1,    57,    85,
-      58,    -1,    57,    85,   103,    58,    -1,    37,    85,    38,
-      -1,   105,   107,   106,    -1,    47,    -1,    48,    -1,    -1,
-     108,   107,    -1,   109,   111,   110,    -1,    49,    -1,    50,
-      -1,   112,    -1,   112,   102,    -1,   100,    -1,    99,   100,
-      -1,   100,    99,    -1
+      -1,    27,    21,    28,    -1,    27,    28,    -1,    27,    22,
+      28,    -1,    29,    22,    30,    -1,    31,    22,    32,    -1,
+      91,    93,    92,    -1,    43,    -1,    44,    -1,    -1,    94,
+      93,    -1,    95,    97,    96,    -1,    45,    -1,    46,    -1,
+      98,    -1,    98,   102,    -1,    99,   100,   101,    -1,    99,
+     101,   100,    -1,   100,    99,   101,    -1,   100,   101,    99,
+      -1,   101,   100,    99,    -1,   101,    99,   100,    -1,    51,
+      85,    52,    -1,    55,    85,    56,    -1,    53,    85,    54,
+      -1,    57,    85,    58,    -1,    57,    85,   103,    58,    -1,
+      37,    85,    38,    -1,   105,   107,   106,    -1,    47,    -1,
+      48,    -1,    -1,   108,   107,    -1,   109,   111,   110,    -1,
+      49,    -1,    50,    -1,   112,    -1,   112,   102,    -1,   100,
+      -1,    99,   100,    -1,   100,    99,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
@@ -604,11 +604,11 @@ static const yytype_uint16 yyrline[] =
      188,   191,   198,   205,   213,   219,   222,   225,   235,   242,
      245,   250,   255,   260,   267,   282,   284,   284,   286,   286,
      286,   286,   286,   289,   297,   305,   313,   321,   329,   335,
-     341,   347,   353,   373,   395,   401,   407,   414,   421,   427,
-     434,   440,   443,   449,   457,   464,   470,   474,   480,   485,
-     490,   495,   500,   505,   512,   520,   528,   536,   543,   552,
-     560,   566,   573,   579,   582,   588,   596,   603,   609,   613,
-     619,   624,   629
+     341,   347,   353,   373,   395,   401,   405,   411,   418,   425,
+     431,   438,   444,   447,   453,   461,   468,   474,   478,   484,
+     489,   494,   499,   504,   509,   516,   524,   532,   540,   547,
+     556,   564,   570,   577,   583,   586,   592,   600,   607,   613,
+     617,   623,   628,   633
 };
 #endif
 
@@ -675,11 +675,11 @@ static const yytype_uint8 yyr1[] =
       66,    67,    68,    69,    70,    71,    71,    72,    73,    74,
       75,    75,    75,    75,    76,    77,    78,    78,    79,    79,
       79,    79,    79,    80,    81,    82,    83,    84,    85,    85,
-      85,    85,    85,    85,    86,    87,    88,    89,    90,    91,
-      92,    93,    93,    94,    95,    96,    97,    97,    98,    98,
-      98,    98,    98,    98,    99,   100,   101,   102,   102,   103,
-     104,   105,   106,   107,   107,   108,   109,   110,   111,   111,
-     112,   112,   112
+      85,    85,    85,    85,    86,    87,    87,    88,    89,    90,
+      91,    92,    93,    93,    94,    95,    96,    97,    97,    98,
+      98,    98,    98,    98,    98,    99,   100,   101,   102,   102,
+     103,   104,   105,   106,   107,   107,   108,   109,   110,   111,
+     111,   112,   112,   112
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
@@ -689,11 +689,11 @@ static const yytype_uint8 yyr2[] =
        1,     2,     3,     3,     3,     0,     2,     3,     1,     1,
        4,     3,     3,     2,     3,     3,     1,     2,     1,     1,
        1,     1,     1,     3,     3,     3,     3,     3,     1,     2,
-       2,     1,     2,     1,     3,     3,     3,     3,     3,     1,
-       1,     0,     2,     3,     1,     1,     1,     2,     3,     3,
-       3,     3,     3,     3,     3,     3,     3,     3,     4,     3,
-       3,     1,     1,     0,     2,     3,     1,     1,     1,     2,
-       1,     2,     2
+       2,     1,     2,     1,     3,     2,     3,     3,     3,     3,
+       1,     1,     0,     2,     3,     1,     1,     1,     2,     3,
+       3,     3,     3,     3,     3,     3,     3,     3,     3,     4,
+       3,     3,     1,     1,     0,     2,     3,     1,     1,     1,
+       2,     1,     2,     2
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -706,17 +706,17 @@ static const yytype_uint8 yydefact[] =
        0,    14,    18,    16,     0,     3,     0,    10,     8,     0,
       11,     0,     0,     0,    13,     0,     0,    19,    17,     0,
       23,    12,    24,     0,     0,     0,     0,     0,     0,    26,
-      28,    29,    30,    32,    31,    49,    71,    22,    51,    21,
-      73,     0,     0,     0,    38,    41,    43,     0,     0,     0,
-       0,    25,    27,    20,    54,     0,    51,     0,    76,     0,
-      73,     0,     0,     0,     0,    33,     0,    39,    40,    42,
-      34,    35,    36,    37,    50,    48,    52,     0,     0,     0,
-       0,    56,     0,     0,     0,    72,    70,    74,     0,    80,
-       0,    78,    44,    45,    46,     0,     0,     0,     0,    55,
-      53,     0,    57,     0,     0,     0,     0,     0,     0,    81,
-      82,    77,    75,    79,    47,    64,    66,    65,     0,    58,
-      59,    60,    61,    63,    62,     0,    67,     0,     0,    68,
-      69
+      28,    29,    30,    32,    31,    50,    72,    22,    52,    21,
+      74,     0,     0,     0,    38,    41,    43,     0,     0,     0,
+       0,    25,    27,    20,    55,     0,    52,     0,    77,     0,
+      74,     0,     0,     0,    45,     0,    33,     0,    39,    40,
+      42,    34,    35,    36,    37,    51,    49,    53,     0,     0,
+       0,     0,    57,     0,     0,     0,    73,    71,    75,     0,
+      81,     0,    79,    44,    46,    47,     0,     0,     0,     0,
+      56,    54,     0,    58,     0,     0,     0,     0,     0,     0,
+      82,    83,    78,    76,    80,    48,    65,    67,    66,     0,
+      59,    60,    61,    62,    64,    63,     0,    68,     0,     0,
+      69,    70
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
@@ -725,9 +725,9 @@ static const yytype_int16 yydefgoto[] =
       -1,     2,     3,     6,    10,    11,    12,    28,    19,    30,
       20,     7,    13,    23,    24,    38,    32,    33,    40,    48,
       49,    50,    51,    52,    53,    54,    63,    64,    65,    66,
-      87,    57,    58,    95,    75,    76,    77,   120,   100,   101,
-     102,   103,   104,   122,   147,    59,    60,   106,    79,    80,
-      81,   132,   110,   111
+      88,    57,    58,    96,    75,    76,    77,   121,   101,   102,
+     103,   104,   105,   123,   148,    59,    60,   107,    79,    80,
+      81,   133,   111,   112
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
@@ -735,22 +735,22 @@ static const yytype_int16 yydefgoto[] =
 #define YYPACT_NINF -97
 static const yytype_int8 yypact[] =
 {
-      -2,    26,    22,   -97,    28,   -97,    27,    54,   -97,   -97,
-      38,    28,    50,    40,    56,   -97,   -97,   -97,    41,    55,
-      51,   -97,   -97,   -97,    47,   -97,    57,   -97,   -97,    46,
-     -97,    49,    53,    43,   -97,    58,    59,   -97,   -97,   -21,
-      -8,   -97,   -97,    -6,    -6,    -6,    52,    60,   -22,   -97,
-     -97,   -97,   -97,   -97,   -97,   -97,   -97,    29,    30,   -97,
-      25,   -13,    61,    44,    62,    62,    62,    48,    42,    45,
-      63,   -97,   -97,   -97,   -97,    64,    30,   -17,   -97,    34,
-      25,   -11,    66,    67,    68,   -97,    65,   -97,   -97,   -97,
-     -97,   -97,   -97,   -97,   -97,   -97,   -97,    -6,    -6,    -6,
-      69,    31,   -10,    -1,   -11,   -97,   -97,   -97,    35,    70,
-      36,    31,   -97,   -97,   -97,    71,    37,    72,    73,   -97,
-     -97,    -6,   -97,    39,    35,    39,    70,    35,    70,   -97,
-     -97,   -97,   -97,   -97,   -97,   -97,   -97,   -97,   -27,   -97,
-     -97,   -97,   -97,   -97,   -97,    -6,   -97,    33,    74,   -97,
-     -97
+       1,    25,     9,   -97,    28,   -97,    30,    41,   -97,   -97,
+      43,    28,    51,    42,    57,   -97,   -97,   -97,    44,    54,
+      52,   -97,   -97,   -97,    48,   -97,    56,   -97,   -97,    49,
+     -97,    50,    55,    47,   -97,    60,    59,   -97,   -97,   -23,
+      -4,   -97,   -97,    -7,    -7,    -7,    61,    62,   -22,   -97,
+     -97,   -97,   -97,   -97,   -97,   -97,   -97,    22,    31,   -97,
+      26,    13,    58,    53,    46,    46,    46,    45,    63,    64,
+      65,   -97,   -97,   -97,   -97,    40,    31,    -9,   -97,    37,
+      26,     2,    66,    67,   -97,    68,   -97,    69,   -97,   -97,
+     -97,   -97,   -97,   -97,   -97,   -97,   -97,   -97,    -7,    -7,
+      -7,    70,    29,   -32,   -15,     2,   -97,   -97,   -97,    33,
+      38,    71,    29,   -97,   -97,   -97,    73,    72,    36,    74,
+     -97,   -97,    -7,   -97,    39,    33,    39,    38,    33,    38,
+     -97,   -97,   -97,   -97,   -97,   -97,   -97,   -97,   -97,   -34,
+     -97,   -97,   -97,   -97,   -97,   -97,    -7,   -97,    35,    75,
+     -97,   -97
 };
 
 /* YYPGOTO[NTERM-NUM].  */
@@ -758,9 +758,9 @@ static const yytype_int8 yypgoto[] =
 {
      -97,   -97,   -97,   -97,    85,   -97,   -97,   -97,   -97,   -97,
      -97,    91,   -97,   -97,   -97,   -97,   -97,   -97,   -97,   -97,
-      75,   -97,   -97,   -97,   -97,   -97,   -44,   -97,   -97,   -97,
-      -7,   -97,   -97,   -97,    23,   -97,   -97,   -97,   -97,   -97,
-     -79,   -76,   -96,    -9,   -97,    76,   -97,   -97,    20,   -97,
+      77,   -97,   -97,   -97,   -97,   -97,   -44,   -97,   -97,   -97,
+      -5,   -97,   -97,   -97,    23,   -97,   -97,   -97,   -97,   -97,
+     -79,   -76,   -96,   -12,   -97,    76,   -97,   -97,    32,   -97,
      -97,   -97,   -97,   -97
 };
 
@@ -771,38 +771,38 @@ static const yytype_int8 yypgoto[] =
 #define YYTABLE_NINF -1
 static const yytype_uint8 yytable[] =
 {
-      67,    68,   108,     1,    71,   109,   124,   126,    82,    83,
-     145,    43,    43,    44,    44,    45,    45,    46,    46,    47,
-      47,    61,     8,    62,   125,   127,   123,   139,   128,   141,
-     130,   146,   129,     4,    97,    55,    98,     9,    99,    56,
-      97,     5,     5,    98,    99,    99,    16,   142,   140,   144,
-      97,   143,    98,   116,   117,   118,    21,    22,    88,    89,
-      15,    18,    25,    26,    29,    27,    31,    35,    39,    34,
-      36,    37,    41,    69,    78,    74,    56,   138,    85,    42,
-      91,    70,   105,    84,    90,    92,   131,   115,   121,   135,
-      99,   149,    98,    86,   112,   113,    17,    14,   114,    96,
-     107,   148,   133,   134,     0,    93,     0,     0,    94,     0,
-       0,     0,   150,     0,     0,   119,     0,     0,     0,     0,
-       0,    97,     0,    72,     0,     0,   136,     0,     0,   137,
-       0,     0,     0,    73
+      67,    68,   109,   146,    71,   110,     1,   125,   127,     8,
+      43,    43,    44,    44,    45,    45,    46,    46,    47,    47,
+      61,    99,    62,   100,   147,   126,   128,   124,   140,   129,
+     142,   131,     4,   130,    82,    83,    98,     9,    99,    55,
+       5,    84,    98,    56,    99,     5,   100,    15,   143,   141,
+     145,    16,   144,    98,   117,   118,   119,   100,    21,    22,
+      89,    90,    18,    25,    27,    29,    26,    31,    34,    56,
+      35,    36,    39,    37,    41,    78,    74,    87,   139,    42,
+      85,    91,    69,    70,    95,   106,   122,    86,   100,    98,
+     137,   116,    99,   150,   113,   114,    17,    14,   115,    97,
+     134,    92,   149,     0,    93,   135,     0,    94,     0,     0,
+       0,     0,   108,   151,     0,     0,   120,     0,     0,     0,
+       0,   132,     0,     0,   136,    72,     0,     0,     0,     0,
+     138,     0,     0,    73
 };
 
 static const yytype_int16 yycheck[] =
 {
-      44,    45,    81,     5,    26,    81,   102,   103,    21,    22,
-      37,    33,    33,    35,    35,    37,    37,    39,    39,    41,
-      41,    27,     0,    29,   103,   104,   102,   123,   104,   125,
-     109,    58,   108,     7,    51,    43,    53,     9,    55,    47,
-      51,    15,    15,    53,    55,    55,     8,   126,   124,   128,
-      51,   127,    53,    97,    98,    99,    16,    17,    65,    66,
-       6,    11,     6,    22,    13,    10,    19,    21,    25,    12,
-      21,    18,    14,    21,    49,    45,    47,   121,    34,    20,
-      38,    21,    48,    22,    36,    40,    50,    22,    57,    52,
-      55,    58,    53,    31,    28,    28,    11,     6,    30,    76,
-      80,   145,   111,    32,    -1,    42,    -1,    -1,    44,    -1,
-      -1,    -1,    38,    -1,    -1,    46,    -1,    -1,    -1,    -1,
-      -1,    51,    -1,    48,    -1,    -1,    54,    -1,    -1,    56,
-      -1,    -1,    -1,    57
+      44,    45,    81,    37,    26,    81,     5,   103,   104,     0,
+      33,    33,    35,    35,    37,    37,    39,    39,    41,    41,
+      27,    53,    29,    55,    58,   104,   105,   103,   124,   105,
+     126,   110,     7,   109,    21,    22,    51,     9,    53,    43,
+      15,    28,    51,    47,    53,    15,    55,     6,   127,   125,
+     129,     8,   128,    51,    98,    99,   100,    55,    16,    17,
+      65,    66,    11,     6,    10,    13,    22,    19,    12,    47,
+      21,    21,    25,    18,    14,    49,    45,    31,   122,    20,
+      22,    36,    21,    21,    44,    48,    57,    34,    55,    51,
+      54,    22,    53,    58,    28,    28,    11,     6,    30,    76,
+     112,    38,   146,    -1,    40,    32,    -1,    42,    -1,    -1,
+      -1,    -1,    80,    38,    -1,    -1,    46,    -1,    -1,    -1,
+      -1,    50,    -1,    -1,    52,    48,    -1,    -1,    -1,    -1,
+      56,    -1,    -1,    57
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -817,14 +817,14 @@ static const yytype_uint8 yystos[] =
       80,    81,    82,    83,    84,    43,    47,    90,    91,   104,
      105,    27,    29,    85,    86,    87,    88,    85,    85,    21,
       21,    26,    79,   104,    45,    93,    94,    95,    49,   107,
-     108,   109,    21,    22,    22,    34,    31,    89,    89,    89,
-      36,    38,    40,    42,    44,    92,    93,    51,    53,    55,
-      97,    98,    99,   100,   101,    48,   106,   107,    99,   100,
-     111,   112,    28,    28,    30,    22,    85,    85,    85,    46,
-      96,    57,   102,   100,   101,    99,   101,    99,   100,   100,
-      99,    50,   110,   102,    32,    52,    54,    56,    85,   101,
-     100,   101,    99,   100,    99,    37,    58,   103,    85,    58,
-      38
+     108,   109,    21,    22,    28,    22,    34,    31,    89,    89,
+      89,    36,    38,    40,    42,    44,    92,    93,    51,    53,
+      55,    97,    98,    99,   100,   101,    48,   106,   107,    99,
+     100,   111,   112,    28,    28,    30,    22,    85,    85,    85,
+      46,    96,    57,   102,   100,   101,    99,   101,    99,   100,
+     100,    99,    50,   110,   102,    32,    52,    54,    56,    85,
+     101,   100,   101,    99,   100,    99,    37,    58,   103,    85,
+      58,    38
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1979,64 +1979,64 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 402 "sf_attribute_table.y"
     {
-        (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
+        (yyval.numericValue) = 0;
   }
     break;
 
   case 46:
 
 /* Line 1455 of yacc.c  */
-#line 408 "sf_attribute_table.y"
+#line 406 "sf_attribute_table.y"
+    {
+        (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
+  }
+    break;
+
+  case 47:
+
+/* Line 1455 of yacc.c  */
+#line 412 "sf_attribute_table.y"
     {
         /* Copy numeric */
         (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
       }
     break;
 
-  case 47:
+  case 48:
 
 /* Line 1455 of yacc.c  */
-#line 415 "sf_attribute_table.y"
+#line 419 "sf_attribute_table.y"
     {
     /* Copy numeric */
     (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
   }
     break;
 
-  case 48:
-
-/* Line 1455 of yacc.c  */
-#line 422 "sf_attribute_table.y"
-    {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ServiceList (complete)\n"););
-  }
-    break;
-
   case 49:
 
 /* Line 1455 of yacc.c  */
-#line 428 "sf_attribute_table.y"
+#line 426 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ServiceList\n"););
-    sfat_client_or_service = ATTRIBUTE_SERVICE;
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ServiceList (complete)\n"););
   }
     break;
 
   case 50:
 
 /* Line 1455 of yacc.c  */
-#line 435 "sf_attribute_table.y"
+#line 432 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ServiceList\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ServiceList\n"););
+    sfat_client_or_service = ATTRIBUTE_SERVICE;
   }
     break;
 
   case 51:
 
 /* Line 1455 of yacc.c  */
-#line 440 "sf_attribute_table.y"
+#line 439 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyService\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ServiceList\n"););
   }
     break;
 
@@ -2045,14 +2045,23 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 444 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service ServiceListData\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyService\n"););
   }
     break;
 
   case 53:
 
 /* Line 1455 of yacc.c  */
-#line 450 "sf_attribute_table.y"
+#line 448 "sf_attribute_table.y"
+    {
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service ServiceListData\n"););
+  }
+    break;
+
+  case 54:
+
+/* Line 1455 of yacc.c  */
+#line 454 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Adding Complete\n"););
     SFAT_AddApplicationData();
@@ -2060,31 +2069,22 @@ yyreduce:
   }
     break;
 
-  case 54:
+  case 55:
 
 /* Line 1455 of yacc.c  */
-#line 458 "sf_attribute_table.y"
+#line 462 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Start\n"););
     SFAT_CreateApplicationEntry();
   }
     break;
 
-  case 55:
-
-/* Line 1455 of yacc.c  */
-#line 465 "sf_attribute_table.y"
-    {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service End\n"););
-  }
-    break;
-
   case 56:
 
 /* Line 1455 of yacc.c  */
-#line 471 "sf_attribute_table.y"
+#line 469 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (no application)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service End\n"););
   }
     break;
 
@@ -2093,74 +2093,83 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 475 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (application)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (no application)\n"););
   }
     break;
 
   case 58:
 
 /* Line 1455 of yacc.c  */
-#line 481 "sf_attribute_table.y"
+#line 479 "sf_attribute_table.y"
     {
-    /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Proto Port)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (application)\n"););
   }
     break;
 
   case 59:
 
 /* Line 1455 of yacc.c  */
-#line 486 "sf_attribute_table.y"
+#line 485 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Port Proto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Proto Port)\n"););
   }
     break;
 
   case 60:
 
 /* Line 1455 of yacc.c  */
-#line 491 "sf_attribute_table.y"
+#line 490 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto IPProto Port)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (IPProto Port Proto)\n"););
   }
     break;
 
   case 61:
 
 /* Line 1455 of yacc.c  */
-#line 496 "sf_attribute_table.y"
+#line 495 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto Port IPProto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto IPProto Port)\n"););
   }
     break;
 
   case 62:
 
 /* Line 1455 of yacc.c  */
-#line 501 "sf_attribute_table.y"
+#line 500 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port Proto IPProto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Proto Port IPProto)\n"););
   }
     break;
 
   case 63:
 
 /* Line 1455 of yacc.c  */
-#line 506 "sf_attribute_table.y"
+#line 505 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port IPProto Proto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port Proto IPProto)\n"););
   }
     break;
 
   case 64:
 
 /* Line 1455 of yacc.c  */
-#line 513 "sf_attribute_table.y"
+#line 510 "sf_attribute_table.y"
+    {
+    /* Order independent */
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data Required (Port IPProto Proto)\n"););
+  }
+    break;
+
+  case 65:
+
+/* Line 1455 of yacc.c  */
+#line 517 "sf_attribute_table.y"
     {
     /* Store IPProto Info */
     DEBUG_WRAP(PrintAttributeData("IPProto", &(yyvsp[(2) - (3)].data)););
@@ -2168,10 +2177,10 @@ yyreduce:
   }
     break;
 
-  case 65:
+  case 66:
 
 /* Line 1455 of yacc.c  */
-#line 521 "sf_attribute_table.y"
+#line 525 "sf_attribute_table.y"
     {
     /* Store Protocol Info */
     DEBUG_WRAP(PrintAttributeData("Protocol", &(yyvsp[(2) - (3)].data)););
@@ -2179,10 +2188,10 @@ yyreduce:
   }
     break;
 
-  case 66:
+  case 67:
 
 /* Line 1455 of yacc.c  */
-#line 529 "sf_attribute_table.y"
+#line 533 "sf_attribute_table.y"
     {
     /* Store Port Info */
     DEBUG_WRAP(PrintAttributeData("Port", &(yyvsp[(2) - (3)].data)););
@@ -2190,10 +2199,10 @@ yyreduce:
   }
     break;
 
-  case 67:
+  case 68:
 
 /* Line 1455 of yacc.c  */
-#line 537 "sf_attribute_table.y"
+#line 541 "sf_attribute_table.y"
     {
     /* Store Application Info */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Application\n"));
@@ -2202,10 +2211,10 @@ yyreduce:
   }
     break;
 
-  case 68:
+  case 69:
 
 /* Line 1455 of yacc.c  */
-#line 544 "sf_attribute_table.y"
+#line 548 "sf_attribute_table.y"
     {
     /* Store Application Info */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Application with Version\n"));
@@ -2214,10 +2223,10 @@ yyreduce:
   }
     break;
 
-  case 69:
+  case 70:
 
 /* Line 1455 of yacc.c  */
-#line 553 "sf_attribute_table.y"
+#line 557 "sf_attribute_table.y"
     {
     /* Store Version Info */
     DEBUG_WRAP(PrintAttributeData("Version", &(yyvsp[(2) - (3)].data)););
@@ -2225,40 +2234,31 @@ yyreduce:
   }
     break;
 
-  case 70:
-
-/* Line 1455 of yacc.c  */
-#line 561 "sf_attribute_table.y"
-    {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ClientList (complete)\n"););
-  }
-    break;
-
   case 71:
 
 /* Line 1455 of yacc.c  */
-#line 567 "sf_attribute_table.y"
+#line 565 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ClientList\n"););
-    sfat_client_or_service = ATTRIBUTE_CLIENT;
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ClientList (complete)\n"););
   }
     break;
 
   case 72:
 
 /* Line 1455 of yacc.c  */
-#line 574 "sf_attribute_table.y"
+#line 571 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ClientList\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ClientList\n"););
+    sfat_client_or_service = ATTRIBUTE_CLIENT;
   }
     break;
 
   case 73:
 
 /* Line 1455 of yacc.c  */
-#line 579 "sf_attribute_table.y"
+#line 578 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyClient\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ClientList\n"););
   }
     break;
 
@@ -2267,14 +2267,23 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 583 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client ClientListData\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyClient\n"););
   }
     break;
 
   case 75:
 
 /* Line 1455 of yacc.c  */
-#line 589 "sf_attribute_table.y"
+#line 587 "sf_attribute_table.y"
+    {
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client ClientListData\n"););
+  }
+    break;
+
+  case 76:
+
+/* Line 1455 of yacc.c  */
+#line 593 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Adding Complete\n"););
     SFAT_AddApplicationData();
@@ -2282,31 +2291,22 @@ yyreduce:
   }
     break;
 
-  case 76:
+  case 77:
 
 /* Line 1455 of yacc.c  */
-#line 597 "sf_attribute_table.y"
+#line 601 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Start\n"););
     SFAT_CreateApplicationEntry();
   }
     break;
 
-  case 77:
-
-/* Line 1455 of yacc.c  */
-#line 604 "sf_attribute_table.y"
-    {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client End\n"););
-  }
-    break;
-
   case 78:
 
 /* Line 1455 of yacc.c  */
-#line 610 "sf_attribute_table.y"
+#line 608 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (no application)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client End\n"););
   }
     break;
 
@@ -2315,34 +2315,43 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 614 "sf_attribute_table.y"
     {
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (application)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (no application)\n"););
   }
     break;
 
   case 80:
 
 /* Line 1455 of yacc.c  */
-#line 620 "sf_attribute_table.y"
+#line 618 "sf_attribute_table.y"
     {
-    /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (Proto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (application)\n"););
   }
     break;
 
   case 81:
 
 /* Line 1455 of yacc.c  */
-#line 625 "sf_attribute_table.y"
+#line 624 "sf_attribute_table.y"
     {
     /* Order independent */
-    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (IPProto Proto)\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (Proto)\n"););
   }
     break;
 
   case 82:
 
 /* Line 1455 of yacc.c  */
-#line 630 "sf_attribute_table.y"
+#line 629 "sf_attribute_table.y"
+    {
+    /* Order independent */
+    DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (IPProto Proto)\n"););
+  }
+    break;
+
+  case 83:
+
+/* Line 1455 of yacc.c  */
+#line 634 "sf_attribute_table.y"
     {
     /* Order independent */
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data Required (Proto IPProto)\n"););
@@ -2352,7 +2361,7 @@ yyreduce:
 
 
 /* Line 1455 of yacc.c  */
-#line 2356 "sf_attribute_table.c"
+#line 2365 "sf_attribute_table.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2564,7 +2573,7 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 635 "sf_attribute_table.y"
+#line 639 "sf_attribute_table.y"
 
 /*
 int yywrap(void)

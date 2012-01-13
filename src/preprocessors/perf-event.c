@@ -3,7 +3,7 @@
 **
 **  perf-event.c
 **
-**  Copyright (C) 2002-2010 Sourcefire, Inc.
+**  Copyright (C) 2002-2011 Sourcefire, Inc.
 **  Marc Norton <mnorton@sourcefire.com>
 **  Dan Roelker <droelker@sourcefire.com>
 **
@@ -28,6 +28,11 @@
 **
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "snort.h"
 #include "util.h"
 
@@ -85,9 +90,9 @@ int ProcessEventStats(SFEVENT *sfEvent)
 
     if(sfEvent->TotalEvents)
     {
-        sfEventStats.NQPercent = 100.0 * (double)sfEvent->NQEvents / 
+        sfEventStats.NQPercent = 100.0 * (double)sfEvent->NQEvents /
                                  (double)sfEvent->TotalEvents;
-        sfEventStats.QPercent  = 100.0 * (double)sfEvent->QEvents / 
+        sfEventStats.QPercent  = 100.0 * (double)sfEvent->QEvents /
                                  (double)sfEvent->TotalEvents;
     }
     else
@@ -121,5 +126,5 @@ int DisplayEventPerfStats(SFEVENT_STATS *sfEventStats)
 
     return 0;
 }
-    
+
 

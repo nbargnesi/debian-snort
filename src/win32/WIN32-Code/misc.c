@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -19,6 +19,10 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "snort.h"
 #include "util.h"
@@ -289,7 +293,7 @@ int init_winsock(void)
     }
 
     return 1;
-}	
+}
 
 int geteuid(void)
 {

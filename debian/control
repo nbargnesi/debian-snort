@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
 Uploaders: Pascal Hakim <pasc@debian.org>
-Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 5.0.0), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, iptables-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386], libgnutls-dev, libdumbnet-dev, libdaq-dev
+Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 5.0.0), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, libgnutls-dev, libdumbnet-dev, libdaq-dev, flex, bison
 Build-Depends-Indep: texlive, texlive-latex-base, ghostscript
 Standards-Version:  3.9.1
 Homepage: http://www.snort.org/
@@ -112,7 +112,7 @@ Architecture: all
 Depends: debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), ${shlibs:Depends}, ${misc:Depends}
 Suggests: snort (>= 2.2.0) | snort-pgsql (>= 2.2.0) | snort-mysql (>= 2.2.0)
 Recommends: oinkmaster
-Homepage: http://www.snort.org/rules/
+Homepage: http://www.snort.org/snort-rules/
 Description: flexible Network Intrusion Detection System ruleset
  Snort default ruleset which provides a common set of accepted and test
  network intrusion detection rules developed by the Snort community.

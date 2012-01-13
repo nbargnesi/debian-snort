@@ -1,8 +1,8 @@
 /*
-** Copyright (C) 1998-2010 Sourcefire, Inc.
+** Copyright (C) 1998-2011 Sourcefire, Inc.
 ** Adam Keeton
 ** Kevin Liu <kliu@sourcefire.com>
-** 
+**
 ** $Id$
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -25,7 +25,7 @@
  * sf_ip.c
  * 11/17/06
  *
- * Library for managing IP addresses of either v6 or v4 families.  
+ * Library for managing IP addresses of either v6 or v4 families.
 */
 
 #ifdef HAVE_CONFIG_H
@@ -48,7 +48,7 @@
 
 #if 0
 /* Support function .. but could see some external uses */
-static INLINE int sfip_length(sfip_t *ip) {
+static inline int sfip_length(sfip_t *ip) {
     ARG_CHECK1(ip, 0);
 
     if(sfip_family(ip) == AF_INET) return 4;
@@ -62,7 +62,7 @@ static INLINE int sfip_length(sfip_t *ip) {
 // no valid ip4 format (including mask) with 2 ':'s
 // we don't have to figure out if the format is entirely legal
 // we just have to be able to tell correct formats apart
-static INLINE int sfip_str_to_fam(const char *str) {
+static inline int sfip_str_to_fam(const char *str) {
     const char* s;
     ARG_CHECK1(str, 0);
     s = strchr(str, (int)':');
@@ -72,19 +72,19 @@ static INLINE int sfip_str_to_fam(const char *str) {
 }
 
 /* Place-holder allocation incase we want to do something more indepth later */
-static INLINE sfip_t *_sfip_alloc() {
-    /* Note: using calloc here instead of SnortAlloc since the dynamic libs 
+static inline sfip_t *_sfip_alloc() {
+    /* Note: using calloc here instead of SnortAlloc since the dynamic libs
      * can't presently resolve SnortAlloc */
-    return (sfip_t*)calloc(sizeof(sfip_t), 1); 
+    return (sfip_t*)calloc(sizeof(sfip_t), 1);
 }
 
 /* Masks off 'val' bits from the IP contained within 'ip' */
-static INLINE int sfip_cidr_mask(sfip_t *ip, int val) {
+static inline int sfip_cidr_mask(sfip_t *ip, int val) {
     int i;
-    unsigned int mask = 0; 
+    unsigned int mask = 0;
     unsigned int *p;
     int index = (int)ceil(val / 32.0) - 1;
-   
+
     ARG_CHECK1(ip, SFIP_ARG_ERR);
 
     p = ip->ip32;
@@ -94,8 +94,8 @@ static INLINE int sfip_cidr_mask(sfip_t *ip, int val) {
         ((sfip_family(ip) == AF_INET) && val > 32) ) {
         return SFIP_ARG_ERR;
     }
-    
-    /* Build the netmask by converting "val" into 
+
+    /* Build the netmask by converting "val" into
      * the corresponding number of bits that are set */
     for(i = 0; i < 32- (val - (index * 32)); i++)
         mask = (mask<<1) + 1;
@@ -114,7 +114,7 @@ static INLINE int sfip_cidr_mask(sfip_t *ip, int val) {
 sfip_t *sfip_alloc(const char *ip, SFIP_RET *status) {
     SFIP_RET tmp;
     sfip_t *ret;
-   
+
     if(!ip) {
         if(status)
             *status = SFIP_ARG_ERR;
@@ -122,20 +122,20 @@ sfip_t *sfip_alloc(const char *ip, SFIP_RET *status) {
     }
 
     if((ret = _sfip_alloc()) == NULL) {
-        if(status) 
+        if(status)
             *status = SFIP_ALLOC_ERR;
         return NULL;
     }
-    
+
     if( (tmp = sfip_pton(ip, ret)) != SFIP_SUCCESS) {
-        if(status) 
+        if(status)
             *status = tmp;
 
         sfip_free(ret);
         return NULL;
     }
 
-    if(status) 
+    if(status)
         *status = SFIP_SUCCESS;
 
     return ret;
@@ -169,8 +169,8 @@ sfip_t *sfip_alloc_raw(void *ip, int family, SFIP_RET *status) {
 }
 
 /* Support function for _netmask_str_to_bit_count */
-static INLINE int _count_bits(unsigned int val) {
-    unsigned int count; 
+static inline int _count_bits(unsigned int val) {
+    unsigned int count;
 
     for (count = 0; val; count++) {
         val &= val - 1;
@@ -181,14 +181,14 @@ static INLINE int _count_bits(unsigned int val) {
 
 /* Support function for sfip_pton.  Used for converting a netmask string
  * into a number of bits to mask off */
-static INLINE int _netmask_str_to_bit_count(char *mask, int family) {
-    u_int32_t buf[4];
+static inline int _netmask_str_to_bit_count(char *mask, int family) {
+    uint32_t buf[4];
     int bits, i, nBits, nBytes;
-    u_int8_t* bytes = (u_int8_t*)buf;
+    uint8_t* bytes = (uint8_t*)buf;
 
-    /* XXX 
-     * Mask not validated.  
-     * Only sfip_pton should be using this function, and using it safely. 
+    /* XXX
+     * Mask not validated.
+     * Only sfip_pton should be using this function, and using it safely.
      * XXX */
 
     if(inet_pton(family, mask, buf) < 1)
@@ -230,10 +230,10 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
     char *ip;
     int bits;
 
-    if(!dst || !src) 
+    if(!dst || !src)
         return SFIP_ARG_ERR;
-            
-    if((sfip_buf = strdup(src)) == NULL) 
+
+    if((sfip_buf = strdup(src)) == NULL)
         return SFIP_ALLOC_ERR;
 
     ip = sfip_buf;
@@ -244,7 +244,7 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
 
     /* check for and extract a mask in CIDR form */
     if( (mask = strchr(ip, (int)'/')) != NULL ) {
-        /* NULL out this character so inet_pton will see the 
+        /* NULL out this character so inet_pton will see the
          * correct ending to the IP string */
         char* end = mask++;
         while ( (end > ip) && isspace((int)end[-1]) ) end--;
@@ -255,12 +255,12 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
         /* verify a leading digit */
         if(((dst->family == AF_INET6) && !isxdigit((int)*mask)) ||
            ((dst->family == AF_INET) && !isdigit((int)*mask))) {
-            free(sfip_buf);                          
+            free(sfip_buf);
             return SFIP_CIDR_ERR;
         }
 
         /* Check if there's a netmask here instead of the number of bits */
-        if(strchr(mask, (int)'.') || strchr(mask, (int)':')) 
+        if(strchr(mask, (int)'.') || strchr(mask, (int)':'))
             bits = _netmask_str_to_bit_count(mask, sfip_str_to_fam(mask));
         else
             bits = atoi(mask);
@@ -269,7 +269,7 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
             /* If this is IPv4, ia ':' may used specified to indicate a netmask */
             ((dst->family == AF_INET) && (mask = strchr(ip, (int)':')) != NULL) ||
 
-            /* We've already skipped the leading whitespace, if there is more 
+            /* We've already skipped the leading whitespace, if there is more
              * whitespace, then there's probably a netmask specified after it. */
              (mask = strchr(ip, (int)' ')) != NULL
     ) {
@@ -283,23 +283,23 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
         /* Make sure we're either looking at a valid digit, or a leading
          * colon, such as can be the case with IPv6 */
         if(((dst->family == AF_INET) && isdigit((int)*mask)) ||
-           ((dst->family == AF_INET6) && (isxdigit((int)*mask) || *mask == ':'))) { 
+           ((dst->family == AF_INET6) && (isxdigit((int)*mask) || *mask == ':'))) {
             bits = _netmask_str_to_bit_count(mask, sfip_str_to_fam(mask));
-        } 
+        }
         /* No netmask */
-        else { 
+        else {
             if(dst->family == AF_INET) bits = 32;
-            else bits = 128;        
+            else bits = 128;
         }
     }
     /* No netmask */
     else {
         if(dst->family == AF_INET) bits = 32;
-        else bits = 128;        
+        else bits = 128;
     }
 
     if(inet_pton(dst->family, ip, dst->ip8) < 1) {
-        free(sfip_buf);                          
+        free(sfip_buf);
         return SFIP_INET_PARSE_ERR;
     }
 
@@ -311,20 +311,20 @@ SFIP_RET sfip_pton(const char *src, sfip_t *dst) {
         free(sfip_buf);
         return SFIP_INVALID_MASK;
     }
-    
+
     free(sfip_buf);
     return SFIP_SUCCESS;
 }
 
 /* Sets existing IP, "dst", to be source IP, "src" */
 SFIP_RET sfip_set_raw(sfip_t *dst, void *src, int family) {
-    
+
     ARG_CHECK3(dst, src, dst->ip32, SFIP_ARG_ERR);
 
     dst->family = family;
 
     if(family == AF_INET) {
-        dst->ip32[0] = *(u_int32_t*)src;
+        dst->ip32[0] = *(uint32_t*)src;
         memset(&dst->ip32[1], 0, 12);
         dst->bits = 32;
     } else if(family == AF_INET6) {
@@ -333,7 +333,7 @@ SFIP_RET sfip_set_raw(sfip_t *dst, void *src, int family) {
     } else {
         return SFIP_ARG_ERR;
     }
-    
+
     return SFIP_SUCCESS;
 }
 
@@ -364,7 +364,7 @@ void sfip_obfuscate(sfip_t *ob, sfip_t *ip) {
     ob_p = ob->ip32;
     ip_p = ip->ip32;
 
-    /* Build the netmask by converting "val" into 
+    /* Build the netmask by converting "val" into
      * the corresponding number of bits that are set */
     index = (int)ceil(ob->bits / 32.0) - 1;
 
@@ -387,9 +387,9 @@ void sfip_obfuscate(sfip_t *ob, sfip_t *ip) {
 }
 
 
-/* Check if ip is contained within the network specified by net */ 
-/* Returns SFIP_EQUAL if so.  
- * XXX sfip_contains assumes that "ip" is 
+/* Check if ip is contained within the network specified by net */
+/* Returns SFIP_EQUAL if so.
+ * XXX sfip_contains assumes that "ip" is
  *      not less-specific than "net" XXX
 */
 SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
@@ -397,7 +397,7 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
     int net_fam, ip_fam;
     unsigned int *p1, *p2;
 
-    /* SFIP_CONTAINS is returned here due to how IpAddrSetContains 
+    /* SFIP_CONTAINS is returned here due to how IpAddrSetContains
      * handles zero'ed IPs" */
     ARG_CHECK2(net, ip, SFIP_CONTAINS);
 
@@ -414,7 +414,7 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
         /* Both are really IPv4.  Only compare last 4 bytes of 'ip'*/
         p1 = net->ip32;
         p2 = &ip->ip32[3];
-        
+
         /* Mask off bits */
         bits = 32 - bits;
         temp = (ntohl(*p2) >> bits) << bits;
@@ -429,7 +429,7 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
 
     /* Iterate over each 32 bit segment */
     for(i=0; i < bits/32 && i < 3; i++, p1++, p2++) {
-        if(*p1 != *p2) 
+        if(*p1 != *p2)
             return SFIP_NOT_CONTAINS;
     }
 
@@ -442,86 +442,98 @@ SFIP_RET sfip_contains(sfip_t *net, sfip_t *ip) {
     temp = ntohl(*p2);
     temp = (temp >> mask) << mask;
 
-    /* If p1 was setup correctly through this library, there is no need to 
+    /* If p1 was setup correctly through this library, there is no need to
      * mask off any bits of its own. */
-    if(ntohl(*p1) == temp) 
+    if(ntohl(*p1) == temp)
         return SFIP_CONTAINS;
 
     return SFIP_NOT_CONTAINS;
 
 }
 
-void sfip_raw_ntop(int family, const void *ip_raw, char *buf, int bufsize) {
-    int i;
-
-    if(!ip_raw || !buf || !bufsize || 
-       (family != AF_INET && family != AF_INET6) || 
+void sfip_raw_ntop(int family, const void *ip_raw, char *buf, int bufsize)
+{
+    if(!ip_raw || !buf ||
+       (family != AF_INET && family != AF_INET6) ||
        /* Make sure if it's IPv6 that the buf is large enough. */
-       /* Need atleast a max of 8 fields of 4 bytes plus 7 for colons in 
+       /* Need atleast a max of 8 fields of 4 bytes plus 7 for colons in
         * between.  Need 1 more byte for null. */
-       (family == AF_INET6 && bufsize < 8*4 + 7 + 1) ||
+       (family == AF_INET6 && bufsize < INET6_ADDRSTRLEN) ||
        /* Make sure if it's IPv4 that the buf is large enough. */
        /* 4 fields of 3 numbers, plus 3 dots and a null byte */
-       (family == AF_INET && bufsize < 3*4 + 4) )
+       (family == AF_INET && bufsize < INET_ADDRSTRLEN) )
     {
         if(buf && bufsize > 0) buf[0] = 0;
         return;
     }
 
+#if defined(HAVE_INET_NTOP) && !defined(REG_TEST)
+    if (!inet_ntop(family, ip_raw, buf, bufsize))
+        snprintf(buf, bufsize, "ERROR");
+#else
     /* 4 fields of at most 3 characters each */
     if(family == AF_INET) {
-        u_int8_t *p = (u_int8_t*)ip_raw;
+        int i;
+        uint8_t *p = (uint8_t*)ip_raw;
 
-        for(i=0; p < ((u_int8_t*)ip_raw) + 4; p++) {
+        for(i=0; p < ((uint8_t*)ip_raw) + 4; p++) {
             i += sprintf(&buf[i], "%d", *p);
 
             /* If this is the last iteration, this could technically cause one
              *  extra byte to be written past the end. */
-            if(i < bufsize && ((p + 1) < ((u_int8_t*)ip_raw+4)))
+            if(i < bufsize && ((p + 1) < ((uint8_t*)ip_raw+4)))
                 buf[i] = '.';
 
             i++;
         }
 
-    /* Check if this is really just an IPv4 address represented as 6, 
+    /* Check if this is really just an IPv4 address represented as 6,
      * in compatible format */
 #if 0
-    } 
+    }
     else if(!field[0] && !field[1] && !field[2]) {
         unsigned char *p = (unsigned char *)(&ip->ip[12]);
 
-        for(i=0; p < &ip->ip[16]; p++) 
+        for(i=0; p < &ip->ip[16]; p++)
              i += sprintf(&buf[i], "%d.", *p);
 #endif
-    } 
+    }
     else {
-        u_int16_t *p = (u_int16_t*)ip_raw;
+        int i;
+        uint16_t *p = (uint16_t*)ip_raw;
 
-        for(i=0; p < ((u_int16_t*)ip_raw) + 8; p++) {
+        for(i=0; p < ((uint16_t*)ip_raw) + 8; p++) {
             i += sprintf(&buf[i], "%04x", ntohs(*p));
 
             /* If this is the last iteration, this could technically cause one
              *  extra byte to be written past the end. */
-            if(i < bufsize && ((p + 1) < ((u_int16_t*)ip_raw) + 8))
+            if(i < bufsize && ((p + 1) < ((uint16_t*)ip_raw) + 8))
                 buf[i] = ':';
 
             i++;
         }
     }
+#endif
+}
+
+void sfip_ntop(const sfip_t *ip, char *buf, int bufsize)
+{
+    if(!ip)
+    {
+        if(buf && bufsize > 0) buf[0] = 0;
+        return;
+    }
+
+    sfip_raw_ntop(sfip_family(ip), ip->ip32, buf, bufsize);
 }
 
 /* Uses a static buffer to return a string representation of the IP */
-char *sfip_to_str(const sfip_t *ip) {
-    /* IPv6 addresses will be at most 8 fields, of 4 characters each, 
-     * with 7 colons inbetween, one NULL, and one fudge byte for sloppy use
-     * in sfip_to_strbuf */
-    static char buf[8*4 + 7 + 1 + 1];
+char *sfip_to_str(const sfip_t *ip)
+{
+    static char buf[INET6_ADDRSTRLEN];
 
-    if(!ip)
-         return NULL;
+    sfip_ntop(ip, buf, sizeof(buf));
 
-    sfip_raw_ntop(sfip_family(ip), ip->ip32, buf, sizeof(buf));
-    
     return buf;
 }
 
@@ -565,9 +577,9 @@ int sfip_ismapped(sfip_t *ip) {
 
     ARG_CHECK1(ip, 0);
 
-    if(sfip_family(ip) == AF_INET) 
+    if(sfip_family(ip) == AF_INET)
         return 0;
-       
+
     p = ip->ip32;
 
     if(p[0] || p[1] || (ntohl(p[2]) != 0xffff && p[2] != 0)) return 0;

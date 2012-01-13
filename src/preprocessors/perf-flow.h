@@ -2,7 +2,7 @@
 /*
 ** perf-flow.h
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 ** Dan Roelker <droelker@sourcefire.com>
 **
@@ -72,7 +72,7 @@ typedef struct _sfflow {
     uint64_t   byteTotal;
 
     uint64_t   *pktLenPercent;
-    
+
     uint64_t   *portTcpSrc;
     uint64_t   *portTcpDst;
     uint64_t   *portUdpSrc;
@@ -93,8 +93,8 @@ typedef struct _sfflow {
 
 typedef struct _sfflow_stats {
 
-    double    pktLenPercent[SF_MAX_PKT_LEN];
-   
+    double    pktLenPercent[SF_MAX_PKT_LEN + 2];
+
     double    trafficTCP;
     double    trafficUDP;
     double    trafficICMP;
@@ -116,7 +116,7 @@ typedef struct _sfflow_stats {
 */
 int InitFlowStats   (SFFLOW *sfFlow);
 int InitFlowIPStats   (SFFLOW *sfFlow);
-int UpdateFlowStats (SFFLOW *sfFlow, const unsigned char *pucBuffer, int len,
+int UpdateFlowStats (SFFLOW *sfFlow, const unsigned char *pucBuffer, uint32_t len,
         int iRebuiltPkt);
 int ProcessFlowStats(SFFLOW *sfFlow);
 int ProcessFlowIPStats(SFFLOW *sfFlow, FILE *fh);

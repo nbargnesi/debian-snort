@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2010 Sourcefire, Inc.
+ * Copyright (C) 2010-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -34,6 +34,7 @@
 #define CHARSET_UTF16BE 3
 #define CHARSET_UTF32LE 4
 #define CHARSET_UTF32BE 5
+#define CHARSET_UNKNOWN 255
 
 /* Since payloads don't have to end on 2/4-byte boundaries, callers to
    DecodeUTF are responsible for keeping a decode_utf_state_t. This carries

@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -67,10 +67,11 @@ void RegisterPreprocessorRuleOptionByteOrder(char *keyword, PreprocOptionByteOrd
 
 int AddPreprocessorRuleOption(char *, OptTreeNode *, void *, PreprocOptionEval);
 
-u_int32_t PreprocessorRuleOptionHash(void *d);
+uint32_t PreprocessorRuleOptionHash(void *d);
 int PreprocessorRuleOptionCompare(void *l, void *r);
 void PreprocessorRuleOptionsFreeFunc(void *);
 int GetPreprocFastPatterns(void *, int, int, FPContentInfo **);
+int PreprocessorOptionFunc(void *option_data, Packet *p);
 
 #endif  /* __SP_PREPROCOPT_H_ */
 

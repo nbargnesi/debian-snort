@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2010 Sourcefire, Inc.
+ ** Copyright (C) 2005-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -24,6 +24,11 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "sf_dynamic_define.h"
 #include "sf_preproc_info.h"
 #include "sf_snort_packet.h"
@@ -50,6 +55,7 @@ NORETURN void DynamicPreprocessorFatalMessage(const char *format, ...)
     exit(1);
 }
 
+
 PREPROC_LINKAGE int InitializePreprocessor(DynamicPreprocessorData *dpd)
 {
     if (dpd->version < PREPROCESSOR_DATA_VERSION)
@@ -61,7 +67,7 @@ PREPROC_LINKAGE int InitializePreprocessor(DynamicPreprocessorData *dpd)
 
     if (dpd->size != sizeof(DynamicPreprocessorData))
     {
-        printf("ERROR size %d != %lu\n", dpd->size, sizeof(*dpd));
+        printf("ERROR size %d != %u\n", dpd->size, (unsigned)sizeof(*dpd));
         return -2;
     }
 

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 #include "rules.h"
 #include "treenodes.h"
 #include "sf_types.h"
-#include "debug.h"
+#include "snort_debug.h"
 
 #ifndef WIN32
 # include <sys/ioctl.h>
@@ -193,8 +193,10 @@ typedef void (*PreprocStatsFunc)(int);
 typedef void (*PreprocEvalFunc)(Packet *, void *);
 typedef void (*PreprocCheckConfigFunc)(void);
 typedef void (*PreprocSignalFunc)(int, void *);
-typedef void * (*PreprocReassemblyPktFunc)(void);
 typedef void (*PreprocPostConfigFunc)(void *);
+typedef void (*PreprocMetaEvalFunc)(int, const uint8_t *);
+
+typedef void (*PeriodicFunc)(int, void *);
 
 #ifdef SNORT_RELOAD
 typedef void (*PreprocReloadFunc)(char *);
@@ -255,6 +257,19 @@ typedef struct _PreprocEvalFuncNode
 
 } PreprocEvalFuncNode;
 
+typedef struct _PreprocMetaEvalFuncNode
+{
+    uint16_t priority;
+    uint32_t preproc_id;
+    uint32_t preproc_bit;
+    union
+    {
+        PreprocMetaEvalFunc fptr;
+        void *void_fptr;
+    } fptr;
+    struct _PreprocMetaEvalFuncNode *next;
+} PreprocMetaEvalFuncNode;
+
 typedef struct _PreprocCheckConfigFuncNode
 {
     union
@@ -280,18 +295,6 @@ typedef struct _PreprocSignalFuncNode
 
 } PreprocSignalFuncNode;
 
-typedef struct _PreprocReassemblyPktFuncNode
-{
-    unsigned int preproc_id;
-    union
-    {
-        PreprocReassemblyPktFunc fptr;
-        void *void_fptr;
-    } fptr;
-    struct _PreprocReassemblyPktFuncNode *next;
-
-} PreprocReassemblyPktFuncNode;
-
 typedef struct _PreprocPostConfigFuncNode
 {
     void *data;
@@ -303,6 +306,22 @@ typedef struct _PreprocPostConfigFuncNode
     struct _PreprocPostConfigFuncNode *next;
 
 } PreprocPostConfigFuncNode;
+
+typedef struct _PeriodicCheckFuncNode
+{
+    void *arg;
+    uint16_t priority;
+    uint32_t preproc_id;
+    uint32_t period;
+    uint32_t time_left;
+    union
+    {
+        PeriodicFunc fptr;
+        void *void_fptr;
+    } fptr;
+    struct _PeriodicCheckFuncNode *next;
+
+} PeriodicCheckFuncNode;
 
 #ifdef SNORT_RELOAD
 typedef struct _PreprocReloadVerifyFuncNode
@@ -322,30 +341,30 @@ struct _SnortConfig;
 
 void RegisterPreprocessors(void);
 #ifndef SNORT_RELOAD
-void RegisterPreprocessor(char *, PreprocConfigFunc);
+void RegisterPreprocessor(const char *, PreprocConfigFunc);
 #else
-void RegisterPreprocessor(char *, PreprocConfigFunc, PreprocReloadFunc,
+void RegisterPreprocessor(const char *, PreprocConfigFunc, PreprocReloadFunc,
                           PreprocReloadSwapFunc, PreprocReloadSwapFreeFunc);
 #endif
 PreprocConfigFuncNode * GetPreprocConfig(char *);
 PreprocConfigFunc GetPreprocConfigFunc(char *);
-void RegisterPreprocStats(char *, PreprocStatsFunc);
+void RegisterPreprocStats(const char *, PreprocStatsFunc);
 void DumpPreprocessors(void);
 void AddFuncToConfigCheckList(PreprocCheckConfigFunc);
 void AddFuncToPreprocPostConfigList(PreprocPostConfigFunc, void *);
 void CheckPreprocessorsConfig(struct _SnortConfig *);
 PreprocEvalFuncNode * AddFuncToPreprocList(PreprocEvalFunc, uint16_t, uint32_t, uint32_t);
+PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(PreprocMetaEvalFunc, uint16_t, uint32_t);
 void AddFuncToPreprocCleanExitList(PreprocSignalFunc, void *, uint16_t, uint32_t);
 void AddFuncToPreprocShutdownList(PreprocSignalFunc, void *, uint16_t, uint32_t);
 void AddFuncToPreprocResetList(PreprocSignalFunc, void *, uint16_t, uint32_t);
 void AddFuncToPreprocResetStatsList(PreprocSignalFunc, void *, uint16_t, uint32_t);
-void AddFuncToPreprocReassemblyPktList(PreprocReassemblyPktFunc, uint32_t);
 int IsPreprocEnabled(uint32_t);
 void FreePreprocConfigFuncs(void);
 void FreePreprocCheckConfigFuncs(PreprocCheckConfigFuncNode *);
 void FreePreprocStatsFuncs(PreprocStatsFuncNode *);
 void FreePreprocEvalFuncs(PreprocEvalFuncNode *);
-void FreePreprocReassemblyPktFuncs(PreprocReassemblyPktFuncNode *);
+void FreePreprocMetaEvalFuncs(PreprocMetaEvalFuncNode *);
 void FreePreprocSigFuncs(PreprocSignalFuncNode *);
 void FreePreprocPostConfigFuncs(PreprocPostConfigFuncNode *);
 void PostConfigPreprocessors(struct _SnortConfig *);
@@ -359,36 +378,36 @@ void FreeSwappedPreprocConfigurations(void);
 void FreePreprocReloadVerifyFuncList(PreprocReloadVerifyFuncNode *);
 #endif
 
-static INLINE void DisablePreprocessors(Packet *p) 
+void AddFuncToPeriodicCheckList(PeriodicFunc, void *, uint16_t, uint32_t, uint32_t);
+void FreePeriodicFuncs(PeriodicCheckFuncNode *head);
+
+static inline void DisablePreprocessors(Packet *p)
 {
     p->preprocessor_bits = PP_ALL_OFF;
 }
 
-static INLINE void EnablePreprocessors(Packet *p) 
+static inline void EnablePreprocessors(Packet *p)
 {
     p->preprocessor_bits = PP_ALL_ON;
 }
 
-static INLINE int IsPreprocBitSet(Packet *p, unsigned int preproc_bit)
+static inline int IsPreprocBitSet(Packet *p, unsigned int preproc_bit)
 {
     return (p->preprocessor_bits & preproc_bit);
 }
 
-static INLINE int SetPreprocBit(Packet *p, unsigned int preproc_id)
+static inline int SetPreprocBit(Packet *p, unsigned int preproc_id)
 {
     p->preprocessor_bits |= (1 << preproc_id);
     return 0;
 }
 
-static INLINE int IsPreprocReassemblyPktBitSet(Packet *p, unsigned int preproc_id)
+static inline int SetAllPreprocBits(Packet *p)
 {
-    return (p->preproc_reassembly_pkt_bits & (1 << preproc_id)) != 0;
-}
-
-static INLINE int SetPreprocReassemblyPktBit(Packet *p, unsigned int preproc_id)
-{
-    p->preproc_reassembly_pkt_bits |= (1 << preproc_id);
-    p->packet_flags |= PKT_PREPROC_RPKT;
+    SetPreprocBit(p, PP_SFPORTSCAN);
+    SetPreprocBit(p, PP_PERFMONITOR);
+    SetPreprocBit(p, PP_STREAM5);
+    SetPreprocBit(p, PP_SDF);
     return 0;
 }
 

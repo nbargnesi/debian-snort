@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2010 Sourcefire, Inc.
+** Copyright (C) 2006-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -22,6 +22,10 @@
  * sftarget_protocol_reference.c
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #ifdef TARGET_BASED
 
 #include "sftarget_protocol_reference.h"
@@ -29,7 +33,7 @@
 
 #include "log.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 
 #include "stream_api.h"
 #include "spp_frag3.h"
@@ -73,7 +77,7 @@ static char *standard_protocols[] =
 
 /* XXX XXX Probably need to do this during swap time since the
  * proto_reference_table is accessed during runtime */
-int16_t AddProtocolReference(char *protocol)
+int16_t AddProtocolReference(const char *protocol)
 {
     SFTargetProtocolReference *reference;
 
@@ -85,7 +89,7 @@ int16_t AddProtocolReference(char *protocol)
         InitializeProtocolReferenceTable();
     }
 
-    reference = sfghash_find(proto_reference_table, protocol);
+    reference = sfghash_find(proto_reference_table, (void *)protocol);
     if (reference)
     {
         DEBUG_WRAP(
@@ -106,7 +110,7 @@ int16_t AddProtocolReference(char *protocol)
         * defined as 8192.
         */
         LogMessage("WARNING: protocol_number wrapped.   This may result"
-                   "in odd behavior and potential false positives\n");
+                   "in odd behavior and potential false positives.\n");
 
         /* 1 is the first protocol id we use. */
         /* 0 is not used */
@@ -125,7 +129,7 @@ int16_t AddProtocolReference(char *protocol)
     return reference->ordinal;
 }
 
-int16_t FindProtocolReference(char *protocol)
+int16_t FindProtocolReference(const char *protocol)
 {
     SFTargetProtocolReference *reference;
 
@@ -137,7 +141,7 @@ int16_t FindProtocolReference(char *protocol)
         InitializeProtocolReferenceTable();
     }
 
-    reference = sfghash_find(proto_reference_table, protocol);
+    reference = sfghash_find(proto_reference_table, (void *)protocol);
 
     if (reference)
         return reference->ordinal;
@@ -234,7 +238,7 @@ int16_t GetProtocolReference(Packet *p)
 
         if (protocol != 0)
         {
-            
+
             break;
         }
 

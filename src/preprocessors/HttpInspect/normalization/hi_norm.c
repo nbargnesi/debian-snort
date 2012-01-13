@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,19 +18,19 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       hi_norm.c
-**  
+**
 **  @author     Daniel Roelker <droelker@sourcefire.com
-**  
+**
 **  @brief      Contains normalization skeleton for server and client
 **              normalization routines.
-**  
+**
 **  This file contains the core routines to normalize the different fields
 **  within the HTTP protocol.  We currently only support client URI
 **  normalization, but the hooks are here to easily add other routines.
-**  
+**
 **  NOTES:
 **      - Initial development.  DJR
 */
@@ -39,6 +39,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "hi_client_norm.h"
 #include "hi_server_norm.h"
@@ -55,9 +59,6 @@
 
 #define MAX_DIRS        2048
 
-#define NO_HEX_VAL      -1
-#define BASE36_VAL      -2
-#define HEX_VAL          1
 
 /**
 **  This define checks for negative return codes, since we have multiple
@@ -87,8 +88,6 @@ typedef struct s_URI_NORM_STATE
 typedef int (*DECODE_FUNC)(HI_SESSION *, const u_char *,
                           const u_char *, const u_char **, URI_NORM_STATE *, uint16_t *);
 
-int hex_lookup[256] = {0};
-int valid_lookup[256] = {0};
 
 /*
 **  NAME
@@ -96,30 +95,30 @@ int valid_lookup[256] = {0};
 */
 /**
 **  This routine is for getting bytes in the U decode.
-**  
+**
 **  This checks the current bounds and checking for the double decoding.
 **  This routine differs from the other Get routines because it returns
 **  other values than just END_OF_BUFFER and the char.
-**  
+**
 **  We also return DOUBLE_ENCODING if there is a % and double decoding
 **  is turned on.
-**  
+**
 **  When using this function it is important to note that it increments
 **  the buffer before checking the bounds.  So, if you call this function
-**  in a loop and don't check for END_OF_BUFFER being returned, then 
+**  in a loop and don't check for END_OF_BUFFER being returned, then
 **  you are going to overwrite the buffer.  If I put the check in, you
 **  would just be in an never-ending loop.  So just use this correctly.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER    the end of the buffer has been reached.
 **  @retval DOUBLE_ENCODING  a percent was found and double decoding is on
-**  @retval <= 0xff          an ASCII char         
+**  @retval <= 0xff          an ASCII char
 */
 static int GetPtr(HI_SESSION *Session, const u_char *start,
                   const u_char *end, const u_char **ptr, URI_NORM_STATE *norm_state, uint16_t *encodeType)
@@ -136,7 +135,7 @@ static int GetPtr(HI_SESSION *Session, const u_char *start,
         *encodeType |= HTTP_ENCODE_TYPE__DOUBLE_ENCODE ;
         return DOUBLE_ENCODING;
     }
-    
+
     return (int)**ptr;
 }
 
@@ -146,18 +145,18 @@ static int GetPtr(HI_SESSION *Session, const u_char *start,
 */
 /**
 **  Handles the single decode for %U encoding.
-**  
+**
 **  This routine receives the ptr pointing to the u.  We check the bounds
 **  and continue with processing.  %u encoding works by specifying the
 **  exact codepoint to be used.  For example, %u002f would be /.  So this
 **  all seems fine.  BUT, the problem is that IIS maps multiple codepoints
 **  to ASCII characters.  So, %u2044 also maps to /.  So this is what we
 **  need to handle here.
-**  
+**
 **  This routine only handles the single encoding.  For double decoding,
 **  %u is handled in DoubleDecode().  It's the same routine, with just
 **  the GetByte function different.
-**  
+**
 **  We use a get_byte function to get the bytes, so we can use this
 **  routine for PercentDecode and for DoubleDecode.
 **
@@ -166,9 +165,9 @@ static int GetPtr(HI_SESSION *Session, const u_char *start,
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
 **  @param get_byte    the function pointer to get bytes.
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER    we are at the end of the buffer
 **  @retval DOUBLE_ENCODING  this U encoding is possible double encoded
 **  @retval NON_ASCII_CHAR   return this char for non-ascii or bad decodes
@@ -218,7 +217,7 @@ static int UDecode(HI_SESSION *Session, const u_char *start,
             iNorm = ServerConf->iis_unicode_map[iNorm];
 
             if(iNorm == HI_UI_NON_ASCII_CODEPOINT)
-            {   
+            {
                 *encodeType |= HTTP_ENCODE_TYPE__NONASCII;
                 hi_stats.non_ascii++;
                 iNorm = NON_ASCII_CHAR;
@@ -263,31 +262,31 @@ static int UDecode(HI_SESSION *Session, const u_char *start,
 **  This function is the main decoding function.  It handles all the ASCII
 **  encoding and the U encoding, and tells us when there is a double
 **  encoding.
-**  
+**
 **  We use the GetPtr() routine to get the bytes for us.  This routine
 **  checks for DOUBLE_ENCODING and tells us about it if it finds something,
 **  so we can reset the ptrs and run it through the double decoding
 **  routine.
-**  
+**
 **  The philosophy behind this routine is that if we run out of buffer
 **  we return such, the only other thing we return besides the decodes
 **  char is a NON_ASCII_CHAR in the case that we try and decode something
 **  like %tt.  This is no good, so we return a place holder.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER   We've hit the end of buffer while decoding.
 **  @retval NON_ASCII_CHAR  Invalid hex encoding, so we return a placeholder.
 **  @retval char            return the valid char
-**  
+**
 **  @see GetPtr()
 */
-static int PercentDecode(HI_SESSION *Session, const u_char *start, 
+static int PercentDecode(HI_SESSION *Session, const u_char *start,
                          const u_char *end, const u_char **ptr, URI_NORM_STATE *norm_state, uint16_t *encodeType)
 {
     HTTPINSPECT_CONF *ServerConf = Session->server_conf;
@@ -354,24 +353,11 @@ static int PercentDecode(HI_SESSION *Session, const u_char *start,
 
             return iNorm;
         }
-        else if(!ServerConf->base36.on ||
-                valid_lookup[(u_char)iByte] != BASE36_VAL)
+        else
         {
             *encodeType |= HTTP_ENCODE_TYPE__NONASCII;
             hi_stats.non_ascii++;
             return NON_ASCII_CHAR;
-        }
-
-        /*
-        **  The logic above dictates that if we get to this point, we
-        **  have a valid base36 encoding, so let's log the event.
-        */
-        *encodeType |= HTTP_ENCODE_TYPE__BASE36;
-        hi_stats.base36++;
-        if(hi_eo_generate_event(Session, ServerConf->base36.alert) &&
-           !norm_state->param)
-        {
-            hi_eo_client_event_log(Session, HI_EO_CLIENT_BASE36, NULL, NULL);
         }
     }
 
@@ -391,24 +377,9 @@ static int PercentDecode(HI_SESSION *Session, const u_char *start,
 
     if(valid_lookup[(u_char)iByte] < 0)
     {
-        if(!ServerConf->base36.on || valid_lookup[(u_char)iByte] != BASE36_VAL)
-        {
-            *encodeType |= HTTP_ENCODE_TYPE__NONASCII;
-            hi_stats.non_ascii++;
-            return NON_ASCII_CHAR;
-        }
-
-        /*
-        **  Once again, we know we have a valid base36 encoding, let's alert
-        **  if possible.
-        */
-        *encodeType |= HTTP_ENCODE_TYPE__BASE36;
-        hi_stats.base36++;
-        if(hi_eo_generate_event(Session, ServerConf->base36.alert) &&
-           !norm_state->param)
-        {
-            hi_eo_client_event_log(Session, HI_EO_CLIENT_BASE36, NULL, NULL);
-        }
+        *encodeType |= HTTP_ENCODE_TYPE__NONASCII;
+        hi_stats.non_ascii++;
+        return NON_ASCII_CHAR;
     }
 
     iNorm = (iNorm | (hex_lookup[(u_char)iByte])) & 0xff;
@@ -432,23 +403,23 @@ static int PercentDecode(HI_SESSION *Session, const u_char *start,
 /**
 **  Wrapper for PercentDecode() and handles the return values from
 **  PercentDecode().
-**  
+**
 **  This really decodes the chars for UnicodeDecode().  If the char is
 **  a percent then we process stuff, otherwise we just increment the
 **  pointer and return.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
 **  @param bare_byte   value for a non-ASCII char or a decoded non-ASCII char
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER   End of the buffer has been reached before decode.
 **  @retval NON_ASCII_CHAR  End of buffer during decoding, return decoded char.
 **  @retval char            return the valid decoded/undecoded char
-**  
+**
 **  @see PercentDecode()
 **  @see GetByte()
 */
@@ -463,7 +434,7 @@ static int GetChar(HI_SESSION *Session, const u_char *start,
         return END_OF_BUFFER;
 
     iNorm = (int)(**ptr);
-    
+
     if(**ptr == '%' && ServerConf->ascii.on)
     {
         /*
@@ -522,24 +493,24 @@ static int GetChar(HI_SESSION *Session, const u_char *start,
 /*
 **  Decode the UTF-8 sequences and check for valid codepoints via the
 **  Unicode standard and the IIS standard.
-**  
+**
 **  We decode up to 3 bytes of UTF-8 because that's all I've been able to
 **  get to work on various servers, so let's reduce some false positives.
 **  So we decode valid UTF-8 sequences and then check the value.  If the
 **  value is ASCII, then it's decoded to that.  Otherwise, if iis_unicode
 **  is turned on, we will check the unicode codemap for valid IIS mappings.
 **  If a mapping turns up, then we return the mapped ASCII.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
-**  
+**
 **  @return integer
-**  
+**
 **  @retval NON_ASCII_CHAR  Reached end of buffer while decoding
 **  @retval char            return the decoded or badly decoded char
-**  
+**
 **  @see GetByte()
 **  @see UnicodeDecode()
 */
@@ -555,7 +526,7 @@ static int UTF8Decode(HI_SESSION *Session, const u_char *start,
     int iByte;
 
     /*
-    **  Right now we support up to 3 byte unicode sequences.  We can add 
+    **  Right now we support up to 3 byte unicode sequences.  We can add
     **  more if any of the HTTP servers support more.
     */
     if((iFirst & 0xe0) == 0xc0)
@@ -660,21 +631,21 @@ static int UTF8Decode(HI_SESSION *Session, const u_char *start,
 */
 /**
 **  Checks for the ServerConf values before we actually decode.
-**  
+**
 **  This function is really a ServerConf wrapper for UTF8Decode.
 **
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
-**  
+**
 **  @return integer
-**  
+**
 **  @retval char       the decode/undecoded byte.
-**  
+**
 **  @see GetByte()
 */
-static int UnicodeDecode(HI_SESSION *Session, const u_char *start, 
+static int UnicodeDecode(HI_SESSION *Session, const u_char *start,
                          const u_char *end, const u_char **ptr, int iFirst,
                          URI_NORM_STATE *norm_state, uint16_t *encodeType)
 {
@@ -696,17 +667,17 @@ static int UnicodeDecode(HI_SESSION *Session, const u_char *start,
 /**
 **  Handles the first stage of URI decoding for the case of IIS double
 **  decoding.
-**  
+**
 **  The first stage consists of ASCII decoding and unicode decoding.  %U
 **  decoding is handled in the ASCII decoding.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER means that we've reached the end of buffer in
 **                        GetChar.
 **  @retval iChar         this is the character that was decoded.
@@ -741,7 +712,7 @@ static int GetByte(HI_SESSION *Session, const u_char *start, const u_char *end,
 */
 /**
 **  The double decoding routine for IIS good times.
-**  
+**
 **  Coming into this function means that we just decoded a % or that
 **  we just saw two percents in a row.  We know which state we are
 **  in depending if the first char is a '%' or not.
@@ -753,15 +724,15 @@ static int GetByte(HI_SESSION *Session, const u_char *start, const u_char *end,
 **  -  ascii
 **
 **  Knowing this, we can decode appropriately.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
 **  @param norm_state  the ptr to the URI norm state
-**  
+**
 **  @return integer
-**  
+**
 **  @retval NON_ASCII_CHAR  End of buffer reached while decoding
 **  @retval char            The decoded char
 */
@@ -801,7 +772,7 @@ static int DoubleDecode(HI_SESSION *Session, const u_char *start,
         if(ServerConf->u_encoding.on && (toupper(iByte) == 'U'))
         {
             iNorm = UDecode(Session, start, end, ptr, GetByte, norm_state, encodeType);
-            
+
             if(iNorm == END_OF_BUFFER)
             {
                 /*
@@ -850,32 +821,32 @@ static int DoubleDecode(HI_SESSION *Session, const u_char *start,
 **  This is the final GetByte routine.  The value that is returned from this
 **  routine is the final decoded byte, and normalization can begin.  This
 **  routine handles the double phase of decoding that IIS is fond of.
-**  
+**
 **  So to recap all the decoding up until this point.
-**  
+**
 **  The first phase is to call GetByte().  GetByte() returns the first stage
 **  of decoding, which handles the UTF-8 decoding.  If we have decoded a
 **  % of some type, then we head into DoubleDecode() if the ServerConf
 **  allows it.
-**  
+**
 **  What returns from DoubleDecode is the final result.
-**  
+**
 **  @param ServerConf  the server configuration
 **  @param start       the start of the URI
 **  @param end         the end of the URI
 **  @param ptr         the current pointer into the URI
 **  @param norm_state  the pointer to the URI norm state
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER  While decoding, the end of buffer was reached.
 **  @retval char           The resultant decoded char.
-**  
+**
 **  @see DoubleDecode();
 **  @see GetByte();
 */
 static int GetDecodedByte(HI_SESSION *Session, const u_char *start,
-                          const u_char *end, const u_char **ptr, 
+                          const u_char *end, const u_char **ptr,
                           URI_NORM_STATE *norm_state, uint16_t *encodeType)
 {
     HTTPINSPECT_CONF *ServerConf = Session->server_conf;
@@ -898,7 +869,7 @@ static int GetDecodedByte(HI_SESSION *Session, const u_char *start,
         if(hi_eo_generate_event(Session, ServerConf->iis_backslash.alert) &&
            !norm_state->param)
         {
-            hi_eo_client_event_log(Session, HI_EO_CLIENT_IIS_BACKSLASH, 
+            hi_eo_client_event_log(Session, HI_EO_CLIENT_IIS_BACKSLASH,
                                    NULL, NULL);
         }
 
@@ -919,18 +890,18 @@ static int GetDecodedByte(HI_SESSION *Session, const u_char *start,
 */
 /**
 **  Set the ub_ptr and update the URI_NORM_STATE.
-**  
+**
 **  The main point of this function is to take care of the details in
 **  updating the directory stack and setting the buffer pointer to the
 **  last directory.
-**  
+**
 **  @param norm_state pointer to the normalization state struct
 **  @param ub_ptr     double pointer to the normalized buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval HI_SUCCESS function successful
-**  
+**
 **  @see hi_norm_uri()
 */
 static int DirTrav(HI_SESSION *Session, URI_NORM_STATE *norm_state,
@@ -942,7 +913,7 @@ static int DirTrav(HI_SESSION *Session, URI_NORM_STATE *norm_state,
     if(norm_state->dir_count)
     {
         *ub_ptr = norm_state->dir_track[norm_state->dir_count - 1];
-        
+
         /*
         **  Check to make sure that we aren't at the beginning
         */
@@ -972,7 +943,7 @@ static int DirTrav(HI_SESSION *Session, URI_NORM_STATE *norm_state,
         }
     }
 
-    return HI_SUCCESS; 
+    return HI_SUCCESS;
 }
 
 /*
@@ -982,18 +953,18 @@ static int DirTrav(HI_SESSION *Session, URI_NORM_STATE *norm_state,
 /**
 **  Set the directory by writing a '/' to the normalization buffer and
 **  updating the directory stack.
-**  
+**
 **  This gets called after every slash that isn't a directory traversal.  We
 **  just write a '/' and then update the directory stack to point to the
 **  last directory, in the case of future directory traversals.
-**  
+**
 **  @param norm_state pointer to the normalization state struct
 **  @param ub_ptr     double pointer to the normalized buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval HI_SUCCESS function successful
-**  
+**
 **  @see hi_norm_uri()
 */
 static int DirSet(URI_NORM_STATE *norm_state, u_char **ub_ptr)
@@ -1023,42 +994,42 @@ static int DirSet(URI_NORM_STATE *norm_state, u_char **ub_ptr)
 /**
 **  The main function for dealing with multiple slashes, self-referential
 **  directories, and directory traversals.
-**  
+**
 **  This routine does GetDecodedByte() while looking for directory foo.  It's
 **  called every time that we see a slash in the main hi_norm_uri.  Most of
-**  the time we just enter this loop, find a non-directory-foo char and 
+**  the time we just enter this loop, find a non-directory-foo char and
 **  return that char.  hi_norm_uri() takes care of the directory state
 **  updating and so forth.
-**  
+**
 **  But when we run into trouble with directories, this function takes care
 **  of that.  We loop through multiple slashes until we get to the next
 **  directory.  We also loop through self-referential directories until we
-**  get to the next directory.  Then finally we deal with directory 
+**  get to the next directory.  Then finally we deal with directory
 **  traversals.
-**  
+**
 **  With directory traversals we do a kind of "look ahead".  We verify that
 **  there is indeed a directory traversal, and then set the ptr back to
 **  the beginning of the '/', so when we iterate through hi_norm_uri() we
 **  catch it.
-**  
+**
 **  The return value for this function is usually the character after
 **  the directory.  When there was a directory traversal, it returns the
 **  value DIR_TRAV.  And when END_OF_BUFFER is returned, it means that we've
 **  really hit the end of the buffer, or we were looping through multiple
 **  slashes and self-referential directories until the end of the URI
 **  buffer.
-**  
+**
 **  @param ServerConf   pointer to the Server configuration
 **  @param start        pointer to the start of the URI buffer
 **  @param end          pointer to the end of the URI buffer
 **  @param ptr          pointer to the index in the URI buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER   we've reached the end of buffer
 **  @retval DIR_TRAV        we found a directory traversal
 **  @retval char            return the next char after the directory
-**  
+**
 **  @see hi_norm_uri()
 **  @see GetDecodedByte()
 */
@@ -1171,7 +1142,7 @@ static int DirNorm(HI_SESSION *Session, const u_char *start, const u_char *end,
                         continue;
                     }
                 }
-  
+
                 /*
                 **  This means that we saw '.' and then another char, so
                 **  it was just a file/dir that started with a '.'.
@@ -1196,16 +1167,16 @@ static int DirNorm(HI_SESSION *Session, const u_char *start, const u_char *end,
 */
 /**
 **  This function checks for long directory names in the request URI.
-**  
+**
 **  @param Session    pointer to the session
 **  @param norm_state pointer to the directory stack
 **  @param ub_ptr     current pointer in normalization buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval HI_SUCCESS
 */
-static int CheckLongDir(HI_SESSION *Session, URI_NORM_STATE *norm_state, 
+static int CheckLongDir(HI_SESSION *Session, URI_NORM_STATE *norm_state,
                         u_char *ub_ptr)
 {
     int    iDirLen;
@@ -1241,18 +1212,18 @@ static int CheckLongDir(HI_SESSION *Session, URI_NORM_STATE *norm_state,
 /**
 **  This function inspects the normalized chars for any other processing
 **  that we need to do, such as directory traversals.
-**  
+**
 **  The main things that we check for here are '/' and '?'.  There reason
 **  for '/' is that we do directory traversals.  If it's a slash, we call
 **  the routine that will normalize mutli-slashes, self-referential dirs,
 **  and dir traversals.  We do all that processing here and call the
 **  appropriate functions.
-**  
+**
 **  The '?' is so we can mark the parameter field, and check for oversize
 **  directories one last time.  Once the parameter field is set, we don't
 **  do any more oversize directory checks since we aren't in the url
 **  any more.
-**  
+**
 **  @param Session      pointer to the current session
 **  @param iChar        the char to inspect
 **  @param norm_state   the normalization state
@@ -1262,16 +1233,16 @@ static int CheckLongDir(HI_SESSION *Session, URI_NORM_STATE *norm_state,
 **  @param ub_start     the start of the norm buffer
 **  @param ub_end       the end of the norm buffer
 **  @param ub_ptr       the address of the pointer index into the norm buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval END_OF_BUFFER    we've reached the end of the URI or norm buffer
 **  @retval HI_NONFATAL_ERR  no special char, so just write the char and
 **                           increment the ub_ptr.
 **  @retval HI_SUCCESS       normalized the special char and already
 **                           incremented the buffers.
 */
-static INLINE int InspectUriChar(HI_SESSION *Session, int iChar,
+static inline int InspectUriChar(HI_SESSION *Session, int iChar,
                                  URI_NORM_STATE *norm_state,
                                  const u_char *start, const u_char *end, const u_char **ptr,
                                  u_char *ub_start, u_char *ub_end,
@@ -1370,7 +1341,7 @@ static INLINE int InspectUriChar(HI_SESSION *Session, int iChar,
             */
             if(!hi_util_in_bounds(ub_start, ub_end, *ub_ptr))
                 return END_OF_BUFFER;
-            
+
             /*
             **  Set the char to what we got in DirNorm()
             */
@@ -1398,7 +1369,7 @@ static INLINE int InspectUriChar(HI_SESSION *Session, int iChar,
     if((u_char)iChar == '?')
     {
         /*
-        **  We assume that this is the beginning of the parameter field, 
+        **  We assume that this is the beginning of the parameter field,
         **  and check for a long directory following.  Event though seeing
         **  a question mark does not guarantee the parameter field, thanks
         **  IIS.
@@ -1420,27 +1391,27 @@ static INLINE int InspectUriChar(HI_SESSION *Session, int iChar,
 */
 /**
 **  Normalize the URI into the URI normalize buffer.
-**  
+**
 **  This is the routine that users call to normalize the URI.  It iterates
 **  through the URI buffer decoding the next character and is then checked
 **  for any directory problems before writing the decoded character into the
 **  normalizing buffer.
-**  
+**
 **  We return the length of the normalized URI buffer in the variable,
 **  uribuf_size.  This value is passed in as the max size of the normalization
 **  buffer, which we then set in iMaxUriBufSize for later reference.
-**  
+**
 **  If there was some sort of problem during normalizing we set the normalized
 **  URI buffer size to 0 and return HI_NONFATAL_ERR.
-**  
+**
 **  @param ServerConf   the pointer to the server configuration
 **  @param uribuf       the pointer to the normalize uri buffer
 **  @param uribuf_size  the size of the normalize buffer
 **  @param uri          the pointer to the unnormalized uri buffer
 **  @param uri_size     the size of the unnormalized uri buffer
-**  
+**
 **  @return integer
-**  
+**
 **  @retval HI_NONFATAL_ERR there was a problem during normalizing, the
 **                          uribuf_size is also set to 0
 **  @retval HI_SUCCESS      Normalizing the URI was successful
@@ -1535,93 +1506,19 @@ int hi_norm_uri(HI_SESSION *Session, u_char *uribuf, int *uribuf_size,
 
 /*
 **  NAME
-**    hi_norm_init::
-*/
-/**
-**  Initialize the arrays neccessary to normalize the HTTP protocol fields.
-**  
-**  Currently, we set a hex_lookup array where we can convert the hex encoding
-**  that we encounter in the URI into numbers we deal with.
-**  
-**  @param GlobalConf  pointer to the global configuration of HttpInspect
-**  
-**  @return HI_SUCCESS  function successful
-*/
-int hi_norm_init(HTTPINSPECT_GLOBAL_CONF *GlobalConf)
-{
-    int iCtr;
-    int iNum;
-
-    memset(hex_lookup, NO_HEX_VAL, sizeof(hex_lookup));
-    memset(valid_lookup, NO_HEX_VAL, sizeof(valid_lookup));
-
-    /*
-    **  Set the decimal number values
-    */
-    iNum = 0;
-    for(iCtr = 48; iCtr < 58; iCtr++)
-    {
-        hex_lookup[iCtr] = iNum;
-        valid_lookup[iCtr] = HEX_VAL;
-        iNum++;
-    }
-
-    /*
-    **  Set the upper case values.
-    */
-    iNum = 10;
-    for(iCtr = 65; iCtr < 71; iCtr++)
-    {
-        hex_lookup[iCtr] = iNum;
-        valid_lookup[iCtr] = HEX_VAL;
-        iNum++;
-    }
-
-    iNum = 16;
-    for(iCtr = 71; iCtr < 91; iCtr++)
-    {
-        hex_lookup[iCtr] = iNum;
-        valid_lookup[iCtr] = BASE36_VAL;
-        iNum++;
-    }
-
-    /*
-    **  Set the lower case values.
-    */
-    iNum = 10;
-    for(iCtr = 97; iCtr < 103; iCtr++)
-    {
-        hex_lookup[iCtr] = iNum;
-        valid_lookup[iCtr] = HEX_VAL;
-        iNum++;
-    }
-
-    iNum = 16;
-    for(iCtr = 103; iCtr < 123; iCtr++)
-    {
-        hex_lookup[iCtr] = iNum;
-        valid_lookup[iCtr] = BASE36_VAL;
-        iNum++;
-    }
-
-    return HI_SUCCESS;
-}
-
-/*
-**  NAME
 **    hi_normalization::
 */
 /**
 **  Wrap the logic for normalizing different inspection modes.
-**  
+**
 **  We call the various normalization modes here, and adjust the appropriate
 **  Session constructs.
-**  
+**
 **  @param Session      pointer to the session structure.
 **  @param iInspectMode the type of inspection/normalization to do
-**  
+**
 **  @return integer
-**  
+**
 **  @retval HI_SUCCESS      function successful
 **  @retval HI_INVALID_ARG  invalid argument
 */
@@ -1654,7 +1551,7 @@ int hi_normalization(HI_SESSION *Session, int iInspectMode, HttpSessionData *hsd
     {
         iRet = hi_server_norm((void *)Session, hsd);
         if (iRet)
-        {   
+        {
             return iRet;
         }
     }

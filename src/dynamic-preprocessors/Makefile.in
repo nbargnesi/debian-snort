@@ -14,6 +14,8 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
+
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -44,10 +46,72 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+am__vpath_adj = case $$p in \
+    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
+    *) f=$$p;; \
+  esac;
+am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
+am__install_max = 40
+am__nobase_strip_setup = \
+  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
+am__nobase_strip = \
+  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
+am__nobase_list = $(am__nobase_strip_setup); \
+  for p in $$list; do echo "$$p $$p"; done | \
+  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
+  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
+    if (++n[$$2] == $(am__install_max)) \
+      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
+    END { for (dir in files) print dir, files[dir] }'
+am__base_list = \
+  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
+  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
+am__installdirs = "$(DESTDIR)$(preproclibdir)" \
+	"$(DESTDIR)$(preprocdir)"
+LTLIBRARIES = $(preproclib_LTLIBRARIES)
+libsf_dynamic_preproc_la_LIBADD =
+am__libsf_dynamic_preproc_la_SOURCES_DIST = libs/ssl.c libs/sfparser.c
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@am_libsf_dynamic_preproc_la_OBJECTS = libsf_dynamic_preproc_la-ssl.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfparser.lo
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@nodist_libsf_dynamic_preproc_la_OBJECTS = libsf_dynamic_preproc_la-sf_dynamic_preproc_lib.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sf_ip.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfrt.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfrt_dir.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfrt_flat.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfrt_flat_dir.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-segment_mem.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-mempool.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sf_sdlist.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sfPolicyUserData.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-util_unfold.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sf_base64decode.lo \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	libsf_dynamic_preproc_la-sf_email_attach_decode.lo
+libsf_dynamic_preproc_la_OBJECTS =  \
+	$(am_libsf_dynamic_preproc_la_OBJECTS) \
+	$(nodist_libsf_dynamic_preproc_la_OBJECTS)
+libsf_dynamic_preproc_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) \
+	$(libsf_dynamic_preproc_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@am_libsf_dynamic_preproc_la_rpath =  \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	-rpath \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	$(preproclibdir)
+DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp =
 am__depfiles_maybe =
-SOURCES =
-DIST_SOURCES =
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+SOURCES = $(libsf_dynamic_preproc_la_SOURCES) \
+	$(nodist_libsf_dynamic_preproc_la_SOURCES)
+DIST_SOURCES = $(am__libsf_dynamic_preproc_la_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -55,6 +119,7 @@ RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	install-pdf-recursive install-ps-recursive install-recursive \
 	installcheck-recursive installdirs-recursive pdf-recursive \
 	ps-recursive uninstall-recursive
+HEADERS = $(nodist_preproc_HEADERS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
@@ -62,7 +127,8 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = libs ftptelnet smtp ssh dns ssl dcerpc2 sdf
+DIST_SUBDIRS = . libs ftptelnet pop imap smtp ssh dns ssl dcerpc2 sdf \
+	sip reputation gtp modbus dnp3 rzb_saac
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -98,7 +164,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -113,7 +181,8 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
-INCLUDES = @INCLUDES@ 
+ICONFIGFLAGS = @ICONFIGFLAGS@
+INCLUDES = -I${top_builddir}/src/dynamic-preprocessors/include -I${top_srcdir}/src/dynamic-preprocessors/libs
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -149,13 +218,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -214,9 +289,72 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign no-dependencies
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@preproclibdir = $(pkglibdir)/dynamic_preproc
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@preproclib_LTLIBRARIES = libsf_dynamic_preproc.la
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libsf_dynamic_preproc_la_CFLAGS = -fPIC -DPIC
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libsf_dynamic_preproc_la_LDFLAGS = -static
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@nodist_libsf_dynamic_preproc_la_SOURCES = \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_preproc_lib.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_ip.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_dir.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_flat.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_flat_dir.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/segment_mem.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/mempool.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_sdlist.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfPolicyUserData.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/util_unfold.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_base64decode.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_email_attach_decode.c
+
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libsf_dynamic_preproc_la_SOURCES = \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libs/ssl.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libs/sfparser.c
+
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@preprocdir = $(pkgincludedir)/dynamic_preproc
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@nodist_preproc_HEADERS = \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libs/ssl.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libs/sfcommon.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@libs/sf_preproc_info.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_snort_packet.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_protocols.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_snort_plugin_api.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_decompression.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfPolicyUserData.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/snort_debug.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/snort_bounds.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/cpuclock.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/profiler.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/bitop.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/mempool.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_sdlist_types.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_ip.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_flat.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_flat_dir.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/segment_mem.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_common.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_engine.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_define.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_meta.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_preprocessor.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_dynamic_preproc_lib.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/ipv6_port.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfPolicy.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_dir.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfrt_trie.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/obfuscation.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/stream_api.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/str_search.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/preprocids.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/attribute_table_api.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfcontrol.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/idle_processing.h
+
 BUILT_SOURCES = \
-	include/bounds.h \
-	include/debug.h \
+	include/snort_bounds.h \
+	include/snort_debug.h \
 	include/preprocids.h \
 	include/profiler.h \
 	include/cpuclock.h \
@@ -238,7 +376,9 @@ BUILT_SOURCES = \
 	include/sfsnort_dynamic_detection_lib.c \
 	include/sfsnort_dynamic_detection_lib.h \
 	include/sf_snort_packet.h \
+	include/sf_protocols.h \
 	include/sf_snort_plugin_api.h \
+	include/sf_decompression.h \
 	include/pcap_pkthdr32.h \
 	include/stream_api.h \
 	include/str_search.h \
@@ -247,22 +387,37 @@ BUILT_SOURCES = \
 	include/sfrt.c \
 	include/sfrt_dir.h \
 	include/sfrt_dir.c \
+	include/sfrt_flat.h \
+	include/sfrt_flat.c \
+	include/sfrt_flat_dir.h \
+	include/sfrt_flat_dir.c \
 	include/sfrt_trie.h \
+	include/segment_mem.h \
+	include/segment_mem.c \
 	include/mempool.h \
 	include/mempool.c \
 	include/sf_sdlist.h \
+	include/sf_sdlist_types.h \
 	include/sf_sdlist.c \
 	include/sfPolicyUserData.c \
 	include/sfPolicyUserData.h \
 	include/sfPolicy.h \
+	include/util_unfold.h \
+	include/util_unfold.c \
 	include/sf_base64decode.h \
 	include/sf_base64decode.c \
+	include/sf_email_attach_decode.h \
+	include/sf_email_attach_decode.c \
 	include/treenodes.h \
 	include/signature.h \
 	include/plugin_enum.h \
 	include/obfuscation.h \
 	include/rule_option_types.h \
-	include/event.h
+	include/event.h \
+	include/Unified2_common.h \
+	include/attribute_table_api.h \
+	include/sfcontrol.h \
+	include/idle_processing.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
@@ -358,6 +513,7 @@ replace_policy_globals = \
 		    -e "/SharedObjectAddEnds/d" \
             -e "/SharedObjectDeleteBegins/,/SharedObjectDeleteEnds/d" \
 		    -e "s/getDefaultPolicy()/_dpd.getDefaultPolicy()/" \
+		    -e "s/SnortStrnStr/_dpd.SnortStrnStr/" \
 		        $$dst_header > $$dst_header.new; \
 		mv $$dst_header.new $$dst_header; \
 	fi
@@ -395,7 +551,8 @@ copy_treenode_header = \
 		$(sed_treenode_header); \
 	fi
 
-@HAVE_DYNAMIC_PLUGINS_TRUE@SUBDIRS = libs ftptelnet smtp ssh dns ssl dcerpc2 sdf
+@WANT_SF_SAAC_TRUE@RZB_SAAC_DIR = rzb_saac
+@HAVE_DYNAMIC_PLUGINS_TRUE@SUBDIRS = . libs ftptelnet pop imap smtp ssh dns ssl dcerpc2 sdf sip reputation gtp modbus dnp3 $(RZB_SAAC_DIR)
 EXTRA_DIST = \
 dynamic_preprocessors.dsp \
 sf_dynamic_initialize/sf_dynamic_initialize.dsp \
@@ -412,34 +569,45 @@ treenodes.sed
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_dynamic_preproc_lib.c \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_ip.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_snort_packet.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_protocols.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_snort_plugin_api.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_decompression.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_types.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfsnort_dynamic_detection_lib.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfsnort_dynamic_detection_lib.c \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/pcap_pkthdr32.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/str_search.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/stream_api.h \
-@HAVE_DYNAMIC_PLUGINS_TRUE@include/debug.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/snort_debug.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/profiler.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfghash.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfhashfcn.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/bitop.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/preprocids.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfPolicyUserData.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/util_unfold.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/util_unfold.c \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_base64decode.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_base64decode.c \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_email_attach_decode.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_email_attach_decode.c \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/treenodes.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/signature.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/plugin_enum.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfPolicyUserData.c \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/obfuscation.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/rule_option_types.h \
-@HAVE_DYNAMIC_PLUGINS_TRUE@include/event.h
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/event.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/Unified2_common.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/attribute_table_api.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sfcontrol.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/idle_processing.h
 
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
+.SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -470,12 +638,125 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+install-preproclibLTLIBRARIES: $(preproclib_LTLIBRARIES)
+	@$(NORMAL_INSTALL)
+	test -z "$(preproclibdir)" || $(MKDIR_P) "$(DESTDIR)$(preproclibdir)"
+	@list='$(preproclib_LTLIBRARIES)'; test -n "$(preproclibdir)" || list=; \
+	list2=; for p in $$list; do \
+	  if test -f $$p; then \
+	    list2="$$list2 $$p"; \
+	  else :; fi; \
+	done; \
+	test -z "$$list2" || { \
+	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(preproclibdir)'"; \
+	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(preproclibdir)"; \
+	}
+
+uninstall-preproclibLTLIBRARIES:
+	@$(NORMAL_UNINSTALL)
+	@list='$(preproclib_LTLIBRARIES)'; test -n "$(preproclibdir)" || list=; \
+	for p in $$list; do \
+	  $(am__strip_dir) \
+	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(preproclibdir)/$$f'"; \
+	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(preproclibdir)/$$f"; \
+	done
+
+clean-preproclibLTLIBRARIES:
+	-test -z "$(preproclib_LTLIBRARIES)" || rm -f $(preproclib_LTLIBRARIES)
+	@list='$(preproclib_LTLIBRARIES)'; for p in $$list; do \
+	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
+	  test "$$dir" != "$$p" || dir=.; \
+	  echo "rm -f \"$${dir}/so_locations\""; \
+	  rm -f "$${dir}/so_locations"; \
+	done
+libsf_dynamic_preproc.la: $(libsf_dynamic_preproc_la_OBJECTS) $(libsf_dynamic_preproc_la_DEPENDENCIES) 
+	$(libsf_dynamic_preproc_la_LINK) $(am_libsf_dynamic_preproc_la_rpath) $(libsf_dynamic_preproc_la_OBJECTS) $(libsf_dynamic_preproc_la_LIBADD) $(LIBS)
+
+mostlyclean-compile:
+	-rm -f *.$(OBJEXT)
+
+distclean-compile:
+	-rm -f *.tab.c
+
+.c.o:
+	$(COMPILE) -c $<
+
+.c.obj:
+	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+.c.lo:
+	$(LTCOMPILE) -c -o $@ $<
+
+libsf_dynamic_preproc_la-ssl.lo: libs/ssl.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-ssl.lo `test -f 'libs/ssl.c' || echo '$(srcdir)/'`libs/ssl.c
+
+libsf_dynamic_preproc_la-sfparser.lo: libs/sfparser.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfparser.lo `test -f 'libs/sfparser.c' || echo '$(srcdir)/'`libs/sfparser.c
+
+libsf_dynamic_preproc_la-sf_dynamic_preproc_lib.lo: include/sf_dynamic_preproc_lib.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sf_dynamic_preproc_lib.lo `test -f 'include/sf_dynamic_preproc_lib.c' || echo '$(srcdir)/'`include/sf_dynamic_preproc_lib.c
+
+libsf_dynamic_preproc_la-sf_ip.lo: include/sf_ip.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sf_ip.lo `test -f 'include/sf_ip.c' || echo '$(srcdir)/'`include/sf_ip.c
+
+libsf_dynamic_preproc_la-sfrt.lo: include/sfrt.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfrt.lo `test -f 'include/sfrt.c' || echo '$(srcdir)/'`include/sfrt.c
+
+libsf_dynamic_preproc_la-sfrt_dir.lo: include/sfrt_dir.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfrt_dir.lo `test -f 'include/sfrt_dir.c' || echo '$(srcdir)/'`include/sfrt_dir.c
+
+libsf_dynamic_preproc_la-sfrt_flat.lo: include/sfrt_flat.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfrt_flat.lo `test -f 'include/sfrt_flat.c' || echo '$(srcdir)/'`include/sfrt_flat.c
+
+libsf_dynamic_preproc_la-sfrt_flat_dir.lo: include/sfrt_flat_dir.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfrt_flat_dir.lo `test -f 'include/sfrt_flat_dir.c' || echo '$(srcdir)/'`include/sfrt_flat_dir.c
+
+libsf_dynamic_preproc_la-segment_mem.lo: include/segment_mem.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-segment_mem.lo `test -f 'include/segment_mem.c' || echo '$(srcdir)/'`include/segment_mem.c
+
+libsf_dynamic_preproc_la-mempool.lo: include/mempool.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-mempool.lo `test -f 'include/mempool.c' || echo '$(srcdir)/'`include/mempool.c
+
+libsf_dynamic_preproc_la-sf_sdlist.lo: include/sf_sdlist.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sf_sdlist.lo `test -f 'include/sf_sdlist.c' || echo '$(srcdir)/'`include/sf_sdlist.c
+
+libsf_dynamic_preproc_la-sfPolicyUserData.lo: include/sfPolicyUserData.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sfPolicyUserData.lo `test -f 'include/sfPolicyUserData.c' || echo '$(srcdir)/'`include/sfPolicyUserData.c
+
+libsf_dynamic_preproc_la-util_unfold.lo: include/util_unfold.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-util_unfold.lo `test -f 'include/util_unfold.c' || echo '$(srcdir)/'`include/util_unfold.c
+
+libsf_dynamic_preproc_la-sf_base64decode.lo: include/sf_base64decode.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sf_base64decode.lo `test -f 'include/sf_base64decode.c' || echo '$(srcdir)/'`include/sf_base64decode.c
+
+libsf_dynamic_preproc_la-sf_email_attach_decode.lo: include/sf_email_attach_decode.c
+	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsf_dynamic_preproc_la_CFLAGS) $(CFLAGS) -c -o libsf_dynamic_preproc_la-sf_email_attach_decode.lo `test -f 'include/sf_email_attach_decode.c' || echo '$(srcdir)/'`include/sf_email_attach_decode.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
+install-nodist_preprocHEADERS: $(nodist_preproc_HEADERS)
+	@$(NORMAL_INSTALL)
+	test -z "$(preprocdir)" || $(MKDIR_P) "$(DESTDIR)$(preprocdir)"
+	@list='$(nodist_preproc_HEADERS)'; test -n "$(preprocdir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(preprocdir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(preprocdir)" || exit $$?; \
+	done
+
+uninstall-nodist_preprocHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_preproc_HEADERS)'; test -n "$(preprocdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(preprocdir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(preprocdir)" && rm -f $$files
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.
@@ -673,9 +954,14 @@ distdir: $(DISTFILES)
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-recursive
-all-am: Makefile
+@HAVE_DYNAMIC_PLUGINS_FALSE@all-local:
+@SO_WITH_STATIC_LIB_FALSE@all-local:
+all-am: Makefile $(LTLIBRARIES) $(HEADERS) all-local
 installdirs: installdirs-recursive
 installdirs-am:
+	for dir in "$(DESTDIR)$(preproclibdir)" "$(DESTDIR)$(preprocdir)"; do \
+	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
+	done
 install: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) install-recursive
 install-exec: install-exec-recursive
@@ -707,11 +993,13 @@ maintainer-clean-generic:
 @HAVE_DYNAMIC_PLUGINS_FALSE@install-data-local:
 clean: clean-recursive
 
-clean-am: clean-generic clean-libtool clean-local mostlyclean-am
+clean-am: clean-generic clean-libtool clean-local \
+	clean-preproclibLTLIBRARIES mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f Makefile
-distclean-am: clean-am distclean-generic distclean-tags
+distclean-am: clean-am distclean-compile distclean-generic \
+	distclean-tags
 
 dvi: dvi-recursive
 
@@ -725,7 +1013,8 @@ info: info-recursive
 
 info-am:
 
-install-data-am: install-data-local
+install-data-am: install-data-local install-nodist_preprocHEADERS \
+	install-preproclibLTLIBRARIES
 
 install-dvi: install-dvi-recursive
 
@@ -759,7 +1048,8 @@ maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-generic mostlyclean-libtool
+mostlyclean-am: mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool
 
 pdf: pdf-recursive
 
@@ -769,29 +1059,38 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am: uninstall-local
+uninstall-am: uninstall-local uninstall-nodist_preprocHEADERS \
+	uninstall-preproclibLTLIBRARIES
 
 .MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all check \
 	ctags-recursive install install-am install-strip \
 	tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
-	all all-am check check-am clean clean-generic clean-libtool \
-	clean-local ctags ctags-recursive distclean distclean-generic \
+	all all-am all-local check check-am clean clean-generic \
+	clean-libtool clean-local clean-preproclibLTLIBRARIES ctags \
+	ctags-recursive distclean distclean-compile distclean-generic \
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-data-local install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs installdirs-am \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am uninstall-local
+	install-info install-info-am install-man \
+	install-nodist_preprocHEADERS install-pdf install-pdf-am \
+	install-preproclibLTLIBRARIES install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	installdirs-am maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-recursive \
+	uninstall uninstall-am uninstall-local \
+	uninstall-nodist_preprocHEADERS \
+	uninstall-preproclibLTLIBRARIES
 
+
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@all-local: $(LTLIBRARIES)
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@	$(MAKE) DESTDIR=`pwd`/build install-preproclibLTLIBRARIES
 
 # From main src tree
-include/debug.h: $(srcdir)/../debug.h 
+include/snort_debug.h: $(srcdir)/../snort_debug.h
 	@src_header=$?; dst_header=$@; $(copy_debug_header)
 
 include/preprocids.h: $(srcdir)/../preprocids.h
@@ -806,10 +1105,10 @@ include/cpuclock.h: $(srcdir)/../cpuclock.h
 include/pcap_pkthdr32.h: $(srcdir)/../pcap_pkthdr32.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-include/bounds.h: $(srcdir)/../bounds.h 
+include/snort_bounds.h: $(srcdir)/../snort_bounds.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-include/ipv6_port.h: $(srcdir)/../ipv6_port.h 
+include/ipv6_port.h: $(srcdir)/../ipv6_port.h
 	@src_header=$?; dst_header=$@; $(massage_ipv6_headers)
 
 include/sf_types.h: $(srcdir)/../sf_types.h
@@ -838,6 +1137,9 @@ include/sf_dynamic_meta.h: $(srcdir)/../dynamic-plugins/sf_dynamic_meta.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/sf_dynamic_preprocessor.h: $(srcdir)/../dynamic-plugins/sf_dynamic_preprocessor.h
+	@src_header=$?; dst_header=$@; $(massage_headers)
+
+include/attribute_table_api.h: $(srcdir)/../dynamic-plugins/attribute_table_api.h
 	@src_header=$?; dst_header=$@; $(massage_headers)
 
 # From dynamic-plugins/sf_preproc_example
@@ -881,7 +1183,25 @@ include/sfrt_dir.h: $(srcdir)/../sfutil/sfrt_dir.h
 include/sfrt_dir.c: $(srcdir)/../sfutil/sfrt_dir.c
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
+include/sfrt_flat.h: $(srcdir)/../sfutil/sfrt_flat.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_flat.c: $(srcdir)/../sfutil/sfrt_flat.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_flat_dir.h: $(srcdir)/../sfutil/sfrt_flat_dir.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfrt_flat_dir.c: $(srcdir)/../sfutil/sfrt_flat_dir.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 include/sfrt_trie.h: $(srcdir)/../sfutil/sfrt_trie.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/segment_mem.c: $(srcdir)/../sfutil/segment_mem.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/segment_mem.h: $(srcdir)/../sfutil/segment_mem.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/mempool.h: $(srcdir)/../mempool.h
@@ -891,6 +1211,9 @@ include/mempool.c: $(srcdir)/../mempool.c
 	@src_header=$?; dst_header=$@; $(copy_headers); $(copy_error_message); $(replace_policy_globals)
 
 include/sf_sdlist.h: $(srcdir)/../sf_sdlist.h
+	@src_header=$?; dst_header=$@; $(copy_headers); $(copy_error_message); $(replace_policy_globals)
+
+include/sf_sdlist_types.h: $(srcdir)/../sf_sdlist_types.h
 	@src_header=$?; dst_header=$@; $(copy_headers); $(copy_error_message); $(replace_policy_globals)
 
 include/sf_sdlist.c: $(srcdir)/../sf_sdlist.c
@@ -905,10 +1228,25 @@ include/sfPolicyUserData.h: $(srcdir)/../sfutil/sfPolicyUserData.h
 include/sfPolicy.h: $(srcdir)/../sfutil/sfPolicy.h
 	@src_header=$?; dst_header=$@; $(copy_headers); $(replace_policy_globals)
 
+include/util_unfold.h: $(srcdir)/../sfutil/util_unfold.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/util_unfold.c: $(srcdir)/../sfutil/util_unfold.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 include/sf_base64decode.h: $(srcdir)/../sfutil/sf_base64decode.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/sf_base64decode.c: $(srcdir)/../sfutil/sf_base64decode.c
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_email_attach_decode.h: $(srcdir)/../sfutil/sf_email_attach_decode.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_email_attach_decode.c: $(srcdir)/../sfutil/sf_email_attach_decode.c
+	@src_header=$?; dst_header=$@; $(copy_headers); $(copy_error_message); $(replace_policy_globals)
+
+include/Unified2_common.h: $(srcdir)/../sfutil/Unified2_common.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins/sf_engine/examples
@@ -922,7 +1260,13 @@ include/sfsnort_dynamic_detection_lib.h: $(srcdir)/../dynamic-plugins/sf_engine/
 include/sf_snort_packet.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_packet.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
+include/sf_protocols.h: $(srcdir)/../sf_protocols.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 include/sf_snort_plugin_api.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_plugin_api.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_decompression.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_decompression.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # Stream API/String Searching, massage it to use SFSnortPacket
@@ -941,6 +1285,12 @@ include/signature.h: $(srcdir)/../signature.h
 include/plugin_enum.h: $(srcdir)/../plugin_enum.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
+include/sfcontrol.h: $(top_srcdir)/src/control/sfcontrol.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/idle_processing.h: $(top_srcdir)/src/idle_processing.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 clean-local:
 	rm -rf include build
 
@@ -956,7 +1306,7 @@ clean-local:
 @HAVE_DYNAMIC_PLUGINS_TRUE@	@for f in $(exported_files); do \
 @HAVE_DYNAMIC_PLUGINS_TRUE@		truefile=`echo $$f | sed -e "s/.*\///"`; \
 @HAVE_DYNAMIC_PLUGINS_TRUE@		$(mkinstalldirs) $(DESTDIR)$(srcinstdir); \
-@HAVE_DYNAMIC_PLUGINS_TRUE@		$(RM) -f $(DESTDIR)$(srcinstdir)/$$truefile; \
+@HAVE_DYNAMIC_PLUGINS_TRUE@		rm -f $(DESTDIR)$(srcinstdir)/$$truefile; \
 @HAVE_DYNAMIC_PLUGINS_TRUE@	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

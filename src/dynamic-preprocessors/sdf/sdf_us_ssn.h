@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,24 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- **************************************************************************** 
+ ****************************************************************************
  *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
+#include "snort_debug.h"
 #include "dce2_utils.h"
 #include "dce2_debug.h"
 #include "dce2_config.h"
 #include "snort_dce2.h"
 #include "sf_types.h"
-#include "bounds.h"
+#include "snort_bounds.h"
 #include "sf_snort_packet.h"
 #include "sf_dynamic_preprocessor.h"
 #include <stdarg.h>
-
-/********************************************************************
- * Extern variables
- ********************************************************************/
-extern DynamicPreprocessorData _dpd;
 
 /********************************************************************
  * Function:
@@ -80,8 +81,10 @@ DCE2_Buffer * DCE2_BufferNew(uint32_t initial_size, uint32_t min_add_size, DCE2_
  * Returns:
  *
  ********************************************************************/
-DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *buf, const uint8_t *data,
-                            uint32_t data_len, DCE2_BufferMinAddFlag mflag)
+DCE2_Ret DCE2_BufferAddData(
+    DCE2_Buffer *buf, const uint8_t *data,
+    uint32_t data_len, uint32_t offset,
+    DCE2_BufferMinAddFlag mflag)
 {
     DCE2_Ret status;
 
@@ -92,9 +95,12 @@ DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *buf, const uint8_t *data,
     if (data_len == 0)
         return DCE2_RET__SUCCESS;
 
+    if ( !offset )
+        offset = DCE2_BufferLength(buf);
+
     if (buf->data == NULL)
     {
-        uint32_t size = data_len;
+        uint32_t size = offset + data_len;
 
         if ((size < buf->min_add_size) && (mflag == DCE2_BUFFER_MIN_ADD_FLAG__USE))
             size = buf->min_add_size;
@@ -105,10 +111,10 @@ DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *buf, const uint8_t *data,
 
         buf->size = size;
     }
-    else if ((buf->len + data_len) > buf->size)
+    else if ((offset + data_len) > buf->size)
     {
         uint8_t *tmp;
-        uint32_t new_size = buf->len + data_len;
+        uint32_t new_size = offset + data_len;
 
         if (((new_size - buf->size) < buf->min_add_size) && (mflag == DCE2_BUFFER_MIN_ADD_FLAG__USE))
             new_size += buf->min_add_size;
@@ -121,7 +127,7 @@ DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *buf, const uint8_t *data,
         buf->size = new_size;
     }
 
-    status = DCE2_Memcpy(buf->data + buf->len, data, data_len, buf->data, buf->data + buf->size);
+    status = DCE2_Memcpy(buf->data + offset, data, data_len, buf->data, buf->data + buf->size);
     if (status != DCE2_RET__SUCCESS)
     {
         DCE2_Log(DCE2_LOG_TYPE__ERROR,
@@ -129,7 +135,7 @@ DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *buf, const uint8_t *data,
         return DCE2_RET__ERROR;
     }
 
-    buf->len += data_len;
+    buf->len = offset + data_len;
 
     return DCE2_RET__SUCCESS;
 }
@@ -271,8 +277,10 @@ void DCE2_BufferDestroy(DCE2_Buffer *buf)
  * Returns:
  *
  ********************************************************************/
-DCE2_Ret DCE2_HandleSegmentation(DCE2_Buffer *seg_buf, const uint8_t *data_ptr,
-                                 uint16_t data_len, uint32_t need_len, uint16_t *data_used)
+DCE2_Ret DCE2_HandleSegmentation(
+    DCE2_Buffer *seg_buf, const uint8_t *data_ptr,
+    uint16_t data_len, uint32_t offset,
+    uint32_t need_len, uint16_t *data_used)
 {
     uint32_t copy_len;
     DCE2_Ret status;
@@ -286,11 +294,15 @@ DCE2_Ret DCE2_HandleSegmentation(DCE2_Buffer *seg_buf, const uint8_t *data_ptr,
 
     /* Don't need anything - call it desegmented.  Really return
      * an error - this shouldn't happen */
-    if (need_len == 0)
+    if (need_len == 0 )
         return DCE2_RET__ERROR;
 
+    /* Need to append, instead of jump when offset is malformed*/
+    if (( !offset )|| (offset > DCE2_BufferLength(seg_buf)))
+        offset = DCE2_BufferLength(seg_buf);
+
     /* Already have enough data for need */
-    if (DCE2_BufferLength(seg_buf) >= need_len)
+    if (offset >= need_len)
         return DCE2_RET__SUCCESS;
 
     /* No data and need length > 0 - must still be segmented */
@@ -298,11 +310,13 @@ DCE2_Ret DCE2_HandleSegmentation(DCE2_Buffer *seg_buf, const uint8_t *data_ptr,
         return DCE2_RET__SEG;
 
     /* Already know that need length is greater than buffer length */
-    copy_len = need_len - DCE2_BufferLength(seg_buf);
+    copy_len = need_len - offset;
     if (copy_len > data_len)
         copy_len = data_len;
 
-    status = DCE2_BufferAddData(seg_buf, data_ptr, copy_len, DCE2_BUFFER_MIN_ADD_FLAG__USE);
+    status = DCE2_BufferAddData(
+        seg_buf, data_ptr, copy_len, offset, DCE2_BUFFER_MIN_ADD_FLAG__USE);
+
     if (status != DCE2_RET__SUCCESS)
         return DCE2_RET__ERROR;
 
@@ -410,7 +424,7 @@ void DCE2_Log(DCE2_LogType ltype, const char *format, ...)
  ********************************************************************/
 const char * DCE2_UuidToStr(const Uuid *uuid, DceRpcBoFlag byte_order)
 {
-#define UUID_BUF_SIZE  50 
+#define UUID_BUF_SIZE  50
     static char uuid_buf1[UUID_BUF_SIZE];
     static char uuid_buf2[UUID_BUF_SIZE];
     static int buf_num = 0;
@@ -441,6 +455,7 @@ const char * DCE2_UuidToStr(const Uuid *uuid, DceRpcBoFlag byte_order)
     return uuid_buf;
 }
 
+#ifdef DEBUG_MSGS
 /********************************************************************
  * Function: DCE2_PrintPktData()
  *
@@ -559,4 +574,4 @@ void DCE2_PrintPktData(const uint8_t *data, const uint16_t len)
 
     printf("\n");
 }
-
+#endif

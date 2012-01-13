@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,6 +19,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
+
+// @file    sfdaq.h
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #ifndef __DAQ_H__
 #define __DAQ_H__
 
@@ -62,7 +66,12 @@ int DAQ_Stop(void);
 // (but only where performance justifies exposing implementation!)
 int DAQ_Acquire(int max, DAQ_Analysis_Func_t, uint8_t* user);
 int DAQ_Inject(const DAQ_PktHdr_t*, int rev, const uint8_t* buf, uint32_t len);
-int DAQ_BreakLoop(void);
+int DAQ_BreakLoop(int error);
+#ifdef HAVE_DAQ_ACQUIRE_WITH_META
+void DAQ_Set_MetaCallback(DAQ_Meta_Func_t meta_callback);
+#endif
+
+int DAQ_ModifyFlow(const void* h, uint32_t id);
 
 // returns total stats if no daq else current stats
 // returns statically allocated stats - don't free

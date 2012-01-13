@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2010 Sourcefire, Inc.
+** Copyright (C) 2007-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -20,7 +20,7 @@
 /* $Id$ */
 
 /* spo_alert_test_
- * 
+ *
  * Purpose:  output plugin for test alerting
  *
  * Arguments: file <file>, stdout, rebuilt, session, msg
@@ -31,7 +31,7 @@
  *           S - Stream rebuilt
  *           F - IP frag rebuilt
  *           outputs: <rebuilt type>:<rebuilt count>
- * session - include src/dst IPs and ports  
+ * session - include src/dst IPs and ports
  *           outputs: <sip>:<sport>-<dip>:<dport>
  * msg - include alert message
  *
@@ -45,7 +45,7 @@
  * output alert_test: rebuilt, session, msg
  * output alert_test: stdout, rebuilt, session, msg
  * output alert_test: file test.alert, rebuilt, session, msg
- *   
+ *
  * Effect:
  *
  * Alerts are written to a file in the snort test alert format
@@ -59,9 +59,10 @@
 #include "config.h"
 #endif
 
+#include "sf_types.h"
 #include "event.h"
 #include "decode.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
@@ -106,13 +107,13 @@ void AlertTestCleanExitFunc(int, void *);
 void AlertTestRestartFunc(int, void *);
 void AlertTest(Packet *, char *, void *, Event *);
 
-extern PacketCount pc; 
+extern PacketCount pc;
 
 
 /*
  * Function: SetupAlertTest()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -123,7 +124,7 @@ extern PacketCount pc;
  */
 void AlertTestSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("alert_test", OUTPUT_TYPE_FLAG__ALERT, AlertTestInit);
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Output plugin: AlertTest is setup...\n"););
@@ -151,7 +152,7 @@ void AlertTestInit(char *args)
     data = ParseAlertTestArgs(args);
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Linking AlertTest functions to call lists...\n"););
-    
+
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertTest, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertTestCleanExitFunc, data);
@@ -180,7 +181,7 @@ void AlertTest(Packet *p, char *msg, void *arg, Event *event)
     if (data->flags & TEST_FLAG_MSG)
     {
         if (msg != NULL)
-            fprintf(data->file, "%s\t", msg); 
+            fprintf(data->file, "%s\t", msg);
     }
 
     if (data->flags & TEST_FLAG_SESSION)
@@ -201,9 +202,9 @@ void AlertTest(Packet *p, char *msg, void *arg, Event *event)
 /*
  * Function: ParseAlertTestArgs(char *)
  *
- * Purpose: Process the preprocessor arguements from the rules file and 
+ * Purpose: Process the preprocessor arguements from the rules file and
  *          initialize the preprocessor's data struct.  This function doesn't
- *          have to exist if it makes sense to parse the args in the init 
+ *          have to exist if it makes sense to parse the args in the init
  *          function.
  *
  * Arguments: args => argument list

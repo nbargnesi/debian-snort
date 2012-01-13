@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -32,13 +32,14 @@
 #include <strings.h>
 #endif
 
+#include "sf_types.h"
 /*
 #include "snort.h"
 #include "parser.h"
 #include "util.h"
 #include "plugbase.h"
 */
-#include "debug.h"
+#include "snort_debug.h"
 #include "stream_api.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
@@ -53,11 +54,21 @@
 #include "profiler.h"
 
 #include "spp_sdf.h"
+#include "sf_preproc_info.h"
 #include "sdf_us_ssn.h"
 #include "sdf_detection_option.h"
 #include "sdf_pattern_match.h"
 
-extern DynamicPreprocessorData _dpd;
+const int MAJOR_VERSION = 1;
+const int MINOR_VERSION = 1;
+const int BUILD_VERSION = 1;
+#ifdef SUP_IP6
+const char *PREPROC_NAME = "SF_SDF (IPV6)";
+#else
+const char *PREPROC_NAME = "SF_SDF";
+#endif
+
+#define SetupSDF DYNAMIC_PREPROC_SETUP
 
 /* PROTOTYPES */
 static void SDFInit(char *args);
@@ -110,7 +121,7 @@ void SetupSDF(void)
 #ifndef SNORT_RELOAD
     _dpd.registerPreproc("sensitive_data", SDFInit);
 #else
-    _dpd.registerPreproc("sensitive_data", SDFInit, SDFReload, SDFReloadSwap, 
+    _dpd.registerPreproc("sensitive_data", SDFInit, SDFReload, SDFReloadSwap,
                          SDFReloadSwapFree);
 #endif
 }
@@ -338,7 +349,7 @@ static void SDFSearch(SDFConfig *config, SFSnortPacket *packet,
 
                         if (session->counters[found_pattern->counter_index] == found_pattern->count)
                         {
-                            
+
                             /* Raise the alert for this particular pattern */
                             _dpd.alertAdd(GENERATOR_SPP_SDF_RULES,
                                           found_pattern->otn->sigInfo.id,
@@ -397,7 +408,7 @@ static void ProcessSDF(void *p, void *context)
     SFSnortPacket *packet = (SFSnortPacket *)p;
     SDFSessionData *session;
     char *begin, *end;
-    u_int16_t buflen;
+    uint16_t buflen;
     PROFILE_VARS;
 
     /* Check if we should be working on this packet */
@@ -442,8 +453,18 @@ static void ProcessSDF(void *p, void *context)
 
     PREPROC_PROFILE_START(sdfPerfStats);
 
-    /* If HTTP Inspect left decoded buffers for us, we'll search those. */
-    if (packet->num_uris > 0)
+    /* Inspect HTTP Body or Email attachments. */
+    if (_dpd.fileDataBuf->len > 0)
+    {
+        begin = (char *) _dpd.fileDataBuf->data;
+        buflen = _dpd.fileDataBuf->len;
+        end = begin + buflen;
+
+        SDFSearch(config, packet, session, begin, end, buflen);
+    }
+
+    /* If this packet is HTTP, inspect the URI and Client Body while ignoring headers. */
+    if (packet->flags & FLAG_HTTP_DECODE)
     {
         if (_dpd.uriBuffers[HTTP_BUFFER_URI]->uriLength > 0)
         {
@@ -464,6 +485,8 @@ static void ProcessSDF(void *p, void *context)
     }
     else
     {
+        /* Only inspect raw packet payload on non-HTTP. This is done so that
+           when server_flow_depth == -1, we don't inspect anyway. */
         begin = (char *)packet->payload;
         buflen = packet->payload_size;
         end = begin + buflen;
@@ -513,7 +536,7 @@ static void ParseSDFArgs(SDFConfig *config, char *args)
     /* Copy args so that we can break them up wtih strtok */
     argcpy = strdup(args);
     if (argcpy == NULL)
-        DynamicPreprocessorFatalMessage("Could not allocate memory to parse " 
+        DynamicPreprocessorFatalMessage("Could not allocate memory to parse "
                                         "SDF options.\n");
 
     cur_tokenp = strtok(argcpy, " ");
@@ -525,7 +548,7 @@ static void ParseSDFArgs(SDFConfig *config, char *args)
         if (!strcmp(cur_tokenp, SDF_THRESHOLD_KEYWORD))
         {
             char *endptr;
-            
+
             cur_tokenp = strtok(NULL, " ");
             if (cur_tokenp == NULL)
             {
@@ -611,7 +634,7 @@ static SDFConfig * NewSDFConfig(tSfPolicyUserContextId context)
 {
     SDFConfig *config = NULL;
     tSfPolicyId policy_id = _dpd.getParserPolicy();
-   
+
     /* Check for an existing configuration in this policy */
     sfPolicyUserPolicySet(context, policy_id);
 
@@ -708,7 +731,7 @@ static void SDFReload(char *args)
         swap_head_node = (sdf_tree_node *)calloc(1, sizeof(sdf_tree_node));
         if (!swap_head_node)
         DynamicPreprocessorFatalMessage("Failed to allocate memory for SDF "
-                                        "configuration.\n"); 
+                                        "configuration.\n");
     }
 
     config = NewSDFConfig(sdf_swap_context_id);
@@ -758,9 +781,9 @@ static void SDFReloadSwapFree(void *data)
 *
 *  w - short words of data
 *  blen - byte length
-* 
+*
 */
-static INLINE unsigned short in_chksum_ip(  unsigned short * w, int blen )
+static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
 {
    unsigned int cksum;
 
@@ -801,9 +824,9 @@ static void SDFPrintPseudoPacket(SDFConfig *config, SDFSessionData *session,
     if (config == NULL || session == NULL || real_packet == NULL)
         return;
 
-    _dpd.encodeFormat(ENC_DYN_FWD|ENC_DYN_NET, real_packet, config->pseudo_packet);
+    _dpd.encodeFormat(ENC_DYN_FWD|ENC_DYN_NET, real_packet, config->pseudo_packet, PSEUDO_PKT_SDF);
 
-    if ( IS_IP4(real_packet) )    
+    if ( IS_IP4(real_packet) )
     {
         ((IPV4Header *)p->ip4_header)->proto = IPPROTO_SDF;
 #ifdef SUP_IP6
@@ -826,14 +849,14 @@ static void SDFPrintPseudoPacket(SDFConfig *config, SDFSessionData *session,
 
 #ifdef SUP_IP6
     if (real_packet->family == AF_INET)
-    {    
+    {
         p->ip4h->ip_len = p->ip4_header->data_length;
-    }    
-    else 
-    {    
+    }
+    else
+    {
         IP6RawHdr* ip6h = (IP6RawHdr*)p->raw_ip6_header;
         if ( ip6h ) p->ip6h->len = ip6h->payload_len;
-    }    
+    }
 #endif
 }
 
@@ -866,14 +889,14 @@ static void SDFFillPacket(sdf_tree_node *node, SDFSessionData *session,
             {
                 /* Print line */
                 char *sigmessage = option_data->otn->sigInfo.message;
-                uint8_t *dest = (u_int8_t*)p->payload + *dlen;
+                uint8_t *dest = (uint8_t*)p->payload + *dlen;
                 size_t siglen = strlen(sigmessage);
                 uint16_t space_left = p->max_payload - *dlen;
 
                 if (space_left < siglen + SDF_ALERT_LENGTH)
                     return;
 
-                *dlen += (siglen + SDF_ALERT_LENGTH); 
+                *dlen += (siglen + SDF_ALERT_LENGTH);
                 snprintf((char *)dest, space_left, "%s: %3d", sigmessage, counter);
             }
         }

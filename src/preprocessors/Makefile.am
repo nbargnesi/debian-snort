@@ -11,7 +11,7 @@ endif
 
 libspp_a_SOURCES = spp_arpspoof.c spp_arpspoof.h spp_bo.c spp_bo.h \
 spp_rpc_decode.c spp_rpc_decode.h  \
-stream_ignore.c stream_ignore.h \
+stream_expect.c stream_expect.h \
 spp_perfmonitor.c spp_perfmonitor.h \
 perf.c perf.h \
 perf-base.c perf-base.h \

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       hi_ui_server_lookup.c
 **
@@ -38,6 +38,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "hi_util_xmalloc.h"
 #include "hi_util_kmap.h"
@@ -100,8 +104,8 @@ int hi_ui_server_lookup_init(SERVER_LOOKUP **ServerLookup)
 **  @return integer
 **
 **  @retval HI_SUCCESS        function successful
-**  @retval HI_INVALID_ARG    invalid argument, most likely NULL pointer 
-**  @retval HI_MEM_ALLOC_FAIL memory allocation failed 
+**  @retval HI_INVALID_ARG    invalid argument, most likely NULL pointer
+**  @retval HI_MEM_ALLOC_FAIL memory allocation failed
 **  @retval HI_NONFATAL_ERR   key is already in table, don't overwrite
 **                            configuration.
 */
@@ -148,7 +152,7 @@ int hi_ui_server_lookup_add(SERVER_LOOKUP *ServerLookup, sfip_t *Ip,
 **  @retval HI_INVALID_ARG argument(s) are invalid
 **  @retval HI_NOT_FOUND IP not found
 */
-HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup, 
+HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup,
                                             snort_ip_p Ip, int *iError)
 {
     HTTPINSPECT_CONF *ServerConf;
@@ -180,14 +184,14 @@ HTTPINSPECT_CONF  *hi_ui_server_lookup_find(SERVER_LOOKUP *ServerLookup,
 }
 
 void hi_ui_server_iterate(
-        SERVER_LOOKUP *ServerLookup, 
+        SERVER_LOOKUP *ServerLookup,
         void (*userfunc)(void *)
         )
 {
      sfrt_iterate(ServerLookup, userfunc);
 }
 #if 0
-/** Obsoleted. After changing underlying KMAP to SFRT. SFRT provides an iterator with 
+/** Obsoleted. After changing underlying KMAP to SFRT. SFRT provides an iterator with
  * a callback function but does not support getFirst, getNext operations.
  */
 
@@ -278,7 +282,7 @@ HTTPINSPECT_CONF *hi_ui_server_lookup_next(SERVER_LOOKUP *ServerLookup,
 
     return ServerConf;
 }
-#endif    
+#endif
 
 void  hi_ui_server_lookup_destroy(SERVER_LOOKUP *ServerLookup)
 {
@@ -286,9 +290,9 @@ void  hi_ui_server_lookup_destroy(SERVER_LOOKUP *ServerLookup)
     sfrt_free(ServerLookup);
 }
 
-/**Free pData buffer, which may be referenced multiple times. ReferenceCount 
- * is the number of times the buffer is referenced.  For freeing the buffer, 
- * we just decrement referenceCount till it reaches 0, at which time the 
+/**Free pData buffer, which may be referenced multiple times. ReferenceCount
+ * is the number of times the buffer is referenced.  For freeing the buffer,
+ * we just decrement referenceCount till it reaches 0, at which time the
  * buffer is also freed.
  */
 static void serverConfFree(void *pData)

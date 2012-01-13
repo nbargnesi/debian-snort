@@ -23,7 +23,10 @@ sftarget_hostentry.h \
 sftarget_protocol_reference.c \
 sftarget_protocol_reference.h \
 sf_attribute_table_parser.l \
-sf_attribute_table.y
+sf_attribute_table.y \
+sftarget_reader_live.c \
+sftarget_reader_live.h
+
 else
 libtarget_based_a_SOURCES = sftarget_reader.c
 endif

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,12 +18,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #ifndef STREAM5_TCP_H_
 #define STREAM5_TCP_H_
 
 #include "stream5_common.h"
 #include "sfPolicy.h"
+
+extern uint32_t xtradata_func_count;
+extern LogFunction xtradata_map[LOG_FUNC_MAX];
+extern LogExtraData extra_data_log;
+extern void *extra_data_config;
 
 void Stream5CleanTcp(void);
 void Stream5ResetTcp(void);
@@ -47,8 +52,9 @@ int GetTcpRebuiltPackets(Packet *p, Stream5LWSession *ssn,
         PacketIterator callback, void *userdata);
 int GetTcpStreamSegments(Packet *p, Stream5LWSession *ssn,
         StreamSegmentIterator callback, void *userdata);
-int Stream5AddSessionAlertTcp(Stream5LWSession *lwssn, Packet *p, uint32_t gid, uint32_t sid);
+int Stream5AddSessionAlertTcp(Stream5LWSession *lwssn, Packet *p, uint32_t gid, uint32_t sid, int alerted);
 int Stream5CheckSessionAlertTcp(Stream5LWSession *lwssn, Packet *p, uint32_t gid, uint32_t sid);
+int Stream5LogSessionAlertExtraDataTcp(Stream5LWSession *lwssn, Packet *p, uint32_t gid, uint32_t sid, uint32_t event_id, uint32_t event_second);
 char Stream5GetReassemblyDirectionTcp(Stream5LWSession *lwssn);
 uint32_t Stream5GetFlushPointTcp(Stream5LWSession *lwssn, char dir);
 void Stream5SetFlushPointTcp(Stream5LWSession *lwssn, char dir, uint32_t flush_point);
@@ -58,8 +64,14 @@ char Stream5IsStreamSequencedTcp(Stream5LWSession *lwssn, char dir);
 int Stream5MissingInReassembledTcp(Stream5LWSession *lwssn, char dir);
 char Stream5PacketsMissingTcp(Stream5LWSession *lwssn, char dir);
 void s5TcpSetPortFilterStatus(
-        unsigned short port, 
-        int status,
+        unsigned short port,
+        uint16_t status,
+        tSfPolicyId policyId,
+        int parsing
+        );
+void s5TcpUnsetPortFilterStatus(
+        unsigned short port,
+        uint16_t status,
         tSfPolicyId policyId,
         int parsing
         );
@@ -68,7 +80,12 @@ int s5TcpGetPortFilterStatus(
         tSfPolicyId policyId,
         int parsing
         );
+void s5TcpSetSynSessionStatus(uint16_t status, tSfPolicyId policyId, int parsing);
+void s5TcpUnsetSynSessionStatus(uint16_t status, tSfPolicyId policyId, int parsing);
 void Stream5TcpConfigFree(Stream5TcpConfig *);
+void** Stream5GetPAFUserDataTcp(Stream5LWSession*, bool to_server);
+bool Stream5IsPafActiveTcp(Stream5LWSession*, bool to_server);
+bool Stream5ActivatePafTcp(Stream5LWSession*, bool to_server);
 
 uint32_t Stream5GetTcpPrunes(void);
 void Stream5ResetTcpPrunes(void);
@@ -76,6 +93,10 @@ void Stream5ResetTcpPrunes(void);
 #ifdef NORMALIZER
 void Stream_PrintNormalizationStats(void);
 void Stream_ResetNormalizationStats(void);
+#endif
+
+#ifdef ENABLE_PAF
+void Stream5PostConfigTcp(void*);
 #endif
 
 #endif /* STREAM5_TCP_H_ */

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,12 +28,13 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "parser.h"
 #include "plugbase.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugin_enum.h"
 #include "util.h"
 
@@ -88,7 +89,7 @@ int IpIdCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupIpIdCheck()
  *
  * Purpose: Associate the id keyword with IpIdCheckInit
@@ -111,7 +112,7 @@ void SetupIpIdCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IpIdCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Setup the id data struct and link the function into option
@@ -126,23 +127,23 @@ void SetupIpIdCheck(void)
 void IpIdCheckInit(char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_IP_ID_CHECK])
     {
         FatalError("%s(%d): Multiple IP id options in rule\n", file_name,
                 file_line);
     }
-        
+
     /* allocate the data structure and attach it to the
        rule's data struct list */
     otn->ds_list[PLUGIN_IP_ID_CHECK] = (IpIdCheckData *)
             SnortAlloc(sizeof(IpIdCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseIpId(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(IpIdCheckEq, otn);
     fpl->type = RULE_OPTION_TYPE_IP_ID;
@@ -152,10 +153,10 @@ void IpIdCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseIpId(char *, OptTreeNode *)
  *
- * Purpose: Convert the id option argument to data and plug it into the 
+ * Purpose: Convert the id option argument to data and plug it into the
  *          data structure
  *
  * Arguments: data => argument data
@@ -200,7 +201,7 @@ void ParseIpId(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IpIdCheckEq(char *, OptTreeNode *)
  *
  * Purpose: Test the ip header's id field to see if its value is equal to the

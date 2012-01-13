@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2010 Sourcefire, Inc.
+** Copyright (C) 2007-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -19,7 +19,7 @@
 
 /* spo_unified2.c
  * Adam Keeton
- * 
+ *
  * 09/26/06
  * This file is litterally spo_unified.c converted to write unified2
  *
@@ -37,6 +37,9 @@
 #endif
 #include <errno.h>
 #include <time.h>
+#ifdef HAVE_UUID_UUID_H
+#include <uuid/uuid.h>
+#endif
 
 #include "sfutil/Unified2_common.h"
 #include "spo_unified2.h"
@@ -47,15 +50,16 @@
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "mstring.h"
 #include "event.h"
 #include "generators.h"
-#include "debug.h"
-#include "bounds.h"
+#include "snort_debug.h"
+#include "snort_bounds.h"
 #include "obfuscation.h"
 #include "active.h"
 #include "detection_util.h"
+#include "detect.h"
 
 #include "snort.h"
 #include "pcap_pkthdr32.h"
@@ -91,10 +95,12 @@ typedef struct _Unified2LogCallbackData
 
 } Unified2LogCallbackData;
 
+Unified2Config *log_config = NULL;
+Unified2Config *alert_config = NULL;
+
 
 /* ----------------External variables -------------------- */
 /* From fpdetect.c, for logging reassembled packets */
-extern uint16_t event_id;
 extern OptTreeNode *otn_tmp;
 
 /* -------------------- Global Variables ----------------------*/
@@ -109,10 +115,13 @@ static uint8_t write_pkt_buffer_v2[sizeof(Serial_Unified2_Header) +
                                      sizeof(Unified2IDSEventIPv6) + IP_MAXPACKET];
 #define write_pkt_end_v2 (write_pkt_buffer_v2 + sizeof(write_pkt_buffer_v2))
 
-#ifdef ZLIB
-#define MAX_GZIP_WRITE_BUF_LEN (MAX_XFF_WRITE_BUF_LENGTH - \
+static uint8_t write_pkt_buffer_ng[sizeof(Serial_Unified2_Header) +
+                                     sizeof(Unified2IDSEventIPv6_NG) + IP_MAXPACKET];
+
+#define write_pkt_end_ng (write_pkt_buffer_ng + sizeof(write_pkt_buffer_ng))
+
+#define MAX_XDATA_WRITE_BUF_LEN (MAX_XFF_WRITE_BUF_LENGTH - \
         sizeof(struct in6_addr) + DECODE_BLEN)
-#endif
 
 /* This is the buffer to use for I/O.  Try to make big enough so the system
  * doesn't potentially flush in the middle of a record.  Every write is
@@ -121,14 +130,14 @@ static uint8_t write_pkt_buffer_v2[sizeof(Serial_Unified2_Header) +
 #define UNIFIED2_SETVBUF
 #ifndef WIN32
 /* use the size of the buffer we copy record data into */
-static char io_buffer[sizeof(write_pkt_buffer_v2)];
+static char io_buffer[sizeof(write_pkt_buffer_ng)];
 #else
 # ifdef _MSC_VER
 #  if _MSC_VER <= 1200
 /* use maximum size defined by VC++ 6.0 */
 static char io_buffer[32768];
 #  else
-static char io_buffer[sizeof(write_pkt_buffer_v2)];
+static char io_buffer[sizeof(write_pkt_buffer_ng)];
 #  endif  /* _MSC_VER <= 1200 */
 # else
 /* no _MSC_VER, don't set I/O buffer */
@@ -145,7 +154,7 @@ static void Unified2Restart(int, void *);
 static void Unified2Init(char *);
 static void Unified2PostConfig(int, void *);
 static void Unified2InitFile(Unified2Config *);
-static INLINE void Unified2RotateFile(Unified2Config *);
+static inline void Unified2RotateFile(Unified2Config *);
 static void Unified2LogAlert(Packet *, char *, void *, Event *);
 static void _AlertIP4(Packet *, char *, Unified2Config *, Event *);
 static void _AlertIP6(Packet *, char *, Unified2Config *, Event *);
@@ -167,6 +176,9 @@ static void Unified2LogInit(char *);
 static ObRet Unified2LogObfuscationCallback(const DAQ_PktHdr_t *pkth,
         const uint8_t *packet_data, ob_size_t length, ob_char_t ob_char, void *userdata);
 
+void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second);
+void AlertExtraDataPerPacket(void *ssnptr, void *data, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second);
+
 #define U2_PACKET_FLAG 1
 /* Obsolete flag as UI wont check the impact_flag field anymore.*/
 #define U2_FLAG_BLOCKED 0x20
@@ -177,7 +189,7 @@ static ObRet Unified2LogObfuscationCallback(const DAQ_PktHdr_t *pkth,
 /*
  * Function: SetupUnified2()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -188,7 +200,7 @@ static ObRet Unified2LogObfuscationCallback(const DAQ_PktHdr_t *pkth,
  */
 void Unified2Setup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("log_unified2", OUTPUT_TYPE_FLAG__LOG, Unified2LogInit);
     RegisterOutputPlugin("alert_unified2", OUTPUT_TYPE_FLAG__ALERT, Unified2AlertInit);
@@ -257,15 +269,21 @@ static void Unified2PostConfig(int unused, void *data)
     }
     config->base_proto = htonl(DAQ_GetBaseProtocol());
 
+
     Unified2InitFile(config);
+
+    if(stream_api)
+    {
+        stream_api->reg_xtra_data_log(AlertExtraData, (void *)config);
+    }
 }
 
 /*
  * Function: Unified2InitFile()
  *
- * Purpose: Initialize the unified2 ouput file 
+ * Purpose: Initialize the unified2 ouput file
  *
- * Arguments: config => pointer to the plugin's reference data struct 
+ * Arguments: config => pointer to the plugin's reference data struct
  *
  * Returns: void function
  */
@@ -329,7 +347,7 @@ static void Unified2InitFile(Unified2Config *config)
     }
 }
 
-static INLINE void Unified2RotateFile(Unified2Config *config)
+static inline void Unified2RotateFile(Unified2Config *config)
 {
     fclose(config->stream);
     config->current = 0;
@@ -343,7 +361,7 @@ static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Serial_Unified2IDSEvent_legacy);
 
     memset(&alertdata, 0, sizeof(alertdata));
-    
+
     alertdata.event_id = htonl(event->event_id);
     alertdata.event_second = htonl(event->ref_time.tv_sec);
     alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
@@ -383,23 +401,23 @@ static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event
             }
         }
     }
-    
+
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Serial_Unified2IDSEvent_legacy));
     hdr.type = htonl(UNIFIED2_IDS_EVENT);
 
-    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header), 
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
-    
+
     if (SafeMemcpy(write_pkt_buffer + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Serial_Unified2IDSEvent_legacy), 
+                   &alertdata, sizeof(Serial_Unified2IDSEvent_legacy),
                    write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2IDSEvent_legacy. "
@@ -417,7 +435,7 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEvent);
 
     memset(&alertdata, 0, sizeof(alertdata));
-    
+
     alertdata.event_id = htonl(event->event_id);
     alertdata.event_second = htonl(event->ref_time.tv_sec);
     alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
@@ -434,7 +452,7 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
             alertdata.impact_flag = U2_FLAG_BLOCKED;
             alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
         }
-        else if ( Active_PacketWouldBeDropped() ) 
+        else if ( Active_PacketWouldBeDropped() )
         {
             alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
         }
@@ -474,23 +492,23 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
 
         }
     }
-    
+
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2IDSEvent));
     hdr.type = htonl(UNIFIED2_IDS_EVENT_VLAN);
 
-    if (SafeMemcpy(write_pkt_buffer_v2, &hdr, sizeof(Serial_Unified2_Header), 
+    if (SafeMemcpy(write_pkt_buffer_v2, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer_v2, write_pkt_end_v2) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
-    
+
     if (SafeMemcpy(write_pkt_buffer_v2 + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Unified2IDSEvent), 
+                   &alertdata, sizeof(Unified2IDSEvent),
                    write_pkt_buffer_v2, write_pkt_end_v2) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2IDSEvent_legacy. "
@@ -501,7 +519,7 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     Unified2Write(write_pkt_buffer_v2, write_len, config);
 }
 
-static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event) 
+static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
 #ifdef SUP_IP6
     Serial_Unified2_Header hdr;
@@ -509,7 +527,7 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Serial_Unified2IDSEventIPv6_legacy);
 
     memset(&alertdata, 0, sizeof(alertdata));
-    
+
     alertdata.event_id = htonl(event->event_id);
     alertdata.event_second = htonl(event->ref_time.tv_sec);
     alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
@@ -555,23 +573,23 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
             }
         }
     }
-    
+
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Serial_Unified2IDSEventIPv6_legacy));
     hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6);
 
-    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header), 
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
-    
+
     if (SafeMemcpy(write_pkt_buffer + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Serial_Unified2IDSEventIPv6_legacy), 
+                   &alertdata, sizeof(Serial_Unified2IDSEventIPv6_legacy),
                    write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2IDSEventIPv6_legacy. "
@@ -653,23 +671,23 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
             }
         }
     }
-    
+
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2IDSEventIPv6));
     hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6_VLAN);
 
-    if (SafeMemcpy(write_pkt_buffer_v2, &hdr, sizeof(Serial_Unified2_Header), 
+    if (SafeMemcpy(write_pkt_buffer_v2, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer_v2, write_pkt_end_v2) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
-    
+
     if (SafeMemcpy(write_pkt_buffer_v2 + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Unified2IDSEventIPv6), 
+                   &alertdata, sizeof(Unified2IDSEventIPv6),
                    write_pkt_buffer_v2, write_pkt_end_v2) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Unified2IDSEventIPv6. "
@@ -681,149 +699,290 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
 #endif
 }
 
+static inline void UUIDPack(uint8_t *policy_uuid, char *str, int size)
+{
+#ifdef HAVE_LIBUUID
+        uuid_parse(str, policy_uuid);
+#else
+        strncpy((char *)policy_uuid, str, size);
+#endif
+}
 
-static INLINE void _AlertXFFData(Packet *p, char *msg, Unified2Config *config, Event *event) 
+static void _AlertIP4_NG(Packet *p, char *msg, Unified2Config *config, Event *event, PESessionRecord *session)
 {
     Serial_Unified2_Header hdr;
-    SerialUnified2ExtraData alertdata;
-    Unified2ExtraDataHdr alertHdr;
-    uint32_t iplen = 0;
-    uint8_t write_buffer[MAX_XFF_WRITE_BUF_LENGTH];
-    uint8_t *write_end = NULL;
-    uint8_t *ptr = NULL;
-    sfip_t *true_ip = NULL;
+    Unified2IDSEventNG alertdata;
+    tSfPolicyId policy_id;
+    SnortPolicy *policy = NULL;
+    uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEventNG);
 
-    
-    uint32_t write_len; 
+    memset(&alertdata, 0, sizeof(alertdata));
+
+    alertdata.event_id = htonl(event->event_id);
+    alertdata.event_second = htonl(event->ref_time.tv_sec);
+    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
+    alertdata.generator_id = htonl(event->sig_generator);
+    alertdata.signature_id = htonl(event->sig_id);
+    alertdata.signature_revision = htonl(event->sig_rev);
+    alertdata.classification_id = htonl(event->classification);
+    alertdata.priority_id = htonl(event->priority);
 
     if(p)
     {
-        true_ip = GetTrueIPForSession(p);
-        if(!true_ip)
-            return;
-    }
-    else
-        return;
-    
-    write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2ExtraDataHdr);
+        if ( Active_PacketWasDropped() )
+        {
+            alertdata.impact_flag = U2_FLAG_BLOCKED;
+            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+        }
+        else if ( Active_PacketWouldBeDropped() )
+        {
+            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+        }
 
-    alertdata.sensor_id = 0;
-    alertdata.event_id = htonl(event->event_id);
-    alertdata.event_second = htonl(event->ref_time.tv_sec);
-    alertdata.data_type = htonl(EVENT_DATA_TYPE_BLOB);
+        if(IPH_IS_VALID(p))
+        {
+            alertdata.ip_source = p->iph->ip_src.s_addr;
+            alertdata.ip_destination = p->iph->ip_dst.s_addr;
+            alertdata.protocol = GET_IPH_PROTO(p);
 
-#ifdef SUP_IP6
-    if(true_ip->family == AF_INET6)
-    {
-        alertdata.type = htonl(EVENT_INFO_XFF_IPV6);
-        iplen = sizeof(struct in6_addr); /*ipv6 address size in bytes*/
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+            {
+                alertdata.sport_itype = htons(p->icmph->type);
+                alertdata.dport_icode = htons(p->icmph->code);
+            }
+            else if (alertdata.protocol != 255)
+            {
+                alertdata.sport_itype = htons(p->sp);
+                alertdata.dport_icode = htons(p->dp);
+            }
 
-    }
-    else
+#ifdef MPLS
+            if((p->mpls) && (config->mpls_event_types))
+            {
+                alertdata.mpls_label = htonl(p->mplsHdr.label);
+            }
 #endif
-    {
-        alertdata.type = htonl(EVENT_INFO_XFF_IPV4);
-        iplen = sizeof(struct in_addr); /*ipv4 address size in bytes*/
+            if(config->vlan_event_types)
+            {
+                if(p->vh)
+                {
+                    alertdata.vlanId = htons(VTH_VLAN(p->vh));
+                }
+
+            }
+
+        }
+
+        policy_id = getRuntimePolicy();
+        if(policy_id == getDefaultPolicy())
+        {
+            if(snort_conf->base_version)
+            {
+                UUIDPack(alertdata.policy_uuid, snort_conf->base_version, sizeof(alertdata.policy_uuid));
+            }
+        }
+        else
+        {
+            policy = snort_conf->targeted_policies[policy_id];
+
+            if(policy && policy->policy_version)
+                UUIDPack(alertdata.policy_uuid, policy->policy_version, sizeof(alertdata.policy_uuid));
+        }
+
+        alertdata.user_id = htonl(session->userId);
+        alertdata.web_application_id = htonl(session->webAppId);
+        alertdata.client_application_id = htonl(session->clientId);
+        alertdata.application_protocol_id = htonl(session->appProtoId);
+        alertdata.policyengine_rule_id = htonl(session->policyengine_ruleId);
+        memcpy(alertdata.policyengine_policy_uuid, session->policyRevision, sizeof(alertdata.policyengine_policy_uuid));
+        memcpy(alertdata.interface_ingress_uuid, session->ingressIntf, sizeof(alertdata.interface_ingress_uuid));
+        memcpy(alertdata.interface_egress_uuid, session->egressIntf, sizeof(alertdata.interface_egress_uuid));
+        memcpy(alertdata.security_zone_ingress_uuid, session->ingressZone, sizeof(alertdata.security_zone_ingress_uuid));
+        memcpy(alertdata.security_zone_egress_uuid, session->egressZone, sizeof(alertdata.security_zone_egress_uuid));
+
     }
 
-    alertdata.blob_length = htonl(sizeof(alertdata.data_type) + 
-                sizeof(alertdata.blob_length) + iplen); /* 8 = sizeof(alertdata.data_type) + sizeof(alertdata.blob_length) */
-
-
-    write_len = write_len + sizeof(alertdata) + iplen;
-    alertHdr.event_type = htonl(EVENT_TYPE_EXTRA_DATA);
-    alertHdr.event_length = htonl(write_len - sizeof(Serial_Unified2_Header));
-
-    
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
-    hdr.length = htonl(write_len - sizeof(Serial_Unified2_Header));
-    hdr.type = htonl(UNIFIED2_EXTRA_DATA);
+    hdr.length = htonl(sizeof(Unified2IDSEventNG));
+    hdr.type = htonl(UNIFIED2_IDS_EVENT_NG);
 
-    write_end = write_buffer+sizeof(write_buffer);
-    
-    ptr = write_buffer;
-
-    if (SafeMemcpy(ptr, &hdr, sizeof(hdr), 
-                   write_buffer, write_end) != SAFEMEM_SUCCESS)
+    if (SafeMemcpy(write_pkt_buffer_ng, &hdr, sizeof(Serial_Unified2_Header),
+                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
 
-    ptr = ptr + sizeof(hdr);
-
-    if (SafeMemcpy(ptr, &alertHdr, sizeof(alertHdr),
-                   write_buffer, write_end) != SAFEMEM_SUCCESS)
+    if (SafeMemcpy(write_pkt_buffer_ng + sizeof(Serial_Unified2_Header),
+                   &alertdata, sizeof(Unified2IDSEventNG),
+                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
     {
-        ErrorMessage("%s(%d) Failed to copy Unified2ExtraDataHdr. "
+        ErrorMessage("%s(%d) Failed to copy Unified2IDSEventNG. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
 
-    ptr = ptr + sizeof(alertHdr);
-    
-    if (SafeMemcpy(ptr, &alertdata, sizeof(alertdata),
-                   write_buffer, write_end) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy SerialUnified2ExtraData. "
-                     "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    ptr = ptr + sizeof(alertdata);
-
-    if (SafeMemcpy(ptr, true_ip->ip8, iplen, 
-                write_buffer, write_end) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy SerialUnified2ExtraData. "
-                "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    Unified2Write(write_buffer, write_len, config);
-
+    Unified2Write(write_pkt_buffer_ng, write_len, config);
 }
 
-
-
-#ifdef ZLIB
-static INLINE void _AlertGzipData(Packet *p, char *msg, Unified2Config *config, Event *event) 
+static void _AlertIP6_NG(Packet *p, char *msg, Unified2Config *config, Event *event, PESessionRecord *session)
 {
+#ifdef SUP_IP6
+    Serial_Unified2_Header hdr;
+    Unified2IDSEventIPv6_NG alertdata;
+    tSfPolicyId policy_id;
+    SnortPolicy *policy = NULL;
+    uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEventIPv6_NG);
+
+    memset(&alertdata, 0, sizeof(alertdata));
+
+    alertdata.event_id = htonl(event->event_id);
+    alertdata.event_second = htonl(event->ref_time.tv_sec);
+    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
+    alertdata.generator_id = htonl(event->sig_generator);
+    alertdata.signature_id = htonl(event->sig_id);
+    alertdata.signature_revision = htonl(event->sig_rev);
+    alertdata.classification_id = htonl(event->classification);
+    alertdata.priority_id = htonl(event->priority);
+
+    if(p)
+    {
+        if ( Active_PacketWasDropped() )
+        {
+            alertdata.impact_flag = U2_FLAG_BLOCKED;
+            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+        }
+        else if ( Active_PacketWouldBeDropped() )
+        {
+            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+        }
+
+        if(IPH_IS_VALID(p))
+        {
+            snort_ip_p ip;
+
+            ip = GET_SRC_IP(p);
+            alertdata.ip_source = *(struct in6_addr*)ip->ip32;
+
+            ip = GET_DST_IP(p);
+            alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
+
+            alertdata.protocol = GET_IPH_PROTO(p);
+
+            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
+            {
+                alertdata.sport_itype = htons(p->icmph->type);
+                alertdata.dport_icode = htons(p->icmph->code);
+            }
+            else if (alertdata.protocol != 255)
+            {
+                alertdata.sport_itype = htons(p->sp);
+                alertdata.dport_icode = htons(p->dp);
+            }
+
+#ifdef MPLS
+            if((p->mpls) && (config->mpls_event_types))
+            {
+                alertdata.mpls_label = htonl(p->mplsHdr.label);
+            }
+#endif
+            if(config->vlan_event_types)
+            {
+                if(p->vh)
+                {
+                    alertdata.vlanId = htons(VTH_VLAN(p->vh));
+                }
+
+            }
+
+        }
+
+        policy_id = getRuntimePolicy();
+        if(policy_id == getDefaultPolicy())
+        {
+            if(snort_conf->base_version)
+                UUIDPack(alertdata.policy_uuid, snort_conf->base_version, sizeof(alertdata.policy_uuid));
+        }
+        else
+        {
+            policy = snort_conf->targeted_policies[policy_id];
+
+            if(policy && policy->policy_version)
+                UUIDPack(alertdata.policy_uuid, policy->policy_version, sizeof(alertdata.policy_uuid));
+        }
+
+        alertdata.user_id = htonl(session->userId);
+        alertdata.web_application_id = htonl(session->webAppId);
+        alertdata.client_application_id = htonl(session->clientId);
+        alertdata.application_protocol_id = htonl(session->appProtoId);
+        alertdata.policyengine_rule_id = htonl(session->policyengine_ruleId);
+        memcpy(alertdata.policyengine_policy_uuid, session->policyRevision, sizeof(alertdata.policyengine_policy_uuid));
+        memcpy(alertdata.interface_ingress_uuid, session->ingressIntf, sizeof(alertdata.interface_ingress_uuid));
+        memcpy(alertdata.interface_egress_uuid, session->egressIntf, sizeof(alertdata.interface_egress_uuid));
+        memcpy(alertdata.security_zone_ingress_uuid, session->ingressZone, sizeof(alertdata.security_zone_ingress_uuid));
+        memcpy(alertdata.security_zone_egress_uuid, session->egressZone, sizeof(alertdata.security_zone_egress_uuid));
+    }
+
+    if ((config->current + write_len) > config->limit)
+        Unified2RotateFile(config);
+
+    hdr.length = htonl(sizeof(Unified2IDSEventIPv6_NG));
+    hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6_NG);
+
+    if (SafeMemcpy(write_pkt_buffer_ng, &hdr, sizeof(Serial_Unified2_Header),
+                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+
+    if (SafeMemcpy(write_pkt_buffer_ng + sizeof(Serial_Unified2_Header),
+                   &alertdata, sizeof(Unified2IDSEventIPv6_NG),
+                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
+    {
+        ErrorMessage("%s(%d) Failed to copy Unified2IDSEventIPv6_NG. "
+                     "Not writing unified2 event.\n", __FILE__, __LINE__);
+        return;
+    }
+
+    Unified2Write(write_pkt_buffer_ng, write_len, config);
+#endif
+}
+
+void _WriteExtraData(Unified2Config *config, uint32_t event_id, uint32_t event_second, uint8_t *buffer, uint32_t len, uint32_t type )
+{
+
     Serial_Unified2_Header hdr;
     SerialUnified2ExtraData alertdata;
     Unified2ExtraDataHdr alertHdr;
-    uint8_t write_buffer[MAX_GZIP_WRITE_BUF_LEN];
+    uint8_t write_buffer[MAX_XDATA_WRITE_BUF_LEN];
     uint8_t *write_end = NULL;
     uint8_t *ptr = NULL;
 
-    
-    uint32_t write_len; 
 
-    if(!(p->packet_flags & PKT_ALT_DECODE))
-    {
-        return;
-    }
-    
+    uint32_t write_len;
+
     write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2ExtraDataHdr);
 
     alertdata.sensor_id = 0;
-    alertdata.event_id = htonl(event->event_id);
-    alertdata.event_second = htonl(event->ref_time.tv_sec);
+    alertdata.event_id = htonl(event_id);
+    alertdata.event_second = htonl(event_second);
     alertdata.data_type = htonl(EVENT_DATA_TYPE_BLOB);
 
-    alertdata.type = htonl(EVENT_INFO_GZIP_DATA);
-    alertdata.blob_length = htonl(sizeof(alertdata.data_type) + 
-                sizeof(alertdata.blob_length) + DecodeBuffer.len);
+    alertdata.type = htonl(type);
+    alertdata.blob_length = htonl(sizeof(alertdata.data_type) +
+                sizeof(alertdata.blob_length) + len);
 
 
-    write_len = write_len + sizeof(alertdata) + DecodeBuffer.len;
+    write_len = write_len + sizeof(alertdata) + len;
     alertHdr.event_type = htonl(EVENT_TYPE_EXTRA_DATA);
     alertHdr.event_length = htonl(write_len - sizeof(Serial_Unified2_Header));
 
-    
+
     if ((config->current + write_len) > config->limit)
         Unified2RotateFile(config);
 
@@ -835,14 +994,14 @@ static INLINE void _AlertGzipData(Packet *p, char *msg, Unified2Config *config, 
 
     ptr = write_buffer;
 
-    if (SafeMemcpy(ptr, &hdr, sizeof(hdr), 
+    if (SafeMemcpy(ptr, &hdr, sizeof(hdr),
                    write_buffer, write_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
                      "Not writing unified2 event.\n", __FILE__, __LINE__);
         return;
     }
-    
+
     ptr = ptr +  sizeof(hdr);
 
     if (SafeMemcpy(ptr, &alertHdr, sizeof(alertHdr),
@@ -854,7 +1013,7 @@ static INLINE void _AlertGzipData(Packet *p, char *msg, Unified2Config *config, 
     }
 
     ptr = ptr + sizeof(alertHdr);
-    
+
     if (SafeMemcpy(ptr, &alertdata, sizeof(alertdata),
                    write_buffer, write_end) != SAFEMEM_SUCCESS)
     {
@@ -865,7 +1024,7 @@ static INLINE void _AlertGzipData(Packet *p, char *msg, Unified2Config *config, 
 
     ptr = ptr + sizeof(alertdata);
 
-    if (SafeMemcpy(ptr, DecodeBuffer.data, DecodeBuffer.len, 
+    if (SafeMemcpy(ptr, buffer, len,
                 write_buffer, write_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Gzip Decompressed Buffer. "
@@ -875,57 +1034,115 @@ static INLINE void _AlertGzipData(Packet *p, char *msg, Unified2Config *config, 
 
     Unified2Write(write_buffer, write_len, config);
 }
-#endif
 
-
-static INLINE void _AlertExtraData(Packet *p, char *msg, Unified2Config *config, Event *event)
+void AlertExtraDataPerPacket(void *ssnptr, void *data, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second)
 {
-    if( p->data_flags & DATA_FLAGS_TRUE_IP)
-        _AlertXFFData(p, msg, config, event);
-#ifndef SOURCEFIRE
-#ifdef ZLIB
-    if(p->data_flags & DATA_FLAGS_GZIP)
-        _AlertGzipData(p, msg, config, event);
-#endif
-#endif
+    LogFunction *log_funcs;
+    uint32_t max_count;
+
+    max_count = stream_api->get_xtra_data_map(&log_funcs);
+
+    if(max_count > 0)
+    {
+        AlertExtraData(ssnptr, data, log_funcs, max_count, xtradata_mask, event_id, event_second);
+    }
+}
+void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second)
+{
+    Unified2Config *config = (Unified2Config *)data;
+    uint32_t type = 0;
+    uint32_t len = 0;
+    uint8_t *write_buffer;
+    uint32_t i = 0;
+
+    if((config == NULL) || !xtradata_mask || !event_second)
+        return;
+
+    while( i < max_count )
+    {
+        if( xtradata_mask & (1 << i) )
+        {
+            if((*(log_funcs[i]))(ssnptr, &write_buffer,&len,&type))
+            {
+                if(len > 0)
+                    _WriteExtraData(config, event_id, event_second, write_buffer, len, type);
+            }
+        }
+        i++;
+    }
+
 }
 
 static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
 {
     Unified2Config *config = (Unified2Config *)arg;
+    PESessionRecord *session = NULL;
 
     if (config == NULL)
         return;
 
     if(!event) return;
+    if(p->policyEngineData)
+    {
+        session = (PESessionRecord*)(p->policyEngineData);
+    }
     if(IS_IP4(p))
     {
-#ifdef MPLS
-        if((config->vlan_event_types) || (config->mpls_event_types))
-#else
-        if(config->vlan_event_types)
-#endif
+        if(session)
+            _AlertIP4_NG(p, msg, config, event, session);
+        else
         {
-            _AlertIP4_v2(p, msg, config, event); 
-        }
-        else 
-            _AlertIP4(p, msg, config, event);
-    } 
-    else 
-    {
 #ifdef MPLS
-        if((config->vlan_event_types) || (config->mpls_event_types))
+            if((config->vlan_event_types) || (config->mpls_event_types))
 #else
-        if(config->vlan_event_types)
+            if(config->vlan_event_types)
 #endif
-        {
-            _AlertIP6_v2(p, msg, config, event); 
+            {
+                _AlertIP4_v2(p, msg, config, event);
+            }
+            else
+                _AlertIP4(p, msg, config, event);
         }
-        else 
-            _AlertIP6(p, msg, config, event);
     }
-    
-    _AlertExtraData(p, msg, config, event);
+    else
+    {
+        if(session)
+            _AlertIP6_NG(p, msg, config, event, session);
+        else
+        {
+#ifdef MPLS
+            if((config->vlan_event_types) || (config->mpls_event_types))
+#else
+            if(config->vlan_event_types)
+#endif
+            {
+                _AlertIP6_v2(p, msg, config, event);
+            }
+            else
+                _AlertIP6(p, msg, config, event);
+        }
+
+#ifdef SUP_IP6
+        if(ScLogIPv6Extra() && IS_IP6(p))
+        {
+            snort_ip_p ip = GET_SRC_IP(p);
+            _WriteExtraData(config, event->event_id, event->ref_time.tv_sec,
+                &ip->ip8[0], sizeof(struct in6_addr),  EVENT_INFO_IPV6_SRC);
+            ip = GET_DST_IP(p);
+            _WriteExtraData(config, event->event_id, event->ref_time.tv_sec,
+                &ip->ip8[0], sizeof(struct in6_addr),  EVENT_INFO_IPV6_DST);
+        }
+#endif
+    }
+
+    if(p->ssnptr)
+    {
+        stream_api->log_session_extra_data(p->ssnptr, p, event->sig_generator, event->sig_id, event->event_id, event->ref_time.tv_sec);
+
+        if(p->per_packet_xtradata)
+            AlertExtraDataPerPacket(p->ssnptr, config, p->per_packet_xtradata, event->event_id, event->ref_time.tv_sec);
+    }
+
 
     return;
 }
@@ -937,15 +1154,15 @@ static void Unified2LogPacketAlert(Packet *p, char *msg, void *arg, Event *event
     if (config == NULL)
         return;
 
-    if(p) 
+    if(p)
     {
         if ((p->packet_flags & PKT_REBUILT_STREAM) && stream_api)
         {
-            DEBUG_WRAP(DebugMessage(DEBUG_LOG, 
+            DEBUG_WRAP(DebugMessage(DEBUG_LOG,
                         "[*] Reassembled packet, dumping stream packets\n"););
             _Unified2LogStreamAlert(p, msg, config, event);
         }
-        else 
+        else
         {
             DEBUG_WRAP(DebugMessage(DEBUG_LOG, "[*] Logging unified 2 packets...\n"););
             _Unified2LogPacketAlert(p, msg, config, event);
@@ -953,12 +1170,12 @@ static void Unified2LogPacketAlert(Packet *p, char *msg, void *arg, Event *event
    }
 }
 
-static void _Unified2LogPacketAlert(Packet *p, char *msg, 
+static void _Unified2LogPacketAlert(Packet *p, char *msg,
                                     Unified2Config *config, Event *event)
-{ 
+{
     Serial_Unified2_Header hdr;
     Serial_Unified2Packet logheader;
-    uint32_t pkt_length = 0; 
+    uint32_t pkt_length = 0;
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Serial_Unified2Packet) - 4;
 
     logheader.sensor_id = 0;
@@ -1019,7 +1236,7 @@ static void _Unified2LogPacketAlert(Packet *p, char *msg,
     hdr.length = htonl(sizeof(Serial_Unified2Packet) - 4 + pkt_length);
     hdr.type = htonl(UNIFIED2_PACKET);
 
-    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header), 
+    if (SafeMemcpy(write_pkt_buffer, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer, write_pkt_end) != SAFEMEM_SUCCESS)
     {
         ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
@@ -1108,7 +1325,7 @@ static int Unified2LogStreamCallback(DAQ_PktHdr_t *pkth,
 
     Unified2Write(write_pkt_buffer, write_len, unifiedData->config);
 
-#if 0 
+#if 0
     /* DO NOT DO THIS FOR UNIFIED2.
      * The event referenced below in the unifiedData is a pointer
      * to the actual event and this changes its gid & sid to 2:1.
@@ -1122,7 +1339,7 @@ static int Unified2LogStreamCallback(DAQ_PktHdr_t *pkth,
         unifiedData->event->sig_rev = 1;
         unifiedData->event->classification = 0;
         unifiedData->event->priority = unifiedData->event->priority;
-        /* Note that event_id is now incorrect. 
+        /* Note that event_id is now incorrect.
          * See OldUnified2LogPacketAlert() for details. */
     }
 #endif
@@ -1271,9 +1488,9 @@ static void _Unified2LogStreamAlert(Packet *p, char *msg, Unified2Config *config
 /*
  * Function: Unified2ParseArgs(char *)
  *
- * Purpose: Process the preprocessor arguements from the rules file and 
+ * Purpose: Process the preprocessor arguements from the rules file and
  *          initialize the preprocessor's data struct.  This function doesn't
- *          have to exist if it makes sense to parse the args in the init 
+ *          have to exist if it makes sense to parse the args in the init
  *          function.
  *
  * Arguments: args => argument list
@@ -1304,9 +1521,9 @@ static Unified2Config * Unified2ParseArgs(char *args, char *default_filename)
             char *index = toks[i];
             while(isspace((int)*index))
                 ++index;
-          
+
             stoks = mSplit(index, " \t", 2, &num_stoks, 0);
-            
+
             if(strcasecmp("filename", stoks[0]) == 0)
             {
                 if(num_stoks > 1 && config->base_filename == NULL)
@@ -1368,7 +1585,7 @@ static Unified2Config * Unified2ParseArgs(char *args, char *default_filename)
     }
     else if (config->limit > 512)
     {
-        LogMessage("spo_unified2 %s(%d)=> Lowering limit of %iMB to 512MB\n", 
+        LogMessage("spo_unified2 %s(%d)=> Lowering limit of %iMB to 512MB\n",
             file_name, file_line, config->limit);
         config->limit = 512;
     }
@@ -1425,6 +1642,7 @@ static void Unified2Restart(int signal, void *arg)
 
     DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified2: Restart\n"););
 
+    log_config = alert_config = NULL;
     /* free up initialized memory */
     if (config != NULL)
     {
@@ -1442,11 +1660,25 @@ static void Unified2Restart(int signal, void *arg)
 static void Unified2AlertInit(char *args)
 {
     Unified2Config *config;
+    int signal = 0;
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: Unified2 Alert Initialized\n"););
 
     /* parse the argument list from the rules file */
     config = Unified2ParseArgs(args, "snort-unified.alert");
+
+    alert_config = config;
+
+    if(log_config && log_config->base_filename)
+    {
+        if(strcmp(config->base_filename, log_config->base_filename) == 0)
+        {
+            Unified2CleanExit(signal , (void *)log_config);
+            Unified2CleanExit(signal, (void *)config);
+            FatalError("Argument Error in %s(%i). Cannot reuse the filename in config option '%s'\n",
+                                    file_name, file_line, "alert_unified2");
+        }
+    }
 
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
@@ -1459,11 +1691,25 @@ static void Unified2AlertInit(char *args)
 static void Unified2LogInit(char *args)
 {
     Unified2Config *config;
+    int signal = 0;
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: Unified2 Log Initialized\n"););
 
     /* parse the argument list from the rules file */
     config = Unified2ParseArgs(args, "snort-unified.log");
+
+    log_config = config;
+
+    if(alert_config && alert_config->base_filename)
+    {
+        if(strcmp(config->base_filename, alert_config->base_filename) == 0)
+        {
+            Unified2CleanExit(signal, (void *)alert_config);
+            Unified2CleanExit(signal, (void *)config);
+            FatalError("Argument Error in %s(%i). Cannot reuse the filename in config option '%s'\n",
+                                    file_name, file_line, "log_unified2");
+        }
+    }
 
     //LogMessage("Unified2LogFilename = %s\n", Unified2Info->filename);
 
@@ -1485,7 +1731,7 @@ static void Unified2LogInit(char *args)
  * writes sometimes fail and leave the unified2 file corrupted.  If the write
  * to the newly created unified2 file fails, Snort will fatal error.
  *
- * In the case of interrupt errors, the write is retried, but only for a 
+ * In the case of interrupt errors, the write is retried, but only for a
  * finite number of times.
  *
  * All other errors are treated as non-recoverable and Snort will fatal error.
@@ -1524,7 +1770,7 @@ static void Unified2Write(uint8_t *buf, uint32_t buf_len, Unified2Config *config
         int max_retries = 3;
 
         /* On iterations other than the first, the only non-zero error will be
-         * EINTR or interrupt.  Only iterate a maximum of max_retries times so 
+         * EINTR or interrupt.  Only iterate a maximum of max_retries times so
          * there is no chance of infinite looping if for some reason the write
          * is constantly interrupted */
         while ((error != 0) && (max_retries != 0))

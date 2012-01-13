@@ -1,4 +1,1528 @@
+2011-12-14 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.2
+    * src/build.h: updating build number to 78
+
+    * snort.8:
+        Fixed spelling errors. Thanks to Neline van Ginkel for the report.
+
+    * src/: snort.c, preprocessors/spp_perfmonitor.c: 
+        Perfmonitor "now" files are created after Snort drops privileges.
+
+    * src/output-plugins/spo_unified2.c:
+        Only log IPv6 extra data when the packet is IPv6.
+
+    * src/preprocessors/HttpInspect/: server/hi_server.c, client/hi_client.c:
+        Fixed unfolding of HTTP Headers across packet boundaries.
+        Thanks to Jim Hranicky for reporting this issue on the RC build.
+
+    * src/preprocessors/spp_httpinspect.c:
+        HTTP Inspect should check for hi_swap_config in HttpInspectInit()
+        only when snort is compiled with --enable-reload.
+        Fixed build errors on Win32.
+
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+        When pruning a session, don't attempt to flush if the grinder
+        failed to decode a TCP header.
+        Thanks to Jim Hranicky for reporting this issue on the RC build.
+
+2011-11-23 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.2 RC
+    * src/build.h: updating build number to 75
+
+    * src/preprocessors/spp_httpinspect.c:
+        Fixed an issue with HTTP Inspect server conf reload
+        (when the HTTP Inspect is turned on from off between a reload)
+
+    * src/preprocessors/spp_stream5.c:
+        Fixed a memory leak caused by initializing the expected channel
+        more than once.
+
+    * src/dynamic-preprocessors/dcerpc2/spp_dce2.c:
+        Fixed a segfault during dcerpc2 startup when stream5 is not enabled.
+
+    * src/preprocessors/spp_normalize.c:
+        Added support to turn normalization off or on during a Snort reload.
+
+    * src/dynamic-preprocessors/modbus/spp_modbus.c:
+        Moved the check for truncated PDUs past the port check, to avoid
+        false positives.
+
+    * src/sfutil/bitop_funcs.h:
+        Fixed an error in the allocation of flowbit groups, where bytes
+        were interpreted as bits.
+
+    * src/detection-plugins/sp_flowbits.c:
+        Fixed a flowbits issue where the "isset" operation failed when
+        there was only a single flowbit in a group.
+        Fixed the error message logged when the same flowbit is added
+        to two groups.
+
+    * src/ipv6_port.h:
+    * src/: dynamic-preprocessors/gtp/gtp_parser.c,
+      dynamic-preprocessors/gtp/gtp_roptions.c,
+      dynamic-preprocessors/ftptelnet/pp_ftp.c,
+      dynamic-preprocessors/ftptelnet/snort_ftptelnet.c,
+      dynamic-preprocessors/reputation/reputation_config.c,
+      sfutil/segment_mem.c, encode.c:
+        Compiler warning cleanup.
+
+    * doc/: README.reload, snort_manual.pdf, snort_manual.tex:
+        Updated the reload documentation to mention the caveat that exists
+        with reload and fail-open in OpenBSD when Snort is run on primary
+        network interface.
+
+    * src/dynamic-preprocessors/dnp3/: dnp3_reassembly.c,
+      dnp3_reassembly.h, dnp3_roptions.c, spp_dnp3.c:
+        Added support for multiple DNP3 PDUs in a single DNP3 payload.
+        Fixed an issue where the DNP3 preprocessor only identified the
+        minimum reserved address, instead of all reserved addresses.
+
+    * src/dynamic-preprocessors/dnp3/spp_dnp3.h:
+        Updated an incorrect minimum DNP3 memcap to match the documented
+        minimum of 4144 bytes.
+
+    * src/output-plugins/spo_unified2.c:
+        Snort will fatal error when the user configures the same filename
+        for options "alert_unified2" and "log_unified2".
+
+    * src/sfutil/: sfrt.c, sfrt.h, sfrt_dir.c, sfrt_dir.h:
+        Added the ability to delete entries in the sfrt table.
+
+    * src/preprocessors/snort_httpinspect.c,
+      src/preprocessors/spp_frag3.c, src/preprocessors/spp_normalize.c,
+      src/preprocessors/spp_stream5.c,
+      src/preprocessors/Stream5/snort_stream5_tcp.c,
+      src/preprocessors/Stream5/stream5_common.c,
+      src/dynamic-preprocessors/reputation/reputation_config.c,
+      etc/gen-msg.map, src/detection-plugins/sp_flowbits.c,
+      src/detection-plugins/sp_replace.c,
+      src/output-plugins/spo_alert_sf_socket.c, src/decode.c,
+      src/detect.c, src/generators.h, src/sfdaq.c, src/snort.c,
+      src/tag.c, src/util.c, src/dynamic-plugins/sf_dynamic_plugins.c,
+      src/sfutil/acsmx2.c, configure.in,
+      src/dynamic-preprocessors/dnp3/spp_dnp3.c,
+      src/target-based/sftarget_protocol_reference.c:
+    * src/dynamic-preprocessors/dnp3/dnp3_roptions.c:
+        Made the format of warning messages consistent.
+
+    * src/dynamic-preprocessors/: dnp3/spp_dnp3.c, modbus/spp_modbus.c:
+        Providing an empty port list now causes a fatal error.
+
+    * src/dynamic-preprocessors/dnp3/spp_dnp3.h:
+        Fixed reserved address check on big-endian machines.
+
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+        Changed identification of TCP retransmits by comparing payloads
+        instead of TCP checksums.
+
+    * src/decode.h, src/dynamic-plugins/sf_engine/sf_snort_packet.h,
+      src/dynamic-preprocessors/imap/snort_imap.c,
+      src/dynamic-preprocessors/pop/snort_pop.c,
+      src/dynamic-preprocessors/smtp/smtp_util.c,
+      src/dynamic-preprocessors/smtp/snort_smtp.c,
+      src/output-plugins/spo_unified2.c,
+      src/preprocessors/snort_httpinspect.c,
+      src/preprocessors/snort_httpinspect.h,
+      src/preprocessors/spp_httpinspect.c,
+      src/preprocessors/spp_stream5.c, src/preprocessors/stream_api.h,
+      src/preprocessors/HttpInspect/include/hi_ui_config.h,
+      src/sfutil/Unified2_common.h, tools/u2spewfoo/u2spewfoo.c:
+        Enable logging of normalized JavaScript to unified2 when built
+        without --enable-sourcefire.
+            - Changed extra data logging to log packet-specific data
+              (gzip/normalized) after each packet.
+            - Updated u2spewfoo to read the normalized JavaScript
+              extra data.
+
+    * src/dynamic-preprocessors/dnp3/dnp3_reassembly.c:
+        Fixed a bug where "dnp3_data" rules would not work if the content
+        was broken up by CRCs or split across multiple DNP3 segments.
+        As a result, DNP3 rules that inspect the DNP3 headers now require
+        "rawbytes" to work correctly, as the DNP3 reassembly buffer is
+        inspected by default.
+
+    * etc/gen-msg.map, preproc_rules/preprocessor.rules,
+      src/dynamic-preprocessors/dnp3/spp_dnp3.h:
+        Removed DNP3 rule 145:5, and decremented the SIDs of rules 145:6
+        and 145:7. The old 145:5 was never able to be triggered.
+        Updated references for rules 119:15 and 137:1.
+
+    * rpm/snort.spec:
+        Updated the RPM spec file to use wildcards for linking and installing
+        preprocessors. Thanks to Tim Brigham for the suggestion.
+
+    * src/detection_util.h:
+        Increased the URI buffer size from 4096 to 8192 to normalize and
+        detect longer URIs.
+
+    * src/preprocessors/: spp_frag3.c, spp_stream5.c,
+      Stream5/snort_stream5_tcp.c, Stream5/snort_stream5_udp.c:
+        Change the printing function of tracker/session sizes
+        (TcpSession/UdpSession/StreamLWSession/FragTarcker) from fprintf
+        to LogMessage.
+        Fix handling of "first" and "vista" policies in stream5 that,
+        under certain circumstances with overlaps and gaps, could cause
+        the stream5 segmentation list to get out of order.
+
+    * doc/snort_manual.pdf, doc/snort_manual.tex,
+      src/detection-plugins/sp_dsize_check.c:
+        Enable the "dsize" rule option with rebuilt packets, if it is the
+        start of a PDU. Thanks to Dave Bertouille for reporting this problem.
+
+    * src/dynamic-preprocessors/modbus/modbus_decode.c:
+        Added length checking for Modbus "Read File Record" and
+        "Write File Record" requests.
+
+    * src/output-plugins/spo_unified2.c, src/sfutil/Unified2_common.h,
+      tools/u2spewfoo/u2spewfoo.c:
+        Added new Unified2 event structs with extra application ID data.
+        Updated u2spewfoo to read these fields.
+
+    * src/detection-plugins/: sp_asn1_detect.c, sp_byte_check.c,
+      sp_byte_jump.c, sp_isdataat.c:
+        Allow rule evaluation to continue if the doe_ptr reaches the end
+        of a buffer, but a negative offset brings it back in-bounds.
+        Thanks again to Dave Bertouille for the suggestion.
+
+    * src/target-based/sf_attribute_table.y:
+        Allow empty attribute_value in attribute table.
+
+    * configure.in,
+      src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c:
+        Added Protocol-Aware Flushing support for FTP.
+
+    * snort.8:
+        Updated the man page to include more signals that have been used.
+        Made some format changes, thanks to Markus Lude.
+
+    * doc/Makefile.am:
+        Fixed an error while running "make distcleancheck".
+
+    * doc/snort_manual.pdf, doc/snort_manual.tex,
+      src/win32/WIN32-Includes/config.h, configure.in, src/snort.c,
+      src/snort.h, src/util.c, src/control/sfcontrol.c,
+      src/target-based/sftarget_reader.c:
+        Redefined default signals, and added support for signal
+        customization.
+
+
+2011-10-28 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.2 Beta
+    * src/build.h: updating build number to 64
+
+    * src/preprocessors/: snort_httpinspect.c,
+      HttpInspect/include/hi_ui_config.h,
+      HttpInspect/server/hi_server.c,
+      HttpInspect/server/hi_server_norm.c,
+      HttpInspect/user_interface/hi_ui_config.c:
+    * src/sfutil/: util_jsnorm.c, util_jsnorm.h:
+        Updated the HTTP preprocessor to normalize HTTP responses that include
+        javascript escaped data in their bodies. This expands Snort's coverage
+        in detecting HTTP client-side attacks.
+        See the Snort Manual and README.http_inspect for configuration details.
+
+    * doc/README.modbus:
+    * src/dynamic-preprocessors/modbus/: Makefile.am, modbus_decode.c,
+      modbus_decode.h, modbus_paf.c, modbus_paf.h, modbus_roptions.c,
+      modbus_roptions.h, sf_modbus.dsp, spp_modbus.c, spp_modbus.h:
+        Added the Modbus preprocessor, which decodes the Modbus protocol and
+        provides new rule options for some protocol fields.
+        See the Snort Manual and README.modbus for more details.
+
+    * doc/README.dnp3:
+    * src/dynamic-preprocessors/dnp3/: Makefile.am, dnp3_map.c, dnp3_map.h,
+      dnp3_paf.c, dnp3_paf.h, dnp3_reassembly.c, dnp3_reassembly.h,
+      dnp3_roptions.c, dnp3_roptions.h, sf_dnp3.dsp, spp_dnp3.c, spp_dnp3.h:
+        Added the DNP3 preprocessor, which decodes the DNP3 protocol
+        and provides new rule options for some protocol fields.
+        The preprocessor also performs reassembly of segmented DNP3 traffic.
+        See the Snort Manual and README.dnp3 for more details.
+
+    * doc/README.gtp:
+    * src/decode.c:
+    * src/dynamic-preprocessors/gtp/: Makefile.am, gtp_config.c,
+      gtp_config.h, gtp_debug.h, gtp_parser.c, gtp_parser.h, gtp_roptions.c,
+      gtp_roptions.h, sf_gtp.dsp, spp_gtp.c, spp_gtp.h
+        Added a packet decoder and preprocessor for the GTP protocol.
+        These support detecting attacks over GTP (GPRS Tunneling Protocol).
+        See the Snort Manual and README.gtp for more details.
+
+    * doc/faq.pdf, doc/faq.tex, src/Makefile.am, src/debug.c,
+      src/smalloc.h, src/snort_debug.h,
+      src/dynamic-plugins/sf_dynamic_common.h,
+      src/dynamic-preprocessors/dcerpc2/dce2_paf.c,
+      src/dynamic-preprocessors/ftptelnet/snort_ftptelnet.c,
+      src/dynamic-preprocessors/gtp/gtp_debug.h,
+      src/dynamic-preprocessors/sip/sip_debug.h,
+      src/parser/IpAddrSet.c,
+      src/preprocessors/HttpInspect/utils/hi_paf.c,
+      src/preprocessors/Stream5/stream5_paf.c:
+        Expanded the debug bits from 32 to 64 bits.
+
+    * src/preprocessors/: spp_stream5.c, Stream5/snort_stream5_icmp.c,
+      Stream5/snort_stream5_icmp.h, Stream5/snort_stream5_ip.c,
+      Stream5/snort_stream5_ip.h, Stream5/snort_stream5_udp.c,
+      Stream5/snort_stream5_udp.h:
+        Cleaned up application data for non-TCP sessions after
+        a block or timeout.
+
+    * src/preprocessors/spp_sfportscan.c:
+        Negative memcap numbers are no longer allowed.
+
+    * src/preprocessors/HttpInspect/server/hi_server.c:
+        HTTP responses with incorrect status messages are now inspected.
+
+    * src/preprocessors/Stream5/stream5_paf.c:
+        Fixed PAF callback registration during Snort reload.
+
+    * src/parser.c:
+        Fixed crash when setting HOME_NET to an empty variable.
+        Thanks to Elof for reporting this issue.
+
+    * src/preprocessors/spp_normalize.c:
+        Don't register the packet callback if Snort is not inline.
+        Fixed a crash in the normalizer during Snort reload.
+
+    * src/: sfdaq.c, sfdaq.h, snort.c, snort.h, util.c:
+        Fixed a possible segfault upon fatal error during Snort reload.
+
+    * src/win32/WIN32-Prj/snort_installer.nsi:
+        Updated Windows project files for new preprocessors.
+
+    * doc/: snort_manual.pdf, snort_manual.tex:
+        Updated the Snort manual for new features.
+        Updated the names of contributors to match those found on snort.org.
+        Updated the 'config cs_dir' path to be relative to pid-path.
+
+        Described the FlowIP CSV file format. Thanks to Eoin Miller for
+        pointing out the lack of documentation.
+
+    * src/preprocessors/: perf-base.c, perf-base.h, perf.c, perf.h,
+      spp_frag3.c, spp_frag3.h, Stream5/snort_stream5_tcp.c:
+        Added frag3 and stream5 memory usage to perfmon output.
+
+    * src/control/sfcontrol.c:
+        Added counters to bypass the work queue mutex when nothing
+        is queued.
+        Cleaned up compiler warnings.
+
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+        When the same IP is parsed multiple times for XFF/True-client-IP
+        , the duplicate entries are freed from memory.
+
+    * src/preprocessors/: stream_expect.c, spp_stream5.c, stream_api.h,
+      stream_expect.h, Stream5/snort_stream5_session.c,
+      Stream5/snort_stream5_session.h, Stream5/stream5_common.h:
+        Changed instances of "char" to "uint8_t" when dealing with
+        protocol numbers, preventing a potential issue when Snort
+        supports protocols > 128. Thanks to Joshua Kinard for
+        providing a patch for this issue.
+
+    * src/detection-plugins/sp_react.c:
+        Added a content-length header to the react responses.
+
+    * src/: decode.h, dynamic-plugins/sf_engine/sf_snort_packet.h,
+      dynamic-preprocessors/imap/snort_imap.c,
+      dynamic-preprocessors/pop/snort_pop.c,
+      dynamic-preprocessors/smtp/smtp_config.h,
+      dynamic-preprocessors/smtp/smtp_util.c,
+      dynamic-preprocessors/smtp/smtp_util.h,
+      dynamic-preprocessors/smtp/snort_smtp.c,
+      dynamic-preprocessors/smtp/snort_smtp.h,
+      dynamic-preprocessors/smtp/spp_smtp.c,
+      output-plugins/spo_unified2.c, preprocessors/snort_httpinspect.c,
+      preprocessors/snort_httpinspect.h,
+      preprocessors/spp_httpinspect.c, preprocessors/spp_stream5.c,
+      preprocessors/stream_api.h,
+      preprocessors/HttpInspect/include/hi_ui_config.h,
+      preprocessors/Stream5/snort_stream5_tcp.c,
+      preprocessors/Stream5/snort_stream5_tcp.h,
+      preprocessors/Stream5/stream5_common.h:
+        Reduced the memory usage per TCP session for extra data event
+        logging.
+
+    * src/dynamic-preprocessors/sip/spp_sip.c:
+        Changed a description in the SIP exit stats.
+
+    * configure.in, src/snort.c, src/util.c,
+      src/target-based/sftarget_reader.c:
+        Where possible, sigaction() is used instead of signal() to
+        establish signal handlers.
+
+    * src/util.c:
+        Fixed an error in the calculation of dropped packets.
+        Thanks to Will Metcalf for identifying the issue.
+
+    * src/preprocessors/: perf-flow.c, perf-flow.h:
+        Fixed a bug where packets longer than 4500 bytes were not logged
+        in the perfmon flow stats.
+
+    * src/: active.c, decode.c, decode.h, encode.c, parser.c,
+      sf_protocols.h, snort.c:
+        Fix PPPoE support and active responses to ICMP.
+        Thanks to Eric Lauzon for identifying an issue with PPPoE traffic.
+
+    * etc/gen-msg.map, preproc_rules/preprocessor.rules,
+      src/generators.h,
+      src/preprocessors/HttpInspect/client/hi_client.c,
+      src/preprocessors/HttpInspect/event_output/hi_eo_log.c,
+      src/preprocessors/HttpInspect/include/hi_client.h,
+      src/preprocessors/HttpInspect/include/hi_eo_events.h:
+        Added new preprocessor alerts:
+          1) Both true-client-ip and XFF headers exist in single packet
+          2) Multiple client-ips with different values in the same session
+
+    * etc/gen-msg.map:
+        Fixed an error with incorrect SID numbers for some SMTP preprocessor
+        rules. Thanks to Eric Olsen for identifying the issue.
+
+    * src/: decode.h, detect.c, encode.c, encode.h, plugbase.c,
+      plugbase.h, snort.c, snort.h,
+      detection-plugins/detection_options.c,
+      dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h,
+      dynamic-plugins/sf_engine/sf_snort_packet.h,
+      dynamic-preprocessors/dcerpc2/snort_dce2.c,
+      dynamic-preprocessors/sdf/spp_sdf.c,
+      output-plugins/spo_alert_fast.c, preprocessors/spp_frag3.c,
+      preprocessors/spp_rpc_decode.c, preprocessors/spp_sfportscan.c,
+      preprocessors/stream_api.h,
+      preprocessors/Stream5/snort_stream5_tcp.c,
+      preprocessors/Stream5/stream5_common.c:
+        Refactored packet flags. Added new packet flags for raw in-order
+        stream segment discrimination.
+
+    * src/preprocessors/snort_httpinspect.c:
+        Fixed an issue where gzip logging code misinterpreted the data
+        being passed to it.
+
+        Increased max_method_len to 256.
+        Thanks to rmkml for identifying the issue.
+
+    * src/: preprocessors/spp_rpc_decode.c,
+      dynamic-preprocessors/dcerpc2/dce2_roptions.c,
+      dynamic-preprocessors/dcerpc2/dce2_smb.c:
+        Fixed compiler warnings.
+
+    * src/sfutil/bnfa_search.c:
+        Fixed code defined by #ifdef ALLOW_NFA_FULL to compile and run.
+        Thanks to Brian Hwang for reporting the issue.
+
+    * src/: dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h,
+      dynamic-plugins/sp_dynamic.h,
+      dynamic-preprocessors/reputation/reputation_config.c,
+      dynamic-preprocessors/reputation/shmem/shmem_datamgmt.c,
+      dynamic-preprocessors/reputation/shmem/shmem_datamgmt.h:
+        The paths to whitelist & blacklist files are now relative to
+        the location of snort.conf.
+
+    * src/preprocessors/Stream5/snort_stream5_session.c:
+        Don't prune blocked sessions if pruning for memcap.
+
+    * src/preprocessors/spp_stream5.c:
+        Fixed session data lookup for meta data messages.
+
+    * etc/: sf_rule_options, sf_rule_validation.conf:
+        Updated rule validation files with new rule options.
+
+    * configure.in, doc/INSTALL, doc/README.ARUBA, doc/README.database,
+      doc/README.ipv6, doc/snort_manual.tex,
+      src/output-plugins/spo_alert_arubaaction.c,
+      src/output-plugins/spo_alert_prelude.c,
+      src/output-plugins/spo_database.c:
+        Added deprecation warnings for database, alert_aruba_action,
+        and alert_prelude output plugins. These output plugins are
+        considered deprecated with this release and will be removed
+        in Snort 2.9.3.
+
+    * src/: plugbase.c, plugbase.h, preprocids.h, profiler.c, sfdaq.c,
+      sfdaq.h, snort.c, snort.h, dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h,
+      preprocessors/spp_stream5.c, preprocessors/stream_api.h,
+      preprocessors/Stream5/snort_stream5_icmp.c,
+      preprocessors/Stream5/snort_stream5_ip.c,
+      preprocessors/Stream5/snort_stream5_session.c,
+      preprocessors/Stream5/snort_stream5_session.h:
+        Added API and DAQ functions to get flow start and end events
+        directly from the DAQ when no stream data is available.
+
+    * src/sfdaq.c:
+        Prevent underflow when calculating outstanding packets.
+        Thanks to Hussein Bahaidarah for reporting this issue.
+
+        Don't unload daq modules if --disable-dlclose was a configure
+        option.
+
+    * src/: active.c, dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h:
+        Snort dynamic API changes to inject response packets.
+
+2011-10-20 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.1.2
+    * configure.in,
+      rpm/snort.spec,
+      src/build.h,
+      src/win32/WIN32-Includes/config.h,
+      src/win32/WIN32-Prj/snort_installer.nsi:
+        Incremented version numbers to Snort 2.9.1.2, Build 84.
+
+    * src/preprocessors/snort_httpinspect.c,
+      src/sfutil/util_utf.c:
+        Fixed an issue where Snort would sometimes stop processing traffic
+        in a persistent HTTP 1.1 connection with a UTF-32 encoded response
+        followed by a UTF-16 encoded response.
+
+2011-10-05 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.1.1
+    * src/decode.c:
+        Fixed decode.c to allow building with --enable-debug.
+
+    * src/: dynamic-plugins/sf_engine/sf_decompression.c,
+      dynamic-plugins/sf_engine/sf_decompression.h,
+      preprocessors/snort_httpinspect.h,
+      preprocessors/HttpInspect/server/hi_server.c:
+        Fixed http_inspect decompression and decompression API to decompress
+        both raw and zlib deflated data.
+        Support locating utf charset when spaces are present.
+
+    * src/: preprocessors/HttpInspect/server/hi_server_norm.c,
+      sfutil/util_utf.h:
+        Added "Byte Order Mark" support for unicode in http_inspect.
+
+    * src/detection-plugins/sp_urilen_check.c:
+        Fixed potential false positives when using urilen detection option.
+
+    * src/preprocessors/Stream5/stream5_paf.c:
+        Fixed flushing beyond "paf_max".
+        Verify paf configuration before enabling.
+
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+        Free application and protocol state when a session is blocked.
+        Ensure that seglist_next is NULL after being freed.
+
+    * src/dynamic-preprocessors/smtp/smtp_util.c:
+        Fixed an issue with SMTP logging while running in inline mode.
+
+    * src/dynamic-preprocessors/reputation/Makefile.am,
+      src/dynamic-preprocessors/reputation/reputation_config.c,
+      src/dynamic-preprocessors/reputation/reputation_config.h,
+      src/dynamic-preprocessors/reputation/spp_reputation.c,
+      src/dynamic-preprocessors/reputation/spp_reputation.h,
+      src/Makefile.am, src/idle_processing.c, src/idle_processing.h,
+      src/idle_processing_funcs.h, src/plugbase.c, src/plugbase.h,
+      src/snort.c, src/snort.h, src/util.c, src/util.h,
+      src/dynamic-examples/Makefile.am,
+      src/dynamic-preprocessors/reputation/shmem/shmem_config.c,
+      src/dynamic-preprocessors/reputation/shmem/shmem_config.h,
+      src/dynamic-preprocessors/reputation/shmem/shmem_datamgmt.h,
+      src/dynamic-preprocessors/reputation/shmem/shmem_lib.c,
+      src/dynamic-preprocessors/reputation/shmem/shmem_mgmt.c,
+      src/dynamic-preprocessors/reputation/shmem/shmem_mgmt.h,
+      src/control/Makefile.am, src/control/sfcontrol.c,
+      src/control/sfcontrol.h, src/control/sfcontrol_funcs.h,
+      src/dynamic-preprocessors/reputation/shmem/sflinux_helpers.c,
+      src/dynamic-preprocessors/reputation/shmem/sflinux_helpers.h,
+      src/dynamic-preprocessors/reputation/shmem/shmem_common.h,
+      src/dynamic-preprocessors/reputation/shmem/shmem_datamgmt.c,
+      src/dynamic-preprocessors/reputation/shmem/shmem_lib.h,
+      src/sfutil/Makefile.am, src/sfutil/segment_mem.c,
+      src/sfutil/segment_mem.h, src/sfutil/sfrt_flat.c,
+      src/sfutil/sfrt_flat.h, src/sfutil/sfrt_flat_dir.c,
+      src/sfutil/sfrt_flat_dir.h,
+      src/dynamic-preprocessors/Makefile.am, tools/control/Makefile.am,
+      tools/control/README.snort_control, tools/control/sfcontrol.c,
+      src/dynamic-plugins/sf_dynamic_plugins.c,
+      src/dynamic-plugins/sf_dynamic_preprocessor.h, configure.in,
+      tools/Makefile.am:
+        - Added support for shared memory between Snort processes.
+          This is used in the IP Reputation preprocessor to share a single copy
+          of IP whitelists & blacklists.
+        - Added a control channel, so that commands may be issued to
+          a running Snort process by way of a Unix socket.
+
+    * src/preprocessors/HttpInspect/utils/hi_paf.c:
+        Ensure HTTP 1.1 responses without length indicators (e.g. 304)
+        are flushed at the end of the headers.
+        Preprocessor rule 120:8 is fired at end of headers if content-length
+        and transfer-encoding: chunked are not present, but not for response
+        codes 1XX, 204, 304.
+
+    * doc/README.reputation, doc/snort_manual.pdf,
+      doc/snort_manual.tex:
+        Updated Snort documentation, added documentation for Shared Memory
+        and the Control Socket.
+
+    * src/: dynamic-preprocessors/reputation/sf_reputation.dsp,
+      dynamic-preprocessors/sf_dynamic_initialize/sf_dynamic_initialize.dsp,
+      win32/WIN32-Includes/stdint.h, win32/WIN32-Prj/snort.dsp,
+      win32/WIN32-Prj/snort.dsw:
+        Updated Win32 build files.
+
+
+2011-08-23 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.1
+    * src/build.h:
+        Updated build number to 71.
+
+    * etc/gen-msg.map, preproc_rules/decoder.rules, src/decode.c,
+      src/decode.h, src/generators.h, src/snort.c,
+      src/dynamic-plugins/sf_engine/sf_snort_packet.h:
+        Fixed an issue with decoding large numbers of IPv6 extension headers.
+        Added rule 116:456 to safeguard against too many IPv6 extension headers.
+        Thanks to Martin Schütte for reporting the issue.
+
+    * src/detection-plugins/sp_urilen_check.c,
+      src/detection-plugins/sp_urilen_check.h:
+        Fixed the urilen rule option to look at reassembled packets.
+        Added an extra parameter to specify whether to check raw or normalized
+        uri buffer. Will check raw uri buffer by default.
+
+    * src/: dynamic-preprocessors/dcerpc2/sf_dce2.dsp,
+      dynamic-preprocessors/dns/sf_dns.dsp,
+      dynamic-preprocessors/ftptelnet/sf_ftptelnet.dsp,
+      dynamic-preprocessors/imap/sf_imap.dsp,
+      dynamic-preprocessors/isakmp/sf_isakmp.dsp,
+      dynamic-preprocessors/pop/sf_pop.dsp,
+      dynamic-preprocessors/reputation/sf_reputation.dsp,
+      dynamic-preprocessors/sdf/sf_sdf.dsp,
+      dynamic-preprocessors/sip/sf_sip.dsp,
+      dynamic-preprocessors/smtp/sf_smtp.dsp,
+      dynamic-preprocessors/ssh/sf_ssh.dsp,
+      dynamic-preprocessors/ssl/sf_ssl.dsp,
+      win32/WIN32-Prj/sf_engine.dsp: 
+        Fixed a bug where the sensitive_data preprocessor gave an error while
+        loading sensitive data rules.
+      
+    * doc/README.http_inspect, etc/gen-msg.map,
+      preproc_rules/preprocessor.rules, src/generators.h,
+      src/preprocessors/snort_httpinspect.c,
+      src/preprocessors/HttpInspect/event_output/hi_eo_log.c,
+      src/preprocessors/HttpInspect/include/hi_eo_events.h,
+      src/preprocessors/HttpInspect/utils/hi_paf.c:
+        Added two HTTP Inspect preprocessor rules:
+        119:28 - post w/o content-length or transfer-encoding: chunked
+        120:8 - message with invalid content-length or chunk size 
+      
+    * src/preprocessors/spp_httpinspect.c: 
+        Fixed a bug where Snort wouldn't reload, giving the error that
+        "Changing decompress_depth requries a restart".
+
+    * etc/gen-msg.map: 
+        Commented out four rules from gen-msg.map, 133:44 through 133:47,
+        because they were not yet implemented.  
+
+    * preproc_rules/preprocessor.rules:
+        Added a CVE reference for Rule 119:19.
+        Added a reference to SMTP preprocessor rule 124:4.  
+        Added a preprocessor rule, 125:9, for an FTPTelnet preprocessor
+        alert that was missing the corresponding rule.
+
+    * src/dynamic-plugins/sf_engine/sf_snort_plugin_api.c:
+        PAF tweak for single-segment full PDUs matching only-stream
+
+    * src/snort.c: 
+        Fixed a bug where Snort wouldn't reload on SIGHUP with OpenBSD.
+        Set default paf_max to 16K.
+
+    * doc/: README.reputation, snort_manual.pdf, snort_manual.tex:
+        Added a use case in the IP Reputation preprocessor documentation.
+
+    * src/: dynamic-preprocessors/reputation/reputation_config.c,
+      dynamic-preprocessors/reputation/sf_reputation.dsp,
+      win32/WIN32-Prj/snort.dsw, win32/WIN32-Prj/snort_installer.nsi:
+        Fixed the IP Reputation preprocessor so that it would build on Windows.
+
+    * src/preprocessors/HttpInspect: client/hi_client.c, include/hi_client.h,
+      server/hi-server.c, utils/hi_paf.c:
+        Support up to full 32-bit content-lengths
+
+    * src/preprocessors/Stream5/stream5_paf.c:
+        Fixed compilation with the options "--disable-target-based --enable-paf".
+
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+        Fixed an error in IDS mode when segments overlap and the sequence
+        number wraps.
+
+    * tools/u2spewfoo/Makefile.am:
+        Added the u2spewfoo Windows project file to the Snort source tarball.
+
+2011-07-19 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.1 RC
+    * doc/README.sip, doc/snort_manual.pdf, doc/snort_manual.tex,
+      preproc_rules/preprocessor.rules,
+      src/dynamic-preprocessors/sip/sip_parser.c,
+      src/dynamic-preprocessors/sip/spp_sip.h, etc/gen-msg.map:
+        Added three new SIP preprocessor alerts.
+
+    * src/preprocessors/Stream5/: snort_stream5_tcp.c, stream5_paf.c,
+      stream5_paf.h:
+        Allow multiple preprocs to scan for PDUs on the same port.
+        This fixes a problem with DCE autodetect using the same
+        ports as HTTP.
+
+    * src/build.h: 
+        Updated build number to 63.
+
+    * src/: fpcreate.c, log.c, detection-plugins/sp_byte_extract.c,
+      detection-plugins/sp_tcp_win_check.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_content.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c,
+      preprocessors/spp_normalize.c:
+        Fixed some compiler warnings.
+
+    * src/: detection-plugins/detection_options.c,
+      detection-plugins/sp_flowbits.h,
+      dynamic-plugins/sf_engine/sf_snort_detection_engine.c,
+      dynamic-plugins/sf_engine/examples/Makefile.am,
+      dynamic-plugins/sf_engine/examples/flowbits_test.c,
+      dynamic-plugins/sf_engine/examples/rules.c,
+      dynamic-plugins/sf_engine/examples/web-client_test.c:
+        Only set/clear/toggle/unset a flowbit when all of the rule
+        matches, including the IPs and Ports. Thanks to Eoin Miller
+        for reporting the issue.
+
+    * src/dynamic-preprocessors/: Makefile.am, dcerpc2/Makefile.am,
+      dns/Makefile.am, ftptelnet/Makefile.am, imap/Makefile.am,
+      pop/Makefile.am, reputation/Makefile.am, rzb_saac/Makefile.am,
+      sdf/Makefile.am, sip/Makefile.am, smtp/Makefile.am,
+      ssh/Makefile.am, ssl/Makefile.am:
+        Fixed dynamic preprocesor Makefiles so that they can be built
+        in parallel.
+
+    * doc/README.http_inspect, doc/snort_manual.pdf,
+      doc/snort_manual.tex, etc/gen-msg.map,
+      preproc_rules/preprocessor.rules, src/generators.h,
+      src/preprocessors/snort_httpinspect.c,
+      src/preprocessors/snort_httpinspect.h,
+      src/preprocessors/HttpInspect/client/hi_client.c,
+      src/preprocessors/HttpInspect/event_output/hi_eo_log.c,
+      src/preprocessors/HttpInspect/include/hi_eo_events.h,
+      src/preprocessors/HttpInspect/include/hi_ui_config.h,
+      src/preprocessors/HttpInspect/include/hi_util.h,
+      src/preprocessors/HttpInspect/user_interface/hi_ui_config.c,
+      src/sfutil/util_unfold.c:
+        Added a new HTTP Inspect preprocessor rule, GID 119 SID 26.
+        This rule checks for 200+ whitespaces in a folded header line
+        from an HTTP request. A new config option was added to configure
+        the allowable amount whitespace.
+
+        Added a new configuration option to http_inspect server configuration:
+        "small_chunk_length { <chunk_size> <num_consec_chunks> }", with
+        preprocessor rules for both client and server. Consecutive chunk lengths
+        less than or equal to <chunk_size> will cause an event to be generated.
+        
+        See README.http_inspect for more information.
+
+    * src/: dynamic-preprocessors/dcerpc2/sf_dce2.dsp,
+      dynamic-preprocessors/dns/sf_dns.dsp,
+      dynamic-preprocessors/ftptelnet/sf_ftptelnet.dsp,
+      dynamic-preprocessors/imap/sf_imap.dsp,
+      dynamic-preprocessors/isakmp/sf_isakmp.dsp,
+      dynamic-preprocessors/sdf/sf_sdf.dsp,
+      dynamic-preprocessors/sf_dynamic_initialize/sf_dynamic_initialize.dsp,
+      dynamic-preprocessors/sip/sf_sip.dsp,
+      dynamic-preprocessors/smtp/sf_smtp.dsp,
+      dynamic-preprocessors/ssh/sf_ssh.dsp,
+      dynamic-preprocessors/ssl/sf_ssl.dsp,
+      win32/WIN32-Prj/sf_engine.dsp,
+      win32/WIN32-Prj/sf_engine_initialize.dsp,
+      win32/WIN32-Prj/sf_testdetect.dsp, win32/WIN32-Prj/snort.dsp:
+        Fixed the Win32 build to (1) not use .pch, and (2) correct sed
+        patterns on ipv6_port.h.
+
+    * src/output-plugins/spo_alert_sf_socket.c:
+        Fixed a problem where Snort's generic IP address structure was
+        being sent by the socket output plugin.
+        The output plugin now only generates events for IPv4 packets,
+        and is guaranteed to use uint32_t IPv4 addresses for interoperability.
+
+    * src/sfutil/: sfrt.c, sfrt.h:
+        Optimized some memory usage.
+
+    * configure.in:
+        Add check for pkg-config and provide instructions to get it if
+        pkg-config is not installed.
+
+    * src/preprocessors/Stream5/: snort_stream5_tcp.c,
+      stream5_common.h:
+        Show single segment PAF packets and only short-circuit at
+        correct sequence.
+        When aborting PAF, flush at paf_max.
+        Tweaked retransmission check to use actual sequence numbers
+        instead of the adjusted sequence numbers.
+        Changed the pseudo-random flush point after each flush.
+
+    * src/snort.c:
+        Fixed a compilation error when active response is disabled.
+
+    * src/snort.h:
+        Fixed a bug where Snort wouldn't daemonize on OpenBSD if the
+        process was running as root. Thanks to Olaf Schreck for reporting
+        this issue.
+
+    * src/preprocessors/: perf-base.c, perf-base.h, perf-event.c,
+      perf-event.h, perf-flow.c, perf-flow.h, perf.c, perf.h,
+      spp_perfmonitor.c:
+        Split out Perfmon submodule Init and Reset, so that everything is
+        initialized when the Perfmonitor preprocessor is initialized.
+        Previously, some data was initialized on the first packet.
+
+    * src/detection-plugins/sp_tcp_flag_check.c:
+        Fixed a couple spots where the "1" and "2"
+        flags weren't renamed to "C" and "E". Thanks to Joshua Kinard for
+        reporting the issue and supplying a patch.
+
+    * doc/README.sip, doc/snort_manual.pdf, doc/snort_manual.tex,
+      src/dynamic-preprocessors/sip/sip_parser.c,
+      src/dynamic-preprocessors/sip/spp_sip.h,
+      preproc_rules/preprocessor.rules, etc/gen-msg.map:
+        Added a new SIP preprocessor alert for missing content type headers.
+        Fixed an issue where the SIP preprocessor checked for Stream5 even if
+        the SIP preprocessor was disabled.
+
+    * etc/unicode.map:
+        Updated unicode.map to match the unicode standard on Windows 7 SP1.
+
+    * etc/snort.conf:
+        Sync'ed to VRT's latest snort.conf.
+
+    * src/: decode.c, detect.c:
+        Tweaked the preprocessing loop to bypass app preprocs if no
+        app data.
+
+    * src/sfutil/sf_ip.c, src/sfutil/sf_ip.h, src/sfutil/sfrt_dir.c,
+      src/dynamic-preprocessors/reputation/Makefile.am,
+      src/dynamic-preprocessors/reputation/reputation_config.h,
+      src/dynamic-preprocessors/reputation/reputation_utils.c,
+      src/dynamic-preprocessors/reputation/sf_reputation.dsp,
+      src/dynamic-preprocessors/reputation/spp_reputation.c,
+      src/dynamic-preprocessors/reputation/spp_reputation.h,
+      src/dynamic-preprocessors/reputation/reputation_config.c,
+      src/dynamic-preprocessors/reputation/reputation_debug.h,
+      src/dynamic-preprocessors/reputation/reputation_utils.h,
+      doc/README.reputation, doc/Makefile.am, doc/snort_manual.pdf,
+      doc/snort_manual.tex, preproc_rules/preprocessor.rules,
+      src/dynamic-preprocessors/Makefile.am, configure.in,
+      src/preprocids.h, etc/gen-msg.map:
+        Added the IP Reputation preprocessor. This preprocessor provides
+        the ability to whitelist and blacklist packets based on IP addresses.
+        See README.reputation for more information.
+
+    * src/: sf_types.h, dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-preprocessors/dcerpc2/Makefile.am,
+      dynamic-preprocessors/dcerpc2/dce2_config.c,
+      dynamic-preprocessors/dcerpc2/dce2_debug.h,
+      dynamic-preprocessors/dcerpc2/dce2_paf.c,
+      dynamic-preprocessors/dcerpc2/dce2_paf.h,
+      dynamic-preprocessors/dcerpc2/sf_dce2.dsp,
+      dynamic-preprocessors/dcerpc2/snort_dce2.c:
+        Added protocol-aware flushing support for the dcerpc2 preprocessor.
+
+    * src/dynamic-plugins/sf_convert_dynamic.c:
+        Added the ability to convert shared object rules that use the
+        preprocessor rule option.
+
+    * src/preprocessors/: snort_httpinspect.c, spp_httpinspect.c,
+      HttpInspect/include/hi_paf.h, HttpInspect/utils/hi_paf.c,
+      Stream5/snort_stream5_tcp.c:
+        Don't enable paf unless stream ports configured
+        for the given direction; add "(PAF)" to http inspect ports output
+        to indicate when enabled; and only register port for given
+        direction if corresponding flow depth is set.
+
+        Support full 32-bit content-lengths and chunk sizes, and flush/abort
+        when exceeded.
+
+    * doc/README.SMTP, doc/snort_manual.tex,
+      src/dynamic-preprocessors/smtp/smtp_config.h,
+      src/dynamic-preprocessors/smtp/smtp_util.c,
+      src/dynamic-preprocessors/smtp/snort_smtp.c,
+      src/dynamic-preprocessors/smtp/snort_smtp.h,
+      src/dynamic-preprocessors/smtp/spp_smtp.c:
+        Fixed performance issue: allocate the buffers used
+        for filename, mailfrom and rcptto logging using mempool
+        ('memcap' used to allocate the mempool).
+        Added a fatal error when b64_decode_depth is used with
+        enable_mime_decoding.
+
+    * src/dynamic-plugins/sf_engine/examples: all rule files:
+        Fixed compiler warnings.
+
+2011-06-13 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.1 Beta
+    * configure.in:
+        Updates to configure.in.
+        - Fix zlib checks to use correctly named variable for checking zlib
+          header and library existence.
+        - Enable IPv6 by default in builds.  Can use --disable-ipv6 to turn it off.
+          using --enable-zlib, configure should fail.  snort -V should show
+          IPv6 by default and VRT config should load without modification.
+        - Added a new option, "--enable-large-pcap", which allows Snort to read
+          pcap files that are larger than 2 GB.
+        - Changed the default ./configure options to match the requirements
+          for the bundled snort.conf
+    * doc/: INSTALL, README.imap, README.pop,
+      README.SMTP, README.stream5, README.sip, README.tag,
+      README.http_inspect, README.counts, README.normalize,
+      snort_manual.pdf, snort_manual.tex:
+        Updated documentation for Snort 2.9.1:
+        - Added documentation for new SIP, POP and IMAP preprocessors
+        - Updated README.stream5 with documentation for
+          Protocol Aware Flushing (PAF)
+        - Updated README.http_inspect with memcap information,
+          clarified "http_cookie" information, and documentation for
+          "log_uri" and "log_hostname".
+        - Fixed a typo in README.counts
+        - Updated "byte_extract" section to reflect syntax changes
+        - Improved the explanation of "max_queued_events"
+        - Added documentation for the ESP decoder, which is now configurable
+        - Improved the explanation of "rawbytes"
+        - Fixed an incorrect example in README.tag.
+    * etc/snort.conf:
+        Synced snort.conf with VRT's latest version.
+
+        Added configurations for new preprocessors.
+    * preproc_rules/: decoder.rules, preprocessor.rules
+        Added new preprocessor rules for SIP, SMTP, POP, and IMAP.
+
+        Added decoder rules 116:453, 116:454, and 116:455. These rules
+        were formerly covered by VRT rules.
+    * src/build.h: Updated build number to 46
+    * src/decode.c:
+        TCP and UDP decoder rules that require a fully-decoded packet will
+        only fire if the checksum is correct and the port number is not ignored.
+
+        ESP decoding is now configurable, and off by default.
+
+        The "config enable_decode_oversized_alerts" option now applies to
+        packets where the UDP header claims there is more data than actually exists.
+        The Teredo decoder now only processes packets in the Teredo prefix
+        (2001:0000::/32) or the link-local prefix (fe80::/16).
+    * src/detection-plugins/sp_cvs.c:
+        Fixed a false positive in the CVS detection plugin.
+    * doc/snort_manual.tex, src/detection-plugins/sp_byte_extract.c:
+        Made some changes to the byte_extract syntax:
+        - Writing "string" without a number type defaults to decimal.
+        - The "string" and "hex/dec/oct" options are now independent of each
+          other, like in byte_test and byte_jump.
+          You can write "string,dec", "hex,string", "string,relative,oct", etc.
+        - Specifying one of "hex", "dec", and "oct" without using "string"
+          results in an error.
+        - byte_extract options can no longer be delimited by spaces.
+          This does not affect "align <num>" or "multiplier <num>".
+    * src/: parser.c, util.c, util.h,
+      detection-plugins/sp_base64_decode.c,
+      dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h,
+      dynamic-plugins/sp_dynamic.c,
+      dynamic-preprocessors/smtp/smtp_util.c,
+      preprocessors/HttpInspect/client/hi_client.c,
+      preprocessors/HttpInspect/server/hi_server.c,
+      sfutil/sf_base64decode.c, sfutil/sf_base64decode.h:
+        Changes include the following:
+        - Attempt dechunkind only when transfer-encoding: chunked is present.
+        - Override the content length with transfer encoding
+        - SnortStrcasestr uses slen now.
+        - unfolding : trim spaces when required.
+    * src/: pcap_pkthdr32.h, preprocessors/spp_frag3.c,
+      preprocessors/Stream5/snort_stream5_tcp.c,
+      preprocessors/Stream5/stream5_common.h, sfutil/sf_ipvar.c,
+      sfutil/sf_ipvar.h, sfutil/sf_vartable.c:
+        Update Frag3/Stream5 to print bound addresses, better descriptsions of detect
+        anomalies and port lists.
+        - Updated Frag3/Stream5 to print bound addresses for IPv6 enabled builds
+        - Updated Frag3 to print meaningful detect anomalies configuration
+        - Updated Stream5 to print that there are more ports than those printed.
+    * src/dynamic-plugins/sf_engine/: Makefile.am, sf_decompression.c,
+      sf_decompression.h, sf_snort_detection_engine.c,
+      sf_snort_plugin_api.h:
+        Added a Decompression API that wraps Zlib for use with dynamic
+        plugins. See sf_decompression.h for more details.
+    * src/: fpcreate.c, fpdetect.c, treenodes.h:
+        Update pattern matcher and sort functions to
+        correctly sort by priority as well as implement sorting by
+        content_length (which was never done with 2.8.2 addition of rule
+        option tree).
+
+        Added a warning when max-pattern-len is defined twice.
+
+        Packets will no longer be tagged or logged if they are filtered or passed.
+    * src/preprocessors/Stream5: 
+        Ensured that reassembly doesn't require packet dropping in IPS mode.
+        The message "additional ports configured but not printed" is only printed
+        when that is actually the case.
+    * src/snort.c:
+        fix output of filename / shutdown alerts sequence when iterating over multiple
+        pcaps with --pcap-show --pcap-reset and console alerts (eg -A cmg or
+        -A console:test).
+
+        Fixed an issue with reloading Snort while the default output options
+        were used.
+
+        When reading several pcap files with --pcap-dir, Snort will move on
+        to the next file if one fails to load.
+    * src/output-plugins/spo_alert_full.c:
+        Update alert_full to print rule references, regardless of whether
+        there is TCP/UDP/etc.
+    * src/output-plugins/spo_log_tcpdump.c:
+        convert DLT_IPV{4,6} to DLT_RAW for compatibility with libpcap 1.0.0
+        fix 'mixed decls and code' compiler warning
+    * src/: decode.h, detect.c, detection_util.c, detection_util.h,
+      fpcreate.c, fpdetect.c, log.c, log_text.c, parser.h, plugbase.c,
+      rule_option_types.h, detection-plugins/Makefile.am,
+      detection-plugins/detection_options.c,
+      detection-plugins/sp_base64_data.c,
+      detection-plugins/sp_byte_check.c,
+      detection-plugins/sp_byte_extract.c,
+      detection-plugins/sp_byte_jump.c,
+      detection-plugins/sp_file_data.c,
+      detection-plugins/sp_ftpbounce.c,
+      detection-plugins/sp_isdataat.c,
+      detection-plugins/sp_pattern_match.c,
+      detection-plugins/sp_pcre.c, detection-plugins/sp_pkt_data.c,
+      detection-plugins/sp_pkt_data.h,
+      dynamic-plugins/sf_convert_dynamic.c,
+      dynamic-plugins/sf_dynamic_common.h,
+      dynamic-plugins/sf_dynamic_define.h,
+      dynamic-plugins/sf_dynamic_engine.h,
+      dynamic-plugins/sf_dynamic_plugins.c,
+      dynamic-plugins/sf_dynamic_preprocessor.h,
+      dynamic-plugins/sp_dynamic.c, dynamic-plugins/sp_dynamic.h,
+      dynamic-plugins/sf_engine/sf_snort_detection_engine.c,
+      dynamic-plugins/sf_engine/sf_snort_packet.h,
+      dynamic-plugins/sf_engine/sf_snort_plugin_api.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_content.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c,
+      dynamic-plugins/sf_engine/examples/detection_lib_meta.h,
+      dynamic-preprocessors/ftptelnet/pp_ftp.c,
+      dynamic-preprocessors/ftptelnet/pp_telnet.c,
+      dynamic-preprocessors/ftptelnet/snort_ftptelnet.c,
+      dynamic-preprocessors/smtp/smtp_util.c,
+      dynamic-preprocessors/smtp/snort_smtp.c,
+      dynamic-preprocessors/smtp/snort_smtp.h,
+      preprocessors/snort_httpinspect.c,
+      preprocessors/snort_httpinspect.h,
+      preprocessors/spp_rpc_decode.c,
+      preprocessors/HttpInspect/server/hi_server.c,
+      preprocessors/HttpInspect/server/hi_server_norm.c,
+      preprocessors/Stream5/snort_stream5_tcp.c:
+        The "file_data" and "base64_data" rule options now set the buffer
+        for any rule options that follow them. This applies to both relative
+        and non-relative rule options.
+
+        The detection code now uses 3 separate buffers:
+        - "Alt Detect": set by file_data, base64_data, etc.
+        - "Alt Decode": set by preprocessor normalization, e.g. HTTP Inspect
+        - Raw packet data
+
+        The AltDetect buffer can also be set by custom .so rules.
+    * src/parser.c, src/parser.h, src/snort.h, src/output-plugins/spo_unified2.c,
+      src/sfutil/Unified2_common.h:
+        IPv6 source and destination addresses are now logged in Unified2
+        as extra data events. This is configured with "config log_ipv6_extra_data".
+    * src/dynamic-preprocessors/sip/Makefile.am,
+      src/dynamic-preprocessors/sip/sf_sip.dsp,
+      src/dynamic-preprocessors/sip/sip_config.c,
+      src/dynamic-preprocessors/sip/sip_config.h,
+      src/dynamic-preprocessors/sip/sip_debug.h,
+      src/dynamic-preprocessors/sip/sip_dialog.c,
+      src/dynamic-preprocessors/sip/sip_dialog.h,
+      src/dynamic-preprocessors/sip/sip_parser.c,
+      src/dynamic-preprocessors/sip/sip_parser.h,
+      src/dynamic-preprocessors/sip/sip_roptions.c,
+      src/dynamic-preprocessors/sip/spp_sip.c,
+      src/dynamic-preprocessors/sip/spp_sip.h,
+      src/dynamic-preprocessors/sip/sip_roptions.h,
+      src/dynamic-preprocessors/sip/sip_utils.c,
+      src/dynamic-preprocessors/sip/sip_utils.h, doc/README.sip,
+      etc/gen-msg.map, src/dynamic-preprocessors/sip/test/Makefile.am,
+      src/dynamic-preprocessors/sip/test/sip_test.c, configure.in,
+      src/dynamic-preprocessors/Makefile.am:
+        Added a new preprocessor for SIP traffic.
+        See README.sip and the Snort Manual for more information.
+    * src/: dynamic-preprocessors/dcerpc2/dce2_utils.c,
+      dynamic-preprocessors/dcerpc2/spp_dce2.c,
+      preprocessors/spp_frag3.c:
+        Make Frag3 OpenBSD Vuln alert only happen if the frag policy is
+        'linux' (which includes OpenBSD).  The 'bsd' policy is NOT used
+        for OpenBSD, which is the only OS on which the vulnerability was
+        present.
+
+        This reduces false positives to only occur when frag3 policy is
+        linux and its an actual linux system, rather than the alert
+        occuring regardless of frag policy.
+    * src/: detection-plugins/Makefile.am,
+      detection-plugins/sp_byte_extract.c,
+      detection-plugins/sp_byte_extract.h,
+      dynamic-plugins/sf_convert_dynamic.c,
+      dynamic-plugins/sf_engine/Makefile.am,
+      dynamic-plugins/sf_engine/sf_snort_detection_engine.c,
+      dynamic-plugins/sf_engine/sf_snort_detection_engine.h,
+      dynamic-plugins/sf_engine/sf_snort_plugin_api.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_api.h,
+      dynamic-plugins/sf_engine/sf_snort_plugin_byte.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_content.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_hdropts.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_loop.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c,
+        Added support for ByteExtract variables to the .so rule versions of
+        Content, ByteTest, ByteJump, and isdataat.
+    * src/: encode.c, preprocessors/spp_normalize.c,
+      preprocessors/Stream5/snort_stream5_tcp.c,
+      preprocessors/Stream5/stream5_common.c:
+        Fixed the TTL on encoded response packets.
+    * src/: fpcreate.c, fpdetect.c,
+      detection-plugins/sp_pattern_match.c,
+      detection-plugins/sp_pattern_match.h,
+      dynamic-plugins/sf_dynamic_define.h,
+      dynamic-plugins/sf_engine/sf_snort_detection_engine.c,
+      dynamic-plugins/sf_engine/sf_snort_plugin_api.h:
+        Update to not inspect HTTP method buffer with Snort's fast pattern engine.
+        Rules with only HTTP method content end up as non-content rules.
+        This eliminates a short cycle of searches with fast pattern on every
+        initial HTTP request.
+    * src/dynamic-preprocessors/pop/: all files
+        Added a new preprocessor for POP traffic.
+        See README.pop for more information.
+    * src/dynamic-preprocessors/imap/: all files
+        Added a new preprocessor for IMAP traffic.
+        See README.imap for more information.
+    * src/sfutil/: sf_email_attach_decode.c, sf_email_attach_decode.h:
+        Base64 decoding was moved to its own section in sfutil, for use
+        by the new email preprocessors.
+
+        Added support for uuencoded email attachments.
+    * src/dynamic-preprocessors/sdf/spp_sdf.c:
+        The Sensitive Data preprocessor now inspects the "file_data" buffer, used
+        for HTTP response bodies & decoded email attachments.
+    * src/: snort.c, preprocessors/spp_stream5.c,
+      preprocessors/stream_api.h:
+        Update Snort to return a DAQ verdict of whitelist (meaning don't
+        send Snort any more packets) for sessions that are being ignored
+        in both directions or ports that are configured to ignore.  For
+        DAQ modules and hardware that supports it, this should result in
+        a performance gain because Snort no longer has to decode packets
+        that are part of that connection.
+    * src/util.c:
+        Added an error message when opening a pid file fails.
+    * src/preprocessors/HttpInspect/: client/hi_client.c,
+      server/hi_server.c:
+        The Set-Cookie: and Cookie: headers wont be included in the cookie buffers.
+    * configure.in, src/active.c, src/active.h, src/decode.h,
+      src/encode.c, src/encode.h, src/log_text.c, src/log_text.h,
+      src/parser.c, src/parser.h, src/sf_types.h, src/sfdaq.c,
+      src/sfdaq.h, src/snort.h, src/snort_debug.h,
+      src/detection-plugins/sp_react.c,
+      src/detection-plugins/sp_respond3.c,
+      src/dynamic-plugins/sf_dynamic_define.h,
+      src/dynamic-plugins/sf_engine/sf_snort_packet.h,
+      src/preprocessors/snort_httpinspect.c,
+      src/preprocessors/spp_httpinspect.c,
+      src/preprocessors/spp_stream5.c, src/preprocessors/stream_api.h,
+      src/preprocessors/HttpInspect/Makefile.am,
+      src/preprocessors/HttpInspect/include/Makefile.am,
+      src/preprocessors/HttpInspect/include/hi_paf.h,
+      src/preprocessors/HttpInspect/mode_inspection/hi_mi.c,
+      src/preprocessors/HttpInspect/server/hi_server.c,
+      src/preprocessors/HttpInspect/utils/Makefile.am,
+      src/preprocessors/HttpInspect/utils/hi_paf.c,
+      src/preprocessors/Stream5/Makefile.am,
+      src/preprocessors/Stream5/snort_stream5_icmp.c,
+      src/preprocessors/Stream5/snort_stream5_session.c,
+      src/preprocessors/Stream5/snort_stream5_tcp.c,
+      src/preprocessors/Stream5/snort_stream5_tcp.h,
+      src/preprocessors/Stream5/snort_stream5_udp.c,
+      src/preprocessors/Stream5/stream5_common.c,
+      src/preprocessors/Stream5/stream5_common.h,
+      src/preprocessors/Stream5/stream5_paf.c,
+      src/preprocessors/Stream5/stream5_paf.h, src/sfutil/sf_textlog.h:
+        Added support in Stream5 for Protocol Aware Flushing (PAF).
+        PAF allows Snort to statefully scan a stream and reassemble a complete
+        PDU regardless of segmentation.
+
+        Added PAF support to HTTP Inspect, allowing the preprocessor to determine
+        when HTTP sessions are flushed by Stream5.
+
+        See README.stream5 for more details.
+    * src/preprocessors/: stream_ignore.h, stream_ignore.c,
+      Stream5/snort_stream5_udp.c:
+        added support for ignoring UDP channels. Light weight session
+        will be created to track UDP channel, even ports are not
+        monitored.
+    * src/win32/: most files
+        Updated Snort and its libraries to build/link against MFC.
+
+2011-03-23 Steven Sturges <ssturges@sourcefire.com>
+  * src/build.h:
+      Increment Snort build number to 134
+  * src/: decode.h, encode.c:
+  * src/dynamic-plugins/sf_engine/: sf_snort_packet.h:
+  * src/preprocessors/: spp_sfportscan.c, spp_frag3.c:
+  * src/output-plugins/: spo_alert_fast.c:
+  * src/preprocessors/Stream5/: stream5_common.c:
+      Updated portscan to set protocol correctly in raw packet for
+      IPv6 and changed the encoder to recognize portscan packets as pseudo
+      packets so that the checksum isn't calculated
+  * src/: sfdaq.c, util.c:
+      Improve handling of DAQ failure codes when Snort is shutting down.
+  * src/preprocessors/spp_perfmonitor.c:
+      Update perfmonitor to create now files prior to dropping privs
+
+2011-03-16 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.5
+  * src/build.h:
+      Increment Snort build number to 132
+  * src/snort.c:
+  * src/preprocessors/: normalize.c, perf-base.c, perf-base.h,
+    Stream5/snort_stream5_tcp.c:
+      TCP timestamp options are only NOPed by the Normalization preprocessor
+      if Stream5 has seen a full 3-way handshake, and timestamps weren't
+      negotiated.
+
+      The IPS mode reassembly policy has been refactored to do stream
+      normalization within the first policy.
+
+      Packets injected by the normalization preprocessor are now counted
+      in the packet statistics.
+  * doc/snort_manual.tex:
+  * src/: parser.c, parser.h:
+  * src/preprocessors/: spp_frag3.c, Stream5/snort_stream5_session.c:
+      Added a "config vlan_agnostic" setting that globally disables Stream's
+      use of vlan tag in session tracking.
+  * src/: snort.c, preprocessors/normalize.c,
+    preprocessors/spp_normalize.c, preprocessors/spp_normalize.h,
+    preprocessors/perf-base.c, preprocessors/perf-base.h:
+  * doc/: README.normalize, snort_manual.pdf, snort_manual.tex:
+      Fixed the normalization preprocessor to call its post-initialization
+      config functions during a policy reload.
+
+      Packets can no longer be trimmed below the minimum ethernet frame
+      length. Trimming is now configurable with the "normalize_ip4: trim;"
+      option. TOS clearing is now configurable with "normalize_ip4: tos;".
+
+      The "normalize_ip4: trim" option is automatically disabled if the
+      DAQ can't inject packets. If the DAQ tries and fails to inject
+      a given packet, the wire packet is not blocked.
+
+      Updated documentation regarding these changes.
+  * src/detection-plugins/sp_cvs.c: 
+      Fixed a false positive in the CVS detection plugin. It was incorrectly
+      parsing CVS entries that had a '+' in between the 3rd and 4th slashes.
+  * src/preprocessors/HttpInspect/: client/hi_client.c,
+    server/hi_server.c: 
+      Changed a pointer comparison to a size check for code readability.
+      Belated thanks to Dwane Atkins and Parker Crook for reporting a
+      related issue that was fixed in Snort 2.9.0.4 build 111.
+
+      Moved the zlib initialization such that gzipped responses are still
+      inspected if the zipped data starts after the first Stream-reassembled
+      packet is inspected.
+  * src/decode.c: 
+      Fixed an issue with decoding too many IP layers in a single packet. The
+      Teredo proto bit was not unset after hitting the limit on IP layers.
+      Thanks to Dwane Atkins for reporting this issue.
+
+      IPv6 fragmented packets are no longer inspected unless they have an
+      offset of zero and the next layer is UDP. This behavior is consistent
+      with IPv4 decoding.
+      Thanks to Martin Schütte for reporting an issue where fragged ICMPv6
+      packets were being inspected.
+
+      The decoder no longer attempts to decode Teredo packets inside of
+      IPv4 fragments, instead waiting for the reassembled packet.
+  * src/encode.c: 
+      Fixed a problem where encoded packets had their lengths calculated
+      incorrectly. This caused the active response feature to generate
+      incorrect RST packets if the original packet had a VLAN tag.
+  * preproc_rules/preprocessor.rules: 
+      Updated references to rule 125:1:1 
+  * src/preprocessors/spp_perfmonitor.c:
+      Perfmonitor files are now created after Snort changes uid/gid.
+  * src/dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c:
+      Fixed the size formatting of an error message argument when
+      compiling with --enable-rzb-saac.
+      Thanks to Cleber S. Brandão for reporting this issue.
+  * etc/snort.conf:
+      Updated the default snort.conf with max compress and decompress
+      depths to enable unlimited decompression of gzipped HTTP responses.
+  * snort.8:
+      Fixed the man page's URL regarding the location of Snort rules.
+      Thanks to Michael Scheidell for reporting an out-of-date man page section.
+  * doc/README.http_inspect, doc/snort_manual.tex,
+    src/preprocessors/snort_httpinspect.c:
+      HTTP Inspect's "unlimited_decompress" option now requires that
+      "compress_depth" and "decompress_depth" are set to their max values.
+  * src/: fpcreate.c, dynamic-plugins/sf_dynamic_define.h,
+    dynamic-plugins/sf_dynamic_engine.h,
+    preprocessors/Stream5/snort_stream5_tcp.c:
+      Fixed an error that prevented compiling with --disable-dynamicplugin.
+      Thanks to Jason Wallace for reporting this issue.
+  * src/dynamic-preprocessors/ftptelnet/: snort_ftptelnet.c,
+    snort_ftptelnet.h, spp_ftptelnet.c:
+      Changed the names of ProcessGlobalConf() and PrintGlobalConf() inside
+      the ftp_telnet preprocessor to avoid a naming conflict with similar
+      functions in HTTP Inspect.
+      Thanks to Bruce Corwin for reporting this issue.
+  * src/preprocessors/: perf.c, perf-base.c, perf-base.h, perf-flow.c,
+    perf-flow.h:
+      Fixed comparisons between signed and unsigned int, which lead to
+      a faulty length check.
+      Thanks to Cihan Ayyildiz and Jason Wallace for helping us debug this
+      issue.
+
+2011-02-28 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.4
+  * src/build.h:
+      Increment Snort build number to 111.
+  * src/preprocessors/HttpInspect/client/hi_client.c:
+    src/preprocessors/HttpInspect/server/hi_server.c:
+      Fixed a bug in the way partial HTTP headers are handled.
+
+2011-02-10 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.4
+  * src/build.h: Increment Snort build number to 110
+  * snort.8, src/snort.c: 
+    Updated Snort man page to match the output of "snort --help".
+    Removed "-o" from the list of valid options, since it was removed
+    a while ago.
+    The verdict from defragged packets are no longer cleared, so that
+    they can be applied to the raw packet.
+    Thanks to Markus Lude for submitting a patch that fixed errors in the
+    man page.
+  * src/fpcreate.c:
+    Deletec the call to fpDeletePortGroup() prior to calling FatalError().
+  * src/parser.c:
+    Fixed portvar parsing code to correctly dislpay names of undefined
+    portvars.
+  * src/preprocessors/Stream5/snort_stream5_tcp.c: 
+    Fixed a FIN sequence number handling issue, where RST after FIN caused a
+    false positive on Stream5 preprocessor rule 129:15. 
+    Thanks to Jason Wallace for pointing out the issue.
+  * doc/: INSTALL, README.frag3, README.http_inspect, README.stream5,
+    snort_manual.tex, snort_manual.pdf:
+    Added documentation for the option "small-segments".
+    Updated team members.
+    Clarified some undocumented "flow" options.
+    Minor edits to punctuation on "ssl_version" examples.
+    Re-worded uricontent's description.
+    Added missing semicolons to rule option examples.
+    Updated "enable_cookie" documentation.
+    Added documentation for "iis_encode" in http_encode keywords.
+    Improved the description of the "disable" keyword.
+    Added "--enable-sourcefire" description.
+    Thanks to Joshua Kinard for sending in several patches to the manual.
+  * doc/: Makefile.am, README.rzb_saac: 
+    Added SaaC readme.  
+  * configure.in, doc/Makefile.am, doc/README.rzb_saac, src/snort.c,
+    src/util.c, src/util.h,
+    src/dynamic-plugins/sf_engine/examples/Makefile.am,
+    src/dynamic-preprocessors/Makefile.am,
+    src/dynamic-preprocessors/dns/spp_dns.c,
+    src/dynamic-preprocessors/rzb_saac/Makefile.am,
+    src/dynamic-preprocessors/rzb_saac/rzb_debug.c,
+    src/dynamic-preprocessors/rzb_saac/rzb_debug.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-client.c,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-client.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-collector.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-fileinfo.c,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-fileinfo.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-server.c,
+    src/dynamic-preprocessors/rzb_saac/rzb_http-server.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_http.h,
+    src/dynamic-preprocessors/rzb_saac/rzb_smtp-collector.c,
+    src/dynamic-preprocessors/rzb_saac/rzb_smtp-collector.h,
+    src/dynamic-preprocessors/rzb_saac/sf_preproc_info.h,
+    src/dynamic-preprocessors/rzb_saac/spp_rzb-saac.c: 
+    Added Razorback SaaC to the dynamic-preprocessors.
+    Use --enable-rzb-saac to build it.  Moved the initgroups call to a
+    separate function and call it from the main thread.	
+  * src/detection-plugins/sp_clientserver.c: 
+    Fixed an erroneous error check so that "no_frag" and "no_stream" can be
+    used in the same "flow" rule option.
+  * src/detection-plugins/sp_pattern_match.c:
+    Rules that use a "depth" value lower than the length of their content
+    now cause an error. Depth should be >= the content length.
+  * src/detection-plugins/sp_tcp_flag_check.c:
+    Changed the reserved bits flags "1, 2" to "C, E". The old values can still
+    be used for backwards compatability.
+  * preproc_rules/preprocessor.rules: 
+    Added references to FTP and SMTP preprocessor rules.  
+  * src/dynamic-plugins/sf_engine/examples/: detection_lib_meta.h:
+    Removed extraneous ifdef
+  * src/: preprocessors/spp_frag3.c, preprocessors/spp_sfportscan.c,
+    dynamic-preprocessors/dcerpc2/dce2_config.c: 
+    Added startup log message to show that the preprocessors are
+    inactive when added to snort.conf as "disabled".
+    Updated frag3 startup log to indicate the memcap frmo which prealloc
+    fragments were generated.
+  * src/preprocessors/: spp_frag3.c, Stream5/snort_stream5_session.c:
+    Updated the Frag3KeyCmp and Stream5KeyCmp functions to handle 32bit
+    sparc platforms where 64bit pointer comparisons can cause bus
+    errors. Thanks to Stephan for reporting this issue.
+  * src/: preprocessors/portscan.c, win32/WIN32-Includes/config.h:
+    Portscan preprocessor's hash table is now allocated based on
+    the memcap, instead of being the same size.
+  * src/dynamic-preprocessors/dcerpc2/: dce2_co.c, dce2_utils.c, dce2_smb.c:
+    Fixed a bug that caused dcerpc2 to reassemble some segments incorrectly.
+    If extra bytes at the end of a request corrupt the next request, they
+    will be discarded.
+  * src/dynamic-preprocessors/ssl/spp_ssl.c:
+    Updated the SSL preproc to count the packets it processes,
+    instead of counting all packets to enter the intiial function.
+  * doc/: faq.tex, faq.pdf: 
+    Updated FAQ based on snort.org reorganization.  
+  * doc/: README.http_inspect, snort_manual.pdf, snort_manual.tex:
+    Updated cookie documentation.
+    Cookie buffer includes "Cookie" header name for HTTP requests and
+    "Set-Cookie" for HTTP responses. When enable_cookie is disabled,
+    cookie buffer points to the HTTP header 
+  * src/preprocessors/snort_httpinspect.c: 
+    Fixed the error message during parsing of HTTP inspect
+    server config. Make it a warning.  
+  * src/: detection_util.h, preprocessors/snort_httpinspect.c,
+    preprocessors/spp_httpinspect.c,
+    preprocessors/HttpInspect/client/hi_client.c,
+    preprocessors/HttpInspect/include/hi_client.h,
+    preprocessors/HttpInspect/include/hi_norm.h,
+    preprocessors/HttpInspect/include/hi_ui_config.h,
+    preprocessors/HttpInspect/normalization/hi_norm.c,
+    preprocessors/HttpInspect/server/hi_server.c:
+      Fixed a false positive due to a large chunk length followed
+      by a small packet.
+      Moved the lookup table such that they are initialized only once.
+      When de-chunking returns error, the data is now inspected as a
+      normal body.
+      Moved the Initialize function out of hi_ui_config.h.
+      CRLFs are no longer placed in the status message buffer.
+  * many files:
+    Updated all Sourcefire copyright notices to the year 2011.
+
+2010-12-20 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.3
+  * src/build.h:
+      Increment Snort build number to 98
+  * doc/: snort_manual.tex, snort_manual.pdf:
+      Fixed Snort manual descriptions of some rule options.
+      Changed whitespace in several areas to be more consistent.
+      Max mime mem example changed from 1000 to 4000.
+      Updated manual for distance / within / offset / depth combos.
+      Thanks to Joshua Kinard for submitting several fixes.
+  * doc/INSTALL:
+      Update doc/INSTALL with instructions for building on OpenBSD.
+  * src/dynamic-preprocessors/smtp/smtp_config.c:
+      Print alert_unknown_commands in SMTP config of snort output.
+      Print the SMTP MIME config details with snort output.
+  * src/: decode.c, decode.h, snort.c:
+      discriminate between ip4 and ip6 raw packets
+      Thanks to Gerald Maziarski for reporting this issue.
+  * src/detection-plugins/: detection_options.c, sp_byte_jump.c,
+      sp_pattern_match.c:
+      restore doe flags along with doe pointer.
+  * preproc_rules/preprocessor.rules:
+      Updated preprocessor.rules references to match VRT.
+  * src/dynamic-preprocessors/smtp/spp_smtp.c:
+      When the SMTP preprocessor is started in a
+      "disabled" state, it no longer requires Stream5.
+  * src/decode.c:
+      Truncated ESP traffic is now handled correctly.
+      Thanks to rmkml for bringing the issue to our attention.
+  * src/: decode.c, fpdetect.c:
+      Fixed a problem with handling UDP/IPv6 over Teredo where the inner UDP
+      header was malformed.
+  * preproc_rules/preprocessor.rules:
+      Added a reference to preprocessor.rules.
+  * src/dynamic-preprocessors/smtp/spp_smtp.c:
+      When the SMTP preprocessor is started in a
+      "disabled" state, it no longer requires Stream5.
+  * src/detection-plugins/: detection_options.c, sp_pattern_match.c:
+      Update content to check for HTTP_RESP_BODY in packet flag
+      if option is relative and not using rawbytes.
+  * etc/snort.conf:
+      Update with snort.conf from VRT
+  * src/dynamic-plugins/sf_engine/examples/detection_lib_meta.h:
+      Bumped minor version number in  example detection lib.
+  * src/preprocessors/spp_frag3.c:
+      Fix memory leak when there are two zero offset
+      fragments with different IP options.  Previous code was blindly
+      copying new IP options over top of existing ones.
+  * src/dynamic-plugins/sf_engine/: sf_snort_detection_engine.c,
+      sf_snort_plugin_api.h:
+      Fixed overlaps in various flags in the Shared Object rule API.
+      Shared Object rules from previous 2.9.0 versions need to be recompiled.
+  * src/detection-plugins/sp_pattern_match.c:
+      Moved non-zero initializations in the PatternMatchData struct
+      to the NewNode() function. This fixes the use of depth, offset,
+      distance, and within on uricontent options.
+      Reject invalid combinations of distance/within and offset/depth
+      including repeated keywords.
+      Thanks to Dave Bertouille and Daniel Clemens for pointing out issues here.
+  * src/: snort.c, util.c, util.h:
+      write correct pid to file for glibc2.2 / linux threads
+  * src/preprocessors/: snort_httpinspect.c,
+      HttpInspect/mode_inspection/hi_mi.c:
+      Fixed an instance where HTTP session data was not checked.
+DAQ 0.5
+  * daq/os-daq-modules/Makefile.am:
+      The IPFW DAQ now builds on OpenBSD.
+      Thanks to Ross Lawrie, Randall Rioux, and many others for reporting this.
+
+2010-11-15 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.2
+    * preproc_rules/preprocessor.rules:
+          Added a reference to an 0day ProFTP bug in a FTP
+          preprocessor rule.
+    * src/build.h:
+          Increment Snort build number to 92
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+          Count only acked segs for flushing post-ack.  Thanks to Eoin Miller
+          for helping track this issue and provide test scenarios.
+    * src/detection_util.h:
+    * src/dynamic-plugins/sf_engine/sf_snort_detection_engine.c:
+    * src/preprocessors/Stream5/snort_stream5_tcp.c:
+          fix file_data:mime in So rules. content matches following
+          file_data:mime should not enter fast pattern matcher. Reset file_data_ptr once
+          stream flush is done and stream reassembled packet is processed. 
+    * src/dynamic-preprocessors/ssl/spp_ssl.c:
+          Fix return value for SSL rule options         
+    * src/: plugbase.h, preprocessors/snort_httpinspect.c:
+          Set the dce preproc bit in HTTP only when server flow depth is -1
+    * src/dynamic-preprocessors/dcerpc2/: dce2_co.c, dce2_smb.c,
+      dce2_utils.c, dce2_utils.h, includes/smb.h:
+          use offset or remaining fields and overwrite
+          as appropriate instead of always appending data
+    * src/preprocessors/HttpInspect/server/hi_server.c:
+    * src/preprocessors/HttpInspect/client/hi_client.c:
+          Fixed a couple of memory leaks.
+    * src/preprocessors/HttpInspect/mode_inspection/hi_mi.c:
+          Fixed an error in the handling of HTTP Session Data.
+    * doc/: README.http_inspect,snort_manual.pdf, snort_manual.tex:
+          Update to the snort manual. remove the stream5
+          alerts. reference the gen-msg.map.
+    * preprocessors/Stream5/snort_stream5_tcp.c:
+          urgent pointer handling corrected for one
+          byte of urgent data at the start of a segment.  The general case
+          of an N-byte urgent payload prefix would be handled here by
+          removing the == 1 limit in urg_offset == 1 but that restrictio
+          is not safe until we flush urgent data.  As is, urgent data is
+          never flushed in reassembled packets and can only be detected i
+          raw packets.
+          pointer handling.
+    * src/: decode.h, detection_util.h, plugbase.h,
+      preprocessors/snort_httpinspect.c,
+      preprocessors/snort_httpinspect.h,
+      preprocessors/HttpInspect/server/hi_server.c,
+          Apply server flow depth on a session basis
+          rather than per packet basis.  This change improves the
+          performance by disabling detect on packet when the packet is
+          beyond the specified flow depth. server_flow_depth now takes
+          values from -1 to 65535
+    * src/parser.c:
+          Correct setting of dup_opt_func and cleanup existing opt_func list before
+          hand to address parse-time leak.
+
 2010-11-01 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0.1
     * doc/: snort_manual.pdf, snort_manual.tex: 
            Added "flush_factor".
            Fixed incorrect line wrap (thx Shawn Thompson).  
@@ -22,6 +1546,9 @@
            interpreting the ovector from pcre_exec.
     * etc/gen-msg.map: 
            Added rules 120:4 and 120:5 to gen-msg.map.  
+    * src/preprocessors/Stream5/snort_stream5_tcp.c: 
+	       Fix issue when handling overlap limit enforcement.  Thanks to rmkml
+		   and Miguel Alvarez for pointing out the issue.
     * src/preprocessors/Stream5/snort_stream5_tcp.c: 
            fix flush after initial when acks are withheld 
            conditional on NORMALIZER 
@@ -126,6 +1653,7 @@
           error on  multiple --daq args 
 
 2010-10-04 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0
     * doc/Makefile.am:
     * doc/README.FLEXRESP:
     * doc/README.FLEXRESP2:
@@ -212,6 +1740,7 @@
       Stream reassembly for the session that matches the rule.
 
 2010-09-03 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0 RC
     * Fixed clean shutdown after reload.
     * Fixed tagging to log tagged packets regardless of filtering.
     * Fixed mempool initialization of free list count bug reported by
@@ -351,6 +1880,7 @@
 	  Handle -g/-u limited with DAQ modules that require root privs.
 
 2010-06-16 Ryan Jordan <ryan.jordan@sourcefire.com>
+Snort 2.9.0 Beta
     * Snort uses the DAQ library for packet acquisition and injection. 
       ./configure --enable-inline and --enable-ipfw are deleted.  Just run ./snort
       -Q to activate inline mode for DAQs that support it.  See the README.daq there

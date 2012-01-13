@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2010 Sourcefire, Inc.
+ ** Copyright (C) 2010-2011 Sourcefire, Inc.
  ** Author: Ryan Jordan <ryan.jordan@sourcefire.com>
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,11 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "snort.h"
 #include "parser.h"
 #include "plugbase.h"
@@ -74,15 +79,17 @@ static void ByteExtractCleanup(int signal, void *data)
     }
 }
 
+#ifdef DEBUG_MSGS
 /* Print a byte_extract option to console. For debugging purposes. */
 void PrintByteExtract(ByteExtractData *data)
 {
     if (data == NULL)
         return;
 
-    printf("bytes_to_grab = %d, offset = %d, relative = %d, convert = %d,"
-           "align = %d, endianess = %d, , base = %d,"
-           "multiplier = %d, var_num = %d, name = %s",
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+           "bytes_to_grab = %d, offset = %d, relative = %d, convert = %d, "
+           "align = %d, endianess = %d, base = %d, "
+           "multiplier = %d, var_num = %d, name = %s\n",
            data->bytes_to_grab,
            data->offset,
            data->relative_flag,
@@ -92,8 +99,9 @@ void PrintByteExtract(ByteExtractData *data)
            data->base,
            data->multiplier,
            data->var_number,
-           data->name);
+           data->name););
 }
+#endif
 
 /* Hash functions. Make sure to update these when the data struct changes! */
 uint32_t ByteExtractHash(void *d)
@@ -121,16 +129,16 @@ uint32_t ByteExtractHash(void *d)
     {
         /* Cleanup warning because of cast from 64bit ptr to 32bit int
          * warning on 64bit OSs */
-        u_int64_t ptr; /* Addresses are 64bits */
+        uint64_t ptr; /* Addresses are 64bits */
 
-        ptr = (u_int64_t) data->byte_order_func;
+        ptr = (uint64_t) data->byte_order_func;
         b += (ptr << 32) & 0XFFFFFFFF;
         c += (ptr & 0xFFFFFFFF);
     }
 #else
-    b += (u_int32_t)data->byte_order_func;
+    b += (uint32_t)data->byte_order_func;
 #endif
-    
+
     final(a,b,c);
 
     return c;
@@ -215,6 +223,13 @@ static int ByteExtractVerify(ByteExtractData *data)
                    "Variable names must start with a letter.");
     }
 
+    if (data->base && !data->data_string_convert_flag)
+    {
+        ParseError("byte_extract rule option has a string converstion type "
+                   "(\"dec\", \"hex\", or \"oct\") without the \"string\" "
+                   "argument.");
+    }
+
     return BYTE_EXTRACT_SUCCESS;
 }
 
@@ -222,8 +237,8 @@ static int ByteExtractVerify(ByteExtractData *data)
 static int ByteExtractParse(ByteExtractData *data, char *args)
 {
     char *args_copy = SnortStrdup(args);
-    char *endptr, *saveptr;
-    char *token = strtok_r(args_copy, " ,", &saveptr);
+    char *endptr, *saveptr = args_copy;
+    char *token = strtok_r(args_copy, ",", &saveptr);
     RuleOptByteOrderFunc tmp_byte_order_func = NULL;
 
     /* set defaults / sentinels */
@@ -237,7 +252,7 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
         if (*endptr != '\0')
             ParseError("byte_extract rule option has non-digits in the "
                     "\"bytes_to_extract\" field.");
-        token = strtok_r(NULL, " ,", &saveptr);
+        token = strtok_r(NULL, ",", &saveptr);
     }
 
     /* second: offset */
@@ -247,14 +262,14 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
         if (*endptr != '\0')
             ParseError("byte_extract rule option has non-digits in the "
                     "\"offset\" field.");
-        token = strtok_r(NULL, " ,", &saveptr);
+        token = strtok_r(NULL, ",", &saveptr);
     }
 
     /* third: variable name */
     if (token)
     {
         data->name = SnortStrdup(token);
-        token = strtok_r(NULL, " ,", &saveptr);
+        token = strtok_r(NULL, ",", &saveptr);
     }
 
     /* optional arguments */
@@ -265,12 +280,12 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
             data->relative_flag = 1;
         }
 
-        else if (strcmp(token, "align") == 0)
+        else if (strncmp(token, "align ", 6) == 0)
         {
-            token = strtok_r(NULL, " ,", &saveptr);
+            char *value = (token+6);
 
             if (data->align == 0)
-                data->align = (uint8_t)SnortStrtoul(token, &endptr, 10);
+                data->align = (uint8_t)SnortStrtoul(value, &endptr, 10);
             else
                 ParseError("byte_extract rule option includes the "
                         "\"align\" argument twice.");
@@ -300,16 +315,16 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
                         "or \"dce\".");
         }
 
-        else if (strcmp(token, "multiplier") == 0)
+        else if (strncmp(token, "multiplier ", 11) == 0)
         {
-            token = strtok_r(NULL, " ,", &saveptr);
+            char *value = (token+11);
             if (token == NULL)
                 ParseError("byte_extract rule option has a \"multiplier\" "
                         "argument with no value specified.");
 
             if (data->multiplier == 1)
             {
-                data->multiplier = SnortStrtoul(token, &endptr, 10);
+                data->multiplier = SnortStrtoul(value, &endptr, 10);
 
                 if (*endptr != '\0')
                     ParseError("byte_extract rule option has non-digits in the "
@@ -326,24 +341,37 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
                 data->data_string_convert_flag = 1;
             else
                 ParseError("byte_extract rule option has multiple "
-                        "string conversion arguments. Use only one.");
+                        "\"string\" arguments. Use only one.");
+        }
 
-            token = strtok_r(NULL, " ,", &saveptr);
-            if (token == NULL)
-                ParseError("byte_extract rule option has a \"string\" "
-                    "argument with no value specified. Use either \"string dec\", "
-                    "\"string hex\", or \"string oct\".");
-
-            if (strcmp(token, "dec") == 0)
+        else if (strcmp(token, "dec") == 0)
+        {
+            if (data->base == 0)
                 data->base = 10;
-            else if (strcmp(token, "hex") == 0)
+            else
+                ParseError("byte_extract rule option has multiple arguments "
+                        "specifying the type of string conversion. Use only "
+                        "one of \"dec\", \"hex\", or \"oct\".");
+        }
+
+        else if (strcmp(token, "hex") == 0)
+        {
+            if (data->base == 0)
                 data->base = 16;
-            else if (strcmp(token, "oct") == 0)
+            else
+                ParseError("byte_extract rule option has multiple arguments "
+                        "specifying the type of string conversion. Use only "
+                        "one of \"dec\", \"hex\", or \"oct\".");
+        }
+
+        else if (strcmp(token, "oct") == 0)
+        {
+            if (data->base == 0)
                 data->base = 8;
             else
-                ParseError("byte_extract rule option has a \"string\" "
-                    "argument with an invalid value. Use either \"string dec\", "
-                    "\"string hex\", or \"string oct\".");
+                ParseError("byte_extract rule option has multiple arguments "
+                        "specifying the type of string conversion. Use only "
+                        "one of \"dec\", \"hex\", or \"oct\".");
         }
 
         else if ((tmp_byte_order_func = GetByteOrderFunc(token)) != NULL)
@@ -366,7 +394,7 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
             ParseError("byte_extract rule option has invalid argument \"%s\".", token);
         }
 
-        token = strtok_r(NULL, " ,", &saveptr);
+        token = strtok_r(NULL, ",", &saveptr);
     }
 
     free(args_copy);
@@ -381,7 +409,10 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
     /* Replace sentinels with defaults */
     if (data->endianess == ENDIAN_NONE)
         data->endianess = BIG;
-    
+
+    if (data->data_string_convert_flag && (data->base == 0))
+        data->base = 10;
+
     /* At this point you could verify the data and return something. */
     return ByteExtractVerify(data);
 }
@@ -393,7 +424,7 @@ int8_t GetVarByName(char *name)
 
     if (name == NULL)
         return BYTE_EXTRACT_NO_VAR;
-    
+
     for (i = 0; i < NUM_BYTE_EXTRACT_VARS; i++)
     {
         if (variable_names[i] != NULL && strcmp(variable_names[i], name) == 0)
@@ -404,7 +435,7 @@ int8_t GetVarByName(char *name)
 }
 
 /* If given an OptFpList with no byte_extracts, clear the variable_names array */
-static void ClearVarNames(OptFpList *fpl)
+void ClearVarNames(OptFpList *fpl)
 {
     int i;
 
@@ -424,9 +455,9 @@ static void ClearVarNames(OptFpList *fpl)
 }
 
 /* Add a variable's name to the variable_names array
-   Returns: variable index 
+   Returns: variable index
 */
-static int8_t AddVarNameToList(ByteExtractData *data)
+int8_t AddVarNameToList(ByteExtractData *data)
 {
     int i;
 
@@ -459,7 +490,7 @@ static void ByteExtractInit(char *data, OptTreeNode *otn, int protocol)
 
     /* Clear out the variable_names array if this is the first byte_extract in a rule. */
     ClearVarNames(otn->opt_func);
-    
+
     /* Parse the options */
     ByteExtractParse(idx, data);
 
@@ -469,7 +500,7 @@ static void ByteExtractInit(char *data, OptTreeNode *otn, int protocol)
     {
         ParseError("Rule has more than %d byte_extract variables.", NUM_BYTE_EXTRACT_VARS);
     }
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     PrintByteExtract(idx);
 #endif
 
@@ -510,20 +541,15 @@ int DetectByteExtract(void *option_data, Packet *p)
     }
 
     /* setup our fun pointers */
-    if (IsBase64DecodeBuf(doe_ptr))
+    if (Is_DetectFlag(FLAG_ALT_DETECT))
     {
-        dsize = base64_decode_size;
-        start = (uint8_t *)base64_decode_buf;
+        dsize = DetectBuffer.len;
+        start = DetectBuffer.data;
     }
-    else if ( IsMimeDecodeBuf(doe_ptr) )
-    {
-        dsize = mime_decode_size;
-        start = (uint8_t *)file_data_ptr;
-    }
-    else if (p->packet_flags & PKT_ALT_DECODE)
+    else if (Is_DetectFlag(FLAG_ALT_DECODE))
     {
         dsize = DecodeBuffer.len;
-        start = (uint8_t *)DecodeBuffer.data;
+        start = DecodeBuffer.data;
     }
     else
     {

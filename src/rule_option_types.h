@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -47,6 +47,7 @@ typedef enum _option_type_t
     RULE_OPTION_TYPE_FILE_DATA,
     RULE_OPTION_TYPE_BASE64_DECODE,
     RULE_OPTION_TYPE_BASE64_DATA,
+    RULE_OPTION_TYPE_PKT_DATA,
     RULE_OPTION_TYPE_CONTENT,
     RULE_OPTION_TYPE_CONTENT_URI,
     RULE_OPTION_TYPE_PCRE,

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -25,19 +25,49 @@
  *
  * Dyanmic Rule Engine
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sf_dynamic_define.h"
 #include "sf_snort_packet.h"
 #include "sf_snort_plugin_api.h"
 #include "sf_dynamic_engine.h"
+#include "sf_snort_detection_engine.h"
+#include "sfghash.h"
 #define BLEN 65535
 
-const u_int8_t base64decodebuf[BLEN];
-u_int32_t base64decodesize;
-
-/* Need access to the snort-isms that were passed to the engine */
-extern DynamicEngineData _ded;
+const uint8_t base64decodebuf[BLEN];
+uint32_t base64decodesize;
 
 
+int CursorInfoInitialize(Rule *rule, CursorInfo *cursor)
+{
+    void *memoryLocation;
+
+    /* Initialize byte_extract pointers */
+    if (cursor->offset_refId)
+    {
+        if (!rule->ruleData)
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       cursor->offset_refId, rule->info.genID, rule->info.sigID);
+        }
+
+        memoryLocation = sfghash_find((SFGHASH*)rule->ruleData, cursor->offset_refId);
+        if (memoryLocation)
+        {
+            cursor->offset_location = memoryLocation;
+        }
+        else
+        {
+            DynamicEngineFatalMessage("ByteExtract variable '%s' in rule [%d:%d] is used before it is defined.\n",
+                                       cursor->offset_refId, rule->info.genID, rule->info.sigID);
+        }
+    }
+
+    return 0;
+}
 
 /*
  *  Get the start and end of the buffer, as divined by the packet flags.
@@ -47,13 +77,23 @@ extern DynamicEngineData _ded;
  *  return 1 if successful
  *  return < 0 if unsuccessful
  */
-ENGINE_LINKAGE int getBuffer(void *packet, int flags, const u_int8_t **start, const u_int8_t **end)
+ENGINE_LINKAGE int getBuffer(void *packet, int flags, const uint8_t **start, const uint8_t **end)
 {
     SFSnortPacket *p = (SFSnortPacket *)packet;
-    if ((flags & CONTENT_BUF_NORMALIZED) && (p->flags & FLAG_ALT_DECODE))
+
+    if ((flags & CONTENT_BUF_NORMALIZED) && (_ded.Is_DetectFlag(SF_FLAG_DETECT_ALL)))
     {
-        *start = _ded.altBuffer->data;
-        *end = *start + _ded.altBuffer->len;
+        if(_ded.Is_DetectFlag(SF_FLAG_ALT_DETECT))
+        {
+            *start = _ded.altDetect->data;
+            *end = *start + _ded.altDetect->len;
+        }
+        else if(_ded.Is_DetectFlag(SF_FLAG_ALT_DECODE))
+        {
+            *start = _ded.altBuffer->data;
+            *end = *start + _ded.altBuffer->len;
+        }
+
     }
     else if ((flags & CONTENT_BUF_RAW) || (flags & CONTENT_BUF_NORMALIZED))
     {
@@ -186,30 +226,6 @@ ENGINE_LINKAGE int getBuffer(void *packet, int flags, const u_int8_t **start, co
             return CONTENT_TYPE_MISMATCH;
         }
     }
-    else if(flags & BUF_FILE_DATA)
-    {
-        if(p->flags & FLAG_ALT_DECODE)
-        {
-            *start = _ded.altBuffer->data;
-            *end = *start + _ded.altBuffer->len;
-        }
-        else
-        {
-            *start = *(_ded.fileDataBuf);
-            *end = *start + p->payload_size;
-        }
-    }
-    else if(flags & BUF_FILE_DATA_MIME)
-    {
-        *start = *(_ded.fileDataBuf);
-        *end = *start + *(_ded.mime_size);
-    }
-    else if(flags & BUF_BASE64_DECODE)
-    {
-        *start = base64decodebuf;
-        *end = *start+base64decodesize;
-    }
-
     else
     {
         return CONTENT_TYPE_MISSING;
@@ -219,7 +235,7 @@ ENGINE_LINKAGE int getBuffer(void *packet, int flags, const u_int8_t **start, co
 }
 
 
-int checkCursorSimple(const u_int8_t *cursor, int flags, const u_int8_t *start, const u_int8_t *end, int offset)
+int checkCursorSimple(const uint8_t *cursor, int flags, const uint8_t *start, const uint8_t *end, int offset)
 {
     if ( cursor == NULL || !(flags & CONTENT_RELATIVE) )
         cursor = start;
@@ -231,10 +247,10 @@ int checkCursorSimple(const u_int8_t *cursor, int flags, const u_int8_t *start, 
 }
 
 /* Returns one if cursor is within the buffer */
-int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor)
+int checkCursorInternal(void *p, int flags, int offset, const uint8_t *cursor)
 {
-    const u_int8_t *start;
-    const u_int8_t *end;
+    const uint8_t *start;
+    const uint8_t *end;
     int ret;
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
@@ -243,15 +259,15 @@ int checkCursorInternal(void *p, int flags, int offset, const u_int8_t *cursor)
     if ( ret < 0 )
     {
         return ret;
-    }  
-    
+    }
+
     return checkCursorSimple(cursor, flags, start, end, offset);
 }
 
-int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor)
+int setCursorInternal(void *p, int flags, int offset, const uint8_t **cursor)
 {
-    const u_int8_t *start;
-    const u_int8_t *end;
+    const uint8_t *start;
+    const uint8_t *end;
     int       ret;
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
@@ -265,7 +281,7 @@ int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor)
     if ( ret < 0 )
     {
         return ret;
-    }    
+    }
 
     if ( flags & JUMP_FROM_BEGINNING )
     {
@@ -301,23 +317,23 @@ int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor)
         /*    API FUNCTIONS    */
 
 
-/* 
+/*
  *  Check cursor function
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  * cursorInfo: data defined in the detection plugin for this rule cursor option
  *     cursor: current position within buffer
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *    < 0 : error
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
- *    CURSOR_IN_BOUNDS     -  if content specifier is found within buffer 
- *    CURSOR_OUT_OF_BOUNDS -  if content specifier is not found within buffer 
- * 
+ *    CURSOR_IN_BOUNDS     -  if content specifier is found within buffer
+ *    CURSOR_OUT_OF_BOUNDS -  if content specifier is not found within buffer
+ *
  * Notes:
  *   Since we are checking the cursor position within a buffer, relativity is assumed.
  *     To check absolute position within a buffer, a NULL pointer can be passed in.
@@ -330,30 +346,36 @@ int setCursorInternal(void *p, int flags, int offset, const u_int8_t **cursor)
  *      normalized(alt-decode)
  *      raw
  *      uri
- *      
+ *
  */
-ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, const u_int8_t *cursor)
+ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, const uint8_t *cursor)
 {
+    /* Get byte_extracted offset if present */
+    if (cursorInfo->offset_location)
+    {
+        cursorInfo->offset = *cursorInfo->offset_location;
+    }
+
     return checkCursorInternal(p, cursorInfo->flags, cursorInfo->offset, cursor);
 }
 
-/* 
+/*
  *  Set cursor function
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  * cursorInfo: data defined in the detection plugin for this rule cursor option
  *     cursor: updated to point to offset bytes after the buffer start
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *    < 0 : error
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
- *    CURSOR_IN_BOUNDS     -  if content specifier is found within buffer 
- *    CURSOR_OUT_OF_BOUNDS -  if content specifier is not found within buffer 
- * 
+ *    CURSOR_IN_BOUNDS     -  if content specifier is found within buffer
+ *    CURSOR_OUT_OF_BOUNDS -  if content specifier is not found within buffer
+ *
  * Notes:
  *
  *   Currently support:
@@ -363,38 +385,38 @@ ENGINE_LINKAGE int checkCursor(void *p, CursorInfo* cursorInfo, const u_int8_t *
  *      normalized(alt-decode)
  *      raw
  *      uri
- *      
+ *
  */
-ENGINE_LINKAGE int setCursor(void *p, CursorInfo* cursorInfo, const u_int8_t **cursor)
+ENGINE_LINKAGE int setCursor(void *p, CursorInfo* cursorInfo, const uint8_t **cursor)
 {
     return setCursorInternal(p, cursorInfo->flags, cursorInfo->offset, cursor);
 }
 
-ENGINE_LINKAGE void setTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor)
+ENGINE_LINKAGE void setTempCursor(const uint8_t **temp_cursor, const uint8_t **cursor)
 {
     *temp_cursor = *cursor;
 }
 
-ENGINE_LINKAGE void revertTempCursor(const u_int8_t **temp_cursor, const u_int8_t **cursor)
+ENGINE_LINKAGE void revertTempCursor(const uint8_t **temp_cursor, const uint8_t **cursor)
 {
     *cursor = *temp_cursor;
 }
 
-/* 
+/*
  *  Check flow function
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  *  flowFlags: data defined in the detection plugin for this rule option
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
  *    RULE_MATCH   -  if packet flow matches rule
- *    RULE_NOMATCH -  if packet flow does not match rule 
- * 
+ *    RULE_NOMATCH -  if packet flow does not match rule
+ *
  */
 ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags)
 {
@@ -420,21 +442,21 @@ ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags)
     return RULE_MATCH;
 }
 
-/* 
+/*
  *  Process flowbits function
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  *   flowBits: data defined in the detection plugin for this rule option
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
  *    RULE_MATCH   -  if flowbit operation succeeded
- *    RULE_NOMATCH -  if flowbit operation failed 
- * 
+ *    RULE_NOMATCH -  if flowbit operation failed
+ *
  */
 ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits)
 {
@@ -446,24 +468,24 @@ ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits)
 
 }
 
-/* 
+/*
  *  Detect ASN1 function
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  *       asn1: data defined in the detection plugin for this rule option
  *     cursor: current position within buffer
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
- *    RULE_MATCH   -  if asn1 specifier is found within buffer 
- *    RULE_NOMATCH -  if asn1 specifier is not found within buffer 
- * 
+ *    RULE_MATCH   -  if asn1 specifier is found within buffer
+ *    RULE_NOMATCH -  if asn1 specifier is not found within buffer
+ *
  */
-ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, const u_int8_t *cursor)
+ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, const uint8_t *cursor)
 {
     /* asn1Detect returns non-zero if the options matched. */
     if (_ded.asn1Detect(p, (void *) asn1, cursor))
@@ -472,13 +494,64 @@ ENGINE_LINKAGE int detectAsn1(void *p, Asn1Context* asn1, const u_int8_t *cursor
     return RULE_NOMATCH;
 }
 
-ENGINE_LINKAGE int base64Decode(void *p, base64DecodeData *data, const u_int8_t *cursor)
+ENGINE_LINKAGE int fileData(void *p, CursorInfo* cursorInfo, const uint8_t **cursor)
 {
-    const u_int8_t *start;
-    const u_int8_t *end;
+    int retVal = RULE_NOMATCH;
+    SFSnortPacket *sp = (SFSnortPacket *) p;
+
+    if((sp->payload_size == 0) || (_ded.fileDataBuf->data == NULL) || (_ded.fileDataBuf->len == 0) )
+    {
+        return RULE_NOMATCH;
+    }
+    _ded.SetAltDetect(_ded.fileDataBuf->data, _ded.fileDataBuf->len);
+    retVal = setCursor(p, cursorInfo, cursor);
+
+    if( retVal > RULE_NOMATCH)
+        return RULE_MATCH;
+
+    _ded.DetectFlag_Disable(SF_FLAG_ALT_DETECT);
+
+    return retVal;
+}
+
+ENGINE_LINKAGE int pktData(void *p, CursorInfo* cursorInfo, const uint8_t **cursor)
+{
+    int retVal = RULE_NOMATCH;
+    _ded.DetectFlag_Disable(SF_FLAG_ALT_DETECT);
+    cursorInfo->flags |= JUMP_FROM_BEGINNING;
+    retVal=setCursor(p, cursorInfo, cursor);
+
+    return retVal;
+}
+
+ENGINE_LINKAGE int base64Data(void *p, CursorInfo* cursorInfo, const uint8_t **cursor)
+{
+    int retVal = RULE_NOMATCH;
+    SFSnortPacket *sp = (SFSnortPacket *) p;
+
+    if((sp->payload_size == 0) || !base64decodesize )
+        return retVal;
+
+    _ded.SetAltDetect((uint8_t *)base64decodebuf, (uint16_t)base64decodesize);
+    retVal = setCursor(p, cursorInfo, cursor);
+        
+    if( retVal > RULE_NOMATCH)
+        return RULE_MATCH;
+            
+    _ded.DetectFlag_Disable(SF_FLAG_ALT_DETECT);
+    return retVal;
+}
+
+
+
+
+ENGINE_LINKAGE int base64Decode(void *p, base64DecodeData *data, const uint8_t *cursor)
+{
+    const uint8_t *start;
+    const uint8_t *end;
     int       ret;
-    const u_int8_t base64_encodebuf[BLEN];
-    u_int32_t base64_encodesize = 0;
+    const uint8_t base64_encodebuf[BLEN];
+    uint32_t base64_encodesize = 0;
     SFSnortPacket *sp = (SFSnortPacket *) p;
 
     ret = getBuffer(sp, CONTENT_BUF_RAW, &start, &end);
@@ -501,7 +574,7 @@ ENGINE_LINKAGE int base64Decode(void *p, base64DecodeData *data, const u_int8_t 
     if( start > end )
         return RULE_NOMATCH;
 
-    if(_ded.sfUnfold(start, end-start, (u_int8_t *)base64_encodebuf, sizeof(base64_encodebuf), &base64_encodesize) != 0)
+    if(_ded.sfUnfold(start, end-start, (uint8_t *)base64_encodebuf, sizeof(base64_encodebuf), &base64_encodesize) != 0)
     {
         return RULE_NOMATCH;
     }
@@ -511,7 +584,7 @@ ENGINE_LINKAGE int base64Decode(void *p, base64DecodeData *data, const u_int8_t 
        base64_encodesize = data->bytes;
    }
 
-    if(_ded.sfbase64decode((u_int8_t *)base64_encodebuf, base64_encodesize, (u_int8_t *)base64decodebuf, BLEN, &base64decodesize) != 0)
+    if(_ded.sfbase64decode((uint8_t *)base64_encodebuf, base64_encodesize, (uint8_t *)base64decodebuf, BLEN, &base64decodesize) != 0)
     {
         return RULE_NOMATCH;
     }
@@ -520,13 +593,33 @@ ENGINE_LINKAGE int base64Decode(void *p, base64DecodeData *data, const u_int8_t 
     return RULE_MATCH;
 }
 
-/* 
+ENGINE_LINKAGE int isDetectFlag(SFDetectFlagType df)
+{
+    return _ded.Is_DetectFlag(df);
+}
+
+ENGINE_LINKAGE void detectFlagDisable(SFDetectFlagType df)
+{
+    _ded.DetectFlag_Disable(df);
+}
+
+ENGINE_LINKAGE int getAltDetect(uint8_t **bufPtr, uint16_t *altLenPtr)
+{
+    return _ded.GetAltDetect(bufPtr, altLenPtr);
+}
+
+ENGINE_LINKAGE void setAltDetect(uint8_t *buf, uint16_t altLen)
+{
+    _ded.SetAltDetect(buf, altLen);
+}
+
+/*
  *  Store Rule Specific session data
- *  
+ *
  *          p: packet data structure, same as the one found in snort.
  *          rule_data: data to store in the session
  *
- * Returns: 
+ * Returns:
  *    nothing
  *
  */
@@ -539,12 +632,12 @@ ENGINE_LINKAGE int storeRuleData(void *p, void *rule_data,
     return RULE_MATCH;
 }
 
-/* 
+/*
  *  Retrieve Rule Specific session data
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  *
- * Returns: 
+ * Returns:
  *    pointer to rule specific session data, NULL if none available
  *
  */
@@ -563,24 +656,24 @@ ENGINE_LINKAGE void freeRuleData(void *data)
     _ded.freeRuleData(data);
 }
 
-/* 
+/*
  *  Preprocessor Defined Detection
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  * preprocOpt: data defined in the detection plugin for this rule preprocessor specific option
  *     cursor: current position within buffer
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
  *    RULE_MATCH   -  if preprocessor indicates match
  *    RULE_NOMATCH -  if preprocessor indicates no match
- * 
+ *
  */
-ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, const u_int8_t **cursor)
+ENGINE_LINKAGE int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, const uint8_t **cursor)
 {
     PreprocOptionEval evalFunc = (PreprocOptionEval)preprocOpt->optionEval;
 
@@ -632,6 +725,8 @@ int isRelativeOption(RuleOption *option)
         break;
     case OPTION_TYPE_HDR_CHECK:
     case OPTION_TYPE_FILE_DATA:
+    case OPTION_TYPE_PKT_DATA:
+    case OPTION_TYPE_BASE64_DATA:
     case OPTION_TYPE_PREPROCESSOR:
         /* Never relative */
         break;
@@ -640,34 +735,34 @@ int isRelativeOption(RuleOption *option)
     return relative;
 }
 
-/* 
+/*
  *  ruleMatch
- * 
+ *
  *          p: packet data structure, same as the one found in snort.
  *    options: NULL terminated list of rule options
  *
- * Returns: 
+ * Returns:
  *    > 0 : match found
  *    = 0 : no match found
  *
- * Predefined constants: 
+ * Predefined constants:
  *    (see sf_snort_plugin_api.h for more values)
- *    RULE_MATCH   -  if asn1 specifier is found within buffer 
- *    RULE_NOMATCH -  if asn1 specifier is not found within buffer 
- * 
+ *    RULE_MATCH   -  if asn1 specifier is found within buffer
+ *    RULE_NOMATCH -  if asn1 specifier is not found within buffer
+ *
  */
-int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_int8_t **cursor)
+int ruleMatchInternal(SFSnortPacket *p, Rule* rule, uint32_t optIndex, const uint8_t **cursor)
 {
-    const u_int8_t *thisCursor = NULL, *startCursor = NULL;
-    const u_int8_t *tmpCursor = NULL;
+    const uint8_t *thisCursor = NULL, *startCursor = NULL;
+    const uint8_t *tmpCursor = NULL;
     int retVal = RULE_NOMATCH;
-    u_int32_t notFlag = 0;
+    uint32_t notFlag = 0;
     int thisType;
     ContentInfo *thisContentInfo = NULL;
     int startAdjust = 0;
-    u_int32_t origFlags = 0;
+    uint32_t origFlags = 0;
     int32_t origOffset = 0;
-    u_int32_t origDepth = 0;
+    uint32_t origDepth = 0;
     int continueLoop = 1;
     PCREInfo *thisPCREInfo = NULL;
 
@@ -741,7 +836,15 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
             notFlag = rule->options[optIndex]->option_u.cursor->flags & NOT_FLAG;
             break;
         case OPTION_TYPE_FILE_DATA:
-            retVal = setCursor(p, rule->options[optIndex]->option_u.cursor, &thisCursor);
+            retVal = fileData(p, rule->options[optIndex]->option_u.cursor, &thisCursor);
+            notFlag = rule->options[optIndex]->option_u.cursor->flags & NOT_FLAG;
+            break;
+        case OPTION_TYPE_PKT_DATA:
+            retVal = pktData(p, rule->options[optIndex]->option_u.cursor, &thisCursor);
+            notFlag = rule->options[optIndex]->option_u.cursor->flags & NOT_FLAG;
+            break;
+        case OPTION_TYPE_BASE64_DATA:
+            retVal = base64Data(p, rule->options[optIndex]->option_u.cursor, &thisCursor);
             notFlag = rule->options[optIndex]->option_u.cursor->flags & NOT_FLAG;
             break;
         case OPTION_TYPE_BASE64_DECODE:
@@ -853,7 +956,7 @@ int ruleMatchInternal(SFSnortPacket *p, Rule* rule, u_int32_t optIndex, const u_
                     /* And only if the next option is relative */
                     if (!isRelativeOption(rule->options[optIndex+1]))
                     {
-                        /* Match failed, next option is not relative. 
+                        /* Match failed, next option is not relative.
                          * We're done. */
                         retVal = nestedRetVal;
                         break;

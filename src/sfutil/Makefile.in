@@ -56,16 +56,19 @@ am__libsfutil_a_SOURCES_DIST = sfghash.c sfghash.h sfhashfcn.c \
 	sfksearch.c sfksearch.h bnfa_search.c bnfa_search.h mpse.c \
 	mpse.h bitop.h bitop_funcs.h util_math.c util_math.h \
 	util_net.c util_net.h util_str.c util_str.h util_utf.c \
-	util_utf.h asn1.c asn1.h sfeventq.c sfeventq.h \
+	util_utf.h util_jsnorm.c util_jsnorm.h util_unfold.c \
+	util_unfold.h asn1.c asn1.h sfeventq.c sfeventq.h \
 	sfsnprintfappend.c sfsnprintfappend.h sfrt.c sfrt.h \
-	sfrt_trie.h sfrt_dir.c sfrt_dir.h sfportobject.c \
-	sfportobject.h sfrim.c sfrim.h sfprimetable.c sfprimetable.h \
-	sf_ip.c sf_ip.h sf_ipvar.c sf_ipvar.h sf_vartable.c \
-	sf_vartable.h sf_iph.c sf_iph.h sf_textlog.c sf_textlog.h \
-	sfPolicy.c sfPolicy.h sfPolicyUserData.c sfPolicyUserData.h \
-	sfActionQueue.c sfActionQueue.h sfrf.c sfrf.h strvec.c \
-	strvec.h sf_base64decode.c sf_base64decode.h Unified2_common.h \
-	intel-soft-cpm.c intel-soft-cpm.h
+	sfrt_trie.h sfrt_dir.c sfrt_dir.h sfrt_flat.c sfrt_flat.h \
+	sfrt_flat_dir.c sfrt_flat_dir.h segment_mem.c segment_mem.h \
+	sfportobject.c sfportobject.h sfrim.c sfrim.h sfprimetable.c \
+	sfprimetable.h sf_ip.c sf_ip.h sf_ipvar.c sf_ipvar.h \
+	sf_vartable.c sf_vartable.h sf_iph.c sf_iph.h sf_textlog.c \
+	sf_textlog.h sfPolicy.c sfPolicy.h sfPolicyUserData.c \
+	sfPolicyUserData.h sfActionQueue.c sfActionQueue.h sfrf.c \
+	sfrf.h strvec.c strvec.h sf_email_attach_decode.c \
+	sf_email_attach_decode.h sf_base64decode.c sf_base64decode.h \
+	Unified2_common.h intel-soft-cpm.c intel-soft-cpm.h
 @HAVE_INTEL_SOFT_CPM_TRUE@am__objects_1 = intel-soft-cpm.$(OBJEXT)
 am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
 	sflsq.$(OBJEXT) sfmemcap.$(OBJEXT) sfthd.$(OBJEXT) \
@@ -73,13 +76,15 @@ am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
 	acsmx.$(OBJEXT) acsmx2.$(OBJEXT) sfksearch.$(OBJEXT) \
 	bnfa_search.$(OBJEXT) mpse.$(OBJEXT) util_math.$(OBJEXT) \
 	util_net.$(OBJEXT) util_str.$(OBJEXT) util_utf.$(OBJEXT) \
-	asn1.$(OBJEXT) sfeventq.$(OBJEXT) sfsnprintfappend.$(OBJEXT) \
-	sfrt.$(OBJEXT) sfrt_dir.$(OBJEXT) sfportobject.$(OBJEXT) \
-	sfrim.$(OBJEXT) sfprimetable.$(OBJEXT) sf_ip.$(OBJEXT) \
-	sf_ipvar.$(OBJEXT) sf_vartable.$(OBJEXT) sf_iph.$(OBJEXT) \
-	sf_textlog.$(OBJEXT) sfPolicy.$(OBJEXT) \
-	sfPolicyUserData.$(OBJEXT) sfActionQueue.$(OBJEXT) \
-	sfrf.$(OBJEXT) strvec.$(OBJEXT) sf_base64decode.$(OBJEXT) \
+	util_jsnorm.$(OBJEXT) util_unfold.$(OBJEXT) asn1.$(OBJEXT) \
+	sfeventq.$(OBJEXT) sfsnprintfappend.$(OBJEXT) sfrt.$(OBJEXT) \
+	sfrt_dir.$(OBJEXT) sfrt_flat.$(OBJEXT) sfrt_flat_dir.$(OBJEXT) \
+	segment_mem.$(OBJEXT) sfportobject.$(OBJEXT) sfrim.$(OBJEXT) \
+	sfprimetable.$(OBJEXT) sf_ip.$(OBJEXT) sf_ipvar.$(OBJEXT) \
+	sf_vartable.$(OBJEXT) sf_iph.$(OBJEXT) sf_textlog.$(OBJEXT) \
+	sfPolicy.$(OBJEXT) sfPolicyUserData.$(OBJEXT) \
+	sfActionQueue.$(OBJEXT) sfrf.$(OBJEXT) strvec.$(OBJEXT) \
+	sf_email_attach_decode.$(OBJEXT) sf_base64decode.$(OBJEXT) \
 	$(am__objects_1)
 libsfutil_a_OBJECTS = $(am_libsfutil_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -108,7 +113,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -123,6 +130,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONFIGFLAGS = @ICONFIGFLAGS@
 INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -159,13 +167,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -245,10 +259,14 @@ libsfutil_a_SOURCES = \
     util_net.c util_net.h \
     util_str.c util_str.h \
     util_utf.c util_utf.h \
+    util_jsnorm.c util_jsnorm.h \
+    util_unfold.c util_unfold.h \
     asn1.c asn1.h \
     sfeventq.c sfeventq.h \
     sfsnprintfappend.c sfsnprintfappend.h \
     sfrt.c sfrt.h sfrt_trie.h sfrt_dir.c sfrt_dir.h \
+    sfrt_flat.c sfrt_flat.h sfrt_flat_dir.c sfrt_flat_dir.h \
+    segment_mem.c segment_mem.h \
     sfportobject.c sfportobject.h \
     sfrim.c  sfrim.h \
     sfprimetable.c sfprimetable.h \
@@ -262,6 +280,7 @@ libsfutil_a_SOURCES = \
     sfActionQueue.c sfActionQueue.h \
     sfrf.c sfrf.h \
     strvec.c strvec.h \
+    sf_email_attach_decode.c sf_email_attach_decode.h \
     sf_base64decode.c sf_base64decode.h \
     Unified2_common.h \
     $(INTEL_SOFT_CPM_SOURCES)

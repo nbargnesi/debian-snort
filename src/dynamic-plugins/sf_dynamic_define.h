@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2007-2010 Sourcefire, Inc.
+ * Copyright (C) 2007-2011 Sourcefire, Inc.
  *
  * Author: Russ Combs
  *
@@ -25,10 +25,6 @@
  */
 #ifndef _SF_DYNAMIC_DEFINE_H_
 #define _SF_DYNAMIC_DEFINE_H_
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 /* the OPTION_TYPE_* and FLOW_*  values
  * are used as args to the hasFunc()
@@ -52,12 +48,14 @@ typedef enum {
      OPTION_TYPE_SET_CURSOR,
      OPTION_TYPE_LOOP,
      OPTION_TYPE_FILE_DATA,
+     OPTION_TYPE_PKT_DATA,
+     OPTION_TYPE_BASE64_DATA,
      OPTION_TYPE_BASE64_DECODE,
      OPTION_TYPE_MAX
 } DynamicOptionType;
 
 // beware: these are redefined from sf_snort_packet.h FLAG_*!
-#define FLOW_ESTABLISHED         0x0010
+#define FLOW_ESTABLISHED         0x0008
 #define FLOW_FR_SERVER           0x0040
 #define FLOW_TO_CLIENT           0x0040 /* Just for convenience */
 #define FLOW_TO_SERVER           0x0080
@@ -86,7 +84,7 @@ typedef enum {
 #  endif
 #  define DLL_LOCAL
 #else
-#  ifdef HAVE_VISIBILITY
+#  ifdef SF_VISIBILITY
 #    define SO_PUBLIC  __attribute__ ((visibility("default")))
 #    define SO_PRIVATE __attribute__ ((visibility("hidden")))
 #  else
@@ -95,6 +93,19 @@ typedef enum {
 #  endif
 #endif
 #endif
+
+/* Parameters are rule info pointer, int to indicate URI or NORM,
+ * and list pointer */
+/* These need to match HTTP_SEARCH_xxx defined in sp_pattern_match.h
+ * for proper fast pattern match pattern selection */
+#define CONTENT_HTTP_URI          0x01
+#define CONTENT_HTTP_HEADER       0x04
+#define CONTENT_HTTP_CLIENT_BODY  0x10
+#define CONTENT_HTTP_METHOD       0x20
+
+#define CONTENT_NORMAL            0x400
+#define CONTENT_HTTP (CONTENT_HTTP_URI|CONTENT_HTTP_HEADER|\
+                        CONTENT_HTTP_CLIENT_BODY|CONTENT_HTTP_METHOD)
 
 #endif /* _SF_DYNAMIC_DEFINE_H_ */
 
