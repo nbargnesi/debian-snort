@@ -11,7 +11,7 @@ Homepage: http://www.snort.org/
 Package: snort
 Architecture: any
 Pre-Depends: adduser (>= 3.11)
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, ${misc:Depends}
+Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools,${misc:Depends}
 Conflicts: snort-mysql, snort-pgsql
 Replaces: snort-common (<< 2.0.2-3)
 Recommends: iproute
@@ -69,7 +69,7 @@ Provides: snort
 Architecture: any
 Priority: extra
 Pre-Depends: adduser (>= 3.11)
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, ${misc:Depends}
+Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools, ${misc:Depends}
 Recommends: iproute
 Suggests: snort-doc
 Conflicts: snort, snort-pgsql
@@ -90,7 +90,7 @@ Package: snort-pgsql
 Provides: snort
 Architecture: any
 Priority: optional
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, ${misc:Depends}
+Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools, ${misc:Depends}
 Recommends: iproute
 Suggests: snort-doc
 Conflicts: snort, snort-mysql

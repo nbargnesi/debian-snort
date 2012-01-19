@@ -2,6 +2,10 @@
 
 CONFIG=/etc/snort/snort.debian.conf
 CONFIG_CHECKSUM=/var/lib/snort/snort.debian.conf.md5sum
+# Create the checksum directory if it does not exist
+if [ ! -d $(dirname $CONFIG_CHECKSUM) ]; then
+    mkdir $(dirname $CONFIG_CHECKSUM)
+fi
 
 . /usr/share/debconf/confmodule
 test $DEBIAN_SCRIPT_DEBUG && set -v -x
@@ -119,9 +123,6 @@ DEBIAN_SNORT_STATS_RCPT="$STATS_RCPT"
 DEBIAN_SNORT_STATS_THRESHOLD="$STATS_THRESHOLD"
 EOF
             if cmp -s "$CONFIG" "$OLD_CONFIG"; then
-                if [ ! -d $(dirname $CONFIG_CHECKSUM) ]; then
-                  mkdir $(dirname $CONFIG_CHECKSUM)
-                fi
                 md5sum "$CONFIG" > "$CONFIG_CHECKSUM"
                 overwrite_config="yes"
             fi
