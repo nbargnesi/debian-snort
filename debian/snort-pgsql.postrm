@@ -40,6 +40,14 @@ case "$1" in
 			rm /etc/snort/database.conf
                 fi
 
+                # Remove files created to follow checksums
+                if [ -e /var/lib/snort/snort.debian.conf.md5sum ]; then
+                    rm /var/lib/snort/snort.debian.conf.md5sum
+                fi
+                if [ -e /var/lib/snort/database.conf.md5sum ]; then
+                    rm /var/lib/snort/database.conf.md5sum
+                fi
+
 		# Remove configuration dir
 		[ -d /etc/snort ] && rmdir --ignore-fail-on-non-empty /etc/snort
 		

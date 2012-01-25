@@ -39,6 +39,13 @@ case "$1" in
 		if [ -e /etc/snort/database.conf ] ; then
 			rm /etc/snort/database.conf
 		fi
+                # Remove files created to follow checksums
+                if [ -e /var/lib/snort/snort.debian.conf.md5sum ]; then
+                    rm /var/lib/snort/snort.debian.conf.md5sum
+                fi  
+                if [ -e /var/lib/snort/database.conf.md5sum ]; then
+                    rm /var/lib/snort/database.conf.md5sum
+                fi
 
 		# Remove configuration dir
 		[ -d /etc/snort ] && rmdir --ignore-fail-on-non-empty /etc/snort
@@ -53,6 +60,7 @@ case "$1" in
 		if ! getent group | grep -q "^snort:" ; then
 			delgroup --only-if-empty snort 2>/dev/null || true
 		fi
+
 		;;
        remove|upgrade|failed-upgrade|abort-install|abort-upgrade)
 		# nothing
