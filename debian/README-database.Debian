@@ -1,3 +1,11 @@
+!! The database output plugins are considered deprecated as of Snort 2.9.2 and
+!! will be removed by the upstream maintainers in Snort 2.9.3.
+!!
+!! Consequently, the database packages for Debian will be removed with
+!! the next Snort release.
+!!
+!! The recommended approach to logging is to use unified2 with barnyard2
+!! or similar.
 
  SNORT WITH DATABASE SUPPORT
 ------------------------------
@@ -102,6 +110,14 @@
 host   all        all        127.0.0.1        255.255.255.255   ident sameuser
 ------------------------------------------------------------------------------
 
+KNOWN LIMITATIONS
+-----------------
+
+  In Debian, IPv6 support is not enabled when the database packages are used
+  because the database schemas for Snort do not log IPv6 addresses.
+
+  This is not foreseen to change since upstream is dropping support of 
+  the database modules for future releases.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
-    Sun, 02 Jan 2011 01:53:56 +0100
+    Wed, 25 Jan 2012 23:00:05 +0100
