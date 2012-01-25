@@ -38,7 +38,7 @@ clean-sources:
 # Remove the flag that indicated that the sources were configured
 	-rm -f configure-stamp
 
-clean: clean-sources
+clean: clean-sources unpatch
 	dh_testdir
 	dh_testroot
 # Clean all the stamps
@@ -58,7 +58,7 @@ clean: clean-sources
 	dh_clean
 
 configure: configure-stamp
-configure-stamp:
+configure-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 # Standard package support
 	./configure $(CONFFLAGS) \
@@ -69,7 +69,7 @@ configure-stamp:
 	touch $@
 
 build-basic: build-basic-stamp
-build-basic-stamp: configure
+build-basic-stamp: $(QUILT_STAMPFN) configure
 # NOTE: We don't clean the sources on the first compilation
 	dh_testdir
 	# Basic package (no BBDD support):
@@ -78,7 +78,7 @@ build-basic-stamp: configure
 	touch $@
 
 build-pgsql: build-pgsql-stamp
-build-pgsql-stamp:
+build-pgsql-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 	sh debian/clean_sources.sh
 	# PostgreSQL package:
@@ -92,7 +92,7 @@ build-pgsql-stamp:
 	touch $@
 
 build-mysql: build-mysql-stamp
-build-mysql-stamp:
+build-mysql-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 	sh debian/clean_sources.sh
 	# MySQL package:
@@ -107,7 +107,7 @@ build-mysql-stamp:
 	touch $@
 
 build-inline: build-inline-stamp
-build-inline-stamp: 
+build-inline-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 	sh debian/clean_sources.sh
 	# Inline support
