@@ -64,7 +64,8 @@ configure-stamp:
 	./configure $(CONFFLAGS) \
 		--without-mysql \
 		--without-postgresql \
-		--enable-zlib
+		--enable-zlib \
+		--enable-ipv6
 	touch $@
 
 build-basic: build-basic-stamp
