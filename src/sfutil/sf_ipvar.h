@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1998-2010 Sourcefire, Inc.
+** Copyright (C) 1998-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include "sf_ip.h"
 
-/* Selects which mode a given variable is using to 
+/* Selects which mode a given variable is using to
  * store and lookup IP addresses */
 typedef enum _modes {
     SFIP_LIST,
@@ -51,17 +51,17 @@ typedef struct _ip_node {
     int flags;
                     // XXX
     int addr_flags; /* Flags used exlusively by Snort */
-                    /* Keeping these variables seperate keeps 
+                    /* Keeping these variables seperate keeps
                      * this from stepping on Snort's toes. */
                     /* Should merge them later */
 } sfip_node_t;
 
 /* An IP variable onkect */
 typedef struct _var_t {
-    /* Selects whether or not to use the list, the table, 
+    /* Selects whether or not to use the list, the table,
      * or any other method added later */
     MODES mode;
-    
+
     /* Linked lists.  Switch to something faster later */
     sfip_node_t *head;
     sfip_node_t *neg_head;
@@ -69,7 +69,7 @@ typedef struct _var_t {
     /* The mode above will select whether to use the sfip_node_t linked list
      * or the IP routing table */
 //    sfrt rt;
-    
+
     /* Linked list of IP variables for the variable table */
     struct _var_t *next;
 
@@ -111,7 +111,7 @@ sfip_node_t *sfipnode_alloc(char *str, SFIP_RET *status);
 SFIP_RET sfvar_add(sfip_var_t *dst, sfip_var_t *src);
 
 /* Adds the nodes in 'src' to the variable 'dst' */
-/* The mismatch of types is for ease-of-supporting Snort4 and 
+/* The mismatch of types is for ease-of-supporting Snort4 and
  * Snort6 simultaneously */
 SFIP_RET sfvar_add_node(sfip_var_t *dst, sfip_node_t *src, int negated);
 
@@ -129,9 +129,11 @@ void sfvar_free(sfip_var_t *var);
 int sfvar_ip_in(sfip_var_t *var, sfip_t *ip);
 
 /* Prints the variable "var" to the file descriptor 'f' */
-void sfvar_print(FILE *f, sfip_var_t *var);
+void sfvar_print(const char *prefix, sfip_var_t *var);
+void sfip_set_print(const char *prefix, sfip_node_t *head);
 
-void sfip_set_print(FILE *f, sfip_node_t *head);
+void sfvar_print_to_file(FILE *f, sfip_var_t *var);
+void sfip_set_print_to_file(FILE *f, sfip_node_t *head);
 
 /* Returns the node's flags */
 int sfvar_flags(sfip_node_t *node);

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2009-2010 Sourcefire, Inc.
+** Copyright (C) 2009-2011 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,11 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "spp_sdf.h"
 #include "sdf_credit_card.h"
 #include <stdint.h>
@@ -52,7 +57,7 @@ static inline int CheckIssuers(char *cardnum, uint32_t buflen)
     return 0;
 }
 
-/* This function takes a string representation of a credit card number and 
+/* This function takes a string representation of a credit card number and
  * checks that it's a valid number. The number may contain spaces or dashes.
  *
  * Returns: 1 on match, 0 otherwise.
@@ -94,7 +99,7 @@ int SDFLuhnAlgorithm(char *buf, uint32_t buflen, struct _SDFConfig *config)
             else
                 break;
         }
-        
+
         cc_digits[digits++] = buf[j];
     }
     cc_digits[digits] = '\0';

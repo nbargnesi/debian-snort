@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #ifndef SNORT_STREAM5_SESSION_H_
 #define SNORT_STREAM5_SESSION_H_
 
@@ -32,7 +32,8 @@ typedef void(*Stream5SessionCleanup)(Stream5LWSession *ssn);
 typedef struct _Stream5SessionCache
 {
     SFXHASH *hashTable;
-    uint32_t timeout;
+    uint32_t timeoutAggressive;
+    uint32_t timeoutNominal;
     uint32_t max_sessions;
     uint32_t cleanup_sessions;
     uint32_t prunes;
@@ -52,11 +53,21 @@ void PrintSessionKey(SessionKey *);
 #endif
 
 Stream5SessionCache *InitLWSessionCache(int max_sessions,
-                                        uint32_t session_timeout,
+                                        uint32_t session_timeout_min,
+                                        uint32_t session_timeout_max,
                                         uint32_t cleanup_sessions,
                                         uint32_t cleanup_percent,
                                         Stream5SessionCleanup clean_fcn);
 Stream5LWSession *GetLWSession(Stream5SessionCache *, Packet *, SessionKey *);
+int GetLWSessionKeyFromIpPort(
+                    snort_ip_p srcIP,
+                    uint16_t srcPort,
+                    snort_ip_p dstIP,
+                    uint16_t dstPort,
+                    char proto,
+                    uint16_t vlan,
+                    uint32_t mplsId,
+                    SessionKey *key);
 Stream5LWSession *GetLWSessionFromKey(Stream5SessionCache *, SessionKey *);
 Stream5LWSession *NewLWSession(Stream5SessionCache *, Packet *, SessionKey *, void *);
 int DeleteLWSession(Stream5SessionCache *, Stream5LWSession *, char *reason);
@@ -71,27 +82,26 @@ int GetLWSessionCount(Stream5SessionCache *);
 void GetLWPacketDirection(Packet *p, Stream5LWSession *ssn);
 void FreeLWApplicationData(Stream5LWSession *ssn);
 void setPortFilterList(
-        uint8_t *portList, 
+        uint16_t *portList,
         int isUdp,
         int ignoreAnyAnyRules,
         tSfPolicyId policyId
         );
 int Stream5AnyAnyFlow(
-        uint8_t *portList, 
+        uint16_t *portList,
         OptTreeNode *otn,
-        RuleTreeNode *rtn, 
+        RuleTreeNode *rtn,
         int any_any_flow,
         IgnoredRuleList **ppIgnoredRuleList,
         int ignoreAnyAnyRules
         );
 void s5PrintPortFilter(
-        uint8_t portList[]
+        uint16_t portList[]
         );
 int
 Stream5SetRuntimeConfiguration(
         Stream5LWSession *lwssn,
-        char protocol
+        uint8_t protocol
         );
-
 #endif /* SNORT_STREAM5_SESSION_H_ */
 

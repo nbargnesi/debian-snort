@@ -1,8 +1,6 @@
-/*
- * spp_example.c
+/****************************************************************************
  *
- * Copyright (C) 2006-2009 Sourcefire,Inc
- * Steven A. Sturges <ssturges@sourcefire.com>
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,6 +17,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
+ ****************************************************************************/
+/*
+ * spp_example.c
+ *
+ * Author:
+ *
+ * Steven A. Sturges <ssturges@sourcefire.com>
+ *
  * Description:
  *
  * This file is part of an example of a dynamically loadable preprocessor.
@@ -32,11 +38,16 @@
 #include <ctype.h>
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "preprocids.h"
 #include "sf_snort_packet.h"
 #include "sf_dynamic_preproc_lib.h"
 #include "sf_dynamic_preprocessor.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
 
@@ -57,8 +68,6 @@ ExampleConfig *ex_eval_config = NULL;
 #ifdef SNORT_RELOAD
 tSfPolicyUserContextId ex_swap_config = NULL;
 #endif
-
-extern DynamicPreprocessorData _dpd;
 
 static void ExampleInit(char *);
 static void ExampleProcess(void *, void *);

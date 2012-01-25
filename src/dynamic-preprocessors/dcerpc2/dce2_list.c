@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,14 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- **************************************************************************** 
+ ****************************************************************************
  * Provides list, queue and stack data structures and methods for use
  * with the preprocessor.
- * 
+ *
  * 8/17/2008 - Initial implementation ... Todd Wease <twease@sourcefire.com>
  *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "dce2_list.h"
 #include "dce2_memory.h"
 #include "dce2_debug.h"
@@ -108,7 +113,7 @@ DCE2_List * DCE2_ListNew(DCE2_ListType type, DCE2_ListKeyCompare kc,
  *
  * Returns:
  *  void *
- *      If the key is found, the data associated with the node 
+ *      If the key is found, the data associated with the node
  *          is returned.
  *      NULL is returned if the item cannot be found given the key.
  *
@@ -249,7 +254,7 @@ DCE2_Ret DCE2_ListFindKey(DCE2_List *list, void *key)
  *          in the list and no duplicates are allowed.
  *      DCE2_RET__SUCCESS if a new node with key and data is
  *          successfully inserted into the list.
- *      DCE2_RET__ERROR if memory cannot be allocated for the 
+ *      DCE2_RET__ERROR if memory cannot be allocated for the
  *          new node or a NULL list object was passed in.
  *
  ********************************************************************/
@@ -329,7 +334,7 @@ DCE2_Ret DCE2_ListInsert(DCE2_List *list, void *key, void *data)
 /********************************************************************
  * Function: DCE2_ListRemove()
  *
- * Removes the node in the list with the specified key.  If 
+ * Removes the node in the list with the specified key.  If
  * data free and key free functions were given with the creation
  * of the list object, they are called with the data and key
  * respectively.
@@ -369,7 +374,7 @@ DCE2_Ret DCE2_ListRemove(DCE2_List *list, void *key)
             return DCE2_RET__ERROR;
         }
     }
-    
+
     if (n == NULL)
         return DCE2_RET__ERROR;
 
@@ -381,7 +386,7 @@ DCE2_Ret DCE2_ListRemove(DCE2_List *list, void *key)
         n->prev->next = n->next;
     if (n->next != NULL)
         n->next->prev = n->prev;
-    
+
     if (list->key_free != NULL)
         list->key_free(n->key);
 
@@ -432,7 +437,7 @@ void * DCE2_ListFirst(DCE2_List *list)
  *
  * Increments the current pointer in the list to the next node in
  * the list and returns the data associated with it.  This in
- * combination with DCE2_ListFirst is useful in a for loop to 
+ * combination with DCE2_ListFirst is useful in a for loop to
  * iterate over the items in a list.
  *
  * Arguments:
@@ -503,7 +508,7 @@ void * DCE2_ListLast(DCE2_List *list)
  *
  * Puts the current pointer in the list to the previous node in
  * the list and returns the data associated with it.  This in
- * combination with DCE2_ListLast is useful in a for loop to 
+ * combination with DCE2_ListLast is useful in a for loop to
  * iterate over the items in a list in backwards order.
  *
  * Arguments:
@@ -574,7 +579,7 @@ void DCE2_ListRemoveCurrent(DCE2_List *list)
         list->current->prev->next = list->current->next;
     if (list->current->next != NULL)
         list->current->next->prev = list->current->prev;
-    
+
     if (list->key_free != NULL)
         list->key_free(list->current->key);
 
@@ -942,7 +947,7 @@ void * DCE2_QueueFirst(DCE2_Queue *queue)
  *
  * Increments the current pointer in the queue to the next node in
  * the queue and returns the data associated with it.  This in
- * combination with DCE2_QueueFirst is useful in a for loop to 
+ * combination with DCE2_QueueFirst is useful in a for loop to
  * iterate over the items in a queue.
  *
  * Arguments:
@@ -1007,7 +1012,7 @@ void * DCE2_QueueLast(DCE2_Queue *queue)
  *
  * Puts the current pointer in the queue to the previous node in
  * the queue and returns the data associated with it.  This in
- * combination with DCE2_QueueLast is useful in a for loop to 
+ * combination with DCE2_QueueLast is useful in a for loop to
  * iterate over the items in a queue in backwards order.
  *
  * Arguments:
@@ -1261,7 +1266,7 @@ void * DCE2_StackFirst(DCE2_Stack *stack)
  *
  * Increments the current pointer in the stack to the next node in
  * the stack and returns the data associated with it.  This in
- * combination with DCE2_StackFirst is useful in a for loop to 
+ * combination with DCE2_StackFirst is useful in a for loop to
  * iterate over the items in a stack.
  *
  * Arguments:
@@ -1326,7 +1331,7 @@ void * DCE2_StackLast(DCE2_Stack *stack)
  *
  * Puts the current pointer in the stack to the previous node in
  * the stack and returns the data associated with it.  This in
- * combination with DCE2_StackLast is useful in a for loop to 
+ * combination with DCE2_StackLast is useful in a for loop to
  * iterate over the items in a stack in backwards order.
  *
  * Arguments:
@@ -1418,7 +1423,7 @@ void DCE2_StackDestroy(DCE2_Stack *stack)
  * Function: DCE2_CQueueNew()
  *
  * Creates and initializes a new circular queue object.  The
- * circular queue uses a fixed size array and uses indexes to 
+ * circular queue uses a fixed size array and uses indexes to
  * indicate the start and end of the queue.  This type of
  * queue can become full since it is a fixed size.  Used for
  * performance reasons since new nodes do not need to be
@@ -1446,7 +1451,7 @@ void DCE2_StackDestroy(DCE2_Stack *stack)
 DCE2_CQueue * DCE2_CQueueNew(int size, DCE2_CQueueDataFree df, DCE2_MemType mtype)
 {
     DCE2_CQueue *cqueue;
-    
+
     if (size <= 0)
         return NULL;
 
@@ -1595,7 +1600,7 @@ void * DCE2_CQueueFirst(DCE2_CQueue *cqueue)
  *
  * Increments the current index in the queue to the next node in
  * the queue and returns the data associated with it.  This in
- * combination with DCE2_CQueueFirst is useful in a for loop to 
+ * combination with DCE2_CQueueFirst is useful in a for loop to
  * iterate over the items in a queue.
  *
  * Arguments:
@@ -1691,7 +1696,7 @@ void DCE2_CQueueDestroy(DCE2_CQueue *cqueue)
  * Function: DCE2_CStackNew()
  *
  * Creates and initializes a new static sized stack object.  The
- * static stack uses a fixed size array and uses indexes to 
+ * static stack uses a fixed size array and uses indexes to
  * indicate the start and end of the stack.  This type of
  * stack can become full since it is a fixed size.  Used for
  * performance reasons since new nodes do not need to be
@@ -1888,7 +1893,7 @@ void * DCE2_CStackFirst(DCE2_CStack *cstack)
  *
  * Increments the current index in the stack to the next node in
  * the stack and returns the data associated with it.  This in
- * combination with DCE2_CStackFirst is useful in a for loop to 
+ * combination with DCE2_CStackFirst is useful in a for loop to
  * iterate over the items in a stack.
  *
  * Arguments:

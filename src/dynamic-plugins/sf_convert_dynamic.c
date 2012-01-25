@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -22,6 +22,10 @@
 
 #ifdef DYNAMIC_PLUGIN
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sf_engine/sf_snort_plugin_api.h"
 #include "detection_options.h"
 #include "rules.h"
@@ -33,6 +37,7 @@
 #include "sp_asn1_detect.h"
 #include "sp_byte_check.h"
 #include "sp_byte_jump.h"
+#include "sp_byte_extract.h"
 #include "sp_clientserver.h"
 #include "sp_flowbits.h"
 #include "sp_isdataat.h"
@@ -40,7 +45,10 @@
 #include "sp_pcre.h"
 #include "sp_hdr_opt_wrap.h"
 #include "sp_file_data.h"
+#include "sp_pkt_data.h"
 #include "sp_base64_decode.h"
+#include "sp_base64_data.h"
+#include "sp_preprocopt.h"
 
 extern void ParsePattern(char *, OptTreeNode *, int);
 // extern int PCRESetup(Rule *rule, PCREInfo *pcreInfo);
@@ -56,9 +64,12 @@ extern int ByteTest(void *option_data, Packet *p);
 extern int ByteJump(void *option_data, Packet *p);
 extern int IsDataAt(void *option_data, Packet *p);
 extern int FileDataEval(void *option_data, Packet *p);
+extern int PktDataEval(void *option_data, Packet *p);
+extern int Base64DataEval(void *option_data, Packet *p);
 extern int Base64DecodeEval(void *option_data, Packet *p) ;
 
 static int CheckConvertability(Rule *rule, OptTreeNode *otn);
+static int ConvertPreprocessorOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertContentOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertPcreOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertFlowbitOption(Rule *rule, int index, OptTreeNode *otn);
@@ -72,6 +83,8 @@ static int ConvertByteExtractOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertSetCursorOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertLoopOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertFileDataOption(Rule *rule, int index, OptTreeNode *otn);
+static int ConvertPktDataOption(Rule *rule, int index, OptTreeNode *otn);
+static int ConvertBase64DataOption(Rule *rule, int index, OptTreeNode *otn);
 static int ConvertBase64DecodeOption(Rule *rule, int index, OptTreeNode *otn);
 
 /* Use an array of callbacks to handle varying option types
@@ -82,7 +95,7 @@ static int ConvertBase64DecodeOption(Rule *rule, int index, OptTreeNode *otn);
 static int (* OptionConverterArray[OPTION_TYPE_MAX])
     (Rule *rule, int index, OptTreeNode *otn) =
 {
-    NULL,
+    ConvertPreprocessorOption,
     ConvertContentOption,
     ConvertPcreOption,
     ConvertFlowbitOption,
@@ -96,6 +109,8 @@ static int (* OptionConverterArray[OPTION_TYPE_MAX])
     ConvertSetCursorOption,
     ConvertLoopOption,
     ConvertFileDataOption,
+    ConvertPktDataOption,
+    ConvertBase64DataOption,
     ConvertBase64DecodeOption
 };
 
@@ -116,9 +131,9 @@ int ConvertDynamicRule(Rule *rule, OptTreeNode *otn)
     {
         int ret;
         int optype = rule->options[i]->optionType;
-        if (optype < OPTION_TYPE_CONTENT || optype >= OPTION_TYPE_MAX)
+        if (optype < OPTION_TYPE_PREPROCESSOR || optype >= OPTION_TYPE_MAX)
             return -1; // Invalid option type
-        
+
         ret = OptionConverterArray[optype](rule, i, otn);
         if (ret < 0)
             return -1;
@@ -127,7 +142,7 @@ int ConvertDynamicRule(Rule *rule, OptTreeNode *otn)
     if(otn->proto_nodes)
     {
 
-         for (policyId = 0; 
+         for (policyId = 0;
                  policyId < otn->proto_node_num;policyId++)
          {
              rtn = otn->proto_nodes[policyId];
@@ -144,6 +159,47 @@ int ConvertDynamicRule(Rule *rule, OptTreeNode *otn)
     otn->sigInfo.shared = 0;
 
     return 1;
+}
+
+/* A text-rule byte_extract option can only have NUM_BYTE_EXTRACT_VARS unique
+   variables. This function iterates through a Rule and counts the unique names. */
+static inline int CheckByteExtractVars(Rule *rule)
+{
+    unsigned int i, j, unique_names = 0;
+    char *names[NUM_BYTE_EXTRACT_VARS];
+
+    for (i = 0; i < rule->numOptions; i++)
+    {
+        ByteExtract *data;
+        int unique_name = 1;
+
+        /* Only need byte_extract options */
+        if (rule->options[i]->optionType != OPTION_TYPE_BYTE_EXTRACT)
+            continue;
+
+        /* Check name against other unique names */
+        data = rule->options[i]->option_u.byteExtract;
+        for (j = 0; j < unique_names; j++)
+        {
+            if (strcmp(names[j], data->refId) == 0)
+            {
+                unique_name = 0;
+                break;
+            }
+        }
+
+        /* Add unique names to the array */
+        if (unique_name)
+        {
+            if (unique_names == NUM_BYTE_EXTRACT_VARS)
+                return -1; /* Too many variables! */
+
+            names[unique_names] = data->refId;
+            unique_names++;
+        }
+    }
+
+    return 0;
 }
 
 static int CheckConvertability(Rule *rule, OptTreeNode *otn)
@@ -170,19 +226,62 @@ static int CheckConvertability(Rule *rule, OptTreeNode *otn)
         switch (optype)
         {
             /* Option types not supported for conversion */
-            case OPTION_TYPE_PREPROCESSOR:
-            case OPTION_TYPE_BYTE_EXTRACT:
             case OPTION_TYPE_SET_CURSOR:
             case OPTION_TYPE_LOOP:
                 return -1;
         }
     }
 
+    /* Check for too many byte_extract variables. These can't be converted
+       because the detection plugin only supports a specific number per rule. */
+    if (CheckByteExtractVars(rule) < 0)
+        return -1;
+
     /* We're good! */
     return 1;
 }
 
 /* Option-converting functions */
+static int ConvertPreprocessorOption(Rule *rule, int index, OptTreeNode *otn)
+{
+    PreprocessorOption *preprocOpt = rule->options[index]->option_u.preprocOpt;
+    PreprocessorOptionInfo *preprocOptInfo = SnortAlloc(sizeof(PreprocessorOptionInfo));
+    OptFpList *fpl;
+    void *option_dup;
+
+    preprocOptInfo->optionInit = preprocOpt->optionInit;
+    preprocOptInfo->optionEval = preprocOpt->optionEval;
+    preprocOptInfo->optionFpFunc = preprocOpt->optionFpFunc;
+    preprocOptInfo->data = preprocOpt->dataPtr;
+
+    /* FreeOneRule() already calls the cleanup function. Left NULL here
+       to avoid a double-free. */
+    preprocOptInfo->optionCleanup = NULL;
+
+    preprocOptInfo->optionHash = NULL;
+    preprocOptInfo->optionKeyCompare = NULL;
+    preprocOptInfo->otnHandler = NULL;
+
+    //  Add to option chain with generic callback
+    fpl = AddOptFuncToList(PreprocessorOptionFunc, otn);
+
+    /*
+     * attach custom info to the context node so that we can call each instance
+     * individually
+     */
+    fpl->context = (void *) preprocOptInfo;
+
+    if (add_detection_option(RULE_OPTION_TYPE_PREPROCESSOR,
+                             (void *)preprocOptInfo, &option_dup) == DETECTION_OPTION_EQUAL)
+    {
+        PreprocessorRuleOptionsFreeFunc(preprocOptInfo);
+        fpl->context = preprocOptInfo = option_dup;
+    }
+    fpl->type = RULE_OPTION_TYPE_PREPROCESSOR;
+
+    return 1;
+}
+
 static int ConvertContentOption(Rule *rule, int index, OptTreeNode *otn)
 {
     ContentInfo *content = rule->options[index]->option_u.content;
@@ -224,10 +323,20 @@ static int ConvertContentOption(Rule *rule, int index, OptTreeNode *otn)
     }
 
     /* Initialize var numbers */
-    pmd->offset_var = -1;
-    pmd->depth_var = -1;
-    pmd->distance_var = -1;
-    pmd->within_var = -1;
+    if (content->flags & CONTENT_RELATIVE)
+    {
+        pmd->distance_var = GetVarByName(content->offset_refId);
+        pmd->within_var = GetVarByName(content->depth_refId);
+        pmd->offset_var = -1;
+        pmd->depth_var = -1;
+    }
+    else
+    {
+        pmd->offset_var = GetVarByName(content->offset_refId);
+        pmd->depth_var = GetVarByName(content->depth_refId);
+        pmd->distance_var = -1;
+        pmd->within_var = -1;
+    }
 
     /* Set URI buffer flags */
     if (content->flags & CONTENT_BUF_URI)
@@ -378,8 +487,8 @@ static int ConvertPcreOption(Rule *rule, int index, OptTreeNode *otn)
     if (pcre_info->flags & CONTENT_BUF_COOKIE)
         pcre_data->options |= SNORT_PCRE_HTTP_COOKIE;
 
-    if (pcre_info->flags & CONTENT_BUF_RAW_URI)
-        pcre_data->options |= SNORT_PCRE_HTTP_RAW_URI;
+    if (pcre_info->flags & CONTENT_BUF_URI)
+        pcre_data->options |= SNORT_PCRE_HTTP_URI;
 
     if (pcre_info->flags & CONTENT_BUF_STAT_CODE)
         pcre_data->options |= SNORT_PCRE_HTTP_STAT_CODE;
@@ -477,13 +586,12 @@ static int ConvertFlowflagsOption(Rule *rule, int index, OptTreeNode *otn)
         csdata->only_reassembled |= ONLY_STREAM;
     if (flow->flags & FLOW_ESTABLISHED)
         csdata->established = 1;
-    else
-        csdata->unestablished = 1;
     csdata->stateless = 0;
+    csdata->unestablished = 0;
 
-    otn->stateless = csdata->stateless;
     otn->established = csdata->established;
-    otn->unestablished = csdata->unestablished;
+    otn->stateless = 0;
+    otn->unestablished = 0;
 
     if (add_detection_option(RULE_OPTION_TYPE_FLOW, (void *)csdata, &dup) == DETECTION_OPTION_EQUAL)
     {
@@ -494,6 +602,7 @@ static int ConvertFlowflagsOption(Rule *rule, int index, OptTreeNode *otn)
     fpl = AddOptFuncToList(CheckFlow, otn);
     fpl->type = RULE_OPTION_TYPE_FLOW;
     fpl->context = (void *)csdata;
+    otn->ds_list[PLUGIN_CLIENTSERVER] = (void *)csdata;
 
     return 1;
 }
@@ -538,7 +647,7 @@ static int ConvertCursorOption(Rule *rule, int index, OptTreeNode *otn)
     void *dup;
 
     data->offset = cursor->offset;
-    data->offset_var = -1;
+    data->offset_var = GetVarByName(cursor->offset_refId);
     if (cursor->flags & CONTENT_RELATIVE)
         data->flags |= ISDATAAT_RELATIVE_FLAG;
     if (cursor->flags & CONTENT_BUF_RAW)
@@ -589,9 +698,9 @@ static int ConvertByteTestOption(Rule *rule, int index, OptTreeNode *otn)
 
     byte_test->bytes_to_compare = byte->bytes;
     byte_test->cmp_value = byte->value;
-    byte_test->cmp_value_var = -1;
+    byte_test->cmp_value_var = GetVarByName(byte->value_refId);
     byte_test->offset = byte->offset;
-    byte_test->offset_var = -1;
+    byte_test->offset_var = GetVarByName(byte->offset_refId);
     if (byte->flags & NOT_FLAG)
         byte_test->not_flag = 1;
 
@@ -611,7 +720,7 @@ static int ConvertByteTestOption(Rule *rule, int index, OptTreeNode *otn)
         byte_test->endianess = BIG;
     else
         byte_test->endianess = LITTLE;
-    
+
     if (byte->flags & EXTRACT_AS_DEC)
         byte_test->base = 10;
     if (byte->flags & EXTRACT_AS_OCT)
@@ -621,7 +730,7 @@ static int ConvertByteTestOption(Rule *rule, int index, OptTreeNode *otn)
 
     fpl = AddOptFuncToList(ByteTest, otn);
     fpl->type = RULE_OPTION_TYPE_BYTE_TEST;
-    
+
     if (add_detection_option(RULE_OPTION_TYPE_BYTE_TEST, (void *)byte_test, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
         free(byte_test);
@@ -645,7 +754,7 @@ static int ConvertByteJumpOption(Rule *rule, int index, OptTreeNode *otn)
 
     byte_jump->bytes_to_grab = byte->bytes;
     byte_jump->offset = byte->offset;
-    byte_jump->offset_var = -1;
+    byte_jump->offset_var = GetVarByName(byte->offset_refId);
     byte_jump->multiplier = byte->multiplier;
     byte_jump->post_offset = byte->post_offset;
 
@@ -685,6 +794,63 @@ static int ConvertByteJumpOption(Rule *rule, int index, OptTreeNode *otn)
 
 static int ConvertByteExtractOption(Rule *rule, int index, OptTreeNode *otn)
 {
+    ByteExtract *so_byte = rule->options[index]->option_u.byteExtract;
+    ByteExtractData *snort_byte = SnortAlloc(sizeof(ByteExtractData));
+    OptFpList *fpl;
+    void *dup;
+
+    /* Clear out sp_byte_extract.c's variable_names array if this is the first
+       byte_extract option in the rule. */
+    ClearVarNames(otn->opt_func);
+
+    /* Copy over the various struct members */
+    snort_byte->bytes_to_grab = so_byte->bytes;
+    snort_byte->offset = so_byte->offset;
+    snort_byte->align = so_byte->align;
+    snort_byte->name = strdup(so_byte->refId);
+
+    /* In an SO rule, setting multiplier to 0 means that the multiplier is
+       ignored. This is not the case in the text rule version of byte_extract. */
+    if (so_byte->multiplier)
+        snort_byte->multiplier = so_byte->multiplier;
+    else
+        snort_byte->multiplier = 1;
+
+    if (so_byte->flags & CONTENT_RELATIVE)
+        snort_byte->relative_flag = 1;
+
+    if (so_byte->flags & EXTRACT_AS_STRING)
+        snort_byte->data_string_convert_flag = 1;
+
+    if (so_byte->flags & BYTE_BIG_ENDIAN)
+        snort_byte->endianess = BIG;
+    else
+        snort_byte->endianess = LITTLE;
+
+    if (so_byte->flags & EXTRACT_AS_HEX)
+        snort_byte->base = 16;
+    if (so_byte->flags & EXTRACT_AS_DEC)
+        snort_byte->base = 10;
+    if (so_byte->flags & EXTRACT_AS_OCT)
+        snort_byte->base = 8;
+
+    snort_byte->var_number = AddVarNameToList(snort_byte);
+    snort_byte->byte_order_func = NULL;
+
+    /* Add option to list */
+    fpl = AddOptFuncToList(DetectByteExtract, otn);
+    fpl->type = RULE_OPTION_TYPE_BYTE_EXTRACT;
+    if (add_detection_option(RULE_OPTION_TYPE_BYTE_EXTRACT, (void *)snort_byte, &dup) == DETECTION_OPTION_EQUAL)
+    {
+        free(snort_byte->name);
+        free(snort_byte);
+        snort_byte = dup;
+    }
+
+    fpl->context = (void *) snort_byte;
+    if (snort_byte->relative_flag)
+        fpl->isRelative = 1;
+
     return 0;
 }
 
@@ -719,6 +885,25 @@ static int ConvertFileDataOption(Rule *rule, int index, OptTreeNode *otn)
     fpl = AddOptFuncToList(FileDataEval, otn);
     fpl->type = RULE_OPTION_TYPE_FILE_DATA;
     fpl->context = (void *)data;
+
+    return 1;
+}
+
+static int ConvertPktDataOption(Rule *rule, int index, OptTreeNode *otn)
+{
+    OptFpList *fpl;
+    fpl = AddOptFuncToList(PktDataEval, otn);
+    fpl->type = RULE_OPTION_TYPE_PKT_DATA;
+
+    return 1;
+}
+
+
+static int ConvertBase64DataOption(Rule *rule, int index, OptTreeNode *otn)
+{
+    OptFpList *fpl;
+    fpl = AddOptFuncToList(Base64DataEval, otn);
+    fpl->type = RULE_OPTION_TYPE_BASE64_DATA;
 
     return 1;
 }

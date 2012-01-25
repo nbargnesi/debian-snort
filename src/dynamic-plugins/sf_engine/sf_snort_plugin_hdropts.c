@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -26,13 +26,16 @@
  *
  * Header Option operations for dynamic rule engine
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sf_dynamic_define.h"
 #include "sf_snort_packet.h"
 #include "sf_snort_plugin_api.h"
 #include "sf_dynamic_engine.h"
 #include "ipv6_port.h"
-
-extern DynamicEngineData _ded; /* sf_detection_engine.c */
+#include "sf_snort_detection_engine.h"
 
 int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData)
 {
@@ -47,7 +50,7 @@ int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData)
             _ded.errMsg("Invalid operator for Check Header IP Options: %d "
                 "for dynamic rule [%d:%d].\n"
                 "Must be either CHECK_EQ (option present) or "
-                "CHECK_NEQ (not present).\n", 
+                "CHECK_NEQ (not present).\n",
                 optData->op, rule->info.genID, rule->info.sigID);
             retVal = -1;
         }
@@ -59,7 +62,7 @@ int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData)
             _ded.errMsg("Invalid operator for Check Header IP Options: %d "
                 "for dynamic rule [%d:%d].\n"
                 "Must be either CHECK_EQ (option present) or "
-                "CHECK_NEQ (not present).\n", 
+                "CHECK_NEQ (not present).\n",
                 optData->op, rule->info.genID, rule->info.sigID);
             retVal = -1;
         }
@@ -79,7 +82,7 @@ int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData)
     return retVal;
 }
 
-int checkBits(u_int32_t value, u_int32_t op, u_int32_t bits)
+int checkBits(uint32_t value, uint32_t op, uint32_t bits)
 {
     switch (op)
     {
@@ -103,7 +106,7 @@ int checkBits(u_int32_t value, u_int32_t op, u_int32_t bits)
     return RULE_NOMATCH;
 }
 
-int checkOptions(u_int32_t value, int op, IPOptions options[], int numOptions)
+int checkOptions(uint32_t value, int op, IPOptions options[], int numOptions)
 {
     int found = 0;
     int i;
@@ -138,7 +141,7 @@ int checkOptions(u_int32_t value, int op, IPOptions options[], int numOptions)
     return RULE_NOMATCH;
 }
 
-int checkField(int op, u_int32_t value1, u_int32_t value2)
+int checkField(int op, uint32_t value1, uint32_t value2)
 {
     switch (op)
     {
@@ -193,7 +196,7 @@ ENGINE_LINKAGE int checkHdrOpt(void *p, HdrOptCheck *optData)
      * 1 or 2 bytes, converted to host byte order,
      * and placed in a 4 byte value for easy comparison
      */
-    u_int32_t value = 0;
+    uint32_t value = 0;
 
     if ((optData->hdrField & IP_HDR_OPTCHECK_MASK) && (!pkt->ip4_header))
         return RULE_NOMATCH;
@@ -210,7 +213,7 @@ ENGINE_LINKAGE int checkHdrOpt(void *p, HdrOptCheck *optData)
     {
     /* IP Header Checks */
     case IP_HDR_ID:
-        value = IS_IP6(pkt) ? ntohl(GET_IPH_ID(pkt)) : ntohs((u_int16_t)GET_IPH_ID(pkt));
+        value = IS_IP6(pkt) ? ntohl(GET_IPH_ID(pkt)) : ntohs((uint16_t)GET_IPH_ID(pkt));
         break;
     case IP_HDR_PROTO:
         value = pkt->ip4_header->proto;

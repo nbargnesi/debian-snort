@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -17,10 +17,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************
- * 
+ *
  ****************************************************************************/
 
 #include <daq.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "snort_dce2.h"
 #include "dce2_config.h"
 #include "dce2_utils.h"
@@ -57,7 +62,6 @@ static int dce2_detected = 0;
 /********************************************************************
  * Extern variables
  ********************************************************************/
-extern DynamicPreprocessorData _dpd;
 extern DCE2_MemState dce2_mem_state;
 extern DCE2_Stats dce2_stats;
 
@@ -136,7 +140,7 @@ static DCE2_SsnData * DCE2_NewSession(SFSnortPacket *p, tSfPolicyId policy_id)
 
         case DCE2_TRANS_TYPE__NONE:
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Not configured to look at this traffic "
-                           "or unable to autodetect - not inspecting.\n"));
+                                     "or unable to autodetect - not inspecting.\n"));
             return NULL;
 
         default:
@@ -189,12 +193,34 @@ static DCE2_SsnData * DCE2_NewSession(SFSnortPacket *p, tSfPolicyId policy_id)
 
         if (!DCE2_SsnIsRebuilt(p))
         {
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Got non-rebuilt packet - flushing.\n"));
-            DCE2_SsnFlush(p);
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Got non-rebuilt packet.\n"));
 
             if (DCE2_SsnIsStreamInsert(p))
             {
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
+#if 0
+#ifdef ENABLE_PAF
+                if (!_dpd.isPafEnabled())
+#endif
+                {
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Flushing opposite direction.\n"));
+                    //DCE2_SsnFlush(p);  // No need to flush since this is first data packet?
+                }
+#endif
+
+#ifdef ENABLE_PAF
+                if (!_dpd.isPafEnabled() || !PacketHasFullPDU(p))
+#endif
+                {
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
+                    return NULL;
+                }
+            }
+            else if ((DCE2_SsnFromClient(p) && (rs_dir == SSN_DIR_SERVER))
+                     || (DCE2_SsnFromServer(p) && (rs_dir == SSN_DIR_CLIENT))
+                     || (rs_dir == SSN_DIR_BOTH))
+            {
+                /* Reassembly was already set for this session, but stream
+                 * decided not to use the packet so it's probably not good */
                 return NULL;
             }
         }
@@ -251,15 +277,26 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
     }
     else if (IsTCP(p) && !DCE2_SsnIsRebuilt(p))
     {
-
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Got non-rebuilt packet - flushing opposite direction.\n"));
-        DCE2_SsnFlush(p);
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Got non-rebuilt packet\n"));
 
         if (DCE2_SsnIsStreamInsert(p))
         {
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
-            PREPROC_PROFILE_END(dce2_pstat_session);
-            return DCE2_RET__NOT_INSPECTED;
+#ifdef ENABLE_PAF
+            if (!_dpd.isPafEnabled())
+#endif
+            {
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Flushing opposite direction.\n"));
+                DCE2_SsnFlush(p);
+            }
+
+#ifdef ENABLE_PAF
+            if (!_dpd.isPafEnabled() || !PacketHasFullPDU(p))
+#endif
+            {
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
+                PREPROC_PROFILE_END(dce2_pstat_session);
+                return DCE2_RET__NOT_INSPECTED;
+            }
         }
         else
         {
@@ -304,7 +341,7 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
         return DCE2_RET__NOT_INSPECTED;
     }
 
-    p->flags |= FLAG_DCE_PKT;
+    p->flags |= FLAG_ALLOW_MULTIPLE_DETECT;
     dce2_detected = 0;
 
     PREPROC_PROFILE_END(dce2_pstat_session);
@@ -336,10 +373,14 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
     if (!dce2_detected)
         DCE2_Detect(sd);
 
+    DCE2_ResetRopts(&sd->ropts);
     DCE2_PopPkt();
 
     if (dce2_mem_state == DCE2_MEM_STATE__MEMCAP)
+    {
         DCE2_SetNoInspect(sd);
+        dce2_mem_state = DCE2_MEM_STATE__OKAY;
+    }
 
     if (DCE2_SsnAutodetected(sd))
         return DCE2_RET__NOT_INSPECTED;
@@ -412,6 +453,9 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
     if (DCE2_SsnFromClient(p) && !DCE2_SsnSeenClient(sd))
     {
+#if 0
+        // This code should be obsoleted by the junk data check in dce2_smb.c
+
         /* Check to make sure we can continue processing */
         if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
         {
@@ -427,6 +471,7 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
             return DCE2_RET__NOT_INSPECTED;
         }
+#endif
 
         DCE2_SsnSetSeenClient(sd);
 
@@ -438,6 +483,9 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
     }
     else if (DCE2_SsnFromServer(p) && !DCE2_SsnSeenServer(sd))
     {
+#if 0
+        // This code should be obsoleted by the junk data check in dce2_smb.c
+
         /* Check to make sure we can continue processing */
         if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
         {
@@ -453,6 +501,7 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
             return DCE2_RET__NOT_INSPECTED;
         }
+#endif
 
         DCE2_SsnSetSeenServer(sd);
 
@@ -478,6 +527,8 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Client last => seq: %u, next seq: %u\n",
                            sd->cli_seq, sd->cli_nseq));
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "This packet => seq: %u, next seq: %u\n",
+                           pkt_seq, pkt_seq + p->payload_size));
         }
         else
         {
@@ -488,6 +539,8 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Server last => seq: %u, next seq: %u\n",
                            sd->srv_seq, sd->srv_nseq));
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "This packet => seq: %u, next seq: %u\n",
+                           pkt_seq, pkt_seq + p->payload_size));
         }
 
         *overlap_bytes = 0;
@@ -508,26 +561,29 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
                  * reassembly on both sides and not looking at non-reassembled packets
                  * Actually this can happen if the stream seg list is empty */
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Overlap => seq: %u, next seq: %u\n",
-                               pkt_seq, pkt_seq + p->payload_size));
+                            pkt_seq, pkt_seq + p->payload_size));
 
                 if (DCE2_SsnMissedPkts(sd))
                     DCE2_SsnClearMissedPkts(sd);
 
                 /* Do what we can and take the difference and only inspect what we
                  * haven't already inspected */
-                if ((pkt_seq + p->payload_size) > *ssn_nseq)
+                if ((pkt_seq + p->payload_size) > *ssn_nseq
+                    || (pkt_seq + p->payload_size < pkt_seq))
                 {
                     *overlap_bytes = (uint16_t)(*ssn_nseq - pkt_seq);
                     dce2_stats.overlapped_bytes += *overlap_bytes;
 
                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN,
-                                   "Setting overlap bytes: %u\n", *overlap_bytes));
+                                "Setting overlap bytes: %u\n", *overlap_bytes));
                 }
                 else
                 {
                     return DCE2_RET__NOT_INSPECTED;
                 }
             }
+
+            DCE2_DEBUG_CODE(DCE2_DEBUG__MAIN, DCE2_PrintPktData(p->payload, p->payload_size););
         }
         else if (DCE2_SsnMissedPkts(sd))
         {
@@ -545,14 +601,10 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
             if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
             {
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Couldn't confirm transport - "
-                               "not inspecting\n"));
-
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "This packet => seq: %u, next seq: %u\n"
-                               "Setting current and next to the same thing, since we're "
-                               "not inspecting this packet.\n", sd->cli_seq, sd->cli_nseq));
+                            "not inspecting\n"));
 
                 *ssn_seq = pkt_seq;
-                *ssn_nseq = pkt_seq;
+                *ssn_nseq = pkt_seq + p->payload_size;
 
                 return DCE2_RET__NOT_INSPECTED;
             }
@@ -566,9 +618,6 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 
         *ssn_seq = pkt_seq;
         *ssn_nseq = pkt_seq + p->payload_size;
-
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "This packet => seq: %u, next seq: %u\n",
-                       *ssn_seq, *ssn_nseq));
     }
 
     return DCE2_RET__SUCCESS;
@@ -593,7 +642,7 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
  *
  * Returns:
  *  DCE2_TransType
- *      DCE2_TRANS_TYPE__NONE if a transport could not be 
+ *      DCE2_TRANS_TYPE__NONE if a transport could not be
  *          determined or target based labeled the session as
  *          traffic we are not interested in.
  *      DCE2_TRANS_TYPE__SMB if the traffic is determined to be
@@ -893,7 +942,7 @@ void DCE2_InitRpkts(void)
  * Arguments:
  *  SFSnortPacket *  - pointer to packet off wire
  *  const uint8_t *  - pointer to data to attach to reassembly packet
- *  uint16_t - length of data 
+ *  uint16_t - length of data
  *
  * Returns:
  *  SFSnortPacket * - pointer to reassembly packet
@@ -907,15 +956,13 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
     SFSnortPacket *rpkt;
     uint16_t payload_len = 0;
     uint16_t data_overhead = 0;
-    int rpkt_flag;
 
     rpkt = dce2_rpkt[rpkt_type];
-    _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt);
 
     switch (rpkt_type)
     {
         case DCE2_RPKT_TYPE__SMB_SEG:
-            rpkt_flag = FLAG_SMB_SEG;
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_SMB_SEG);
             break;
 
         case DCE2_RPKT_TYPE__SMB_TRANS:
@@ -924,13 +971,15 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
             // Better still pass in rpkt and let the init function update
             // payload, etc.  Also, some memsets could probably be avoided
             // by explicitly setting the unitialized header fields.
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_SMB_TRANS);
             data_overhead = DCE2_MOCK_HDR_LEN__SMB_CLI;
             memset((void*)rpkt->payload, 0, data_overhead);
             DCE2_SmbInitRdata((uint8_t *)rpkt->payload, FLAG_FROM_CLIENT);
-            rpkt_flag = FLAG_SMB_TRANS;
             break;
 
         case DCE2_RPKT_TYPE__SMB_CO_SEG:
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_DCE_SEG);
+
             if (DCE2_SsnFromClient(wire_pkt))
             {
                 data_overhead = DCE2_MOCK_HDR_LEN__SMB_CLI;
@@ -943,10 +992,11 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
                 memset((void*)rpkt->payload, 0, data_overhead);
                 DCE2_SmbInitRdata((uint8_t *)rpkt->payload, FLAG_FROM_SERVER);
             }
-            rpkt_flag = FLAG_DCE_SEG;
             break;
 
         case DCE2_RPKT_TYPE__SMB_CO_FRAG:
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_DCE_FRAG);
+
             if (DCE2_SsnFromClient(wire_pkt))
             {
                 data_overhead = DCE2_MOCK_HDR_LEN__SMB_CLI + DCE2_MOCK_HDR_LEN__CO_CLI;
@@ -963,14 +1013,15 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
                 DCE2_CoInitRdata((uint8_t *)rpkt->payload +
                     DCE2_MOCK_HDR_LEN__SMB_SRV, FLAG_FROM_SERVER);
             }
-            rpkt_flag = FLAG_DCE_FRAG;
             break;
 
         case DCE2_RPKT_TYPE__TCP_CO_SEG:
-            rpkt_flag = FLAG_DCE_SEG;
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_DCE_SEG);
             break;
 
         case DCE2_RPKT_TYPE__TCP_CO_FRAG:
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_DCE_FRAG);
+
             if (DCE2_SsnFromClient(wire_pkt))
             {
                 data_overhead = DCE2_MOCK_HDR_LEN__CO_CLI;
@@ -983,14 +1034,13 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
                 memset((void*)rpkt->payload, 0, data_overhead);
                 DCE2_CoInitRdata((uint8_t *)rpkt->payload, FLAG_FROM_SERVER);
             }
-            rpkt_flag = FLAG_DCE_FRAG;
             break;
 
         case DCE2_RPKT_TYPE__UDP_CL_FRAG:
+            _dpd.encodeFormat(ENC_DYN_FWD, wire_pkt, rpkt, PSEUDO_PKT_DCE_FRAG);
             data_overhead = DCE2_MOCK_HDR_LEN__CL;
             memset((void*)rpkt->payload, 0, data_overhead);
             DCE2_ClInitRdata((uint8_t *)rpkt->payload);
-            rpkt_flag = FLAG_DCE_FRAG;
             break;
 
         default:
@@ -1023,7 +1073,7 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
 
 #ifdef SUP_IP6
     if (wire_pkt->family == AF_INET)
-    {   
+    {
         rpkt->ip4h->ip_len = rpkt->ip4_header->data_length;
     }
     else
@@ -1033,12 +1083,11 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
     }
 #endif
 
-    rpkt->flags = FLAG_STREAM_EST;
+    rpkt->flags |= (FLAG_STREAM_EST | FLAG_ALLOW_MULTIPLE_DETECT);
     if (DCE2_SsnFromClient(wire_pkt))
         rpkt->flags |= FLAG_FROM_CLIENT;
     else
         rpkt->flags |= FLAG_FROM_SERVER;
-    rpkt->flags |= (rpkt_flag | FLAG_DCE_PKT);
     rpkt->stream_session_ptr = wire_pkt->stream_session_ptr;
 
     return rpkt;
@@ -1130,7 +1179,7 @@ DCE2_Ret DCE2_AddDataToRpkt(SFSnortPacket *rpkt, DCE2_RpktType rtype,
 
 #ifdef SUP_IP6
     if (rpkt->family == AF_INET)
-    {   
+    {
         rpkt->ip4h->ip_len = rpkt->ip4_header->data_length;
     }
     else
@@ -1330,10 +1379,10 @@ uint16_t DCE2_GetRpktMaxData(DCE2_SsnData *sd, DCE2_RpktType rtype)
  * Purpose:
  *
  * Arguments:
- *       
+ *
  * Returns:
  *
- ******************************************************************/ 
+ ******************************************************************/
 void DCE2_FreeGlobals(void)
 {
     int i;

@@ -24,10 +24,10 @@
 
 /*
  * Lex for Attribute Table
- */ 
+ */
 
 /* Definitions Section.
- * Definitions required by the rules section are in here prior to first  
+ * Definitions required by the rules section are in here prior to first
  * "%%" seperator
  */
 
@@ -153,7 +153,7 @@ comment        {commentStart}.*{commentEnd}
 
 {numericValue}          {
                             sfat_lval.numericValue = strtol( yytext, NULL, 10 );
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,
                                 "Number Value: [%d]\n", sfat_lval.numericValue);
 #endif
@@ -168,7 +168,7 @@ comment        {commentStart}.*{commentEnd}
                                 sfat_lval.stringValue[i] = yytext[i];
                             }
                             sfat_lval.stringValue[i] = '\0';
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,
                                 "String Value: [%s]\n", sfat_lval.stringValue);
 #endif

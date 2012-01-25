@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** Writen by Patrick Mullen <pmullen@sourcefire.com>
  **
@@ -23,10 +23,8 @@
 #define _SF_BASE64DECODE_H_
 
 #include "sf_types.h"
+#include "util_unfold.h"
 
-
-int sf_unfold_header(const uint8_t*, uint32_t, uint8_t*, uint32_t, uint32_t*);
-int sf_unfold_smtp(const uint8_t*, uint32_t, uint8_t*, uint32_t, uint32_t*);
 int sf_base64decode(uint8_t*, uint32_t, uint8_t*, uint32_t, uint32_t*); 
 
-#endif 
+#endif

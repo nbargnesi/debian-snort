@@ -37,7 +37,7 @@
 #include "util.h"
 #include "sftarget_reader.h"
 #include "log.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sf_types.h"
 
 #define YYSTACK_USE_ALLOCA 0
@@ -398,7 +398,11 @@ AttributeValueString:
   };
 
 AttributeValueNumber:
-  SF_AT_START_ATTRIBUTE_VALUE SF_AT_NUMERIC SF_AT_END_ATTRIBUTE_VALUE
+  SF_AT_START_ATTRIBUTE_VALUE  SF_AT_END_ATTRIBUTE_VALUE
+  {
+        $$ = 0;
+  }
+  | SF_AT_START_ATTRIBUTE_VALUE SF_AT_NUMERIC SF_AT_END_ATTRIBUTE_VALUE
   {
         $$ = $2;
   };

@@ -1,12 +1,12 @@
 /*
  * snort_ftptelnet.c
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
  * Kevin Liu <kliu@sourcefire.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
  * published by the Free Software Foundation.  You may not use, modify or
@@ -37,7 +37,7 @@
  * very detailed configuration parameters for each specified FTP client,
  * to provide detailed control over an internal network and robust control
  * of the external network.
- * 
+ *
  * The main functions of note are:
  *   - FTPTelnetSnortConf()    the configuration portion
  *   - SnortFTPTelnet()        the actual normalization & inspection
@@ -47,6 +47,8 @@
  * - 16.09.04:  Initial Development.  SAS
  *
  */
+
+#define _GNU_SOURCE
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -70,21 +72,10 @@
 #include <ctype.h>
 #endif
 
-
-//#include "snort.h"
-//#include "detect.h"
-//#include "decode.h"
-//#include "log.h"
-//#include "event.h"
-//#include "generators.h"
-#include "debug.h"
-//#include "plugbase.h"
-//#include "util.h"
-//#include "event_queue.h"
-//#include "mstring.h"
-
 #define BUF_SIZE 1024
 
+#include "sf_types.h"
+#include "snort_debug.h"
 #include "ftpp_return_codes.h"
 #include "ftpp_ui_config.h"
 #include "ftpp_ui_client_lookup.h"
@@ -96,7 +87,6 @@
 #include "pp_telnet.h"
 #include "pp_ftp.h"
 #include "snort_ftptelnet.h"
-#include "sf_types.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
 #include "stream_api.h"
@@ -225,11 +215,11 @@ extern tSfPolicyUserContextId ftp_telnet_config;
  *
  * 2. Overrides CWD pathname to 256 characters
  *
- * alt_max_param_len 256 { CWD } 
+ * alt_max_param_len 256 { CWD }
  *
  * 3. Overrides PWD & SYST to no parameters
  *
- * alt_max_param_len 0 { PWD SYST } 
+ * alt_max_param_len 0 { PWD SYST }
  *
  */
 
@@ -260,18 +250,18 @@ extern tSfPolicyUserContextId ftp_telnet_config;
  * The default FTP server configuration for FTP command validation.
  * Most of this comes from RFC 959, with additional commands being
  * drawn from other RFCs/Internet Drafts that are in use.
- * 
+ *
  * Any of the below can be overridden in snort.conf.
- * 
+ *
  * This is here to eliminate most of it from snort.conf to
  * avoid an ugly configuration file.  The default_max_param_len
  * is somewhat arbitrary, but is taken from the majority of
  * the snort FTP rules that limit parameter size to 100
  * characters, as of 18 Sep 2004.
- * 
+ *
  * The data_chan_cmds, data_xfer_cmds are used to track open
  * data channel connections.
- * 
+ *
  * The login_cmds and dir_cmds are used to track state of username
  * and current directory.
  */
@@ -285,7 +275,7 @@ static const char* DEFAULT_FTP_CONF[] = {
     "ftp_cmds { USER PASS ACCT CWD CDUP SMNT QUIT REIN TYPE STRU"
               " MODE RETR STOR STOU APPE ALLO REST RNFR RNTO ABOR"
               " DELE RMD MKD PWD LIST NLST SITE SYST STAT HELP NOOP } "
-    "ftp_cmds { AUTH ADAT PROT PBSZ CONF ENC } "  
+    "ftp_cmds { AUTH ADAT PROT PBSZ CONF ENC } "
     "ftp_cmds { PORT PASV LPRT LPSV EPRT EPSV } "
     "ftp_cmds { FEAT OPTS } "
     "ftp_cmds { MDTM REST SIZE MLST MLSD } "
@@ -337,7 +327,7 @@ static void _checkServerConfig(void *pData);
 char *maxToken = NULL;
 static tSfPolicyId ftp_current_policy = 0;
 
-static void _addPortsToStream5(char *, tSfPolicyId);
+static void _addPortsToStream5(char *, tSfPolicyId, int);
 static void _addFtpServerConfPortsToStream5(void *);
 
 char *NextToken(char *delimiters)
@@ -439,7 +429,7 @@ static int PrintConfOpt(FTPTELNET_CONF_OPT *ConfOpt, char *Option)
     return FTPP_SUCCESS;
 }
 
-/* 
+/*
  * Function: ProcessInspectType(FTPTELNET_CONF_OPT *ConfOpt,
  *                          char *ErrorString, int ErrStrLen)
  *
@@ -490,7 +480,7 @@ static int ProcessInspectType(FTPTELNET_GLOBAL_CONF *GlobalConf,
 }
 
 /*
- * Function: ProcessGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
+ * Function: ProcessFTPGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
  *                          char *ErrorString, int ErrStrLen)
  *
  * Purpose: This is where we process the global configuration for FTPTelnet.
@@ -518,7 +508,7 @@ static int ProcessInspectType(FTPTELNET_GLOBAL_CONF *GlobalConf,
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-int ProcessGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
+int ProcessFTPGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                       char *ErrorString, int ErrStrLen)
 {
     FTPTELNET_CONF_OPT *ConfOpt;
@@ -560,7 +550,7 @@ int ProcessGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         else
         {
             snprintf(ErrorString, ErrStrLen,
-                    "Invalid keyword '%s' for '%s' configuration.", 
+                    "Invalid keyword '%s' for '%s' configuration.",
                      pcToken, GLOBAL);
 
             return FTPP_FATAL_ERR;
@@ -624,7 +614,7 @@ static int ProcessPorts(PROTO_CONF *protocol,
 
         return FTPP_FATAL_ERR;
     }
-    
+
     /* Unset the defaults */
     for (iPort = 0;iPort<MAXPORTS;iPort++)
         protocol->ports[iPort] = 0;
@@ -677,7 +667,7 @@ static int ProcessPorts(PROTO_CONF *protocol,
     return FTPP_SUCCESS;
 }
 
-/* 
+/*
  * Function: ProcessTelnetAYTThreshold(TELNET_PROTO_CONF *TelnetConf,
  *                        char *ErrorString, int ErrStrLen)
  *
@@ -765,7 +755,7 @@ static int PrintTelnetConf(TELNET_PROTO_CONF *TelnetConf)
     }
 
     _dpd.logMsg("%s\n", buf);
-    
+
     _dpd.logMsg("      Are You There Threshold: %d\n",
         TelnetConf->ayt_threshold);
     _dpd.logMsg("      Normalize: %s\n", TelnetConf->normalize ? "YES" : "NO");
@@ -875,7 +865,7 @@ int ProcessTelnetConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         else
         {
             snprintf(ErrorString, ErrStrLen,
-                    "Invalid keyword '%s' for '%s' configuration.", 
+                    "Invalid keyword '%s' for '%s' configuration.",
                      pcToken, GLOBAL);
 
             return FTPP_FATAL_ERR;
@@ -926,7 +916,7 @@ static int GetIPAddr(char *addrString, snort_ip *ipAddr,
                              char *ErrorString, int ErrStrLen)
 {
 #ifdef SUP_IP6
-    if(sfip_pton(addrString, ipAddr) != SFIP_SUCCESS) 
+    if(sfip_pton(addrString, ipAddr) != SFIP_SUCCESS)
 #else
     *ipAddr = inet_addr(addrString);
     if (*ipAddr == INADDR_NONE)
@@ -1023,7 +1013,7 @@ static int ProcessFTPCmdList(FTP_SERVER_PROTO_CONF *ServerConf,
 
             return FTPP_FATAL_ERR;
         }
-    
+
         while ((pcToken = NextToken(CONF_SEPARATORS)) != NULL)
         {
             if(!strcmp(END_PORT_LIST, pcToken))
@@ -1137,7 +1127,7 @@ void ResetStringFormat (FTP_PARAM_FMT *Fmt)
  *
  */
 static int ProcessFTPDataChanCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
-                                      char *confOption, 
+                                      char *confOption,
                                       char *ErrorString, int ErrStrLen)
 {
     FTP_CMD_CONF *FTPCmd = NULL;
@@ -1163,7 +1153,7 @@ static int ProcessFTPDataChanCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
 
         return FTPP_FATAL_ERR;
     }
-    
+
     while ((pcToken = NextToken(CONF_SEPARATORS)) != NULL)
     {
         if(!strcmp(END_PORT_LIST, pcToken))
@@ -1269,7 +1259,7 @@ static int ProcessFTPDataChanCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
  *
  */
 static int ProcessFTPDirCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
-                                 char *confOption, 
+                                 char *confOption,
                                  char *ErrorString, int ErrStrLen)
 {
     FTP_CMD_CONF *FTPCmd = NULL;
@@ -1297,7 +1287,7 @@ static int ProcessFTPDirCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
 
         return FTPP_FATAL_ERR;
     }
-    
+
     while ((pcToken = NextToken(CONF_SEPARATORS)) != NULL)
     {
         if(!strcmp(END_PORT_LIST, pcToken))
@@ -1323,7 +1313,7 @@ static int ProcessFTPDirCmdsList(FTP_SERVER_PROTO_CONF *ServerConf,
             }
 
             strcpy(FTPCmd->cmd_name, cmd);
-            
+
             FTPCmd->max_param_len = ServerConf->def_max_param_len;
 
             ftp_cmd_lookup_add(ServerConf->cmd_lookup, cmd,
@@ -1450,7 +1440,7 @@ static void SetOptionalsNext(FTP_PARAM_FMT *ThisFmt, FTP_PARAM_FMT *NextFmt,
                     DynamicPreprocessorFatalMessage("%s(%d) => Failed to allocate memory\n",
                                                     *(_dpd.config_file), *(_dpd.config_line));
                 }
-                
+
                 memcpy(ThisFmt->choices, choices, sizeof(FTP_PARAM_FMT *) * numChoices);
             }
         }
@@ -1804,7 +1794,7 @@ int DoNextFormat(FTP_PARAM_FMT *ThisFmt, int allocated,
                     DynamicPreprocessorFatalMessage("%s(%d) => Can't do memcpy - index out of range \n",
                                                     *(_dpd.config_file), *(_dpd.config_line));
 
-                memcpy(tmpChoices, ThisFmt->choices, 
+                memcpy(tmpChoices, ThisFmt->choices,
                     sizeof(FTP_PARAM_FMT*) * ThisFmt->numChoices);
             }
             NextFmt = (FTP_PARAM_FMT *)calloc(1, sizeof(FTP_PARAM_FMT));
@@ -1903,7 +1893,7 @@ int DoNextFormat(FTP_PARAM_FMT *ThisFmt, int allocated,
     {
         char* end = index(++fmt, *F_LITERAL);
         int len = end ? end - fmt : 0;
-    
+
         if ( len < 1 )
         {
             snprintf(
@@ -1952,7 +1942,7 @@ int DoNextFormat(FTP_PARAM_FMT *ThisFmt, int allocated,
     return DoNextFormat(NextFmt, 0, ErrorString, ErrStrLen);
 }
 
-/* 
+/*
  * Function: ProcessFTPCmdValidity(FTP_SERVER_PROTO_CONF *ServerConf,
  *                              char *ErrorString, int ErrStrLen)
  *
@@ -2181,7 +2171,7 @@ static void PrintCmdFmt(char *buf, FTP_PARAM_FMT *CmdFmt)
 
 }
 
-/* 
+/*
  * Function: ProcessFTPMaxRespLen(FTP_CLIENT_PROTO_CONF *ClientConf,
  *                                char *ErrorString, int ErrStrLen)
  *
@@ -2234,7 +2224,7 @@ static int ProcessFTPMaxRespLen(FTP_CLIENT_PROTO_CONF *ClientConf,
     return FTPP_SUCCESS;
 }
 
-/* 
+/*
  * Function:  ParseBounceTo(char *token, FTP_BOUNCE_TO*)
  *
  * Purpose: Extract the IP address, masking bits (CIDR format), and
@@ -2315,7 +2305,7 @@ int ParseBounceTo(char* token, FTP_BOUNCE_TO* bounce)
     return FTPP_SUCCESS;
 }
 
-/* 
+/*
  * Function: ProcessFTPAlowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
  *                                char *ErrorString, int ErrStrLen)
  *
@@ -2380,7 +2370,7 @@ static int ProcessFTPAllowBounce(FTP_CLIENT_PROTO_CONF *ClientConf,
                      "Failed to allocate memory for Bounce");
             return FTPP_FATAL_ERR;
         }
-        
+
         iRet = ParseBounceTo(pcToken, newBounce);
         if (iRet)
         {
@@ -2455,7 +2445,7 @@ static int PrintFTPClientConf(char * client, FTP_CLIENT_PROTO_CONF *ClientConf)
     }
 
     _dpd.logMsg("      FTP Client: %s\n", client);
-    
+
     PrintConfOpt(&ClientConf->bounce, "  Check for Bounce Attacks");
     PrintConfOpt(&ClientConf->telnet_cmds, "  Check for Telnet Cmds");
     PrintConfOpt(&ClientConf->ignore_telnet_erase_cmds, "  Ignore Telnet Cmd Operations");
@@ -2598,7 +2588,7 @@ int ProcessFTPClientOptions(FTP_CLIENT_PROTO_CONF *ClientConf,
         else
         {
             snprintf(ErrorString, ErrStrLen,
-                    "Invalid keyword '%s' for '%s' configuration.", 
+                    "Invalid keyword '%s' for '%s' configuration.",
                      pcToken, GLOBAL);
 
             return FTPP_FATAL_ERR;
@@ -2705,7 +2695,7 @@ int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         }
 
         //ConfigParseResumePtr = pIpAddressList+strlen(pIpAddressList);
-    
+
         pIpAddressList2 = strdup(pIpAddressList);
         if (!pIpAddressList2)
         {
@@ -2718,9 +2708,9 @@ int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
 
 
 
-        for (client = strtok_r(pIpAddressList2, CONF_SEPARATORS, &brkt); 
-             client; 
-             client = strtok_r(NULL, CONF_SEPARATORS, &brkt)) 
+        for (client = strtok_r(pIpAddressList2, CONF_SEPARATORS, &brkt);
+             client;
+             client = strtok_r(NULL, CONF_SEPARATORS, &brkt))
         {
 
             if (sfip_pton(client, &ipAddr) != SFIP_SUCCESS)
@@ -2750,7 +2740,7 @@ int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
             /*
              **  allocate the memory for the client configuration
              */
-            if (firstIpAddress) 
+            if (firstIpAddress)
             {
                 // Write this IP into the buffer for printing
                 snprintf(client_list, STD_BUF, "%s", client);
@@ -2789,7 +2779,7 @@ int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
             //no IP address was found
             snprintf(ErrorString, ErrStrLen,
                     "Invalid IP Address list in '%s' token.", CLIENT);
-    
+
             retVal = FTPP_INVALID_ARG;
             goto _return;
         }
@@ -2864,6 +2854,7 @@ _return:
  */
 static int PrintFTPServerConf(char * server, FTP_SERVER_PROTO_CONF *ServerConf)
 {
+    const char* spaf = "";
     char buf[BUF_SIZE+1];
     int iCtr;
     int iRet;
@@ -2880,10 +2871,15 @@ static int PrintFTPServerConf(char * server, FTP_SERVER_PROTO_CONF *ServerConf)
         printedFTPHeader = 1;
     }
 
+#ifdef ENABLE_PAF
+    if ( _dpd.isPafEnabled() )
+        spaf = " (PAF)";
+#endif
+
     _dpd.logMsg("      FTP Server: %s\n", server);
 
     memset(buf, 0, BUF_SIZE+1);
-    snprintf(buf, BUF_SIZE, "        Ports: ");
+    snprintf(buf, BUF_SIZE, "        Ports%s: ", spaf);
 
     /*
      * Print out all the applicable ports.
@@ -2897,7 +2893,7 @@ static int PrintFTPServerConf(char * server, FTP_SERVER_PROTO_CONF *ServerConf)
     }
 
     _dpd.logMsg("%s\n", buf);
-    
+
     PrintConfOpt(&ServerConf->telnet_cmds, "  Check for Telnet Cmds");
     PrintConfOpt(&ServerConf->ignore_telnet_erase_cmds, "  Ignore Telnet Cmd Operations");
     _dpd.logMsg("        Identify open data channels: %s\n",
@@ -3071,7 +3067,7 @@ int ProcessFTPServerOptions(FTP_SERVER_PROTO_CONF *ServerConf,
         {
             if (data_chan_configured && ServerConf->data_chan == 0)
             {
-                snprintf(ErrorString, ErrStrLen, "Both 'data_chan' and " 
+                snprintf(ErrorString, ErrStrLen, "Both 'data_chan' and "
                      "'ignore_data_chan' configured with conflicting options.");
                 return FTPP_FATAL_ERR;
             }
@@ -3119,7 +3115,7 @@ int ProcessFTPServerOptions(FTP_SERVER_PROTO_CONF *ServerConf,
         else
         {
             snprintf(ErrorString, ErrStrLen,
-                    "Invalid keyword '%s' for '%s' configuration.", 
+                    "Invalid keyword '%s' for '%s' configuration.",
                      pcToken, GLOBAL);
 
             return FTPP_FATAL_ERR;
@@ -3227,7 +3223,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
             //list begin didn't match so this must be an IP address
             pIpAddressList = server;
         }
-    
+
         ConfigParseResumePtr = pIpAddressList+strlen(pIpAddressList);
 
         pIpAddressList2 = strdup(pIpAddressList);
@@ -3240,9 +3236,9 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
             goto _return;
         }
 
-        for (server = strtok_r(pIpAddressList2, CONF_SEPARATORS, &brkt); 
-             server; 
-             server = strtok_r(NULL, CONF_SEPARATORS, &brkt)) 
+        for (server = strtok_r(pIpAddressList2, CONF_SEPARATORS, &brkt);
+             server;
+             server = strtok_r(NULL, CONF_SEPARATORS, &brkt))
         {
             if (sfip_pton(server, &ipAddr) != SFIP_SUCCESS)
             {
@@ -3269,7 +3265,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
                 ipAddr.ip.u6_addr32[0] = ntohl(ipAddr.ip.u6_addr32[0]);
             }
 
-            if (firstIpAddress) 
+            if (firstIpAddress)
             {
                 /* Write this IP into the buffer for printing */
                 snprintf(server_list, STD_BUF, "%s", server);
@@ -3303,14 +3299,14 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
             }
 
             ftpp_ui_config_add_ftp_server(GlobalConf, &ipAddr, new_server_conf);
-            
+
             //create a reference
             new_server_conf->referenceCount++;
         }
 
         if (firstIpAddress)
         {
-            //no IP address was found 
+            //no IP address was found
             snprintf(ErrorString, ErrStrLen,
                     "Invalid IP Address list in '%s' token.", CLIENT);
 
@@ -3369,9 +3365,9 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
      * the specific server configuration.  Quick hack/trick here: reset
      * the end of the client string to a conf separator, then call strtok.
      * That will reset strtok's internal pointer to the next token after
-     * the client name, which is what we're expecting it to be. 
+     * the client name, which is what we're expecting it to be.
       */
-    if (ConfigParseResumePtr < maxToken) 
+    if (ConfigParseResumePtr < maxToken)
     {
         /* only if there is data after the server/client name */
         if (ip_list)
@@ -3409,7 +3405,7 @@ _return:
 }
 
 /*
- * Function: PrintGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf)
+ * Function: PrintFTPGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf)
  *
  * Purpose: Prints the FTPTelnet preprocessor global configuration
  *
@@ -3419,7 +3415,7 @@ _return:
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-int PrintGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf)
+int PrintFTPGlobalConf(FTPTELNET_GLOBAL_CONF *GlobalConf)
 {
     _dpd.logMsg("FTPTelnet Config:\n");
 
@@ -3474,7 +3470,7 @@ void FTPTelnetCleanupFTPClientConf(void *clientConf)
 
 static int FTPTelnetFreeConfigsPolicy(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {
@@ -3529,7 +3525,7 @@ void FTPTelnetFreeConfig(FTPTELNET_GLOBAL_CONF *GlobalConf)
  * Purpose: This checks that the FTP configuration provided has
  *          options for CMDs that make sense:
  *          -- check if max_len == 0 & there is a cmd_validity
- * 
+ *
  * Arguments: serverConf    => pointer to Server Configuration
  *
  * Returns: 0               => no errors
@@ -3541,7 +3537,7 @@ int FTPTelnetCheckFTPCmdOptions(FTP_SERVER_PROTO_CONF *serverConf)
     FTP_CMD_CONF *cmdConf;
     int iRet =0;
     int config_error = 0;
-    
+
     cmdConf = ftp_cmd_lookup_first(serverConf->cmd_lookup, &iRet);
     while (cmdConf && (iRet == FTPP_SUCCESS))
     {
@@ -3556,7 +3552,7 @@ int FTPTelnetCheckFTPCmdOptions(FTP_SERVER_PROTO_CONF *serverConf)
             config_error = 1;
         }
         cmdConf = ftp_cmd_lookup_next(serverConf->cmd_lookup, &iRet);
-    }      
+    }
 
     return config_error;
 }
@@ -3565,7 +3561,7 @@ int FTPTelnetCheckFTPCmdOptions(FTP_SERVER_PROTO_CONF *serverConf)
  * Function: FTPTelnetCheckFTPServerConfigs(void)
  *
  * Purpose: This checks that the FTP server configurations are reasonable
- * 
+ *
  * Arguments: None
  *
  * Returns: None
@@ -3603,7 +3599,7 @@ static void _checkServerConfig(void *pData)
  *
  * Purpose: This checks that the FTP configuration provided includes
  *          the default configurations for Server & Client.
- * 
+ *
  * Arguments: None
  *
  * Returns: None
@@ -3656,7 +3652,7 @@ int FTPTelnetCheckConfigs( void* pData, tSfPolicyId policyId)
 
 static int FTPConfigCheckPolicy(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {
@@ -3679,30 +3675,30 @@ void FTPConfigCheck(void)
  *
  * Purpose: This is the routine that logs FTP/Telnet Preprocessor (FTPP)
  *          alerts through Snort.
- * 
+ *
  *          Every Session gets looked at for any logged events, and if
  *          there are events to be logged then we select the one with the
  *          highest priority.
- * 
+ *
  *          We use a generic event structure that we set for each different
  *          event structure.  This way we can use the same code for event
  *          logging regardless of what type of event strucure we are dealing
  *          with.
- * 
+ *
  *          The important things to know about this function is how to work
  *          with the event queue.  The number of unique events is contained
  *          in the stack_count variable.  So we loop through all the unique
  *          events and find which one has the highest priority.  During this
  *          loop, we also re-initialize the individual event counts for the
  *          next iteration, saving us time in a separate initialization phase.
- * 
+ *
  *          After we've iterated through all the events and found the one
  *          with the highest priority, we then log that event through snort.
- * 
+ *
  *          We've mapped the FTPTelnet and the Snort alert IDs together, so
  *          we can access them directly instead of having a more complex
  *          mapping function.
- * 
+ *
  * Arguments: GenEvents     => pointer a list of events
  *            iGenerator    => Generator ID (Telnet or FTP)
  *
@@ -3710,7 +3706,7 @@ void FTPConfigCheck(void)
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-static INLINE int LogFTPPEvents(FTPP_GEN_EVENTS *GenEvents,
+static inline int LogFTPPEvents(FTPP_GEN_EVENTS *GenEvents,
                                 int iGenerator)
 {
     FTPP_EVENT      *OrigEvent;
@@ -3806,14 +3802,14 @@ static INLINE int LogFTPPEvents(FTPP_GEN_EVENTS *GenEvents,
  * Purpose: This is the routine that logs FTP alerts through Snort.
  *          It maps the event into a generic event and calls
  *          LOGFTPPEvents().
- * 
+ *
  * Arguments: FtpSession    => pointer the session structure
  *
  * Returns: int     => an error code integer (0 = success,
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-static INLINE int LogFTPEvents(FTP_SESSION *FtpSession)
+static inline int LogFTPEvents(FTP_SESSION *FtpSession)
 {
     FTPP_GEN_EVENTS GenEvents;
     int             iGenerator;
@@ -3838,14 +3834,14 @@ static INLINE int LogFTPEvents(FTP_SESSION *FtpSession)
  * Purpose: This is the routine that logs Telnet alerts through Snort.
  *          It maps the event into a generic event and calls
  *          LOGFTPPEvents().
- * 
+ *
  * Arguments: TelnetSession    => pointer the session structure
  *
  * Returns: int     => an error code integer (0 = success,
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-static INLINE int LogTelnetEvents(TELNET_SESSION *TelnetSession)
+static inline int LogTelnetEvents(TELNET_SESSION *TelnetSession)
 {
     FTPP_GEN_EVENTS GenEvents;
     int             iGenerator;
@@ -3869,7 +3865,7 @@ static INLINE int LogTelnetEvents(TELNET_SESSION *TelnetSession)
  * Purpose: This is the routine sets the source and destination IP
  *          address and port pairs so as to determine the direction
  *          of the FTP or telnet connection.
- * 
+ *
  * Arguments: SiInput       => pointer the session input structure
  *            p             => pointer to the packet structure
  *
@@ -3877,7 +3873,7 @@ static INLINE int LogTelnetEvents(TELNET_SESSION *TelnetSession)
  *                     >0 = non-fatal error, <0 = fatal error)
  *
  */
-static INLINE int SetSiInput(FTPP_SI_INPUT *SiInput, SFSnortPacket *p)
+static inline int SetSiInput(FTPP_SI_INPUT *SiInput, SFSnortPacket *p)
 {
     IP_COPY_VALUE(SiInput->sip, GET_SRC_IP(p));
     IP_COPY_VALUE(SiInput->dip, GET_DST_IP(p));
@@ -3914,7 +3910,7 @@ static INLINE int SetSiInput(FTPP_SI_INPUT *SiInput, SFSnortPacket *p)
  *
  * Purpose: This is the routine that directly performs the rules checking
  *          for each of the FTP & telnet preprocessing modules.
- * 
+ *
  * Arguments: p             => pointer to the packet structure
  *
  * Returns: None
@@ -3961,7 +3957,7 @@ void do_detection(SFSnortPacket *p)
  *
  * Purpose: This is the routine that handles the protocol layer checks
  *          for telnet.
- * 
+ *
  * Arguments: GlobalConf    => pointer the global configuration
  *            p             => pointer to the packet structure
  *            iInspectMode  => indicator whether this is a client or server
@@ -4024,6 +4020,15 @@ int SnortTelnet(FTPTELNET_GLOBAL_CONF *GlobalConf, TELNET_SESSION *TelnetSession
     return FTPP_SUCCESS;
 }
 
+static inline int InspectClientPacket (SFSnortPacket* p)
+{
+#ifdef ENABLE_PAF
+    if ( _dpd.isPafEnabled() )
+        return PacketHasPAFPayload(p);
+#endif
+
+    return !(p->flags & FLAG_STREAM_INSERT);
+}
 /*
  * Function: SnortFTP(FTPTELNET_GLOBAL_CONF *GlobalConf,
  *                       Packet *p,
@@ -4031,7 +4036,7 @@ int SnortTelnet(FTPTELNET_GLOBAL_CONF *GlobalConf, TELNET_SESSION *TelnetSession
  *
  * Purpose: This is the routine that handles the protocol layer checks
  *          for FTP.
- * 
+ *
  * Arguments: GlobalConf    => pointer the global configuration
  *            p             => pointer to the packet structure
  *            iInspectMode  => indicator whether this is a client or server
@@ -4047,14 +4052,14 @@ int SnortFTP(FTPTELNET_GLOBAL_CONF *GlobalConf, FTP_SESSION *FTPSession,
     int iRet;
     PROFILE_VARS;
 
-    if (!FTPSession || 
+    if (!FTPSession ||
          FTPSession->server_conf == NULL ||
          FTPSession->client_conf == NULL)
     {
         return FTPP_INVALID_SESSION;
     }
 
-    if (!GlobalConf->check_encrypted_data && 
+    if (!GlobalConf->check_encrypted_data &&
         ((FTPSession->encr_state == AUTH_TLS_ENCRYPTED) ||
          (FTPSession->encr_state == AUTH_SSL_ENCRYPTED) ||
          (FTPSession->encr_state == AUTH_UNKNOWN_ENCRYPTED)) )
@@ -4066,14 +4071,19 @@ int SnortFTP(FTPTELNET_GLOBAL_CONF *GlobalConf, FTP_SESSION *FTPSession,
 
     if (iInspectMode == FTPP_SI_SERVER_MODE)
     {
-        /* Force flush of client side of stream  */
         DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
             "Server packet: %.*s\n", p->payload_size, p->payload));
-        _dpd.streamAPI->response_flush_stream(p);
+
+#ifdef ENABLE_PAF
+        // FIXTHIS breaks target-based non-standard ports
+        //if ( !_dpd.isPafEnabled() )
+#endif
+            /* Force flush of client side of stream  */
+            _dpd.streamAPI->response_flush_stream(p);
     }
     else
     {
-        if (p->flags & FLAG_STREAM_INSERT)
+        if ( !InspectClientPacket(p) )
         {
             DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
                 "Client packet will be reassembled\n"));
@@ -4152,7 +4162,7 @@ int SnortFTPTelnet(SFSnortPacket *p)
 
     sfPolicyUserPolicySet (ftp_telnet_config, policy_id);
     GlobalConf = (FTPTELNET_GLOBAL_CONF *)sfPolicyUserDataGetCurrent(ftp_telnet_config);
-   
+
     /*
      * Set up the FTPP_SI_INPUT pointer.  This is what the session_inspection()
      * routines use to determine client and server traffic.  Plus, this makes
@@ -4230,7 +4240,7 @@ int SnortFTPTelnet(SFSnortPacket *p)
      * FTPTelnet PACKET FLOW::
      *
      * Determine Proto Module::
-     *   The Session Inspection Module retrieves the appropriate 
+     *   The Session Inspection Module retrieves the appropriate
      *   configuration for sessions, and takes care of the stateless
      *   vs. stateful processing in order to do this.  Once this module
      *   does it's magic, we're ready for the primetime.  This means
@@ -4239,7 +4249,7 @@ int SnortFTPTelnet(SFSnortPacket *p)
      * Proto Specific Module::
      *   This is where we normalize the data.  The Protocol specific module
      *   handles what type of normalization to do (telnet, ftp) and does
-     *   protocl related checks.
+     *   protocol related checks.
      *
      */
     if (ft_ssn == NULL)
@@ -4290,7 +4300,7 @@ int FTPPBounceInit(char *name, char *parameters, void **dataPtr)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FTPPBounce(void *pkt, uint8_t **cursor, void **dataPtr)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -4313,17 +4323,23 @@ int FTPPBounceEval(void *pkt, const uint8_t **cursor, void *dataPtr)
     const char *this_param = *(const char **)cursor;
 
     int dsize;
-    int use_alt_buffer = p->flags & FLAG_ALT_DECODE;
 
     // TBD SUP_IP6 support
     if ( !p->ip4_header )
         return 0;
 
-    if(use_alt_buffer)
+    if(_dpd.Is_DetectFlag(SF_FLAG_ALT_DETECT))
+    {
+        dsize = _dpd.altDetect->len;
+        start_ptr = (char *) _dpd.altDetect->data;
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                "Using Alternative Detect buffer!\n"););
+    }
+    else if(_dpd.Is_DetectFlag(SF_FLAG_ALT_DECODE))
     {
         dsize = _dpd.altBuffer->len;
-        start_ptr = (char *) _dpd.altBuffer;        
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        start_ptr = (char *) _dpd.altBuffer->data;
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "Using Alternative Decode buffer!\n"););
 
     }
@@ -4343,7 +4359,7 @@ int FTPPBounceEval(void *pkt, const uint8_t **cursor, void *dataPtr)
     base_ptr = start_ptr;
 
     while (isspace((int)*this_param) && (this_param < end_ptr)) this_param++;
-    
+
     do
     {
         int value = 0;
@@ -4401,14 +4417,14 @@ int FTPPBounceEval(void *pkt, const uint8_t **cursor, void *dataPtr)
             "PORT command not being used in bounce\n"););
         return RULE_NOMATCH;
     }
-    
+
     /* Never reached */
     return RULE_NOMATCH;
 }
 
 #endif /* DYNAMIC_PLUGIN */
 
-/** Add ports configured for http preprocessor to stream5 port filtering so that if 
+/** Add ports configured for http preprocessor to stream5 port filtering so that if
  * any_any rules are being ignored them the the packet still reaches http-inspect.
  *
  * For ports in global_server configuration, server_lookup and server_lookupIpv6,
@@ -4424,8 +4440,8 @@ void _FTPTelnetAddPortsOfInterest(FTPTELNET_GLOBAL_CONF *config, tSfPolicyId pol
     /* For the server callback */
     ftp_current_policy = policy_id;
 
-    _addPortsToStream5(config->telnet_config->proto_ports.ports, policy_id);
-    _addPortsToStream5(config->default_ftp_server->proto_ports.ports, policy_id);
+    _addPortsToStream5(config->telnet_config->proto_ports.ports, policy_id, 0);
+    _addPortsToStream5(config->default_ftp_server->proto_ports.ports, policy_id, 1);
     ftpp_ui_server_iterate(config->server_lookup,
                            _addFtpServerConfPortsToStream5, &i);
 }
@@ -4433,10 +4449,41 @@ void _FTPTelnetAddPortsOfInterest(FTPTELNET_GLOBAL_CONF *config, tSfPolicyId pol
 static void _addFtpServerConfPortsToStream5(void *pData)
 {
     FTP_SERVER_PROTO_CONF *pConf = (FTP_SERVER_PROTO_CONF *)pData;
-    _addPortsToStream5(pConf->proto_ports.ports, ftp_current_policy);
+    _addPortsToStream5(pConf->proto_ports.ports, ftp_current_policy, 1);
 }
 
-static void _addPortsToStream5(char *ports, tSfPolicyId policy_id)
+#ifdef ENABLE_PAF
+// flush at last line feed in payload
+// preproc will deal with any pipelined commands
+static PAF_Status ftp_paf (
+    void* ssn, void** pv, const uint8_t* data, uint32_t len,
+    uint32_t flags, uint32_t* fp)
+{
+#ifdef HAVE_MEMRCHR
+    uint8_t* lf =  memrchr(data, '\n', len);
+#else
+    uint32_t n = len;
+    uint8_t* lf = NULL, * tmp = (uint8_t*) data;
+
+    while ( (tmp = memchr(tmp, '\n', n)) )
+    {
+        lf = tmp++;
+        n = len - (tmp - data);
+    }
+#endif
+
+    DEBUG_WRAP(DebugMessage(DEBUG_STREAM_PAF,
+        "%s[%d] '%*.*s'\n", __FUNCTION__, len, len, len, data));
+
+    if ( !lf )
+        return PAF_SEARCH;
+
+    *fp = lf - data + 1;
+    return PAF_FLUSH;
+}
+#endif
+
+static void _addPortsToStream5(char *ports, tSfPolicyId policy_id, int ftp)
 {
     unsigned int i;
 
@@ -4447,6 +4494,14 @@ static void _addPortsToStream5(char *ports, tSfPolicyId policy_id)
             //Add port the port
             _dpd.streamAPI->set_port_filter_status(IPPROTO_TCP, (uint16_t)i,
                                                    PORT_MONITOR_SESSION, policy_id, 1);
+
+#ifdef ENABLE_PAF
+            if ( ftp && _dpd.isPafEnabled() )
+            {
+                _dpd.streamAPI->register_paf_cb(policy_id, (uint16_t)i, true, ftp_paf, false);
+                _dpd.streamAPI->register_paf_cb(policy_id, (uint16_t)i, false, ftp_paf, false);
+            }
+#endif
         }
     }
 }

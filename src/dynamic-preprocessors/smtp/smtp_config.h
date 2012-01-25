@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -46,6 +46,16 @@
 #define CONF_MAX_MIME_MEM                "max_mime_mem"
 #define CONF_MAX_MIME_DEPTH              "max_mime_depth"
 #define CONF_ENABLE_MIME_DECODING        "enable_mime_decoding"
+#define CONF_B64_DECODE                  "b64_decode_depth"
+#define CONF_QP_DECODE                   "qp_decode_depth"
+#define CONF_BITENC_DECODE               "bitenc_decode_depth"
+#define CONF_UU_DECODE                   "uu_decode_depth"
+#define CONF_LOG_FILENAME                "log_filename"
+#define CONF_LOG_MAIL_FROM               "log_mailfrom"
+#define CONF_LOG_RCPT_TO                 "log_rcptto"
+#define CONF_LOG_EMAIL_HDRS              "log_email_hdrs"
+#define CONF_SMTP_MEMCAP                 "memcap"
+#define CONF_EMAIL_HDRS_LOG_DEPTH        "email_hdrs_log_depth"
 #define CONF_DISABLED                    "disabled"
 #define CONF_NO_ALERTS                   "no_alerts"
 #define CONF_VALID_CMDS                  "valid_cmds"
@@ -78,16 +88,25 @@
 #define DEFAULT_MAX_RESPONSE_LINE_LEN   0
 
 /*These are temporary values*/
-
+#define MAX_DEPTH                     65535 
+#define MIN_DEPTH                     -1
 #define DEFAULT_MAX_MIME_MEM           838860
 #define DEFAULT_MAX_MIME_DEPTH         1460
+#define DEFAULT_SMTP_MEMCAP            838860
+#define DEFAULT_LOG_DEPTH              1464
 #define MAX_MIME_MEM                   104857600
 #define MIN_MIME_MEM                   3276
 #define MAX_MIME_DEPTH                 20480
-#define MIN_MIME_DEPTH                 5
+#define MIN_MIME_DEPTH                 4
+#define MAX_SMTP_MEMCAP                104857600
+#define MIN_SMTP_MEMCAP                3276
+#define MAX_LOG_DEPTH                  20480
+#define MIN_LOG_DEPTH                  1
 #define SMTP_DEFAULT_SERVER_PORT       25  /* SMTP normally runs on port 25 */
 #define SMTP_DEFAULT_SUBMISSION_PORT  587  /* SMTP Submission port - see RFC 2476 */
 #define XLINK2STATE_DEFAULT_PORT      691  /* XLINK2STATE sometimes runs on port 691 */
+#define MAX_FILE                      1024
+#define MAX_EMAIL                     1024
 
 #define ERRSTRLEN   512
 
@@ -128,12 +147,22 @@ typedef struct _SMTPConfig
     char  alert_unknown_cmds;
     char  alert_xlink2state;
     char  drop_xlink2state;
-    char  print_cmds;    
+    char  print_cmds;
     char  enable_mime_decoding;
+    char  log_mailfrom;
+    char  log_rcptto;
+    char  log_filename;
+    char  log_email_hdrs;
+    uint32_t   email_hdrs_log_depth;
+    uint32_t   memcap;
     int   max_mime_mem;
     int   max_mime_depth; 
-    int   max_mime_decode_bytes;
-    int   max_mime_sessions;
+    int max_depth;
+    int b64_depth;
+    int qp_depth;
+    int bitenc_depth;
+    int uu_depth;
+
     SMTPToken *cmds;
     SMTPCmdConfig *cmd_config;
     SMTPSearch *cmd_search;
@@ -142,13 +171,19 @@ typedef struct _SMTPConfig
     int disabled;
 
     int ref_count;
+    uint32_t xtra_filename_id;
+    uint32_t xtra_mfrom_id;
+    uint32_t xtra_rcptto_id;
+    uint32_t xtra_ehdrs_id;
 
 } SMTPConfig;
 
 /* Function prototypes  */
 void SMTP_ParseArgs(SMTPConfig *, char *);
+void SMTP_PrintConfig(SMTPConfig *config);
 
 void SMTP_CheckConfig(SMTPConfig *, tSfPolicyUserContextId);
+int SMTP_IsDecodingEnabled(SMTPConfig *pPolicyConfig);
 
 #endif
 

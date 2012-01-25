@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2010 Sourcefire, Inc.
+ * Copyright (C) 2002-2011 Sourcefire, Inc.
  * Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  * Author: Ryan Jordan <ryan.jordan@sourcefire.com>
  *
@@ -29,6 +29,10 @@
 
 #include <arpa/inet.h>
 #include <pcap.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "u2boat.h"
 
@@ -89,7 +93,7 @@ static int ConvertLog(FILE *input, FILE *output, char *format)
     }
     if (ferror(input))
     {
-        fprintf(stderr, "Error reading input file, aborting...\n"); 
+        fprintf(stderr, "Error reading input file, aborting...\n");
         return FAILURE;
     }
     if (ferror(output))
@@ -223,7 +227,7 @@ static int GetRecord(FILE *input, u2record *rec)
                 items_read, rec->length);
         return FAILURE;
     }
-    
+
     return SUCCESS;
 }
 
@@ -297,7 +301,7 @@ int main (int argc, char *argv[])
     }
 
     /* Open the files */
-    if ((input_file = fopen(input_filename, "r")) == NULL) 
+    if ((input_file = fopen(input_filename, "r")) == NULL)
     {
         fprintf(stderr, "Unable to open file: %s\n", input_filename);
         return FAILURE;

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2007-2010 Sourcefire, Inc.
+** Copyright (C) 2007-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -23,13 +23,17 @@
 **  @file        detection_options.c
 **
 **  @author      Steven Sturges
-** 
+**
 **  @brief       Support functions for rule option tree
 **
 **  This implements tree processing for rule options, evaluating common
 **  detection options only once per pattern match.
 **
 */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "sfutil/sfxhash.h"
 #include "sfutil/sfhashfcn.h"
@@ -141,6 +145,8 @@ uint32_t detection_option_hash_func(SFHASHFCN *p, unsigned char *k, int n)
             hash = Base64DecodeHash(key->option_data);
             break;
         case RULE_OPTION_TYPE_BASE64_DATA:
+            break;
+        case RULE_OPTION_TYPE_PKT_DATA:
             break;
         case RULE_OPTION_TYPE_ICMP_CODE:
             hash = IcmpCodeCheckHash(key->option_data);
@@ -294,6 +300,8 @@ int detection_option_key_compare_func(const void *k1, const void *k2, size_t n)
             break;
         case RULE_OPTION_TYPE_BASE64_DATA:
             break;
+        case RULE_OPTION_TYPE_PKT_DATA:
+            break;
         case RULE_OPTION_TYPE_ICMP_CODE:
             ret = IcmpCodeCheckCompare(key1->option_data, key2->option_data);
             break;
@@ -428,6 +436,8 @@ int detection_hash_free_func(void *option_key, void *data)
             free(key->option_data);
             break;
         case RULE_OPTION_TYPE_BASE64_DATA:
+            break;
+        case RULE_OPTION_TYPE_PKT_DATA:
             break;
         case RULE_OPTION_TYPE_ICMP_CODE:
             free(key->option_data);
@@ -744,6 +754,7 @@ char *option_type_str[] =
     "RULE_OPTION_TYPE_FILE_DATA",
     "RULE_OPTION_TYPE_BASE64_DECODE",
     "RULE_OPTION_TYPE_BASE64_DATA",
+    "RULE_OPTION_TYPE_PKT_DATA",
     "RULE_OPTION_TYPE_CONTENT",
     "RULE_OPTION_TYPE_CONTENT_URI",
     "RULE_OPTION_TYPE_PCRE",
@@ -834,12 +845,16 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
     PcreData dup_pcre_option_data;
     const uint8_t *dp = NULL;
     char continue_loop = 1;
+    char flowbits_setoperation = 0;
     int loop_count = 0;
     uint32_t tmp_byte_extract_vars[NUM_BYTE_EXTRACT_VARS];
+    uint16_t save_dflags = 0;
     NODE_PROFILE_VARS;
 
     if (!node || !eval_data || !eval_data->p || !eval_data->pomd || !eval_data->otnx)
         return 0;
+
+    save_dflags = Get_DetectFlags();
 
     /* see if evaluated it before ... */
     if (node->last_check.is_relative == 0)
@@ -850,13 +865,13 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
             (node->last_check.packet_number == rule_eval_pkt_count) &&
             (node->last_check.pipeline_number == eval_data->p->http_pipeline_count) &&
             (node->last_check.rebuild_flag == (eval_data->p->packet_flags & REBUILD_FLAGS)) &&
-            (!(eval_data->p->packet_flags & (PKT_DCE_PKT|PKT_RPC_PKT|PKT_ALLOW_MULTIPLE_DETECT))))
+            (!(eval_data->p->packet_flags & PKT_ALLOW_MULTIPLE_DETECT)))
         {
             /* eval'd this rule option before on this packet,
              * use the cached result. */
             if ((node->last_check.flowbit_failed == 0) &&
                 !(eval_data->p->packet_flags & PKT_IP_RULE_2ND) &&
-                !(eval_data->p->proto_bits & PROTO_BIT__TEREDO))
+                !(eval_data->p->proto_bits & (PROTO_BIT__TEREDO | PROTO_BIT__GTP )))
             {
                 return node->last_check.result;
             }
@@ -902,13 +917,15 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
             else /* if (dup_content_option_data.uri_buffer & (1 << HTTP_BUFFER_URI)) */
                 dp = (uint8_t *)UriBufs[HTTP_BUFFER_URI].uri;
         }
-        else if (dup_content_option_data.rawbytes == 0) 
+        else if (dup_content_option_data.rawbytes == 0)
         {
-            if (IsBase64DecodeBuf(doe_ptr))
-                dp = (uint8_t *)base64_decode_buf;
-            else if (IsMimeDecodeBuf(doe_ptr))
-                dp = (uint8_t *)file_data_ptr;
-            else if ((eval_data->p->packet_flags & PKT_ALT_DECODE))
+            /* If AltDetect is set by calling the rule options which set it,
+             * we should use the Alt Detect before checking for any other buffers.
+             * Alt Detect will take precedence over the Alt Decode and/or packet data.
+             */
+            if(Is_DetectFlag(FLAG_ALT_DETECT))
+                dp = (uint8_t *)DetectBuffer.data;
+            else if(Is_DetectFlag(FLAG_ALT_DECODE))
                 dp = (uint8_t *)DecodeBuffer.data;
             else
                 dp = eval_data->p->data;
@@ -947,11 +964,13 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
         }
         else if (!(dup_pcre_option_data.options & SNORT_PCRE_RAWBYTES))
         {
-            if (IsBase64DecodeBuf(doe_ptr))
-                dp = (uint8_t *)base64_decode_buf;
-            else if (IsMimeDecodeBuf(doe_ptr))
-                dp = (uint8_t *)file_data_ptr;
-            else if ((eval_data->p->packet_flags & PKT_ALT_DECODE))
+            /* If AltDetect is set by calling the rule options which set it, 
+             * we should use the Alt Detect before checking for any other buffers.
+             * Alt Detect will take precedence over the Alt Decode and/or packet data.
+             */
+            if(Is_DetectFlag(FLAG_ALT_DETECT))
+                dp = (uint8_t *)DetectBuffer.data;
+            else if(Is_DetectFlag(FLAG_ALT_DECODE))
                 dp = (uint8_t *)DecodeBuffer.data;
             else
                 dp = eval_data->p->data;
@@ -1059,6 +1078,30 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
                     rval = node->evaluate(&dup_pcre_option_data, eval_data->p);
                 }
                 break;
+            case RULE_OPTION_TYPE_PKT_DATA:
+            case RULE_OPTION_TYPE_FILE_DATA:
+            case RULE_OPTION_TYPE_BASE64_DATA:
+                if (node->evaluate)
+                {
+                    save_dflags = Get_DetectFlags();
+                    rval = node->evaluate(node->option_data, eval_data->p);
+                }
+                break;
+            case RULE_OPTION_TYPE_FLOWBIT:
+                if (node->evaluate)
+                {
+                    flowbits_setoperation = FlowBits_SetOperation(node->option_data);
+                    if (!flowbits_setoperation)
+                    {
+                        rval = node->evaluate(node->option_data, eval_data->p);
+                    }
+                    else
+                    {
+                        /* set to match so we don't bail early.  */
+                        rval = DETECTION_OPTION_MATCH;
+                    }
+                }
+                break;
             case RULE_OPTION_TYPE_ASN1:
             case RULE_OPTION_TYPE_BYTE_TEST:
             case RULE_OPTION_TYPE_BYTE_JUMP:
@@ -1067,11 +1110,8 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
             case RULE_OPTION_TYPE_CVS:
             case RULE_OPTION_TYPE_CONTENT_URI:
             case RULE_OPTION_TYPE_DSIZE:
-            case RULE_OPTION_TYPE_FLOWBIT:
             case RULE_OPTION_TYPE_FTPBOUNCE:
-            case RULE_OPTION_TYPE_FILE_DATA:
             case RULE_OPTION_TYPE_BASE64_DECODE:
-            case RULE_OPTION_TYPE_BASE64_DATA:
             case RULE_OPTION_TYPE_ICMP_CODE:
             case RULE_OPTION_TYPE_ICMP_ID:
             case RULE_OPTION_TYPE_ICMP_SEQ:
@@ -1101,6 +1141,9 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
 #ifdef DYNAMIC_PLUGIN
             case RULE_OPTION_TYPE_HDR_OPT_CHECK:
             case RULE_OPTION_TYPE_PREPROCESSOR:
+                if (node->evaluate)
+                    rval = node->evaluate(node->option_data, eval_data->p);
+                break;
             case RULE_OPTION_TYPE_DYNAMIC:
 #endif
                 if (node->evaluate)
@@ -1154,6 +1197,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
                     NODE_PROFILE_END_MATCH(node);
                 }
                 node->last_check.result = result;
+                Reset_DetectFlags(save_dflags);
                 return result;
             }
         }
@@ -1165,13 +1209,15 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
         if (node->num_children)
         {
             const uint8_t *tmp_doe_ptr = doe_ptr;
+            const uint8_t tmp_doe_flags = doe_buf_flags;
 
             for (i=0;i<node->num_children; i++)
             {
                 int j = 0;
                 detection_option_tree_node_t *child_node = node->children[i];
 
-                UpdateDoePtr(tmp_doe_ptr, 0); /* reset the DOE ptr for each child from here */
+                /* reset the DOE ptr for each child from here */
+                SetDoePtr(tmp_doe_ptr, tmp_doe_flags);
 
                 for (j = 0; j < NUM_BYTE_EXTRACT_VARS; j++)
                 {
@@ -1246,6 +1292,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
                     {
                         /* bail if we exceeded time */
                         node->last_check.result = result;
+                        Reset_DetectFlags(save_dflags);
                         return result;
                     }
                 }
@@ -1261,7 +1308,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
             if (result == node->num_children)
                 continue_loop = 0;
             else
-                UpdateDoePtr(tmp_doe_ptr, 0);
+                SetDoePtr(tmp_doe_ptr, tmp_doe_flags);
 
             /* Don't need to reset since it's only checked after we've gone
              * through the loop at least once and the result will have
@@ -1270,7 +1317,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
             //    node->children[i]->result;
         }
 
-        if (result - prior_result > 0 
+        if (result - prior_result > 0
             && node->option_type == RULE_OPTION_TYPE_CONTENT
             && Replace_OffsetStored(&dup_content_option_data) && ScInlineMode())
         {
@@ -1349,6 +1396,17 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
 
     } while (continue_loop);
 
+    if (flowbits_setoperation && (result == DETECTION_OPTION_MATCH))
+    {
+        /* Do any setting/clearing/resetting/toggling of flowbits here
+         * given that other rule options matched. */
+        rval = node->evaluate(node->option_data, eval_data->p);
+        if (rval != DETECTION_OPTION_MATCH)
+        {
+            result = rval;
+        }
+    }
+
     if (eval_data->flowbit_failed)
     {
         /* something deeper in the tree failed a flowbit test, we may need to
@@ -1365,6 +1423,8 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
     {
         NODE_PROFILE_END_MATCH(node);
     }
+
+    Reset_DetectFlags(save_dflags);
     return result;
 }
 

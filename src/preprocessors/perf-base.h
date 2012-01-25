@@ -3,7 +3,7 @@
 **
 ** perf-base.h
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Dan Roelker (droelker@sourcefire.com)
 ** Marc Norton (mnorton@sourcefire.com)
 ** Chris Green (stream4 instrumentation)
@@ -35,8 +35,8 @@
 #endif
 
 #include "sfprocpidstats.h"
-#include "debug.h"
 #include "sf_types.h"
+#include "snort_debug.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -51,7 +51,7 @@ typedef struct _PKTSTATS
 }  PKTSTATS;
 
 typedef enum {
-    PERF_COUNT_IP4_RESZ,
+    PERF_COUNT_IP4_TRIM,
     PERF_COUNT_IP4_TOS,
     PERF_COUNT_IP4_DF,
     PERF_COUNT_IP4_RF,
@@ -75,6 +75,8 @@ typedef enum {
     PERF_COUNT_TCP_ECN_SSN,
     PERF_COUNT_TCP_TS_ECR,
     PERF_COUNT_TCP_TS_NOP,
+    PERF_COUNT_TCP_IPS_DATA,
+    PERF_COUNT_TCP_BLOCK,
     PERF_COUNT_MAX
 } PerfCounts;
 
@@ -87,7 +89,8 @@ typedef struct _SFBASE
                               * unfragmented/stream rebuilt
                               */
     uint64_t   total_blocked_packets;
-    
+    uint64_t   total_injected_packets;  // due to normalize_ip4: trim blocks
+
     uint64_t   total_rebuilt_packets;
     uint64_t   total_wire_bytes;
     uint64_t   total_ipfragmented_bytes;
@@ -117,7 +120,7 @@ typedef struct _SFBASE
     uint64_t   iStreamFlushes;  /* # of fake packet is flushed */
     uint64_t   iStreamFaults;  /* # of times we run out of memory */
     uint64_t   iStreamTimeouts; /* # of timeouts we get in this quanta */
-    
+
     uint64_t   iFragCreates;    /* # of times we call Frag3NewTracker() */
     uint64_t   iFragCompletes;  /* # of times we call FragIsComplete() */
     uint64_t   iFragInserts;    /* # of fraginserts */
@@ -127,7 +130,7 @@ typedef struct _SFBASE
     uint64_t   iMaxFrags;
     uint64_t   iCurrentFrags;
     uint64_t   iFragTimeouts;   /* # of times we've reached timeout */
-    uint64_t   iFragFaults;     /* # of times we've run out of memory */    
+    uint64_t   iFragFaults;     /* # of times we've run out of memory */
 
 #ifdef NORMALIZER
     uint64_t   iPegs[PERF_COUNT_MAX];
@@ -164,6 +167,8 @@ typedef struct _SFBASE
     /**UDP packets ignored due to port/service filtering.*/
     uint64_t   total_udp_filtered_packets;
 
+    uint64_t   frag3_mem_in_use;
+    uint64_t   stream5_mem_in_use;
 }  SFBASE;
 
 typedef struct _SYSTIMES {
@@ -200,7 +205,7 @@ typedef struct _SFBASE_STATS {
     double   user_cpu_time;
     double   system_cpu_time;
     PKTSTATS pkt_stats;
-    double   pkt_drop_percent; 
+    double   pkt_drop_percent;
     double   alerts_per_second;
     double   syns_per_second;
     double   synacks_per_second;
@@ -221,7 +226,7 @@ typedef struct _SFBASE_STATS {
     uint64_t frag_faults;
     uint64_t current_frags;
     uint64_t max_frags;
-    
+
     double   patmatch_percent;
     time_t   time;
 
@@ -235,6 +240,7 @@ typedef struct _SFBASE_STATS {
 
     uint64_t   total_blocked_packets;
     uint64_t   total_blocked_bytes;
+    uint64_t   total_injected_packets;
 
     uint64_t   total_udp_sessions;
     uint64_t   max_udp_sessions;
@@ -265,10 +271,13 @@ typedef struct _SFBASE_STATS {
     uint64_t   total_tcp_filtered_packets;
     /**UDP packets ignored due to port/service filtering.*/
     uint64_t   total_udp_filtered_packets;
+
+    uint64_t   frag3_mem_in_use;
+    uint64_t   stream5_mem_in_use;
 }  SFBASE_STATS;
 
 int InitBaseStats(SFBASE *sfBase);
-int UpdateBaseStats(SFBASE *sfBase, int len, int iRebuiltPkt);
+int UpdateBaseStats(SFBASE *sfBase, uint32_t len, int iRebuiltPkt);
 int ProcessBaseStats(SFBASE *sfBase,int console, int file, FILE * fh);
 int AddStreamSession(SFBASE *sfBase, uint32_t flags);
 #define SESSION_CLOSED_NORMALLY 0x01
@@ -280,12 +289,13 @@ int RemoveStreamSession(SFBASE *sfBase);
 int AddUDPSession(SFBASE *sfBase);
 int RemoveUDPSession(SFBASE *sfBase);
 
-void UpdateWireStats(SFBASE *sfBase, int len, int dropped);  
+void UpdateWireStats(SFBASE *sfBase, int len, int dropped, int injected);
 void UpdateMPLSStats(SFBASE *sfBase, int len, int dropped);
 void UpdateIPFragStats(SFBASE *sfBase, int len);
 void UpdateIPReassStats(SFBASE *sfBase, int len);
 void UpdateFilteredPacketStats(SFBASE *sfBase, unsigned int proto);
 
+void LogBasePerfHeader(FILE*);
 #endif
 
 

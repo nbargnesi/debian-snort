@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -30,13 +30,19 @@
 
 #include <sys/types.h>
 
+#include "snort_httpinspect.h"
 #include "hi_include.h"
 #include "hi_eo.h"
 #include "hi_eo_events.h"
 #define URI_END  99
 #define POST_END 100
 #define NO_URI   101
-#define INVALID_HEX_VAL -1
+typedef enum {
+    TRUE_CLIENT_IP_HDR = 0x01,
+    XFF_HDR = 0x02,
+    HDRS_BOTH = 0x03
+} ActionSFCC;
+
 
 typedef struct s_COOKIE_PTR
 {
@@ -50,7 +56,7 @@ typedef struct s_CONTLEN_PTR
 {
     const u_char *cont_len_start;
     const u_char *cont_len_end;
-    int len;
+    uint32_t len;
 }CONTLEN_PTR;
 
 typedef struct s_CONT_ENCODING_PTR
@@ -67,7 +73,7 @@ typedef struct s_HEADER_FIELD_PTR
     CONT_ENCODING_PTR *content_encoding;
 } HEADER_FIELD_PTR;
 
-/* These numbers were chosen to avoid conflicting with 
+/* These numbers were chosen to avoid conflicting with
  * the return codes in hi_return_codes.h */
 
 /**
@@ -78,7 +84,7 @@ typedef struct s_HEADER_FIELD_PTR
  **  For example,
  **
  **  GET     / HTTP/1.0
- **     ^   ^          
+ **     ^   ^
  **   start end
  **
  **  The end space pointers are set to NULL if there is space until the end
@@ -107,6 +113,7 @@ typedef struct s_HEADER_PTR
     COOKIE_PTR cookie;
     CONTLEN_PTR content_len;
     CONT_ENCODING_PTR content_encoding;
+    bool is_chunked;
 } HEADER_PTR;
 
 
@@ -171,7 +178,17 @@ typedef struct s_HI_CLIENT
 
 }  HI_CLIENT;
 
-int hi_client_inspection(void *Session, const unsigned char *data, int dsize, sfip_t **true_ip);
+typedef struct s_HI_CLIENT_HDR_ARGS
+{
+    HEADER_PTR *hdr_ptr;
+    HEADER_FIELD_PTR *hdr_field_ptr;
+    HttpSessionData *sd; 
+    int strm_ins; 
+    int hst_name_hdr;
+    int true_clnt_xff;
+} HI_CLIENT_HDR_ARGS;
+
+int hi_client_inspection(void *Session, const unsigned char *data, int dsize, HttpSessionData *hsd, int stream_ins);
 int hi_client_init(HTTPINSPECT_GLOBAL_CONF *GlobalConf);
 
-#endif 
+#endif

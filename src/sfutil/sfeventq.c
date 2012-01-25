@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       sfeventq.c
 **
@@ -50,6 +50,10 @@
 */
 
 #include <stdlib.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sfeventq.h"
 #include "util.h"
 
@@ -68,7 +72,7 @@
 **  @retval -1 failure
 **  @retval  0 success
 */
-SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size, 
+SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size,
                          int (*sort)(void *, void *))
 {
     SF_EVENTQ *eq;
@@ -117,7 +121,7 @@ void * sfeventq_event_alloc(SF_EVENTQ *eq)
     {
         if (eq->reserve_event == NULL)
             return NULL;
-        
+
         event = (void *)eq->reserve_event;
         eq->reserve_event = NULL;
 
@@ -154,7 +158,7 @@ void sfeventq_reset(SF_EVENTQ *eq)
 **    sfeventq_free::
 */
 /**
-**  Cleanup the event queue.  
+**  Cleanup the event queue.
 **
 **  @return none
 **
@@ -266,7 +270,7 @@ int sfeventq_add(SF_EVENTQ *eq, void *event)
 {
     SF_EVENTQ_NODE *node;
     SF_EVENTQ_NODE *tmp;
-    
+
     if(!event)
         return -1;
 
@@ -335,7 +339,7 @@ int sfeventq_add(SF_EVENTQ *eq, void *event)
 **  NAME
 **    sfeventq_action::
 */
-/** 
+/**
 **  Call the supplied user action function on the highest priority
 **  events.
 **
@@ -482,7 +486,7 @@ int main(int argc, char **argv)
         sfeventq_reset();
 
     } while(getc(stdin) < 14);
-    
+
     return 0;
 }
 #endif

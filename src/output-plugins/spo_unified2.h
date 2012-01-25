@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,39 @@
 #endif
 #include "decode.h" /* for struct in6_addr -- maybe move to sf_types.h? */
 #include "sf_types.h"
+
+typedef struct _PESessionEndRecord
+{
+    uint32_t    sensorId;
+    uint8_t     ingressZone[16];
+    uint8_t     egressZone[16];
+    uint8_t     ingressIntf[16];
+    uint8_t     egressIntf[16];
+    uint8_t     initiatorIp[16];
+    uint8_t     responderIp[16];
+    uint8_t     policyRevision[16];
+    uint32_t    policyengine_ruleId;
+    uint32_t    policyengine_ruleAction;
+    uint16_t    initiatorPort;
+    uint16_t    responderPort;
+    uint16_t    tcpFlags;
+    uint8_t     protocol;
+    uint8_t     padding;
+    uint8_t     netflowSource[16];
+    uint32_t    firstPktsecond;
+    uint32_t    lastPktsecond;
+    uint64_t    initiatorPkts;
+    uint64_t    responderPkts;
+    uint64_t    initiatorBytes;
+    uint64_t    responderBytes;
+    uint32_t    appProtoId;
+    uint32_t    webAppId;
+    uint32_t    userId;
+    uint32_t    urlCategory;
+    uint32_t    urlReputation;
+    uint32_t    clientId;
+
+} PESessionRecord;
 
 void Unified2Setup(void);
 

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,8 +18,13 @@
  *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "stdlib.h"
 #include "string.h"
+#include "sf_types.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
 
@@ -39,7 +44,7 @@ tSfPolicyId parserPolicyId = 0;
  *  and put it in a new policy management module. Policy management module will set a single
  *  pointer to user data before calling appropriate callback function in a preprocessor. As
  *  an example, policy module will iterate over all policies and call CleanExit functions in every
- *  preprocessor for each policy. This will make policy management module will hide policies from 
+ *  preprocessor for each policy. This will make policy management module will hide policies from
  *  preprocessors and make them policy agnostic.
  *  @{
  */
@@ -48,14 +53,14 @@ tSfPolicyId parserPolicyId = 0;
  * Allocates a new context and return it to user. All transactions within a context are independent from
  * any other transactions in a different context.
  *
- * @returns tSfPolicyUserContextId 
+ * @returns tSfPolicyUserContextId
 */
 tSfPolicyUserContextId sfPolicyConfigCreate(void)
 {
     tSfPolicyUserContext *pTmp = NULL;
 
     pTmp = calloc(1, sizeof(tSfPolicyUserContext));
-    
+
     return pTmp;
 }
 
@@ -78,11 +83,11 @@ void sfPolicyConfigDelete(
 /**Store a pointer to user data.
  * @param pContext
  * @param policyId is 0 based.
- * @param config - pointer to user configuration. 
+ * @param config - pointer to user configuration.
  */
 int sfPolicyUserDataSet (
-        tSfPolicyUserContextId pContext, 
-        tSfPolicyId policyId, 
+        tSfPolicyUserContextId pContext,
+        tSfPolicyId policyId,
         void *config
         )
 {
@@ -111,7 +116,7 @@ int sfPolicyUserDataSet (
     {
         //dont overwrite existing configuration
         return -1;
-    }  
+    }
 
     pContext->userConfig[policyId] = config;
     pContext->numActivePolicies++;
@@ -139,7 +144,7 @@ void * sfPolicyUserDataClear (
 }
 
 int sfPolicyUserDataIterate (
-        tSfPolicyUserContextId pContext, 
+        tSfPolicyUserContextId pContext,
         int (*callback)(tSfPolicyUserContextId pContext, tSfPolicyId policyId, void* config)
         )
 {

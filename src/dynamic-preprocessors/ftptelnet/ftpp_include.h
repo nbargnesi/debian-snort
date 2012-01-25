@@ -1,7 +1,7 @@
 /*
  * ftpp_include.h
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -32,13 +32,13 @@
 #ifndef __FTP_INCLUDE_H__
 #define __FTP_INCLUDE_H__
 
+#include "sf_types.h"
 #include "sf_ip.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sf_snort_packet.h"
 #include "sf_dynamic_preprocessor.h"
 
 #define GENERATOR_SPP_FTPP_FTP                     125
 #define GENERATOR_SPP_FTPP_TELNET                  126
-extern DynamicPreprocessorData _dpd;
 
 #endif

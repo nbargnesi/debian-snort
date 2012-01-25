@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -21,14 +21,18 @@
  * @file   packet_time.c
  * @author Chris Green <cmg@sourcefire.com>
  * @date   Tue Jun 17 17:09:59 2003
- * 
+ *
  * @brief  Easily allow modules to have a gettimeofday() based on packet time
- * 
+ *
  * In many modules in snort, especially the rate detectors need to
  * work based off time values.  It's very hard to reproduce time
  * constraints via pcap readbacks so we either have to throttle snort
  * or use the packet time.  I choose the latter.
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "packet_time.h"
 

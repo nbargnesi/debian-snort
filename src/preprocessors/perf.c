@@ -3,7 +3,7 @@
 **
 **  perf.c
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -40,6 +40,10 @@
 # include <unistd.h>
 #endif /* WIN32 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "util.h"
 #include "perf.h"
 #include "sf_types.h"
@@ -55,7 +59,7 @@ extern SFPERF *perfmon_config;
 
 
 int InitPerfStats(SFPERF *sfPerf, Packet *p);
-int UpdatePerfStats(SFPERF *sfPerf, const unsigned char *pucPacket, int len,
+int UpdatePerfStats(SFPERF *sfPerf, const unsigned char *pucPacket, uint32_t len,
         int iRebuiltPkt);
 int ProcessPerfStats(SFPERF *sfPerf);
 
@@ -65,6 +69,10 @@ int sfInitPerformanceStatistics(SFPERF *sfPerf)
     memset(sfPerf, 0x00, sizeof(SFPERF));
     sfSetPerformanceSampleTime(sfPerf, 0);
     sfSetPerformanceStatistics(sfPerf, 0);
+
+#ifdef LINUX_SMP
+    sfInitProcPidStats(&(sfBase.sfProcPidStats));
+#endif
 
     return 0;
 }
@@ -79,7 +87,7 @@ int sfSetMaxFileSize(SFPERF *sfPerf, uint32_t iSize)
 int sfSetPerformanceSampleTime(SFPERF *sfPerf, int iSeconds)
 {
     sfPerf->sample_time = 0;
-    
+
     if(iSeconds < 0)
     {
         iSeconds = 0;
@@ -94,7 +102,7 @@ int sfSetPerformanceSampleTime(SFPERF *sfPerf, int iSeconds)
 int sfSetPerformanceAccounting(SFPERF *sfPerf, int iReset)
 {
     sfPerf->base_reset = iReset;
-    
+
     return 0;
 }
 
@@ -131,43 +139,63 @@ int sfSetPerformanceStatistics(SFPERF *sfPerf, int iFlag)
     {
         sfPerf->perf_flags = sfPerf->perf_flags | SFPERF_CONSOLE;
     }
-    
+
     return 0;
+}
+
+static void WriteTimeStamp (SFPERF* sfPerf, const char* action)
+{
+    time_t curr_time = time(NULL);
+
+    if ( !sfPerf->fh )
+        return;
+
+    fprintf(sfPerf->fh,
+        "################################### "
+        "Perfmon %s: pid=%u at=%.24s (%lu) "
+        "###################################\n",
+        action, getpid(),
+        ctime(&curr_time), (unsigned long)curr_time);
+
+    fflush(sfPerf->fh);
 }
 
 int sfSetPerformanceStatisticsEx(SFPERF *sfPerf, int iFlag, void * p)
 {
-#ifndef WIN32    
+#ifndef WIN32
     mode_t old_umask;
-#endif 
-    
+#endif
+
     if(iFlag & SFPERF_FILE)
     {
         static char start_up = 1;
 
         sfPerf->perf_flags = sfPerf->perf_flags | SFPERF_FILE;
-        
+
         /* this file needs to be readable by everyone */
 #ifndef WIN32
         old_umask = umask(022);
-#endif         
+#endif
 
         /* append to existing perfmon file if just starting up */
         if (start_up)
         {
             sfPerf->fh = fopen(sfPerf->file, "a");
+            WriteTimeStamp(sfPerf, "start");
             start_up = 0;
         }
         /* otherwise we've rotated - start a new one */
         else
         {
             sfPerf->fh = fopen(sfPerf->file, "w");
+            WriteTimeStamp(sfPerf, "rotate");
         }
+        LogBasePerfHeader(sfPerf->fh);
 
 #ifndef WIN32
         umask(old_umask);
 #endif
-        
+
         if( !sfPerf->fh )
             return -1;
     }
@@ -175,6 +203,7 @@ int sfSetPerformanceStatisticsEx(SFPERF *sfPerf, int iFlag, void * p)
     {
         if (sfPerf->fh)
         {
+            WriteTimeStamp(sfPerf, "stop");
             fclose(sfPerf->fh);
             sfPerf->fh = NULL;
         }
@@ -233,11 +262,11 @@ void sfCloseFlowIPStatsFile(SFPERF *sfPerf)
     }
 }
 
-static INLINE FILE *OpenPerfFileAndCheckMaxSize(struct tm *tm,
+static inline FILE *OpenPerfFileAndCheckMaxSize(struct tm *tm,
                                                 FILE *oldfh,
                                                 SFPERF *sfPerf,
                                                 struct stat *file_stats,
-                                                int prefix_len, 
+                                                int prefix_len,
                                                 int *file_index,
                                                 int *newfd,
                                                 const char *filename,
@@ -294,13 +323,13 @@ static int sfRotateFile(const char *filename, FILE *oldfh)
         LogMessage("Performance log file '%s' not open", filename);
         return 1;
     }
-    
+
     ret = fclose(oldfh);
     if (ret != 0)
     {
         FatalError("Cannot close performance log file '%s': %s\n", filename, strerror(errno));
     }
-    
+
     /* Rename current stats file with yesterday's date */
 #ifndef WIN32
     ptr = strrchr(filename, '/');
@@ -310,7 +339,7 @@ static int sfRotateFile(const char *filename, FILE *oldfh)
 
     if (ptr != NULL)
     {
-        /* take length of string up to path separator and add 
+        /* take length of string up to path separator and add
          * one to include path separator */
         prefix_len = (ptr - &filename[0]) + 1;
     }
@@ -342,10 +371,10 @@ static int sfRotateFile(const char *filename, FILE *oldfh)
         int file_index = 0;
         int newfd = -1;
 
-#ifndef WIN32    
+#ifndef WIN32
         mode_t old_umask;
         old_umask = umask(022);
-#endif         
+#endif
         do
         {
             newfh = fopen(newfile, "a");
@@ -433,7 +462,7 @@ static int sfRotateFile(const char *filename, FILE *oldfh)
 int sfRotatePerformanceStatisticsFile(void)
 {
     int ret = 0;
-   
+
     if (perfmon_config != NULL)
     {
         ret = sfRotateFile(perfmon_config->file, perfmon_config->fh);
@@ -451,13 +480,13 @@ int sfRotatePerformanceStatisticsFile(void)
 int sfRotateFlowIPStatisticsFile(void)
 {
     int ret;
-    
+
     ret = sfRotateFile(perfmon_config->flowip_file, perfmon_config->flowip_fh);
     if (ret != 0)
         return ret;
 
     if (sfOpenFlowIPStatsFile(perfmon_config) != 0)
-        FatalError("Cannot open performance log file '%s': %s\n", perfmon_config->file, strerror(errno));
+        FatalError("Cannot open performance log file '%s': %s\n", perfmon_config->flowip_file, strerror(errno));
 
     return 0;
 }
@@ -505,20 +534,6 @@ int CheckSampleInterval(Packet *p, SFPERF *sfPerf)
     if(prev_time == 0)
     {
         InitPerfStats(sfPerf, p);
-
-        /****** Log an empty line in the file to indicate a restart *********/
-        if ((sfPerf->perf_flags & SFPERF_BASE) && (sfPerf->perf_flags & SFPERF_FILE))
-        {
-            if( sfPerf->fh )
-            {
-                fprintf(sfPerf->fh,
-                    "################################### "
-                    "New Log File: %lu"
-                    "###################################\n",
-                    (unsigned long)curr_time);
-                fflush(sfPerf->fh);
-            }
-        }
     }
     else if((curr_time - prev_time) >= sfPerf->sample_interval)
     {
@@ -547,22 +562,22 @@ int InitPerfStats(SFPERF *sfPerf, Packet *p)
     }
 
     if(sfPerf->perf_flags & SFPERF_BASE)
-    {  
+    {
         InitBaseStats(&sfBase);
     }
 
     if(sfPerf->perf_flags & SFPERF_FLOW)
-    {  
+    {
         InitFlowStats(&sfFlow);
     }
 
     if(sfPerf->perf_flags & SFPERF_FLOWIP)
-    {  
+    {
         InitFlowIPStats(&sfFlow);
     }
 
     if(sfPerf->perf_flags & SFPERF_EVENT)
-    {  
+    {
         InitEventStats(&sfEvent);
     }
 
@@ -574,7 +589,7 @@ int ResetPerfStats(SFPERF *sfPerf)
     return InitPerfStats(sfPerf, NULL);
 }
 
-int UpdatePerfStats(SFPERF *sfPerf, const unsigned char *pucPacket, int len,
+int UpdatePerfStats(SFPERF *sfPerf, const unsigned char *pucPacket, uint32_t len,
                     int iRebuiltPkt)
 {
     if(sfPerf->perf_flags & SFPERF_BASE)
@@ -618,7 +633,7 @@ int ProcessPerfStats(SFPERF *sfPerf)
             }
         }
     }
-    
+
     /* Always goes to the console */
     if(sfPerf->perf_flags & SFPERF_FLOW)
     {
@@ -642,7 +657,7 @@ int ProcessPerfStats(SFPERF *sfPerf)
             }
         }
     }
-   
+
     if (sfPerf->perf_flags & SFPERF_EVENT)
     {
         if (sfPerf->perf_flags & SFPERF_CONSOLE)

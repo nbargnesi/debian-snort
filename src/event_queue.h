@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -65,6 +65,8 @@ void SnortEventqNew(EventQueueConfig *, SF_EVENTQ*[]);
 void SnortEventqFree(SF_EVENTQ *[]);
 
 void SnortEventqReset(void);
+void SnortEventqResetCounts(void);
+
 int  SnortEventqLog(SF_EVENTQ *[], Packet *);
 int  SnortEventqAdd(unsigned int gid,unsigned int sid,unsigned int rev, 
                     unsigned int classification,unsigned int pri,char *msg,

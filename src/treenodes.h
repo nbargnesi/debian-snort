@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -103,6 +103,9 @@ typedef struct _OptTreeNode
     unsigned short proto_node_num;
 
     uint8_t failedCheckBits;
+    char generated;
+
+    uint16_t longestPatternLen;
 
     int rule_state; /* Enabled or Disabled */
 
@@ -120,7 +123,6 @@ typedef struct _OptTreeNode
     uint64_t ppm_suspend_time; /* PPM */
     uint64_t ppm_disable_cnt; /*PPM */
 
-    char generated;
     uint32_t num_detection_opts;
 
     /**unique index generated in ruleIndexMap.

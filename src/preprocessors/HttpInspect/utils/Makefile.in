@@ -51,7 +51,7 @@ libhi_utils_a_AR = $(AR) $(ARFLAGS)
 libhi_utils_a_LIBADD =
 am_libhi_utils_a_OBJECTS = hi_util_kmap.$(OBJEXT) \
 	hi_util_xmalloc.$(OBJEXT) hi_util_hbm.$(OBJEXT) \
-	hi_cmd_lookup.$(OBJEXT)
+	hi_cmd_lookup.$(OBJEXT) hi_paf.$(OBJEXT)
 libhi_utils_a_OBJECTS = $(am_libhi_utils_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp =
@@ -79,7 +79,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -94,6 +96,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONFIGFLAGS = @ICONFIGFLAGS@
 INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -130,13 +133,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -196,10 +205,12 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 noinst_LIBRARIES = libhi_utils.a
-libhi_utils_a_SOURCES = hi_util_kmap.c \
+libhi_utils_a_SOURCES = \
+hi_util_kmap.c \
 hi_util_xmalloc.c \
 hi_util_hbm.c \
-hi_cmd_lookup.c
+hi_cmd_lookup.c \
+hi_paf.c
 
 all: all-am
 

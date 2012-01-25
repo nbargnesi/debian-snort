@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -24,11 +24,12 @@
 #include "sf_ip.h"
 #include "ipv6_port.h"
 #include "sfrt.h"
-#include "debug.h"
+#include "snort_debug.h"
 
 /**Number of additional policies allocated with each re-alloc operation. */
 #define POLICY_ALLOCATION_CHUNK 10
 #define SF_VLAN_BINDING_MAX 4096
+#define SF_POLICY_ID_BINDING_MAX 4096
 #define SF_NETWORK_BINDING_MAX 4096
 #define SF_VLAN_UNBOUND 0xffffffff
 
@@ -48,6 +49,7 @@ typedef struct
 typedef enum {
     SF_BINDING_TYPE_VLAN,
     SF_BINDING_TYPE_NETWORK,
+    SF_BINDING_TYPE_POLICY_ID,
     SF_BINDING_TYPE_UNKNOWN
 } tSF_BINDING_TYPE;
 
@@ -64,6 +66,8 @@ typedef struct
     unsigned int numActivePolicies;
     /**vlan to policyId bindings. */
     tSfPolicyId vlanBindings[SF_VLAN_BINDING_MAX];
+    /**policyId to policyId bindings. */
+    tSfPolicyId policyIdBindings[SF_POLICY_ID_BINDING_MAX];
     /**Network to policyId bindings. */
     table_t *netBindTable;
 
@@ -104,6 +108,19 @@ void sfVlanDeleteBinding(
     tSfPolicyConfig *,
     int
     );
+int sfPolicyIdAddBinding(
+    tSfPolicyConfig *,
+    int,
+    char *
+    );
+tSfPolicyId sfPolicyIdGetBinding(
+    tSfPolicyConfig *,
+    int
+    );
+void sfPolicyIdDeleteBinding(
+    tSfPolicyConfig *,
+    int
+    );
 unsigned int sfGetApplicablePolicyId(
     tSfPolicyConfig *,
     int,
@@ -124,7 +141,7 @@ void sfNetworkDeleteBinding(
     snort_ip_p
     );
 
-static INLINE tSfPolicyId sfGetDefaultPolicy(
+static inline tSfPolicyId sfGetDefaultPolicy(
     tSfPolicyConfig *config
     )
 {
@@ -134,7 +151,7 @@ static INLINE tSfPolicyId sfGetDefaultPolicy(
     return config->defaultPolicyId;
 }
 
-static INLINE void sfSetDefaultPolicy(
+static inline void sfSetDefaultPolicy(
     tSfPolicyConfig *config,
     tSfPolicyId policyId
     )
@@ -145,7 +162,7 @@ static INLINE void sfSetDefaultPolicy(
     config->defaultPolicyId = policyId;
 }
 
-static INLINE tSfPolicyId sfPolicyNumAllocated(
+static inline tSfPolicyId sfPolicyNumAllocated(
     tSfPolicyConfig *config
     )
 {
@@ -157,8 +174,8 @@ static INLINE tSfPolicyId sfPolicyNumAllocated(
 
 //dynamic array functions
 int sfDynArrayCheckBounds (
-        void ** dynArray, 
-        unsigned int index, 
+        void ** dynArray,
+        unsigned int index,
         unsigned int *maxElements
         );
 #endif

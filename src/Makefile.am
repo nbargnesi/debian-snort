@@ -10,12 +10,12 @@ endif
 snort_SOURCES = cdefs.h \
 event.h \
 generators.h \
-protocols.h \
+sf_protocols.h \
 plugin_enum.h \
 rules.h \
 treenodes.h \
 checksum.h \
-debug.c debug.h \
+debug.c snort_debug.h \
 decode.c decode.h \
 encode.c encode.h \
 active.c active.h \
@@ -35,11 +35,11 @@ util.c util.h \
 detect.c detect.h \
 signature.c signature.h \
 mempool.c mempool.h \
-sf_sdlist.c sf_sdlist.h \
+sf_sdlist.c sf_sdlist.h sf_sdlist_types.h \
 fpcreate.c fpcreate.h \
 fpdetect.c fpdetect.h \
 pcrm.c pcrm.h \
-bounds.h \
+snort_bounds.h \
 byte_extract.c \
 byte_extract.h \
 timersub.h \
@@ -47,7 +47,6 @@ spo_plugbase.h \
 sfthreshold.c sfthreshold.h \
 packet_time.c packet_time.h \
 event_wrapper.c event_wrapper.h \
-smalloc.h \
 event_queue.c event_queue.h \
 ipv6_port.h \
 ppm.c ppm.h \
@@ -60,7 +59,8 @@ detection_util.c detection_util.h \
 rate_filter.c rate_filter.h \
 obfuscation.c obfuscation.h \
 rule_option_types.h \
-sfdaq.c sfdaq.h
+sfdaq.c sfdaq.h \
+idle_processing.c idle_processing.h idle_processing_funcs.h
 
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
@@ -70,12 +70,14 @@ parser/libparser.a \
 target-based/libtarget_based.a \
 preprocessors/HttpInspect/libhttp_inspect.a \
 preprocessors/Stream5/libstream5.a \
-sfutil/libsfutil.a
+sfutil/libsfutil.a \
+control/libsfcontrol.a
 
 if BUILD_DYNAMIC_EXAMPLES
 EXAMPLES_DIR = dynamic-examples
 endif
 
-SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors target-based $(EXAMPLES_DIR)
+
+SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors target-based control $(EXAMPLES_DIR)
 
 INCLUDES = @INCLUDES@

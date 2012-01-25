@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  */
 
 /* sp_base64_data
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,12 +33,13 @@
 #endif
 #include <errno.h>
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "rules.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "mstring.h"
 
@@ -64,7 +65,7 @@ void Base64DataParse(char *, OptTreeNode *);
 int  Base64DataEval(void *option_data, Packet *p);
 
 /****************************************************************************
- * 
+ *
  * Function: SetupBase64Data()
  *
  * Purpose: Load 'er up
@@ -87,10 +88,10 @@ void SetupBase64Data(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: Base64DataInit(char *, OptTreeNode *, int protocol)
  *
- * Purpose: Generic rule configuration function.  Handles parsing the rule 
+ * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -121,7 +122,7 @@ static void Base64DataInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: Base64DataParse(char *, OptTreeNode *)
  *
  * Purpose: This is the function that is used to process the option keyword's
@@ -145,7 +146,7 @@ void Base64DataParse(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: Base64DataEval(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -156,7 +157,7 @@ void Base64DataParse(char *data, OptTreeNode *otn)
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int Base64DataEval(void *option_data, Packet *p)
@@ -166,13 +167,14 @@ int Base64DataEval(void *option_data, Packet *p)
 
     PREPROC_PROFILE_START(base64DataPerfStats);
 
-    if ((p->dsize == 0) || (!IsTCP(p) && !IsUDP(p)) )
+    if ((p->dsize == 0) || !base64_decode_size )
     {
         PREPROC_PROFILE_END(base64DataPerfStats);
         return rval;
     }
 
     SetDoePtr(base64_decode_buf, DOE_BUF_STD);
+    SetAltDetect(base64_decode_buf, (uint16_t)base64_decode_size);
     rval = DETECTION_OPTION_MATCH;
 
     PREPROC_PROFILE_END(base64DataPerfStats);

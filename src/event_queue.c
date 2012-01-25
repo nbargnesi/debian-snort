@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2004-2010 Sourcefire, Inc.
+ ** Copyright (C) 2004-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -29,13 +29,13 @@
 **  functions for ordering incoming events.
 **
 ** Notes:
-**  11/1/05  Updates to add support for rules for all events in 
+**  11/1/05  Updates to add support for rules for all events in
 **           decoders and preprocessors and the detection engine.
 **           Added support for rule by rule flushing control via
 **           metadata. Also added code to check fo an otn for every
 **           event (gid,sid pair).  This is now required to get events
-**           to be logged. The decoders and preprocessors are still 
-**           configured independently, which allows them to inspect and 
+**           to be logged. The decoders and preprocessors are still
+**           configured independently, which allows them to inspect and
 **           call the alerting functions SnortEventqAdd, GenerateSnortEvent()
 **           and GenerateEvent2() for sfportscan.c.  The GenerateSnortEvent()
 **           function now finds and otn and calls fpLogEvent.
@@ -45,17 +45,18 @@
 **           configured to detect an alertable event.
 **
 **           In the future, preporcessor may have an api that gets called
-**           after rules are loaded that checks for the gid/sid -> otn 
+**           after rules are loaded that checks for the gid/sid -> otn
 **           mapping, and then adjusts it's inspection or detection
-**           accordingly.  
+**           accordingly.
 **
-**           SnortEventqAdd() - only adds events that have an otn 
-**          
+**           SnortEventqAdd() - only adds events that have an otn
+**
 */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
+#include "sf_types.h"
 #include "fpcreate.h"
 #include "fpdetect.h"
 #include "util.h"
@@ -83,8 +84,10 @@ void SnortEventqPop(void)
     if ( qOverflow > 0 ) qOverflow--;
     else if ( qIndex > 0 ) qIndex--;
 }
-//-------------------------------------------------
 
+static unsigned s_events = 0;
+
+//-------------------------------------------------
 /*
 **  Set default values
 */
@@ -118,10 +121,10 @@ void EventQueueConfigFree(EventQueueConfig *eq)
  *  g_event_queue.log_events into the queue.
  *  ... Jan '06
  */
-int SnortEventqAdd(unsigned int gid, 
-                   unsigned int sid, 
-                   unsigned int rev, 
-                   unsigned int classification, 
+int SnortEventqAdd(unsigned int gid,
+                   unsigned int sid,
+                   unsigned int rev,
+                   unsigned int classification,
                    unsigned int pri,
                    char        *msg,
                    void        *rule_info)
@@ -140,24 +143,24 @@ int SnortEventqAdd(unsigned int gid,
     en->msg = msg;
     en->rule_info = rule_info;
 
-    /* 
+    /*
      * Check if we have a preprocessor or decoder event
      * Preprocessors and decoders may be configured to inspect
-     * and alert in their principal configuration (legacy code) 
-     * this test than checks if the rule otn says they should 
+     * and alert in their principal configuration (legacy code)
+     * this test than checks if the rule otn says they should
      * be enabled or not.  The rule itself will decide if it should
      * be an alert or a drop (sdrop) condition.
      */
-   
+
 #ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
     {
         struct _OptTreeNode * potn;
 
         /* every event should have a rule/otn  */
         potn = OtnLookup(snort_conf->otn_map, gid, sid);
-        /* 
-         * if no rule otn exists for this event, than it was 
-         * not enabled via rules 
+        /*
+         * if no rule otn exists for this event, than it was
+         * not enabled via rules
          */
 
         if (potn == NULL)
@@ -172,10 +175,10 @@ int SnortEventqAdd(unsigned int gid,
                                              en->priority,
                                              en->msg);
 
-                if (potn != NULL)  
+                if (potn != NULL)
                     OtnLookupAdd(snort_conf->otn_map, potn);
             }
-            if (potn == NULL) 
+            if (potn == NULL)
             {
                 /* no otn found/created - do not add it to the queue */
                 return 0;
@@ -194,14 +197,16 @@ int SnortEventqAdd(unsigned int gid,
                 if ( !rtn )
                     return 0;
             }
-        }    
+        }
     }
 #endif
-     
+
     if (sfeventq_add(snort_conf->event_queue[qIndex], (void *)en))
     {
         return -1;
-    } 
+    }
+    s_events++;
+
     return 0;
 }
 #ifdef OLD_RULE_ORDER
@@ -255,7 +260,7 @@ static int OrderContentLength(void *event1, void *event2)
     {
         /*
         **  Neither event is a rule.  Use incoming as
-        **  priority.  Last one in goes at the end to 
+        **  priority.  Last one in goes at the end to
         **  preserve rule order.
         */
         return 0;
@@ -325,6 +330,9 @@ static int LogSnortEvents(void *event, void *user)
     if(!event || !user)
         return 0;
 
+    if ( s_events > 0 )
+        s_events--;
+
     en         = (EventNode *)event;
     snort_user = (SNORT_EVENTQ_USER *)user;
     p  = (Packet *)snort_user->pkt;
@@ -367,7 +375,7 @@ static int LogSnortEvents(void *event, void *user)
                                          en->classification,
                                          en->priority,
                                          en->msg);
-#endif        
+#endif
             if (potn != NULL)
             {
                 OtnLookupAdd(snort_conf->otn_map, potn);
@@ -420,8 +428,20 @@ int SnortEventqLog(SF_EVENTQ *eq[], Packet *p)
     return 0;
 }
 
+static inline void reset_counts (void)
+{
+    pc.log_limit += s_events;
+    s_events = 0;
+}
+
+void SnortEventqResetCounts (void)
+{
+    reset_counts();
+}
+
 void SnortEventqReset(void)
 {
     sfeventq_reset(snort_conf->event_queue[qIndex]);
+    reset_counts();
 }
 

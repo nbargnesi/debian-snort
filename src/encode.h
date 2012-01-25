@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,6 +19,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
+
+// @file    encode.h
+// @author  Russ Combs <rcombs@sourcefire.com>
 
 #ifndef __ENCODE_H__
 #define __ENCODE_H__
@@ -39,7 +42,7 @@ typedef enum {
 #define ENC_FLAG_ID  0x20000000  // use randomized IP ID
 #define ENC_FLAG_NET 0x10000000  // stop after innermost network (ip4/6) layer
 #define ENC_FLAG_DEF 0x08000000  // stop before innermost ip4 opts or ip6 frag header
-#define ENC_FLAG_RAW 0x04000000  // stop before innermost ip4 opts or ip6 frag header
+#define ENC_FLAG_RAW 0x04000000  // don't encode outer eth header (this is raw ip)
 #define ENC_FLAG_RES 0x03000000  // bits reserved for future use
 #define ENC_FLAG_VAL 0x00FFFFFF  // bits for adjusting seq and/or ack
 
@@ -63,10 +66,13 @@ Packet* Encode_New(void);
 void Encode_Delete(Packet*);
 
 // orig is the wire pkt; clone was obtained with New()
-int Encode_Format(EncodeFlags, const Packet* orig, Packet* clone);
+int Encode_Format(EncodeFlags, const Packet* orig, Packet* clone, PseudoPacketType);
 
 // update length and checksum fields in layers and caplen, etc.
 void Encode_Update(Packet*);
+
+// Set the destination MAC address
+void Encode_SetDstMAC(uint8_t* );
 
 #endif // __ENCODE_H__
 

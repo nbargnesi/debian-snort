@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,12 +28,13 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 
@@ -87,7 +88,7 @@ int TcpAckCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupTcpAckCheck()
  *
  * Purpose: Link the ack keyword to the initialization function
@@ -109,7 +110,7 @@ void SetupTcpAckCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: TcpAckCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Attach the option data to the rule data struct and link in the
@@ -130,7 +131,7 @@ void TcpAckCheckInit(char *data, OptTreeNode *otn, int protocol)
         FatalError("%s(%d) TCP Options on non-TCP rule\n", file_name, file_line);
     }
 
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_TCP_ACK_CHECK])
     {
         FatalError("%s(%d): Multiple TCP ack options in rule\n", file_name,
@@ -142,11 +143,11 @@ void TcpAckCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_TCP_ACK_CHECK] = (TcpAckCheckData *)
             SnortAlloc(sizeof(TcpAckCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseTcpAck(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(CheckTcpAckEq, otn);
     fpl->type = RULE_OPTION_TYPE_TCP_ACK;
@@ -156,7 +157,7 @@ void TcpAckCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseTcpAck(char *, OptTreeNode *)
  *
  * Purpose: Attach the option rule's argument to the data struct.
@@ -191,7 +192,7 @@ void ParseTcpAck(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: CheckTcpAckEq(char *, OptTreeNode *)
  *
  * Purpose: Check to see if the packet's TCP ack field is equal to the rule

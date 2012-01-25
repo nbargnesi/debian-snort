@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,19 +18,19 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       hi_eo_log.c
 **
 **  @author     Daniel Roelker <droelker@sourcefire.com>
 **
-**  @brief      This file contains the event output functionality that 
+**  @brief      This file contains the event output functionality that
 **              HttpInspect uses to log events and data associated with
 **              the events.
 **
 **  Log events, retrieve events, and select events that HttpInspect
 **  generates.
-**  
+**
 **  Logging Events:
 **    Since the object behind this is no memset()s, we have to rely on the
 **    stack interface to make sure we don't log the same event twice.  So
@@ -44,6 +44,10 @@
 */
 #include <stdlib.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "hi_si.h"
 #include "hi_eo.h"
 #include "hi_util_xmalloc.h"
@@ -54,7 +58,7 @@
 **  Any time that a new client event is added, we have to
 **  add the event id and the priority here.  If you want to
 **  change either of those characteristics, you have to change
-**  them here. 
+**  them here.
 */
 static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
     { HI_EO_CLIENT_ASCII, HI_EO_LOW_PRIORITY, HI_EO_CLIENT_ASCII_STR },
@@ -62,13 +66,14 @@ static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
         HI_EO_CLIENT_DOUBLE_DECODE_STR },
     { HI_EO_CLIENT_U_ENCODE, HI_EO_MED_PRIORITY, HI_EO_CLIENT_U_ENCODE_STR },
     { HI_EO_CLIENT_BARE_BYTE, HI_EO_HIGH_PRIORITY, HI_EO_CLIENT_BARE_BYTE_STR},
+    /* Base36 is deprecated - leave here so events keep the same number */
     { HI_EO_CLIENT_BASE36, HI_EO_HIGH_PRIORITY, HI_EO_CLIENT_BASE36_STR },
     { HI_EO_CLIENT_UTF_8, HI_EO_LOW_PRIORITY, HI_EO_CLIENT_UTF_8_STR },
-    { HI_EO_CLIENT_IIS_UNICODE, HI_EO_LOW_PRIORITY, 
+    { HI_EO_CLIENT_IIS_UNICODE, HI_EO_LOW_PRIORITY,
         HI_EO_CLIENT_IIS_UNICODE_STR },
     { HI_EO_CLIENT_MULTI_SLASH, HI_EO_MED_PRIORITY,
         HI_EO_CLIENT_MULTI_SLASH_STR },
-    { HI_EO_CLIENT_IIS_BACKSLASH, HI_EO_MED_PRIORITY, 
+    { HI_EO_CLIENT_IIS_BACKSLASH, HI_EO_MED_PRIORITY,
         HI_EO_CLIENT_IIS_BACKSLASH_STR },
     { HI_EO_CLIENT_SELF_DIR_TRAV, HI_EO_HIGH_PRIORITY,
         HI_EO_CLIENT_SELF_DIR_TRAV_STR },
@@ -91,11 +96,25 @@ static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
     {HI_EO_CLIENT_MAX_HEADERS, HI_EO_LOW_PRIORITY,
         HI_EO_CLIENT_MAX_HEADERS_STR},
     {HI_EO_CLIENT_MULTIPLE_CONTLEN, HI_EO_HIGH_PRIORITY,
-            HI_EO_CLIENT_MULTIPLE_CONTLEN_STR},
+        HI_EO_CLIENT_MULTIPLE_CONTLEN_STR},
     {HI_EO_CLIENT_CHUNK_SIZE_MISMATCH, HI_EO_HIGH_PRIORITY,
-            HI_EO_CLIENT_CHUNK_SIZE_MISMATCH_STR},
+        HI_EO_CLIENT_CHUNK_SIZE_MISMATCH_STR},
     {HI_EO_CLIENT_INVALID_TRUEIP, HI_EO_LOW_PRIORITY,
-            HI_EO_CLIENT_INVALID_TRUEIP_STR}
+        HI_EO_CLIENT_INVALID_TRUEIP_STR},
+    {HI_EO_CLIENT_MULTIPLE_HOST_HDRS, HI_EO_LOW_PRIORITY,
+        HI_EO_CLIENT_MULTIPLE_HOST_HDRS_STR},
+    {HI_EO_CLIENT_LONG_HOSTNAME, HI_EO_LOW_PRIORITY,
+        HI_EO_CLIENT_LONG_HOSTNAME_STR},
+    {HI_EO_CLIENT_EXCEEDS_SPACES, HI_EO_LOW_PRIORITY,
+        HI_EO_CLIENT_EXCEEDS_SPACES_STR},
+    {HI_EO_CLIENT_CONSECUTIVE_SMALL_CHUNKS, HI_EO_MED_PRIORITY,
+        HI_EO_CLIENT_CONSECUTIVE_SMALL_CHUNKS_STR},
+    {HI_EO_CLIENT_UNBOUNDED_POST, HI_EO_MED_PRIORITY,
+        HI_EO_CLIENT_UNBOUNDED_POST_STR},
+    {HI_EO_CLIENT_MULTIPLE_TRUEIP_IN_SESSION, HI_EO_MED_PRIORITY,
+        HI_EO_CLIENT_MULTIPLE_TRUEIP_IN_SESSION_STR},
+    {HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS, HI_EO_LOW_PRIORITY,
+        HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS_STR}
 };
 
 static HI_EVENT_INFO server_event_info[HI_EO_SERVER_EVENT_NUM] = {
@@ -103,12 +122,23 @@ static HI_EVENT_INFO server_event_info[HI_EO_SERVER_EVENT_NUM] = {
     {HI_EO_SERVER_INVALID_STATCODE, HI_EO_MED_PRIORITY,
                     HI_EO_SERVER_INVALID_STATCODE_STR},
     {HI_EO_SERVER_NO_CONTLEN, HI_EO_MED_PRIORITY,
-                    HI_EO_SERVER_NO_CONTLEN_STR},
+        HI_EO_SERVER_NO_CONTLEN_STR},
     {HI_EO_SERVER_UTF_NORM_FAIL, HI_EO_MED_PRIORITY,
-            HI_EO_SERVER_UTF_NORM_FAIL_STR},
+        HI_EO_SERVER_UTF_NORM_FAIL_STR},
     {HI_EO_SERVER_UTF7, HI_EO_MED_PRIORITY,
-            HI_EO_SERVER_UTF7_STR}
-
+        HI_EO_SERVER_UTF7_STR},
+    {HI_EO_SERVER_DECOMPR_FAILED, HI_EO_MED_PRIORITY,
+        HI_EO_SERVER_DECOMPR_FAILED_STR},
+    {HI_EO_SERVER_CONSECUTIVE_SMALL_CHUNKS, HI_EO_MED_PRIORITY,
+        HI_EO_SERVER_CONSECUTIVE_SMALL_CHUNKS_STR},
+    {HI_EO_CLISRV_MSG_SIZE_EXCEPTION, HI_EO_MED_PRIORITY,
+        HI_EO_CLISRV_MSG_SIZE_EXCEPTION_STR},
+    {HI_EO_SERVER_JS_OBFUSCATION_EXCD, HI_EO_MED_PRIORITY,
+        HI_EO_SERVER_JS_OBFUSCATION_EXCD_STR},
+    {HI_EO_SERVER_JS_EXCESS_WS, HI_EO_MED_PRIORITY,
+        HI_EO_SERVER_JS_EXCESS_WS_STR},
+    {HI_EO_SERVER_MIXED_ENCODINGS, HI_EO_MED_PRIORITY,
+        HI_EO_SERVER_MIXED_ENCODINGS_STR}
 };
 
 /*
@@ -116,7 +146,7 @@ static HI_EVENT_INFO server_event_info[HI_EO_SERVER_EVENT_NUM] = {
 */
 /**
 **  This routine logs anomalous server events to the event queue.
-**  
+**
 **  @param Session   pointer to the HttpInspect session
 **  @param iEvent    the event id for the client
 **  @param data      pointer to the user data of the event
@@ -199,7 +229,7 @@ int hi_eo_anom_server_event_log(HI_SESSION *Session, int iEvent, void *data,
 **  performance.  We accomplish this utilizing an optimized stack as an
 **  index into the client event array, instead of walking a list for
 **  already logged events.  The problem here is that we can't just log
-**  every event that we've already seen, because this opens us up to a 
+**  every event that we've already seen, because this opens us up to a
 **  DOS.  So by using this method, we can quickly check if an event
 **  has already been logged and deal appropriately.
 **
@@ -275,7 +305,7 @@ int hi_eo_client_event_log(HI_SESSION *Session, int iEvent, void *data,
 **  performance.  We accomplish this utilizing an optimized stack as an
 **  index into the server event array, instead of walking a list for
 **  already logged events.  The problem here is that we can't just log
-**  every event that we've already seen, because this opens us up to a 
+**  every event that we've already seen, because this opens us up to a
 **  DOS.  So by using this method, we can quickly check if an event
 **  has already been logged and deal appropriately.
 **

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License Version 2 as published by
@@ -47,15 +47,19 @@
  * - if a resp3 rule is also a drop rule, the drop processing takes precedence.
  */
 
+// @file    sp_respond3.c
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #ifdef ENABLE_RESPONSE3
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "checksum.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "encode.h"
 #include "detection_options.h"
@@ -94,6 +98,8 @@ typedef struct {
     uint32_t mask;
     uint32_t flags;
 } Resp3_Data;
+
+static int s_init = 1;
 
 // callback functions
 static void Resp3_Init(char* data, OptTreeNode*, int protocol);
@@ -149,7 +155,7 @@ void SetupRespond(void)
 //--------------------------------------------------------------------
 // callback functions
 
-static void Resp3_Init(char* data, OptTreeNode* otn, int protocol) 
+static void Resp3_Init(char* data, OptTreeNode* otn, int protocol)
 {
     Resp3_Data* rd = NULL;
     void* idx_dup;
@@ -158,34 +164,32 @@ static void Resp3_Init(char* data, OptTreeNode* otn, int protocol)
         FatalError("%s(%d): Multiple response options in rule\n",
             file_name, file_line);
 
-#if 0
-    if ( !(protocol & (IPPROTO_ICMP | IPPROTO_TCP | IPPROTO_UDP)) )
-        FatalError("%s: %s(%d): Can't respond to IP protocol rules.\n", 
-            MOD_NAME, file_name, file_line);
-#endif
+    if ( s_init )
+    {
+        AddFuncToCleanExitList(Resp3_Cleanup, NULL);
+        AddFuncToRestartList(Resp3_Cleanup, NULL);
+
+        Active_SetEnabled(1);
+        s_init = 0;
+    }
 
     rd = (Resp3_Data*)SnortAlloc(sizeof(*rd));
     rd->mask = Resp3_Parse(data);
-    
-    // this prevent multiple response options in rule
-    otn->ds_list[PLUGIN_RESPONSE] = rd;
 
     if ( add_detection_option(RULE_OPTION_TYPE_RESPOND, rd, &idx_dup)
         == DETECTION_OPTION_EQUAL)
     {
         free(rd);
-        return;
+        rd = idx_dup;
     }
-
-    AddFuncToCleanExitList(Resp3_Cleanup, NULL);
-    AddFuncToRestartList(Resp3_Cleanup, NULL);
+    // this prevents multiple response options in rule
+    otn->ds_list[PLUGIN_RESPONSE] = rd;
     AddRspFuncToList(Resp3_Queue, otn, rd);
-
-    Active_SetEnabled(1);
 }
 
 static void Resp3_Cleanup(int signal, void* data)
 {
+    s_init = 1;
 }
 
 //--------------------------------------------------------------------
@@ -199,17 +203,8 @@ static int Resp3_Parse(char* type)
     uint32_t flags = 0;
     int num_toks, i;
 
-    while (isspace((int)*type))
-        type++;
-
-    if (!type || !(*type))
-        return 0;
-
-    toks = mSplit(type, ",", 6, &num_toks, 0);
-
-    if (num_toks < 1)
-        FatalError("%s (%d): Bad arguments to resp3: %s.\n",
-            file_name, file_line, type);
+    if ( type )
+        toks = mSplit(type, ",", 6, &num_toks, 0);
 
     i = 0;
     while (i < num_toks)
@@ -253,14 +248,14 @@ static int Resp3_Parse(char* type)
             i++;
         }
         else
-            FatalError("%s: %s(%d): invalid resp modifier: %s\n", 
+            FatalError("%s: %s(%d): invalid resp modifier: %s\n",
                 MOD_NAME, file_name, file_line, toks[i]);
     }
 
     mSplitFree(&toks, num_toks);
 
     if ( !flags )
-        FatalError("%s: %s(%d): invalid resp configuration: %s\n", 
+        FatalError("%s: %s(%d): invalid resp configuration: %s\n",
             MOD_NAME, file_name, file_line, "no response specified");
 
     return flags;

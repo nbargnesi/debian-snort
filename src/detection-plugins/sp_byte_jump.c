@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2002-2010 Sourcefire, Inc.
+ ** Copyright (C) 2002-2011 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -19,10 +19,10 @@
  ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-/* sp_byte_jump 
- * 
+/* sp_byte_jump
+ *
  * Purpose:
- *      Grab some number of bytes, convert them to their numeric 
+ *      Grab some number of bytes, convert them to their numeric
  *      representation, jump the doe_ptr up that many bytes (for
  *      further pattern matching/byte_testing).
  *
@@ -39,10 +39,10 @@
  *      ["hex"]: converted string data is represented in hexidecimal
  *      ["dec"]: converted string data is represented in decimal
  *      ["oct"]: converted string data is represented in octal
- *      ["align"]: round the number of converted bytes up to the next 
+ *      ["align"]: round the number of converted bytes up to the next
  *                 32-bit boundry
- *      ["post_offset"]: number of bytes to adjust after applying 
- *   
+ *      ["post_offset"]: number of bytes to adjust after applying
+ *
  *   sample rules:
  *   alert udp any any -> any 32770:34000 (content: "|00 01 86 B8|"; \
  *       content: "|00 00 00 01|"; distance: 4; within: 4; \
@@ -52,7 +52,7 @@
  *
  * Effect:
  *
- *      Reads in the indicated bytes, converts them to an numeric 
+ *      Reads in the indicated bytes, converts them to an numeric
  *      representation and then jumps the doe_ptr up
  *      that number of bytes.  Returns 1 if the jump is in range (within the
  *      packet) and 0 if it's not.
@@ -75,13 +75,14 @@
 #endif
 #include <errno.h>
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 #include "mstring.h"
@@ -131,17 +132,17 @@ uint32_t ByteJumpHash(void *d)
     b = data->offset;
     c = data->base;
 
-    mix(a,b,c); 
-                                     
+    mix(a,b,c);
+
     a += (data->relative_flag << 24 |
           data->data_string_convert_flag << 16 |
           data->from_beginning_flag << 8 |
-          data->align_flag); 
+          data->align_flag);
     b += data->endianess;
     c += data->multiplier;
 
     mix(a,b,c);
-                                                         
+
     a += RULE_OPTION_TYPE_BYTE_JUMP;
     b += data->post_offset;
     c += data->offset_var;
@@ -152,21 +153,21 @@ uint32_t ByteJumpHash(void *d)
     {
         /* Cleanup warning because of cast from 64bit ptr to 32bit int
          * warning on 64bit OSs */
-        u_int64_t ptr; /* Addresses are 64bits */
+        uint64_t ptr; /* Addresses are 64bits */
 
-        ptr = (u_int64_t) data->byte_order_func;
+        ptr = (uint64_t) data->byte_order_func;
         a += (ptr << 32) & 0XFFFFFFFF;
         b += (ptr & 0xFFFFFFFF);
     }
 #else
-    a += (u_int32_t)data->byte_order_func;
+    a += (uint32_t)data->byte_order_func;
 #endif
 
     final(a,b,c);
-                                                                     
+
     return c;
-}   
-    
+}
+
 int ByteJumpCompare(void *l, void *r)
 {
     ByteJumpData *left = (ByteJumpData *)l;
@@ -201,7 +202,7 @@ static void ByteJumpOverride(char *keyword, char *option, RuleOptOverrideFunc ro
     new->keyword = strdup(keyword);
     new->option = strdup(option);
     new->func = roo_func;
-    
+
     new->next = byteJumpOverrideFuncs;
     byteJumpOverrideFuncs = new;
 }
@@ -229,7 +230,7 @@ static void ByteJumpOverrideFuncsFree(void)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupByteJump()
  *
  * Purpose: Load 'er up
@@ -259,10 +260,10 @@ void SetupByteJump(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ByteJumpInit(char *, OptTreeNode *)
  *
- * Purpose: Generic rule configuration function.  Handles parsing the rule 
+ * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -286,11 +287,11 @@ static void ByteJumpInit(char *data, OptTreeNode *otn, int protocol)
 
     if(idx == NULL)
     {
-        FatalError("%s(%d): Unable to allocate byte_jump data node\n", 
+        FatalError("%s(%d): Unable to allocate byte_jump data node\n",
                    file_name, file_line);
     }
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     override = ByteJumpParse(data, idx, otn);
     if (override != NULL)
@@ -343,7 +344,7 @@ static void ByteJumpInit(char *data, OptTreeNode *otn, int protocol)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: ByteJumpParse(char *, ByteJumpData *, OptTreeNode *)
  *
  * Purpose: This is the function that is used to process the option keyword's
@@ -429,7 +430,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
             }
             else if(!strcasecmp(cptr, "string"))
             {
-                /* the data will be represented as a string that needs 
+                /* the data will be represented as a string that needs
                  * to be converted to an int, binary is assumed otherwise
                  */
                 idx->data_string_convert_flag = 1;
@@ -473,7 +474,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
                 }
                 if ((factor <= 0) || (endp != cptr + multiplier_len))
                 {
-                    FatalError("%s(%d): invalid length multiplier \"%s\"\n", 
+                    FatalError("%s(%d): invalid length multiplier \"%s\"\n",
                             file_name, file_line, cptr);
                 }
                 idx->multiplier = factor;
@@ -492,7 +493,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
                 }
                 if (endp != cptr + postoffset_len)
                 {
-                    FatalError("%s(%d): invalid post_offset \"%s\"\n", 
+                    FatalError("%s(%d): invalid post_offset \"%s\"\n",
                             file_name, file_line, cptr);
                 }
                 idx->post_offset = factor;
@@ -516,7 +517,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
                     override = override->next;
                 }
 
-                FatalError("%s(%d): unknown modifier \"%s\"\n", 
+                FatalError("%s(%d): unknown modifier \"%s\"\n",
                            file_name, file_line, cptr);
             }
 
@@ -537,7 +538,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
 
 
 /****************************************************************************
- * 
+ *
  * Function: ByteJump(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -548,7 +549,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int ByteJump(void *option_data, Packet *p)
@@ -561,34 +562,25 @@ int ByteJump(void *option_data, Packet *p)
     uint32_t extract_offset;
     int32_t offset, tmp = 0;
     int dsize;
-    int use_alt_buffer = p->packet_flags & PKT_ALT_DECODE;
     const uint8_t *base_ptr, *end_ptr, *start_ptr;
     uint8_t rst_doe_flags = 1;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(byteJumpPerfStats);
-  
-    if( IsMimeDecodeBuf(doe_ptr) ) 
+
+    if (Is_DetectFlag(FLAG_ALT_DETECT))
     {
-        dsize = mime_decode_size;
-        start_ptr = file_data_ptr;
+        dsize = DetectBuffer.len;
+        start_ptr = DetectBuffer.data;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                    "Using MIME Decode Buffer!\n"););
+                    "Using Alternative Detect buffer!\n"););
     }
-    else if( IsBase64DecodeBuf(doe_ptr)) 
-    {
-        dsize = base64_decode_size;
-        start_ptr = base64_decode_buf;
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Using Base64 Decode Buffer!\n"););
-    }
-    else if(use_alt_buffer)
+    else if(Is_DetectFlag(FLAG_ALT_DECODE))
     {
         dsize = DecodeBuffer.len;
-        start_ptr = DecodeBuffer.data;        
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        start_ptr = DecodeBuffer.data;
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "Using Alternative Decode buffer!\n"););
-
     }
     else
     {
@@ -620,8 +612,13 @@ int ByteJump(void *option_data, Packet *p)
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "Checking relative offset!\n"););
 
-        /* @todo: possibly degrade to use the other buffer, seems non-intuitive*/        
-        if(!inBounds(start_ptr, end_ptr, doe_ptr))
+        /* @todo: possibly degrade to use the other buffer, seems non-intuitive
+         *  Because doe_ptr can be "end" in the last match,
+         *  use end + 1 for upper bound
+         *  Bound checked also after offset is applied
+         *  (see byte_extract() and string_extract())
+         */
+        if(!inBounds(start_ptr, end_ptr + 1, doe_ptr))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] byte jump bounds check failed..\n"););
@@ -654,7 +651,7 @@ int ByteJump(void *option_data, Packet *p)
 
     /* Both of the extraction functions contain checks to insure the data
      * is always inbounds */
-    
+
     if(!bjd->data_string_convert_flag)
     {
         if(byte_extract(bjd->endianess, bjd->bytes_to_grab,
@@ -685,7 +682,7 @@ int ByteJump(void *option_data, Packet *p)
     }
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                            "grabbed %d of %d bytes, value = %08X\n", 
+                            "grabbed %d of %d bytes, value = %08X\n",
                             payload_bytes_grabbed, bjd->bytes_to_grab, value););
 
     /* Adjust the jump_value (# bytes to jump forward) with the multiplier. */
@@ -695,7 +692,7 @@ int ByteJump(void *option_data, Packet *p)
         jump_value = value;
 
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                            "grabbed %d of %d bytes, after multiplier value = %08X\n", 
+                            "grabbed %d of %d bytes, after multiplier value = %08X\n",
                             payload_bytes_grabbed, bjd->bytes_to_grab, jump_value););
 
 
@@ -704,7 +701,7 @@ int ByteJump(void *option_data, Packet *p)
      */
     if(bjd->align_flag)
     {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "offset currently at %d\n", jump_value););
         if ((jump_value % 4) != 0)
         {
@@ -732,10 +729,8 @@ int ByteJump(void *option_data, Packet *p)
     else
     {
         UpdateDoePtr((base_ptr + payload_bytes_grabbed + jump_value), rst_doe_flags);
-
-
     }
-   
+
     /* now adjust using post_offset -- before bounds checking */
     doe_ptr += bjd->post_offset;
 
@@ -747,7 +742,7 @@ int ByteJump(void *option_data, Packet *p)
         return rval;
     }
     else
-    {        
+    {
         rval = DETECTION_OPTION_MATCH;
     }
 

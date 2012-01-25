@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2010 Sourcefire, Inc.
+** Copyright (C) 2010-2011 Sourcefire, Inc.
 ** Author: Ryan Jordan <ryan.jordan@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@
 #define MIN_BYTE_EXTRACT_MULTIPLIER 1
 #define MAX_BYTE_EXTRACT_MULTIPLIER 65535
 
-typedef struct _ByteExractData
+typedef struct _ByteExtractData
 {
     uint32_t bytes_to_grab;
     int32_t offset;
@@ -59,6 +59,8 @@ int DetectByteExtract(void *, Packet *);
 void ByteExtractFree(void *d);
 
 int8_t GetVarByName(char *name);
+void ClearVarNames(OptFpList *fpl);
+int8_t AddVarNameToList(ByteExtractData *data);
 
 int GetByteExtractValue(uint32_t *dst, int8_t var_number);
 int SetByteExtractValue(uint32_t value, int8_t var_number);

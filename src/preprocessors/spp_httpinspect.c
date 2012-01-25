@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,13 +18,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**
 **  @file       preproc_setup.c
-**  
+**
 **  @author     Daniel Roelker <droelker@sourcefire.com>
 **
-**  @brief      This file initializes HttpInspect as a Snort 
+**  @brief      This file initializes HttpInspect as a Snort
 **              preprocessor.
 **
 **  This file registers the HttpInspect initialization function,
@@ -44,9 +44,13 @@
 #include <string.h>
 #include <sys/types.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "decode.h"
 #include "plugbase.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "parser.h"
 
@@ -58,6 +62,7 @@
 #include "hi_util_kmap.h"
 #include "hi_util_xmalloc.h"
 #include "hi_cmd_lookup.h"
+#include "hi_paf.h"
 
 #include "snort.h"
 #include "profiler.h"
@@ -71,6 +76,7 @@
 #endif
 #include "snort_stream5_session.h"
 #include "sfPolicy.h"
+#include "mempool.h"
 
 /*
 **  Defines for preprocessor initialization
@@ -116,10 +122,12 @@ int hiDetectCalled = 0;
 static tSfPolicyId httpCurrentPolicy = 0;
 
 #ifdef ZLIB
-#include "mempool.h"
 MemPool *hi_gzip_mempool = NULL;
 #endif
 
+MemPool *http_mempool = NULL;
+int hex_lookup[256];
+int valid_lookup[256];
 /*
 ** Prototypes
 */
@@ -138,6 +146,8 @@ static int HttpEncodeInit(char *, char *, void **);
 static int HttpEncodeEval(void *, const uint8_t **, void *);
 static void HttpEncodeCleanup(void *);
 static void HttpInspectRegisterRuleOptions(void);
+static void HttpInspectRegisterXtraDataFuncs(HTTPINSPECT_GLOBAL_CONF *);
+static inline void InitLookupTables(void);
 #ifdef TARGET_BASED
 static void HttpInspectAddServicesOfInterest(tSfPolicyId);
 #endif
@@ -206,7 +216,7 @@ static void HttpInspect(Packet *p, void *context)
 
     /* XXX:
      * NOTE: this includes the HTTPInspect directly
-     * calling the detection engine - 
+     * calling the detection engine -
      * to get the true HTTPInspect only stats, have another
      * var inside SnortHttpInspect that tracks the time
      * spent in Detect().
@@ -226,7 +236,7 @@ static void HttpInspect(Packet *p, void *context)
     return;
 }
 
-static void HttpInspectDropStats(int exiting) 
+static void HttpInspectDropStats(int exiting)
 {
     if(!hi_stats.total)
         return;
@@ -253,14 +263,14 @@ static void HttpInspectDropStats(int exiting)
 #endif
     LogMessage("    Post parameters extracted:            %-10I64u\n", hi_stats.post_params);
     LogMessage("    HTTP Response Headers extracted:      %-10I64u\n", hi_stats.resp_headers);
-#ifdef DEBUG 
+#ifdef DEBUG
     if (hi_stats.resp_headers == 0)
     LogMessage("    Avg Response Header length:           %-10s\n", "n/a");
-    else  
+    else
     LogMessage("    Avg Response Header length:           %-10.2f\n", (double)hi_stats.resp_header_len / (double)hi_stats.resp_headers);
-#endif  
+#endif
     LogMessage("    HTTP Response cookies extracted:      %-10I64u\n", hi_stats.resp_cookies);
-#ifdef DEBUG 
+#ifdef DEBUG
     if (hi_stats.resp_cookies == 0)
     LogMessage("    Avg Response Cookie length:           %-10s\n", "n/a");
     else
@@ -269,7 +279,6 @@ static void HttpInspectDropStats(int exiting)
     LogMessage("    Unicode:                              %-10I64u\n", hi_stats.unicode);
     LogMessage("    Double unicode:                       %-10I64u\n", hi_stats.double_unicode);
     LogMessage("    Non-ASCII representable:              %-10I64u\n", hi_stats.non_ascii);
-    LogMessage("    Base 36:                              %-10I64u\n", hi_stats.base36);
     LogMessage("    Directory traversals:                 %-10I64u\n", hi_stats.dir_trav);
     LogMessage("    Extra slashes (\"//\"):                 %-10I64u\n", hi_stats.slashes);
     LogMessage("    Self-referencing paths (\"./\"):        %-10I64u\n", hi_stats.self_ref);
@@ -322,7 +331,6 @@ static void HttpInspectDropStats(int exiting)
     LogMessage("    Unicode:                              "FMTu64("-10")"\n", hi_stats.unicode);
     LogMessage("    Double unicode:                       "FMTu64("-10")"\n", hi_stats.double_unicode);
     LogMessage("    Non-ASCII representable:              "FMTu64("-10")"\n", hi_stats.non_ascii);
-    LogMessage("    Base 36:                              "FMTu64("-10")"\n", hi_stats.base36);
     LogMessage("    Directory traversals:                 "FMTu64("-10")"\n", hi_stats.dir_trav);
     LogMessage("    Extra slashes (\"//\"):                 "FMTu64("-10")"\n", hi_stats.slashes);
     LogMessage("    Self-referencing paths (\"./\"):        "FMTu64("-10")"\n", hi_stats.self_ref);
@@ -345,6 +353,10 @@ static void HttpInspectDropStats(int exiting)
 
 static void HttpInspectCleanExit(int signal, void *data)
 {
+    hi_paf_term();
+
+    HI_SearchFree();
+
     HttpInspectFreeConfigs(hi_config);
 
 #ifdef ZLIB
@@ -354,6 +366,12 @@ static void HttpInspectCleanExit(int signal, void *data)
         hi_gzip_mempool = NULL;
     }
 #endif
+
+    if (mempool_destroy(http_mempool) == 0)
+    {
+        free(http_mempool);
+        http_mempool = NULL;
+    }
 }
 
 static void HttpInspectReset(int signal, void *data)
@@ -369,7 +387,7 @@ static void HttpInspectResetStats(int signal, void *data)
 #ifdef ZLIB
 static void SetMaxGzipSession(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig)
 {
-    pPolicyConfig->max_gzip_sessions = 
+    pPolicyConfig->max_gzip_sessions =
         pPolicyConfig->max_gzip_mem / (pPolicyConfig->compr_depth + pPolicyConfig->decompr_depth);
 
 }
@@ -423,6 +441,34 @@ static void CheckGzipConfig(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig,
 }
 #endif
 
+
+static void CheckMemcap(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig,
+        tSfPolicyUserContextId context)
+{
+    HTTPINSPECT_GLOBAL_CONF *defaultConfig =
+        (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(context);
+
+    if (pPolicyConfig == defaultConfig)
+    {
+        if (!pPolicyConfig->memcap)
+            pPolicyConfig->memcap = DEFAULT_HTTP_MEMCAP;
+
+    }
+    else if (defaultConfig == NULL)
+    {
+        if (pPolicyConfig->memcap)
+        {
+            FatalError("http_inspect: memcap must be "
+                    "configured in the default policy.\n");
+        }
+
+    }
+    else
+    {
+        pPolicyConfig->memcap = defaultConfig->memcap;
+    }
+}
+
 /*
  **  NAME
  **    HttpInspectInit::
@@ -430,7 +476,7 @@ static void CheckGzipConfig(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig,
 /**
 **  This function initializes HttpInspect with a user configuration.
 **
-**  The function is called when HttpInspect is configured in 
+**  The function is called when HttpInspect is configured in
 **  snort.conf.  It gets passed a string of arguments, which gets
 **  parsed into configuration constructs that HttpInspect understands.
 **
@@ -471,7 +517,7 @@ static void HttpInspectInit(char *args)
     if (hi_config == NULL)
     {
         hi_config = sfPolicyConfigCreate();
-        memset(&hi_stats, 0, sizeof(HIStats)); 
+        memset(&hi_stats, 0, sizeof(HIStats));
 
         /*
          **  Remember to add any cleanup functions into the appropriate
@@ -492,6 +538,8 @@ static void HttpInspectInit(char *args)
         /* Find and cache protocol ID for packet comparison */
         hi_app_protocol_id = AddProtocolReference("http");
 #endif
+        hi_paf_init(0);  // FIXTHIS is cap needed?
+        HI_SearchInit();
     }
 
     /*
@@ -505,7 +553,7 @@ static void HttpInspectInit(char *args)
     pPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetCurrent(hi_config);
     if (pPolicyConfig == NULL)
     {
-        if (strcasecmp(pcToken, GLOBAL) != 0) 
+        if (strcasecmp(pcToken, GLOBAL) != 0)
         {
             ParseError("Must configure the http inspect global "
                        "configuration first.");
@@ -513,11 +561,12 @@ static void HttpInspectInit(char *args)
 
         HttpInspectRegisterRuleOptions();
 
-        pPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)SnortAlloc(sizeof(HTTPINSPECT_GLOBAL_CONF)); 
+        pPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)SnortAlloc(sizeof(HTTPINSPECT_GLOBAL_CONF));
         if (!pPolicyConfig)
         {
              ParseError("HTTP INSPECT preprocessor: memory allocate failed.\n");
         }
+
         sfPolicyUserDataSetCurrent(hi_config, pPolicyConfig);
 
         iRet = HttpInspectInitializeGlobalConfig(pPolicyConfig,
@@ -532,22 +581,33 @@ static void HttpInspectInit(char *args)
 #ifdef ZLIB
                 CheckGzipConfig(pPolicyConfig, hi_config);
 #endif
+                CheckMemcap(pPolicyConfig, hi_config);
                 PrintGlobalConf(pPolicyConfig);
 
                 /* Add HttpInspect into the preprocessor list */
-#ifdef ZLIB
                 if ( pPolicyConfig->disabled )
                     return;
-#endif
-                    AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT, PROTO_BIT__TCP);
+                AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT, PROTO_BIT__TCP);
             }
         }
     }
     else
     {
+#ifdef SNORT_RELOAD
+        if (hi_swap_config)
+        {
+            HTTPINSPECT_GLOBAL_CONF *pReloadPolicyConfig = NULL;
+            sfPolicyUserPolicySet (hi_swap_config, policy_id);
+            pReloadPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetCurrent(hi_swap_config);
+            if(pReloadPolicyConfig == NULL)
+                sfPolicyUserPolicySet (hi_config, policy_id);
+            else
+                pPolicyConfig = pReloadPolicyConfig;
+        }
+#endif
         if (strcasecmp(pcToken, SERVER) != 0)
         {
-            if (strcasecmp(pcToken, GLOBAL) != 0) 
+            if (strcasecmp(pcToken, GLOBAL) != 0)
                 ParseError("Must configure the http inspect global configuration first.");
             else
                 ParseError("Invalid http inspect token: %s.", pcToken);
@@ -556,6 +616,8 @@ static void HttpInspectInit(char *args)
         iRet = ProcessUniqueServerConf(pPolicyConfig,
                                        ErrorString, iErrStrLen);
     }
+
+
 
     if (iRet)
     {
@@ -566,7 +628,7 @@ static void HttpInspectInit(char *args)
             */
             if(*ErrorString)
             {
-                ErrorMessage("%s(%d) => %s\n", 
+                ErrorMessage("%s(%d) => %s\n",
                         file_name, file_line, ErrorString);
             }
         }
@@ -577,7 +639,7 @@ static void HttpInspectInit(char *args)
             */
             if(*ErrorString)
             {
-                FatalError("%s(%d) => %s\n", 
+                FatalError("%s(%d) => %s\n",
                         file_name, file_line, ErrorString);
             }
             else
@@ -587,17 +649,18 @@ static void HttpInspectInit(char *args)
                 */
                 if(iRet == -2)
                 {
-                    FatalError("%s(%d) => ErrorString is undefined.\n", 
+                    FatalError("%s(%d) => ErrorString is undefined.\n",
                             file_name, file_line);
                 }
                 else
                 {
-                    FatalError("%s(%d) => Undefined Error.\n", 
+                    FatalError("%s(%d) => Undefined Error.\n",
                             file_name, file_line);
                 }
             }
         }
     }
+
 }
 
 /*
@@ -629,6 +692,8 @@ void SetupHttpInspect(void)
     RegisterPreprocessor(SERVER_KEYWORD, HttpInspectInit,
                          HttpInspectReload, NULL, NULL);
 #endif
+    InitLookupTables();
+    InitJSNormLookupTable();
 
     DEBUG_WRAP(DebugMessage(DEBUG_HTTPINSPECT, "Preprocessor: HttpInspect is "
                 "setup . . .\n"););
@@ -642,16 +707,32 @@ static void HttpInspectRegisterRuleOptions(void)
 #endif
 }
 
+static void HttpInspectRegisterXtraDataFuncs(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig)
+{
+    if (!stream_api || !pPolicyConfig)
+        return;
 
+    pPolicyConfig->xtra_trueip_id = stream_api->reg_xtra_data_cb(GetHttpTrueIP);
+    pPolicyConfig->xtra_uri_id = stream_api->reg_xtra_data_cb(GetHttpUriData);
+    pPolicyConfig->xtra_hname_id = stream_api->reg_xtra_data_cb(GetHttpHostnameData);
+#ifndef SOURCEFIRE
+#ifdef ZLIB
+    pPolicyConfig->xtra_gzip_id = stream_api->reg_xtra_data_cb(GetHttpGzipData);
+#endif
+    pPolicyConfig->xtra_jsnorm_id = stream_api->reg_xtra_data_cb(GetHttpJSNormData);
+#endif
+    
+}
 static int HttpInspectVerifyPolicy(tSfPolicyUserContextId config,
         tSfPolicyId policyId, void* pData)
 {
     HTTPINSPECT_GLOBAL_CONF *pPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)pData;
 
-#ifdef ZLIB
+    HttpInspectRegisterXtraDataFuncs(pPolicyConfig);
+
     if ( pPolicyConfig->disabled )
         return 0;
-#endif
+
     if (!stream_api || (stream_api->version < STREAM_API_VERSION5))
     {
         FatalError("HttpInspectConfigCheck() Streaming & reassembly "
@@ -674,7 +755,7 @@ static int HttpInspectVerifyPolicy(tSfPolicyUserContextId config,
 }
 
 
-/** Add ports configured for http preprocessor to stream5 port filtering so that if 
+/** Add ports configured for http preprocessor to stream5 port filtering so that if
  * any_any rules are being ignored them the the packet still reaches http-inspect.
  *
  * For ports in global_server configuration, server_lookup,
@@ -691,10 +772,10 @@ static void HttpInspectAddPortsOfInterest(HTTPINSPECT_GLOBAL_CONF *config, tSfPo
     hi_ui_server_iterate(config->server_lookup, addServerConfPortsToStream5);
 }
 
-/**Add server ports from http_inspect preprocessor from snort.comf file to pass through 
+/**Add server ports from http_inspect preprocessor from snort.comf file to pass through
  * port filtering.
  */
-void addServerConfPortsToStream5(void *pData)
+static void addServerConfPortsToStream5(void *pData)
 {
     unsigned int i;
 
@@ -705,9 +786,19 @@ void addServerConfPortsToStream5(void *pData)
         {
             if (pConf->ports[i/8] & (1 << (i % 8) ))
             {
+                bool client = (pConf->client_flow_depth > -1);
+                bool server = (pConf->server_flow_depth > -1);
+
                 //Add port the port
                 stream_api->set_port_filter_status
                     (IPPROTO_TCP, (uint16_t)i, PORT_MONITOR_SESSION, httpCurrentPolicy, 1);
+
+                // there is a fundamental issue here in that both hi and s5
+                // can configure ports per ip independently of each other.
+                // as is, we enable paf for all http servers if any server
+                // has a flow depth enabled (per direction).  still, if eg
+                // all server_flow_depths are -1, we will only enable client.
+                hi_paf_register((uint16_t)i, client, server, httpCurrentPolicy);
             }
         }
     }
@@ -750,15 +841,15 @@ static int HttpEncodeInit(char *name, char *parameters, void **dataPtr)
     if(idx == NULL)
     {
         FatalError("%s(%d): Failed allocate data for %s option\n",
-            file_name, file_line, name);           
+            file_name, file_line, name);
     }
 
 
     toks = mSplit(parameters, ",", 2, &num_toks, 0);
 
-    if(num_toks != 2 ) 
+    if(num_toks != 2 )
     {
-        FatalError("%s (%d): %s option takes two parameters \n", 
+        FatalError("%s (%d): %s option takes two parameters \n",
             file_name, file_line, name);
     }
 
@@ -785,7 +876,7 @@ static int HttpEncodeInit(char *name, char *parameters, void **dataPtr)
     if( findStr1 )
     {
         findStr2 = strchr(toks[1], '!' );
-        if( findStr2 ) 
+        if( findStr2 )
         {
             FatalError("%s (%d): \"|\" is not supported in conjunction with \"!\" for %s option \n",
                     file_name, file_line, name);
@@ -805,58 +896,62 @@ static int HttpEncodeInit(char *name, char *parameters, void **dataPtr)
      {
          etype = toks1[i];
 
-         if( *etype == '!' ) 
-         { 
-             negate_flag = 1; 
-             etype++; 
-             while(isspace((int)*etype)) {etype++;} 
-         } 
+         if( *etype == '!' )
+         {
+             negate_flag = 1;
+             etype++;
+             while(isspace((int)*etype)) {etype++;}
+         }
 
-         if(!strcasecmp(etype, "utf8")) 
-         { 
-             if(negate_flag) 
-                 idx->encode_type &= ~HTTP_ENCODE_TYPE__UTF8_UNICODE; 
-             else 
-                 idx->encode_type |= HTTP_ENCODE_TYPE__UTF8_UNICODE; 
-         } 
+         if(!strcasecmp(etype, "utf8"))
+         {
+             if(negate_flag)
+                 idx->encode_type &= ~HTTP_ENCODE_TYPE__UTF8_UNICODE;
+             else
+                 idx->encode_type |= HTTP_ENCODE_TYPE__UTF8_UNICODE;
+         }
 
-         else if(!strcasecmp(etype, "double_encode")) 
-         { 
-             if(negate_flag) 
-                 idx->encode_type &= ~HTTP_ENCODE_TYPE__DOUBLE_ENCODE; 
-             else idx->encode_type |= HTTP_ENCODE_TYPE__DOUBLE_ENCODE; 
-         } 
+         else if(!strcasecmp(etype, "double_encode"))
+         {
+             if(negate_flag)
+                 idx->encode_type &= ~HTTP_ENCODE_TYPE__DOUBLE_ENCODE;
+             else idx->encode_type |= HTTP_ENCODE_TYPE__DOUBLE_ENCODE;
+         }
 
-         else if(!strcasecmp(etype, "non_ascii")) 
-         { 
-             if(negate_flag) idx->encode_type &= ~HTTP_ENCODE_TYPE__NONASCII; 
-             else 
-                 idx->encode_type |= HTTP_ENCODE_TYPE__NONASCII; 
-         } 
+         else if(!strcasecmp(etype, "non_ascii"))
+         {
+             if(negate_flag) idx->encode_type &= ~HTTP_ENCODE_TYPE__NONASCII;
+             else
+                 idx->encode_type |= HTTP_ENCODE_TYPE__NONASCII;
+         }
 
-         else if(!strcasecmp(etype, "base36")) 
-         { 
-             if(negate_flag) 
-                 idx->encode_type &= ~HTTP_ENCODE_TYPE__BASE36; 
-             else 
-                 idx->encode_type |= HTTP_ENCODE_TYPE__BASE36; 
-         } 
+         /* Base 36 is deprecated and essentially a noop */
+         else if(!strcasecmp(etype, "base36"))
+         {
+             ErrorMessage("WARNING: %s (%d): The \"base36\" argument to the "
+                     "\"http_encode\" rule option is deprecated and void "
+                     "of functionality.\n", file_name, file_line);
 
-         else if(!strcasecmp(etype, "uencode")) 
-         { 
-             if(negate_flag) 
-                 idx->encode_type &= ~HTTP_ENCODE_TYPE__UENCODE; 
-             else 
-                 idx->encode_type |= HTTP_ENCODE_TYPE__UENCODE; 
-         } 
+             /* Set encode type so we can check below to see if base36 was the
+              * only argument in the encode chain */
+             idx->encode_type |= HTTP_ENCODE_TYPE__BASE36;
+         }
 
-         else if(!strcasecmp(etype, "bare_byte")) 
-         { 
-             if(negate_flag) 
-                 idx->encode_type &= ~HTTP_ENCODE_TYPE__BARE_BYTE; 
-             else 
-                 idx->encode_type |= HTTP_ENCODE_TYPE__BARE_BYTE; 
-         } 
+         else if(!strcasecmp(etype, "uencode"))
+         {
+             if(negate_flag)
+                 idx->encode_type &= ~HTTP_ENCODE_TYPE__UENCODE;
+             else
+                 idx->encode_type |= HTTP_ENCODE_TYPE__UENCODE;
+         }
+
+         else if(!strcasecmp(etype, "bare_byte"))
+         {
+             if(negate_flag)
+                 idx->encode_type &= ~HTTP_ENCODE_TYPE__BARE_BYTE;
+             else
+                 idx->encode_type |= HTTP_ENCODE_TYPE__BARE_BYTE;
+         }
          else if (!strcasecmp(etype, "iis_encode"))
          {
              if(negate_flag)
@@ -872,19 +967,27 @@ static int HttpEncodeInit(char *name, char *parameters, void **dataPtr)
                  idx->encode_type |= HTTP_ENCODE_TYPE__ASCII;
          }
 
-         else 
-         { 
-             FatalError("%s(%d): Unknown modifier \"%s\" for option \"%s\"\n", 
-                     file_name, file_line, toks1[i], name); 
-         } 
-         negate_flag = 0; 
-     } 
+         else
+         {
+             FatalError("%s(%d): Unknown modifier \"%s\" for option \"%s\"\n",
+                     file_name, file_line, toks1[i], name);
+         }
+         negate_flag = 0;
+     }
 
-     *dataPtr = idx; 
-     mSplitFree(&toks,num_toks); 
+     /* Only got base36 parameter which is deprecated.  If it's the only
+      * parameter in the chain make it so it always matches as if the
+      * entire rule option were non-existent. */
+     if (idx->encode_type == HTTP_ENCODE_TYPE__BASE36)
+     {
+         idx->encode_type = 0xffffffff;
+     }
+
+     *dataPtr = idx;
+     mSplitFree(&toks,num_toks);
      mSplitFree(&toks1,num_toks1);
 
-     return 0; 
+     return 0;
 }
 
 
@@ -901,7 +1004,7 @@ static int HttpEncodeEval(void *p, const uint8_t **cursor, void *dataPtr)
     {
         if (!UriBufs[i].uri || (UriBufs[i].length == 0))
             continue;
-        
+
         if (!(idx->uri_buffer ==  i) || i == HTTP_BUFFER_METHOD || i == HTTP_BUFFER_CLIENT_BODY || i == HTTP_BUFFER_RAW_URI || i == HTTP_BUFFER_RAW_HEADER)
             continue;
 
@@ -961,6 +1064,43 @@ static int HttpInspectExtractGzip(tSfPolicyUserContextId config,
 }
 #endif
 
+static int HttpInspectExtractUriHostIterate(void *data)
+{
+    HTTPINSPECT_CONF *server = (HTTPINSPECT_CONF *)data;
+
+    if (server == NULL)
+        return 0;
+
+    if (server->log_uri || server->log_hostname)
+        return 1;
+
+    return 0;
+}
+
+static int HttpInspectExtractUriHost(tSfPolicyUserContextId config,
+                tSfPolicyId policyId, void *pData)
+{
+    HTTPINSPECT_GLOBAL_CONF *context = (HTTPINSPECT_GLOBAL_CONF *)pData;
+
+    if (pData == NULL)
+        return 0;
+
+    if(context->disabled)
+        return 0;
+
+    if ((context->global_server != NULL) && (context->global_server->log_uri || context->global_server->log_hostname))
+        return 1;
+
+    if (context->server_lookup != NULL)
+    {
+        if (sfrt_iterate2(context->server_lookup, HttpInspectExtractUriHostIterate) != 0)
+            return 1;
+    }
+
+    return 0;
+}
+
+
 /*
 **  NAME
 **    HttpInspectCheckConfig::
@@ -972,17 +1112,18 @@ static int HttpInspectExtractGzip(tSfPolicyUserContextId config,
 */
 static void HttpInspectCheckConfig(void)
 {
+    HTTPINSPECT_GLOBAL_CONF *defaultConfig;
+
     if (hi_config == NULL)
         return;
 
     sfPolicyUserDataIterate (hi_config, HttpInspectVerifyPolicy);
 
+    defaultConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_config);
+
 
 #ifdef ZLIB
     {
-        HTTPINSPECT_GLOBAL_CONF *defaultConfig =
-            (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_config);
-
         if (sfPolicyUserDataIterate(hi_config, HttpInspectExtractGzip) != 0)
         {
             int compress_depth;
@@ -1030,6 +1171,24 @@ static void HttpInspectCheckConfig(void)
         }
     }
 #endif
+    if (sfPolicyUserDataIterate(hi_config, HttpInspectExtractUriHost) != 0)
+    {
+        uint32_t max_sessions_logged;
+        if (defaultConfig == NULL)
+        {
+            FatalError("http_inspect:  Must configure a default global "
+                        "configuration if you want to enable logging of uri or hostname in any "
+                        "server configuration.\n");
+        }
+
+        max_sessions_logged = defaultConfig->memcap / (MAX_URI_EXTRACTED + MAX_HOSTNAME);
+
+        http_mempool = (MemPool *)SnortAlloc(sizeof(MemPool));
+        if (mempool_init(http_mempool, max_sessions_logged, (MAX_URI_EXTRACTED + MAX_HOSTNAME)) != 0)
+        {
+            FatalError("http_inspect:  Could not allocate HTTP mempool.\n");
+        }
+    }
 }
 
 static int HttpInspectFreeConfigPolicy(tSfPolicyUserContextId config,tSfPolicyId policyId, void* pData )
@@ -1075,7 +1234,7 @@ static void HttpInspectReload(char *args)
     char ErrorString[ERRSTRLEN];
     int  iErrStrLen = ERRSTRLEN;
     int  iRet;
-    HTTPINSPECT_GLOBAL_CONF *pPolicyConfig = NULL;	
+    HTTPINSPECT_GLOBAL_CONF *pPolicyConfig = NULL;
     char *pcToken;
     tSfPolicyId policy_id = getParserPolicy();
 
@@ -1095,6 +1254,7 @@ static void HttpInspectReload(char *args)
     if (hi_swap_config == NULL)
     {
         hi_swap_config = sfPolicyConfigCreate();
+        AddFuncToPreprocReloadVerifyList(HttpInspectReloadVerify);
     }
 
     /*
@@ -1108,7 +1268,7 @@ static void HttpInspectReload(char *args)
     pPolicyConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetCurrent(hi_swap_config);
     if (pPolicyConfig == NULL)
     {
-        if (strcasecmp(pcToken, GLOBAL) != 0) 
+        if (strcasecmp(pcToken, GLOBAL) != 0)
             ParseError("Must configure the http inspect global configuration first.");
 
         HttpInspectRegisterRuleOptions();
@@ -1131,16 +1291,14 @@ static void HttpInspectReload(char *args)
 #ifdef ZLIB
                 CheckGzipConfig(pPolicyConfig, hi_swap_config);
 #endif
+                CheckMemcap(pPolicyConfig, hi_swap_config);
                 PrintGlobalConf(pPolicyConfig);
 
                 /* Add HttpInspect into the preprocessor list */
-#ifdef ZLIB
                 if ( pPolicyConfig->disabled )
                     return;
-#endif
-                    AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT, PROTO_BIT__TCP);
-            
-                AddFuncToPreprocReloadVerifyList(HttpInspectReloadVerify);
+                AddFuncToPreprocList(HttpInspect, PRIORITY_APPLICATION, PP_HTTPINSPECT, PROTO_BIT__TCP);
+
             }
         }
     }
@@ -1148,7 +1306,7 @@ static void HttpInspectReload(char *args)
     {
         if (strcasecmp(pcToken, SERVER) != 0)
         {
-            if (strcasecmp(pcToken, GLOBAL) != 0) 
+            if (strcasecmp(pcToken, GLOBAL) != 0)
                 ParseError("Must configure the http inspect global configuration first.");
             else
                 ParseError("Invalid http inspect token: %s.", pcToken);
@@ -1167,7 +1325,7 @@ static void HttpInspectReload(char *args)
             */
             if(*ErrorString)
             {
-                ErrorMessage("%s(%d) => %s\n", 
+                ErrorMessage("%s(%d) => %s\n",
                         file_name, file_line, ErrorString);
             }
         }
@@ -1178,7 +1336,7 @@ static void HttpInspectReload(char *args)
             */
             if(*ErrorString)
             {
-                FatalError("%s(%d) => %s\n", 
+                FatalError("%s(%d) => %s\n",
                         file_name, file_line, ErrorString);
             }
             else
@@ -1188,12 +1346,12 @@ static void HttpInspectReload(char *args)
                 */
                 if(iRet == -2)
                 {
-                    FatalError("%s(%d) => ErrorString is undefined.\n", 
+                    FatalError("%s(%d) => ErrorString is undefined.\n",
                             file_name, file_line);
                 }
                 else
                 {
-                    FatalError("%s(%d) => Undefined Error.\n", 
+                    FatalError("%s(%d) => Undefined Error.\n",
                             file_name, file_line);
                 }
             }
@@ -1203,18 +1361,18 @@ static void HttpInspectReload(char *args)
 
 static int HttpInspectReloadVerify(void)
 {
+    HTTPINSPECT_GLOBAL_CONF *defaultConfig;
+    HTTPINSPECT_GLOBAL_CONF *defaultSwapConfig;
+
     if (hi_swap_config == NULL)
         return 0;
 
     sfPolicyUserDataIterate (hi_swap_config, HttpInspectVerifyPolicy);
+    defaultConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_config);
+    defaultSwapConfig = (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_swap_config);
 
 #ifdef ZLIB
     {
-        HTTPINSPECT_GLOBAL_CONF *defaultConfig =
-            (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_config);
-        HTTPINSPECT_GLOBAL_CONF *defaultSwapConfig =
-            (HTTPINSPECT_GLOBAL_CONF *)sfPolicyUserDataGetDefault(hi_swap_config);
-
         if (hi_gzip_mempool != NULL)
         {
             if (defaultSwapConfig == NULL)
@@ -1248,6 +1406,9 @@ static int HttpInspectReloadVerify(void)
                 hi_swap_config = NULL;
                 return -1;
             }
+
+            if (defaultSwapConfig->decompr_depth & 7)
+                defaultSwapConfig->decompr_depth += (8 - (defaultSwapConfig->decompr_depth & 7));
 
             if (defaultSwapConfig->decompr_depth != defaultConfig->decompr_depth)
             {
@@ -1302,6 +1463,48 @@ static int HttpInspectReloadVerify(void)
         }
     }
 #endif
+    if (http_mempool != NULL)
+    {
+        if (defaultSwapConfig == NULL)
+        {
+            ErrorMessage("http_inspect:  Changing HTTP memcap requires a restart.\n");
+            HttpInspectFreeConfigs(hi_swap_config);
+            hi_swap_config = NULL;
+            return -1;
+        }
+
+        if (defaultSwapConfig->memcap != defaultConfig->memcap)
+        {
+            ErrorMessage("http_inspect:  Changing memcap requires a restart.\n");
+            HttpInspectFreeConfigs(hi_swap_config);
+            hi_swap_config = NULL;
+            return -1;
+        }
+    }
+    else if (defaultSwapConfig != NULL)
+    {
+        if (sfPolicyUserDataIterate(hi_swap_config, HttpInspectExtractUriHost) != 0)
+        {
+            uint32_t max_sessions_logged;
+
+            if (defaultSwapConfig == NULL)
+            {
+                FatalError("http_inspect:  Must configure a default global "
+                            "configuration if you want to enable logging of uri or hostname in any "
+                            "server configuration.\n");
+            }
+
+            max_sessions_logged = defaultConfig->memcap / (MAX_URI_EXTRACTED + MAX_HOSTNAME);
+
+            http_mempool = (MemPool *)SnortAlloc(sizeof(MemPool));
+
+            if (mempool_init(http_mempool, max_sessions_logged,(MAX_URI_EXTRACTED + MAX_HOSTNAME)) != 0)
+            {
+                FatalError("http_inspect:  Could not allocate HTTP mempool.\n");
+            }
+        }
+    }
+
 
     return 0;
 }
@@ -1327,3 +1530,43 @@ static void HttpInspectReloadSwapFree(void *data)
     HttpInspectFreeConfigs((tSfPolicyUserContextId)data);
 }
 #endif
+
+static inline void InitLookupTables(void)
+{
+    int iNum;
+    int iCtr;
+
+    memset(hex_lookup, INVALID_HEX_VAL, sizeof(hex_lookup));
+    memset(valid_lookup, INVALID_HEX_VAL, sizeof(valid_lookup));
+
+    iNum = 0;
+    for(iCtr = 48; iCtr < 58; iCtr++)
+    {
+        hex_lookup[iCtr] = iNum;
+        valid_lookup[iCtr] = HEX_VAL;
+        iNum++;
+    }
+
+    /*
+    * Set the upper case values.
+    */
+    iNum = 10;
+    for(iCtr = 65; iCtr < 71; iCtr++)
+    {
+        hex_lookup[iCtr] = iNum;
+        valid_lookup[iCtr] = HEX_VAL;
+        iNum++;
+    }
+
+    /*
+     *  Set the lower case values.
+     */
+    iNum = 10;
+    for(iCtr = 97; iCtr < 103; iCtr++)
+    {
+        hex_lookup[iCtr] = iNum;
+        valid_lookup[iCtr] = HEX_VAL;
+        iNum++;
+   }
+}
+

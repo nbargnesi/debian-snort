@@ -1,8 +1,6 @@
-/*
- * sid637.c
+/****************************************************************************
  *
- * Copyright (C) 2006-2008 Sourcefire,Inc
- * Steven A. Sturges <ssturges@sourcefire.com>
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,13 +17,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Description:
- *
- * This file is part of an example of a dynamically loadable rules library.
- *
- * NOTES:
- *
- */
+ ****************************************************************************/
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "sf_snort_plugin_api.h"
 #include "sf_snort_packet.h"
@@ -43,7 +38,7 @@
  */
 
 /* content:"|0A|help|0A|quite|0A|";  */
-static ContentInfo sid637content = 
+static ContentInfo sid637content =
 {
     (u_int8_t *)"|0A|help|0A|quite|0A|",/* pattern to search for */
     0,                      /* depth */
@@ -55,10 +50,14 @@ static ContentInfo sid637content =
     0,                      /* holder of increment length */
     0,                      /* holder for fp offset */
     0,                      /* holder for fp length */
-    0                       /* holder for fp only */
+    0,                      /* holder for fp only */
+    NULL, // offset_refId
+    NULL, // depth_refId
+    NULL, // offset_location
+    NULL  // depth_location
 };
 
-static RuleOption sid637option1 = 
+static RuleOption sid637option1 =
 {
     OPTION_TYPE_CONTENT,
     {
@@ -97,7 +96,7 @@ Rule sid637 =
         ANY_PORT            /* destination port(s) */
     },
     /* metadata */
-    { 
+    {
         3,                  /* genid -- use 3 to distinguish a C rule */
         637,                /* sigid */
         3,                  /* revision */

@@ -53,7 +53,8 @@ libtarget_based_a_LIBADD =
 am__libtarget_based_a_SOURCES_DIST = sftarget_reader.c \
 	sftarget_reader.h sftarget_hostentry.c sftarget_hostentry.h \
 	sftarget_protocol_reference.c sftarget_protocol_reference.h \
-	sf_attribute_table_parser.l sf_attribute_table.y
+	sf_attribute_table_parser.l sf_attribute_table.y \
+	sftarget_reader_live.c sftarget_reader_live.h
 @HAVE_TARGET_BASED_FALSE@am_libtarget_based_a_OBJECTS =  \
 @HAVE_TARGET_BASED_FALSE@	sftarget_reader.$(OBJEXT)
 @HAVE_TARGET_BASED_TRUE@am_libtarget_based_a_OBJECTS =  \
@@ -61,7 +62,8 @@ am__libtarget_based_a_SOURCES_DIST = sftarget_reader.c \
 @HAVE_TARGET_BASED_TRUE@	sftarget_hostentry.$(OBJEXT) \
 @HAVE_TARGET_BASED_TRUE@	sftarget_protocol_reference.$(OBJEXT) \
 @HAVE_TARGET_BASED_TRUE@	sf_attribute_table_parser.$(OBJEXT) \
-@HAVE_TARGET_BASED_TRUE@	sf_attribute_table.$(OBJEXT)
+@HAVE_TARGET_BASED_TRUE@	sf_attribute_table.$(OBJEXT) \
+@HAVE_TARGET_BASED_TRUE@	sftarget_reader_live.$(OBJEXT)
 @HAVE_TARGET_BASED_TRUE@nodist_libtarget_based_a_OBJECTS =  \
 @HAVE_TARGET_BASED_TRUE@	sf_attribute_table_parser.$(OBJEXT) \
 @HAVE_TARGET_BASED_TRUE@	sf_attribute_table.$(OBJEXT)
@@ -103,7 +105,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -118,6 +122,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONFIGFLAGS = @ICONFIGFLAGS@
 INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -154,13 +159,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -239,7 +250,9 @@ noinst_LIBRARIES = libtarget_based.a
 @HAVE_TARGET_BASED_TRUE@sftarget_protocol_reference.c \
 @HAVE_TARGET_BASED_TRUE@sftarget_protocol_reference.h \
 @HAVE_TARGET_BASED_TRUE@sf_attribute_table_parser.l \
-@HAVE_TARGET_BASED_TRUE@sf_attribute_table.y
+@HAVE_TARGET_BASED_TRUE@sf_attribute_table.y \
+@HAVE_TARGET_BASED_TRUE@sftarget_reader_live.c \
+@HAVE_TARGET_BASED_TRUE@sftarget_reader_live.h
 
 all: all-am
 

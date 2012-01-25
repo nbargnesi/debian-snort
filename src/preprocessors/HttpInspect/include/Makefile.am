@@ -8,6 +8,7 @@ hi_client_stateful.h \
 hi_eo_events.h \
 hi_eo.h \
 hi_eo_log.h \
+hi_paf.h \
 hi_include.h \
 hi_mi.h \
 hi_norm.h \

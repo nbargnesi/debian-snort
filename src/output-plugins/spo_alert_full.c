@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -22,11 +22,11 @@
 /* $Id$ */
 
 /* spo_alert_full
- * 
+ *
  * Purpose:  output plugin for full alerting
  *
  * Arguments:  alert file (eventually)
- *   
+ *
  * Effect:
  *
  * Alerts are written to a file in the snort full alert format
@@ -46,12 +46,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "sf_types.h"
 #include "spo_alert_full.h"
 #include "event.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "parser.h"
 #include "util.h"
 #include "log.h"
@@ -83,7 +84,7 @@ static void AlertFullRestart(int, void *);
 /*
  * Function: SetupAlertFull()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -94,7 +95,7 @@ static void AlertFullRestart(int, void *);
  */
 void AlertFullSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("alert_full", OUTPUT_TYPE_FLAG__ALERT, AlertFullInit);
 
@@ -117,7 +118,7 @@ static void AlertFullInit(char *args)
 {
     SpoAlertFullData *data;
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output: AlertFull Initialized\n"););
-    
+
     /* parse the argument list from the rules file */
     data = ParseAlertFullArgs(args);
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Linking AlertFull functions to call lists...\n"););
@@ -202,9 +203,8 @@ static void AlertFull(Packet *p, char *msg, void *arg, Event *event)
                 default:
                     break;
             }
-
-           LogXrefs(data->log, 1);
         }
+        LogXrefs(data->log, 1);
 
         TextLog_Putc(data->log, '\n');
     } /* End of if(p) */

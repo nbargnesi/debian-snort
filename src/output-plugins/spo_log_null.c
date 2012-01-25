@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -20,15 +20,15 @@
 /* $Id$ */
 
 /* spo_log_null
- * 
+ *
  * Purpose:
  *
- * This module is a NULL placeholder for people that want to turn off 
+ * This module is a NULL placeholder for people that want to turn off
  * logging for whatever reason.  Please note that logging is separate from
  * alerting, they are completely separate output facilities within Snort.
  *
  * Arguments:
- *   
+ *
  * None.
  *
  * Effect:
@@ -41,13 +41,17 @@
 
 #include <sys/types.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "spo_log_null.h"
 #include "decode.h"
 #include "event.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 
 #include "snort.h"
 
@@ -59,7 +63,7 @@ static void LogNullRestartFunc(int, void *);
 
 void LogNullSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("log_null", OUTPUT_TYPE_FLAG__LOG, LogNullInit);
 

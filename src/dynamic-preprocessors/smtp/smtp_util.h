@@ -1,6 +1,6 @@
 /****************************************************************************
- * 
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ *
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -35,10 +35,13 @@
 
 void SMTP_GetEOL(const uint8_t *, const uint8_t *, const uint8_t **, const uint8_t **);
 int SMTP_CopyToAltBuffer(SFSnortPacket *, const uint8_t *, int);
-int SMTP_IsBase64Data(const char *, int );
-void SMTP_Base64Decode(const uint8_t *, const uint8_t *);
+int SMTP_CopyEmailHdrs(const uint8_t *, int );
+int SMTP_CopyEmailID(const uint8_t *, int , int );
+int SMTP_CopyFileName(const uint8_t *, int );
+void SMTP_LogFuncs(SMTPConfig *config, SFSnortPacket *p);
+void SMTP_DecodeType(const char *, int );
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
 const char * SMTP_PrintBuffer(SFSnortPacket *);
 #endif
 

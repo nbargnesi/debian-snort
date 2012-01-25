@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,13 +28,14 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugin_enum.h"
 #include "sfhashfcn.h"
 
@@ -103,7 +104,7 @@ int IcmpCodeCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupIcmpCodeCheck()
  *
  * Purpose: Register the icode keyword and configuration function
@@ -126,7 +127,7 @@ void SetupIcmpCodeCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IcmpCodeCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Initialize the rule data structs and parse the rule argument
@@ -146,7 +147,7 @@ void IcmpCodeCheckInit(char *data, OptTreeNode *otn, int protocol)
         FatalError( "%s(%d): ICMP Options on non-ICMP rule\n", file_name, file_line);
     }
 
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_ICMP_CODE])
     {
         FatalError("%s(%d): Multiple icmp code options in rule\n", file_name,
@@ -159,13 +160,13 @@ void IcmpCodeCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_ICMP_CODE] = (IcmpCodeCheckData *)
             SnortAlloc(sizeof(IcmpCodeCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseIcmpCode(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
-    
+
     fpl = AddOptFuncToList(IcmpCodeCheck, otn);
     fpl->type = RULE_OPTION_TYPE_ICMP_CODE;
     fpl->context = otn->ds_list[PLUGIN_ICMP_CODE];
@@ -174,7 +175,7 @@ void IcmpCodeCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseIcmpCode(char *, OptTreeNode *)
  *
  * Purpose: Process the icode argument and stick it in the data struct
@@ -216,8 +217,8 @@ void ParseIcmpCode(char *data, OptTreeNode *otn)
                    file_name, file_line);
     }
 
-    /* 
-     * If a range is specified, put the min in icmp_code, and the max in 
+    /*
+     * If a range is specified, put the min in icmp_code, and the max in
      * icmp_code2
      */
 
@@ -304,7 +305,7 @@ void ParseIcmpCode(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IcmpCodeCheck(Packet *p, OptTreeNode *, OptFpList *fp_list)
  *
  * Purpose: Test the packet's ICMP code field value against the option's
@@ -326,7 +327,7 @@ int IcmpCodeCheck(void *option_data, Packet *p)
 
     /* return 0  if we don't have an icmp header */
     if(!p->icmph)
-        return rval; 
+        return rval;
 
     PREPROC_PROFILE_START(icmpCodePerfStats);
 
@@ -345,7 +346,7 @@ int IcmpCodeCheck(void *option_data, Packet *p)
                 rval = DETECTION_OPTION_MATCH;
             break;
         case ICMP_CODE_TEST_RG:
-            if (p->icmph->code > ds_ptr->icmp_code && 
+            if (p->icmph->code > ds_ptr->icmp_code &&
                     p->icmph->code < ds_ptr->icmp_code2)
                 rval = DETECTION_OPTION_MATCH;
             break;

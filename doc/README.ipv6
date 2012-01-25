@@ -24,15 +24,6 @@ IPv6 support is also included for the following.
     Respond2
     Dynamic plugins (Shared Object rules)
 
-IPv6 support is not included for the following, but will be 
-added in a future release:
-
-    Database
-    Aruba
-    Prelude
-
-        Note: For stream reassembly and flow, use Stream5.
-
 All rule options are supported with IPv6
     
 

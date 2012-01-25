@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 /**************************************************************************
  *
  * spp_smtp.c
@@ -43,7 +43,13 @@
 #include <ctype.h>
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "spp_smtp.h"
+#include "sf_preproc_info.h"
 #include "snort_smtp.h"
 #include "smtp_config.h"
 #include "smtp_log.h"
@@ -51,7 +57,7 @@
 #include "preprocids.h"
 #include "sf_snort_packet.h"
 #include "sf_dynamic_preprocessor.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
 
@@ -64,13 +70,25 @@ int smtpDetectCalled = 0;
 
 #include "sf_types.h"
 #include "mempool.h"
+#include "snort_bounds.h"
+
+const int MAJOR_VERSION = 1;
+const int MINOR_VERSION = 1;
+const int BUILD_VERSION = 9;
+#ifdef SUP_IP6
+const char *PREPROC_NAME = "SF_SMTP (IPV6)";
+#else
+const char *PREPROC_NAME = "SF_SMTP";
+#endif
+
+#define SetupSMTP DYNAMIC_PREPROC_SETUP
 
 MemPool *smtp_mime_mempool = NULL;
+MemPool *smtp_mempool = NULL;
 
 tSfPolicyUserContextId smtp_config = NULL;
 SMTPConfig *smtp_eval_config = NULL;
 
-extern DynamicPreprocessorData _dpd;
 extern SMTP smtp_no_session;
 extern int16_t smtp_proto_id;
 
@@ -80,6 +98,7 @@ static void SMTPCleanExitFunction(int, void *);
 static void SMTPResetFunction(int, void *);
 static void SMTPResetStatsFunction(int, void *);
 static void _addPortsToStream5Filter(SMTPConfig *, tSfPolicyId);
+static void SMTP_RegXtraDataFuncs(SMTPConfig *config);
 #ifdef TARGET_BASED
 static void _addServicesToStream5Filter(tSfPolicyId);
 #endif
@@ -97,7 +116,7 @@ static void SMTPReloadSwapFree(void *);
 /*
  * Function: SetupSMTP()
  *
- * Purpose: Registers the preprocessor keyword and initialization 
+ * Purpose: Registers the preprocessor keyword and initialization
  *          function into the preprocessor list.  This is the function that
  *          gets called from InitPreprocessors() in plugbase.c.
  *
@@ -170,7 +189,7 @@ static void SMTPInit(char *args)
 #endif
 
 #ifdef PERF_PROFILING
-        _dpd.addPreprocProfileFunc("smtp", (void*)&smtpPerfStats, 0, _dpd.totalPerfStats);        
+        _dpd.addPreprocProfileFunc("smtp", (void*)&smtpPerfStats, 0, _dpd.totalPerfStats);
 #endif
     }
 
@@ -187,13 +206,15 @@ static void SMTPInit(char *args)
         DynamicPreprocessorFatalMessage("Not enough memory to create SMTP "
                                         "configuration.\n");
     }
- 
+
     sfPolicyUserDataSetCurrent(smtp_config, pPolicyConfig);
 
+    SMTP_RegXtraDataFuncs(pPolicyConfig);
     SMTP_InitCmds(pPolicyConfig);
     SMTP_ParseArgs(pPolicyConfig, args);
 
     SMTP_CheckConfig(pPolicyConfig, smtp_config);
+    SMTP_PrintConfig(pPolicyConfig);
 
     if(pPolicyConfig->disabled)
         return;
@@ -218,7 +239,7 @@ static void SMTPInit(char *args)
     {
         pPolicyConfig->cmd_search[tmp->search_id].name = tmp->name;
         pPolicyConfig->cmd_search[tmp->search_id].name_len = tmp->name_len;
-        
+
         _dpd.searchAPI->search_instance_add(pPolicyConfig->cmd_search_mpse, tmp->name,
                                             tmp->name_len, tmp->search_id);
     }
@@ -240,7 +261,7 @@ static void SMTPInit(char *args)
  *          as you like.  Try not to destroy the performance of the whole
  *          system by trying to do too much....
  *
- * Arguments: p => pointer to the current packet data struct 
+ * Arguments: p => pointer to the current packet data struct
  *
  * Returns: void function
  *
@@ -278,7 +299,7 @@ static void SMTPDetect(void *pkt, void *context)
 }
 
 
-/* 
+/*
  * Function: SMTPCleanExitFunction(int, void *)
  *
  * Purpose: This function gets called when Snort is exiting, if there's
@@ -286,19 +307,24 @@ static void SMTPDetect(void *pkt, void *context)
  *          it should be done here.
  *
  * Arguments: signal => the code of the signal that was issued to Snort
- *            data => any arguments or data structs linked to this 
+ *            data => any arguments or data structs linked to this
  *                    function when it was registered, may be
  *                    needed to properly exit
- *       
+ *
  * Returns: void function
- */                   
+ */
 static void SMTPCleanExitFunction(int signal, void *data)
-{    
+{
     SMTP_Free();
     if (mempool_destroy(smtp_mime_mempool) == 0)
     {
         free(smtp_mime_mempool);
         smtp_mime_mempool = NULL;
+    }
+    if (mempool_destroy(smtp_mempool) == 0)
+    {
+        free(smtp_mempool);
+        smtp_mempool = NULL;
     }
 
 }
@@ -339,7 +365,7 @@ static void _addServicesToStream5Filter(tSfPolicyId policy_id)
 }
 #endif
 
-static int SMTPEnableMimeDecoding(tSfPolicyUserContextId config,
+static int SMTPEnableDecoding(tSfPolicyUserContextId config,
             tSfPolicyId policyId, void *pData)
 {
     SMTPConfig *context = (SMTPConfig *)pData;
@@ -350,7 +376,24 @@ static int SMTPEnableMimeDecoding(tSfPolicyUserContextId config,
     if(context->disabled)
         return 0;
 
-    if(context->enable_mime_decoding)
+    if(!SMTP_IsDecodingEnabled(context))
+        return 1;
+
+    return 0;
+}
+static int SMTPLogExtraData(tSfPolicyUserContextId config,
+        tSfPolicyId policyId, void *pData)
+{
+    SMTPConfig *context = (SMTPConfig *)pData;
+
+    if (pData == NULL)
+        return 0;
+
+    if(context->disabled)
+        return 0;
+
+    if(context->log_email_hdrs || context->log_filename ||
+            context->log_mailfrom || context->log_rcptto)
         return 1;
 
     return 0;
@@ -358,11 +401,18 @@ static int SMTPEnableMimeDecoding(tSfPolicyUserContextId config,
 
 static int SMTPCheckPolicyConfig(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {
+    SMTPConfig *context = (SMTPConfig *)pData;
+
     _dpd.setParserPolicy(policyId);
+
+    /* In a multiple-policy setting, the SMTP preproc can be turned on in a
+       "disabled" state. In this case, we don't require Stream5. */
+    if (context->disabled)
+        return 0;
 
     if (!_dpd.isPreprocEnabled(PP_STREAM5))
     {
@@ -373,21 +423,14 @@ static int SMTPCheckPolicyConfig(
     return 0;
 }
 
-static void SetMaxMimeSession(SMTPConfig *pPolicyConfig)
+static void SMTP_RegXtraDataFuncs(SMTPConfig *config)
 {
-    /*decode length will be shorter than encode length in base64 encoding and 
-     * hence this calculation. */
-    pPolicyConfig->max_mime_decode_bytes =
-        ( (pPolicyConfig->max_mime_depth/4)*3 );
-
-    if ( pPolicyConfig->max_mime_decode_bytes & 7)
-    {
-        (pPolicyConfig->max_mime_decode_bytes += 8 -
-             (pPolicyConfig->max_mime_decode_bytes & 7));
-    }
-    pPolicyConfig->max_mime_sessions =
-        pPolicyConfig->max_mime_mem / 
-        (pPolicyConfig->max_mime_depth + pPolicyConfig->max_mime_decode_bytes);
+    if ((_dpd.streamAPI == NULL) || !config)
+        return;
+    config->xtra_filename_id = _dpd.streamAPI->reg_xtra_data_cb(SMTP_GetFilename);
+    config->xtra_mfrom_id = _dpd.streamAPI->reg_xtra_data_cb(SMTP_GetMailFrom);
+    config->xtra_rcptto_id = _dpd.streamAPI->reg_xtra_data_cb(SMTP_GetRcptTo);
+    config->xtra_ehdrs_id = _dpd.streamAPI->reg_xtra_data_cb(SMTP_GetEmailHdrs);
 
 }
 
@@ -398,42 +441,76 @@ static void SMTPCheckConfig(void)
         SMTPConfig *defaultConfig =
                 (SMTPConfig *)sfPolicyUserDataGetDefault(smtp_config);
 
-        if (sfPolicyUserDataIterate(smtp_config, SMTPEnableMimeDecoding) != 0)
+        if (sfPolicyUserDataIterate(smtp_config, SMTPEnableDecoding) != 0)
         {
             int encode_depth;
-            int decode_depth;
+            int max_sessions;
 
             if (defaultConfig == NULL)
             {
                 /*error message */
                 DynamicPreprocessorFatalMessage("SMTP: Must configure a default "
-                        "configuration if you want to enable mime decoding.\n");
+                                "configuration if you want to enable smtp decoding.\n");
             }
 
-            encode_depth = defaultConfig->max_mime_depth;
+            encode_depth = defaultConfig->max_depth;
 
             if (encode_depth & 7)
             {
                 encode_depth += (8 - (encode_depth & 7));
-                defaultConfig->max_mime_depth = encode_depth;
             }
 
-            SetMaxMimeSession(defaultConfig);
-
-            decode_depth = defaultConfig->max_mime_decode_bytes;
+            max_sessions = defaultConfig->max_mime_mem / (2 * encode_depth );
 
             smtp_mime_mempool = (MemPool *)calloc(1, sizeof(MemPool));
 
-            if (mempool_init(smtp_mime_mempool, defaultConfig->max_mime_sessions, 
-                        (encode_depth + decode_depth)) != 0)
+            if (mempool_init(smtp_mime_mempool, max_sessions,
+                        (2 * encode_depth )) != 0)
             {
-                if(defaultConfig->max_mime_sessions)
+                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mime mempool.\n");
+            }
+
+        }
+
+        if (sfPolicyUserDataIterate(smtp_config, SMTPLogExtraData) != 0)
+        {
+            uint32_t log_depth, max_bkt_size;
+            uint32_t max_sessions_logged;
+
+            if (defaultConfig == NULL)
+            {
+                /*error message */
+                DynamicPreprocessorFatalMessage("SMTP: Must configure a default "
+                        "configuration if you want to log email headers.\n");
+            }
+
+            log_depth = defaultConfig->email_hdrs_log_depth;
+
+            /* Rounding the log depth to a multiple of 8 since
+             * multiple sessions use the same mempool
+             */
+
+            if (log_depth & 7)
+            {
+                log_depth += (8 - (log_depth & 7));
+                defaultConfig->email_hdrs_log_depth = log_depth;
+            }
+
+            max_bkt_size = ( (2 * MAX_EMAIL) + MAX_FILE + defaultConfig->email_hdrs_log_depth);
+            max_sessions_logged = defaultConfig->memcap / max_bkt_size;
+
+
+            smtp_mempool = calloc(1, sizeof(*smtp_mempool));
+
+            if (mempool_init(smtp_mempool, max_sessions_logged, max_bkt_size) != 0)
+            {
+                if(!max_sessions_logged)
                 {
-                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"max_mime_mem\" \n");
+                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
                 }
                 else
                 {
-                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
+                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"memcap\" \n");
                 }
             }
         }
@@ -476,10 +553,12 @@ static void SMTPReload(char *args)
 
     sfPolicyUserDataSetCurrent(smtp_swap_config, pPolicyConfig);
 
+    SMTP_RegXtraDataFuncs(pPolicyConfig);
     SMTP_InitCmds(pPolicyConfig);
     SMTP_ParseArgs(pPolicyConfig, args);
 
     SMTP_CheckConfig(pPolicyConfig, smtp_swap_config);
+    SMTP_PrintConfig(pPolicyConfig);
 
     if( pPolicyConfig->disabled )
         return;
@@ -502,7 +581,7 @@ static void SMTPReload(char *args)
     {
         pPolicyConfig->cmd_search[tmp->search_id].name = tmp->name;
         pPolicyConfig->cmd_search[tmp->search_id].name_len = tmp->name_len;
-        
+
         _dpd.searchAPI->search_instance_add(pPolicyConfig->cmd_search_mpse, tmp->name,
                                             tmp->name_len, tmp->search_id);
     }
@@ -542,7 +621,7 @@ static int SMTPReloadVerify(void)
     {
         if (configNext == NULL)
         {
-            _dpd.errMsg("SMTP reload: Changing the max_mime_depth or max_mime_mem requires a restart.\n");
+            _dpd.errMsg("SMTP reload: Changing the SMTP configuration requires a restart.\n");
             SMTP_FreeConfigs(smtp_swap_config);
             smtp_swap_config = NULL;
             return -1;
@@ -554,14 +633,59 @@ static int SMTPReloadVerify(void)
             smtp_swap_config = NULL;
             return -1;
         }
-        if (configNext->max_mime_depth & 7)
-            configNext->max_mime_depth += (8 - (configNext->max_mime_depth & 7));
-
-        SetMaxMimeSession(configNext);
-
-        if (configNext->max_mime_depth != config->max_mime_depth)
+        if(configNext->b64_depth != config->b64_depth)
         {
-            _dpd.errMsg("SMTP reload: Changing the max_mime_depth requires a restart.\n");
+            _dpd.errMsg("SMTP reload: Changing the b64_decode_depth requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+        if(configNext->qp_depth != config->qp_depth)
+        {
+            _dpd.errMsg("SMTP reload: Changing the qp_decode_depth requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+        if(configNext->bitenc_depth != config->bitenc_depth)
+        {
+            _dpd.errMsg("SMTP reload: Changing the bitenc_decode_depth requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+        if(configNext->uu_depth != config->uu_depth)
+        {
+            _dpd.errMsg("SMTP reload: Changing the uu_decode_depth requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+
+    }
+
+    if (smtp_mempool != NULL)
+    {
+        if (configNext == NULL)
+        {
+            _dpd.errMsg("SMTP reload: Changing the memcap or email_hdrs_log_depth requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+        if (configNext->memcap != config->memcap)
+        {
+            _dpd.errMsg("SMTP reload: Changing the memcap requires a restart.\n");
+            SMTP_FreeConfigs(smtp_swap_config);
+            smtp_swap_config = NULL;
+            return -1;
+        }
+        if (configNext->email_hdrs_log_depth & 7)
+            configNext->email_hdrs_log_depth += (8 - (configNext->email_hdrs_log_depth & 7));
+
+        if(config->email_hdrs_log_depth != config->email_hdrs_log_depth)
+        {
+            _dpd.errMsg("SMTP reload: Changing the email_hdrs_log_depth requires a restart.\n");
             SMTP_FreeConfigs(smtp_swap_config);
             smtp_swap_config = NULL;
             return -1;
@@ -569,41 +693,64 @@ static int SMTPReloadVerify(void)
     }
     else if(configNext != NULL)
     {
-
-        if (sfPolicyUserDataIterate(smtp_swap_config, SMTPEnableMimeDecoding) != 0)
+        if (sfPolicyUserDataIterate(smtp_swap_config, SMTPEnableDecoding) != 0)
         {
             int encode_depth;
-            int decode_depth;
+            int max_sessions;
 
-            encode_depth = configNext->max_mime_depth;
+
+            encode_depth = configNext->max_depth;
 
             if (encode_depth & 7)
             {
                 encode_depth += (8 - (encode_depth & 7));
-                configNext->max_mime_depth = encode_depth;
             }
 
-            SetMaxMimeSession(configNext);
-            decode_depth = configNext->max_mime_decode_bytes;
+            max_sessions = configNext->max_mime_mem / ( 2 * encode_depth);
 
             smtp_mime_mempool = (MemPool *)calloc(1, sizeof(MemPool));
 
-            if (mempool_init(smtp_mime_mempool, configNext->max_mime_sessions, 
-                        (encode_depth + decode_depth)) != 0)
+            if (mempool_init(smtp_mime_mempool, max_sessions,
+                    (2 * encode_depth)) != 0)
             {
-                if(configNext->max_mime_sessions)
+                DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mime mempool.\n");
+            }
+        }
+
+        if (sfPolicyUserDataIterate(smtp_config, SMTPLogExtraData) != 0)
+        {
+            uint32_t log_depth, max_bkt_size;
+            uint32_t max_sessions_logged;
+
+            log_depth = configNext->email_hdrs_log_depth;
+
+
+            if (log_depth & 7)
+            {
+                log_depth += (8 - (log_depth & 7));
+                configNext->email_hdrs_log_depth = log_depth;
+            }
+
+            max_bkt_size = configNext->memcap/((2* MAX_EMAIL) + MAX_FILE + configNext->email_hdrs_log_depth);
+            max_sessions_logged = configNext->memcap/max_bkt_size;
+
+            smtp_mempool = calloc(1, sizeof(*smtp_mempool));
+
+            if (mempool_init(smtp_mempool, max_sessions_logged, max_bkt_size) != 0)
+            {
+                if(!max_sessions_logged)
                 {
-                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"max_mime_mem\" \n");
+                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
                 }
                 else
                 {
-                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
+                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"memcap\" \n");
                 }
             }
         }
 
     }
-       
+
 
     if ( configNext->disabled )
         return 0;
@@ -620,7 +767,7 @@ static int SMTPReloadVerify(void)
 
 static int SMTPReloadSwapPolicy(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {
@@ -631,7 +778,7 @@ static int SMTPReloadSwapPolicy(
         sfPolicyUserDataClear (config, policyId);
         SMTP_FreeConfig(pPolicyConfig);
     }
-     
+
     return 0;
 }
 

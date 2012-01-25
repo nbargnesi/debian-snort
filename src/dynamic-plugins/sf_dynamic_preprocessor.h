@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -24,20 +24,15 @@
 #ifndef _SF_DYNAMIC_PREPROCESSOR_H_
 #define _SF_DYNAMIC_PREPROCESSOR_H_
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <ctype.h>
-#ifdef HAVE_WCHAR_H
+#ifdef SF_WCHAR
 #include <wchar.h>
 #endif
 #include "sf_dynamic_meta.h"
 #include "ipv6_port.h"
-#include "sf_types.h"
 #include "obfuscation.h"
 
-/* specifies that a function does not return 
+/* specifies that a function does not return
  * used for quieting Visual Studio warnings
  */
 #ifdef WIN32
@@ -67,12 +62,16 @@
 #include "str_search.h"
 #include "obfuscation.h"
 #include "sfportobject.h"
+#include "attribute_table_api.h"
+#include "sfcontrol.h"
+#include "idle_processing.h"
 
 #define MINIMUM_DYNAMIC_PREPROC_ID 10000
 typedef void (*PreprocessorInitFunc)(char *);
-typedef void * (*AddPreprocFunc)(void (*pp_func)(void *, void *), u_int16_t, u_int32_t, u_int32_t);
-typedef void (*AddPreprocExit)(void (*pp_exit_func) (int, void *), void *arg, u_int16_t, u_int32_t);
-typedef void (*AddPreprocUnused)(void (*pp_unused_func) (int, void *), void *arg, u_int16_t, u_int32_t);
+typedef void * (*AddPreprocFunc)(void (*pp_func)(void *, void *), uint16_t, uint32_t, uint32_t);
+typedef void * (*AddMetaEvalFunc)(void (*meta_eval_func)(int, const uint8_t *), uint16_t priority, uint32_t preproc_id);
+typedef void (*AddPreprocExit)(void (*pp_exit_func) (int, void *), void *arg, uint16_t, uint32_t);
+typedef void (*AddPreprocUnused)(void (*pp_unused_func) (int, void *), void *arg, uint16_t, uint32_t);
 typedef void (*AddPreprocConfCheck)(void (*pp_conf_chk_func) (void));
 typedef int (*AlertQueueAdd)(unsigned int, unsigned int, unsigned int,
                              unsigned int, unsigned int, char *, void *);
@@ -86,9 +85,9 @@ typedef void (*PreprocessorReloadSwapFreeFunc)(void *);
 #endif
 
 #ifndef SNORT_RELOAD
-typedef void (*PreprocRegisterFunc)(char *, PreprocessorInitFunc);
+typedef void (*PreprocRegisterFunc)(const char *, PreprocessorInitFunc);
 #else
-typedef void (*PreprocRegisterFunc)(char *, PreprocessorInitFunc,
+typedef void (*PreprocRegisterFunc)(const char *, PreprocessorInitFunc,
                                     PreprocessorReloadFunc,
                                     PreprocessorReloadSwapFunc,
                                     PreprocessorReloadSwapFreeFunc);
@@ -97,26 +96,27 @@ typedef void (*AddPreprocReloadVerifyFunc)(PreprocessorReloadVerifyFunc);
 #endif
 typedef int (*ThresholdCheckFunc)(unsigned int, unsigned int, snort_ip_p, snort_ip_p, long);
 typedef void (*InlineDropFunc)(void *);
+typedef void (*ActiveEnableFunc)(int);
 typedef void (*DisableDetectFunc)(void *);
-typedef int (*SetPreprocBitFunc)(void *, u_int32_t);
+typedef int (*SetPreprocBitFunc)(void *, uint32_t);
 typedef int (*DetectFunc)(void *);
 typedef void *(*GetRuleInfoByNameFunc)(char *);
 typedef void *(*GetRuleInfoByIdFunc)(int);
 typedef int (*printfappendfunc)(char *, int, const char *, ...);
 typedef char ** (*TokenSplitFunc)(const char *, const char *, const int, int *, const char);
 typedef void (*TokenFreeFunc)(char ***, int);
-typedef void (*AddPreprocProfileFunc)(char *, void *, int, void *);
+typedef void (*AddPreprocProfileFunc)(const char *, void *, int, void *);
 typedef int (*ProfilingFunc)(void);
 typedef int (*PreprocessFunc)(void *);
-typedef void (*PreprocStatsRegisterFunc)(char *, void (*pp_stats_func)(int));
-typedef void (*AddPreprocReset)(void (*pp_rst_func) (int, void *), void *arg, u_int16_t, u_int32_t);
-typedef void (*AddPreprocResetStats)(void (*pp_rst_stats_func) (int, void *), void *arg, u_int16_t, u_int32_t);
-typedef void (*AddPreprocReassemblyPktFunc)(void * (*pp_reass_pkt_func)(void), u_int32_t);
-typedef int (*SetPreprocReassemblyPktBitFunc)(void *, u_int32_t);
+typedef void (*PreprocStatsRegisterFunc)(const char *, void (*pp_stats_func)(int));
+typedef void (*AddPreprocReset)(void (*pp_rst_func) (int, void *), void *arg, uint16_t, uint32_t);
+typedef void (*AddPreprocResetStats)(void (*pp_rst_stats_func) (int, void *), void *arg, uint16_t, uint32_t);
+typedef void (*AddPreprocReassemblyPktFunc)(void * (*pp_reass_pkt_func)(void), uint32_t);
+typedef int (*SetPreprocReassemblyPktBitFunc)(void *, uint32_t);
 typedef void (*DisablePreprocessorsFunc)(void *);
 #ifdef TARGET_BASED
-typedef int16_t (*FindProtocolReferenceFunc)(char *);
-typedef int16_t (*AddProtocolReferenceFunc)(char *);
+typedef int16_t (*FindProtocolReferenceFunc)(const char *);
+typedef int16_t (*AddProtocolReferenceFunc)(const char *);
 typedef int (*IsAdaptiveConfiguredFunc)(tSfPolicyId, int);
 #endif
 #ifdef SUP_IP6
@@ -131,7 +131,7 @@ typedef void (*AddKeywordOverrideFunc)(char *, char *, PreprocOptionInit,
         PreprocOptionFastPatternFunc);
 typedef void (*AddKeywordByteOrderFunc)(char *, PreprocOptionByteOrderFunc);
 
-typedef int (*IsPreprocEnabledFunc)(u_int32_t);
+typedef int (*IsPreprocEnabledFunc)(uint32_t);
 
 typedef char * (*PortArrayFunc)(char *, PortObject *, int *);
 
@@ -139,17 +139,40 @@ typedef int (*AlertQueueLog)(void *);
 typedef void (*AlertQueueControl)(void);  // reset, push, and pop
 typedef tSfPolicyId (*GetPolicyFunc)(void);
 typedef void (*SetPolicyFunc)(tSfPolicyId);
-typedef void (*SetFileDataPtrFunc)(const u_char *,uint32_t );
+typedef tSfPolicyId (*GetPolicyFromIdFunc)(uint16_t );
+typedef void (*ChangePolicyFunc)(tSfPolicyId, void *p);
+typedef void (*SetFileDataPtrFunc)(uint8_t *,uint16_t );
+typedef void (*DetectResetFunc)(uint8_t *,uint16_t );
+typedef void (*SetAltDecodeFunc)(uint16_t );
+typedef void (*DetectFlagEnableFunc)(SFDetectFlagType);
 typedef long (*DynamicStrtol)(const char *, char **, int);
 typedef unsigned long(*DynamicStrtoul)(const char *, char **, int);
 typedef const char* (*DynamicStrnStr)(const char *, int, const char *);
+typedef const char* (*DynamicStrcasestr)(const char *, int, const char *);
+typedef int (*DynamicStrncpy)(char *, const char *, size_t );
+typedef const char* (*DynamicStrnPbrk)(const char *, int , const char *);
 
 typedef int (*EvalRTNFunc)(void *rtn, void *p, int check_ports);
 
 typedef void* (*EncodeNew)(void);
 typedef void (*EncodeDelete)(void*);
 typedef void (*EncodeUpdate)(void*);
-typedef int (*EncodeFormat)(uint32_t, const void*, void*);
+typedef int (*EncodeFormat)(uint32_t, const void*, void*, int);
+typedef bool (*PafEnabledFunc)(void);
+
+typedef char* (*GetLogDirectory)(void);
+typedef uint32_t (*GetSnortInstance)(void);
+
+typedef int (*ControlSocketRegisterHandlerFunc)(uint16_t, OOBPreControlFunc, IBControlFunc,
+                                                OOBPostControlFunc);
+
+typedef int (*RegisterIdleHandler)(IdleProcessingHandler);
+typedef void (*DynamicSendBlockResponse)(void *packet, const uint8_t* buffer, uint32_t buffer_len);
+typedef int (*DynamicSetFlowId)(const void* p, uint32_t id);
+
+typedef int (*DynamicIsStrEmpty)(const char * );
+typedef void (*AddPeriodicCheck)(void (*pp_check_func) (int, void *), void *arg, uint16_t, uint32_t, uint32_t);
+typedef void (*AddPostConfigFuncs)(void (*pp_post_config_func) (void *), void *arg);
 
 #define ENC_DYN_FWD 0x80000000
 #define ENC_DYN_NET 0x10000000
@@ -168,8 +191,9 @@ typedef struct _DynamicPreprocessorData
     int version;
     int size;
 
-    SFDataBuffer* altBuffer;
-    unsigned int altBufferSize;
+    SFDataBuffer *altBuffer;
+    SFDataPointer *altDetect;
+    SFDataPointer *fileDataBuf;
     UriInfo *uriBuffers[HTTP_BUFFER_MAX];
 
     LogMsgFunc logMsg;
@@ -179,7 +203,7 @@ typedef struct _DynamicPreprocessorData
 
     PreprocRegisterFunc registerPreproc;
     AddPreprocFunc addPreproc;
-    AddPreprocUnused addPreprocUnused;  // this func ptr is available
+    GetSnortInstance getSnortInstance;
     AddPreprocExit addPreprocExit;
     AddPreprocConfCheck addPreprocConfCheck;
     RegisterPreprocRuleOpt preprocOptRegister;
@@ -190,7 +214,8 @@ typedef struct _DynamicPreprocessorData
     AlertQueueAdd alertAdd;
     GenSnortEvent genSnortEvent;
     ThresholdCheckFunc thresholdCheck;
-    InlineDropFunc  inlineDrop;
+    InlineDropFunc  inlineDropAndReset;
+    ActiveEnableFunc activeSetEnabled;
 
     DetectFunc detect;
     DisableDetectFunc disableDetect;
@@ -209,7 +234,7 @@ typedef struct _DynamicPreprocessorData
 
     GetRuleInfoByNameFunc getRuleInfoByName;
     GetRuleInfoByIdFunc getRuleInfoById;
-#ifdef HAVE_WCHAR_H
+#ifdef SF_WCHAR
     DebugWideMsgFunc debugWideMsg;
 #endif
 
@@ -217,13 +242,10 @@ typedef struct _DynamicPreprocessorData
 
     char **debugMsgFile;
     int *debugMsgLine;
-    
+
     PreprocStatsRegisterFunc registerPreprocStats;
     AddPreprocReset addPreprocReset;
     AddPreprocResetStats addPreprocResetStats;
-    AddPreprocReassemblyPktFunc addPreprocReassemblyPkt;
-    SetPreprocReassemblyPktBitFunc setPreprocReassemblyPktBit;
-
     DisablePreprocessorsFunc disablePreprocessors;
 
 #ifdef SUP_IP6
@@ -257,9 +279,18 @@ typedef struct _DynamicPreprocessorData
     GetPolicyFunc getDefaultPolicy;
     SetPolicyFunc setParserPolicy;
     SetFileDataPtrFunc setFileDataPtr;
+    DetectResetFunc DetectReset;
+    SetAltDecodeFunc SetAltDecode;
+    GetAltDetectFunc GetAltDetect;
+    SetAltDetectFunc SetAltDetect;
+    IsDetectFlagFunc Is_DetectFlag;
+    DetectFlagDisableFunc DetectFlag_Disable;
     DynamicStrtol SnortStrtol;
     DynamicStrtoul SnortStrtoul;
     DynamicStrnStr SnortStrnStr;
+    DynamicStrncpy SnortStrncpy;
+    DynamicStrnPbrk SnortStrnPbrk;
+    DynamicStrcasestr SnortStrcasestr;
     EvalRTNFunc fpEvalRTN;
 
     ObfuscationApi *obApi;
@@ -270,6 +301,28 @@ typedef struct _DynamicPreprocessorData
     EncodeUpdate encodeUpdate;
 
     AddPreprocFunc addDetect;
+    PafEnabledFunc isPafEnabled;
+
+#ifdef TARGET_BASED
+    HostAttributeTableApi *hostAttributeTableApi;
+#endif
+
+    GetLogDirectory getLogDirectory;
+
+    ControlSocketRegisterHandlerFunc controlSocketRegisterHandler;
+    RegisterIdleHandler registerIdleHandler;
+
+    GetPolicyFromIdFunc getPolicyFromId;
+    ChangePolicyFunc changeRuntimePolicy;
+    InlineDropFunc  inlineForceDropPacket;
+    InlineDropFunc  inlineForceDropAndReset;
+    DynamicIsStrEmpty SnortIsStrEmpty;
+    AddMetaEvalFunc addMetaEval;
+    DynamicSendBlockResponse dynamicSendBlockResponse;
+    DynamicSetFlowId dynamicSetFlowId;
+    AddPeriodicCheck addPeriodicCheck;
+    AddPostConfigFuncs addPostConfigFunc;
+    char **snort_conf_dir;
 
 } DynamicPreprocessorData;
 
@@ -286,5 +339,7 @@ void RemoveDuplicatePreprocessorPlugins(void);
  * fatalMsg did not return - use instead of fatalMsg
  */
 NORETURN void DynamicPreprocessorFatalMessage(const char *format, ...);
+
+extern DynamicPreprocessorData _dpd;
 
 #endif /* _SF_DYNAMIC_PREPROCESSOR_H_ */

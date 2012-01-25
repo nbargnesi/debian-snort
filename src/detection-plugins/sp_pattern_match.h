@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 #define __SP_PATTERN_MATCH_H__
 
 #include "snort.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "rules.h" /* needed for OptTreeNode defintion */
 #include "treenodes.h"
 #include <ctype.h>
@@ -45,7 +45,7 @@
 #define HTTP_SEARCH_STAT_CODE 0x100
 #define HTTP_SEARCH_STAT_MSG 0x200
 /*Only these Http buffers are eligible for fast pattern match */
-#define FAST_PATTERN_HTTP_BUFS ( HTTP_SEARCH_URI | HTTP_SEARCH_HEADER | HTTP_SEARCH_CLIENT_BODY | HTTP_SEARCH_METHOD)
+#define FAST_PATTERN_HTTP_BUFS ( HTTP_SEARCH_URI | HTTP_SEARCH_HEADER | HTTP_SEARCH_CLIENT_BODY )
 
 /********************************************************************
  * Data structures
@@ -56,7 +56,7 @@ typedef struct _PatternMatchData
     int depth;              /* pattern search depth */
 
     int distance;           /* offset to start from based on last match */
-    u_int within;           /* this pattern must be found 
+    u_int within;           /* this pattern must be found
                                within X bytes of last match*/
 
     int8_t offset_var;      /* byte_extract variable indices for offset, */
@@ -85,9 +85,9 @@ typedef struct _PatternMatchData
                             /* Needed to be able to set the isRelative flag */
 
     /* Set if fast pattern matcher found a content in the packet,
-       but the rule option specifies a negated content. Only 
+       but the rule option specifies a negated content. Only
        applies to negative contents that are not relative */
-    struct 
+    struct
     {
         struct timeval ts;
         uint64_t packet_number;
@@ -127,7 +127,7 @@ int CheckANDPatternMatch(void *, Packet *);
 int CheckUriPatternMatch(void *, Packet *);
 void PatternMatchDuplicatePmd(void *, PatternMatchData *);
 int PatternMatchAdjustRelativeOffsets(PatternMatchData *orig_pmd, PatternMatchData *dup_pmd,
-        const u_int8_t *current_cursor, const u_int8_t *orig_cursor);
+        const uint8_t *current_cursor, const uint8_t *orig_cursor);
 
 #if 0
 /* Not implemented */
@@ -135,12 +135,12 @@ int CheckORPatternMatch(Packet *, OptTreeNode *, OptFpList *);
 #endif
 
 
-static INLINE int IsHttpBufFpEligible(int uri_buffer)
+static inline int IsHttpBufFpEligible(int uri_buffer)
 {
     return uri_buffer & FAST_PATTERN_HTTP_BUFS;
 }
 
-static INLINE PatternMatchData * RemovePmdFromList(PatternMatchData *pmd)
+static inline PatternMatchData * RemovePmdFromList(PatternMatchData *pmd)
 {
     if (pmd == NULL)
         return NULL;
@@ -156,7 +156,7 @@ static INLINE PatternMatchData * RemovePmdFromList(PatternMatchData *pmd)
     return pmd;
 }
 
-static INLINE int InsertPmdAtFront(PatternMatchData **head, PatternMatchData *ins)
+static inline int InsertPmdAtFront(PatternMatchData **head, PatternMatchData *ins)
 {
     if (head == NULL)
         return -1;
@@ -172,7 +172,7 @@ static INLINE int InsertPmdAtFront(PatternMatchData **head, PatternMatchData *in
     return 0;
 }
 
-static INLINE int AppendPmdToList(PatternMatchData **head, PatternMatchData *ins)
+static inline int AppendPmdToList(PatternMatchData **head, PatternMatchData *ins)
 {
     PatternMatchData *tmp;
 
@@ -197,7 +197,7 @@ static INLINE int AppendPmdToList(PatternMatchData **head, PatternMatchData *ins
 }
 
 
-static INLINE void FreePmdList(PatternMatchData *pmd_list)
+static inline void FreePmdList(PatternMatchData *pmd_list)
 {
     if (pmd_list == NULL)
         return;

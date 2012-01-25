@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -47,7 +47,7 @@
 
 /* Macros *********************************************************************/
 
-/* specifies that a function does not return 
+/* specifies that a function does not return
  * used for quieting Visual Studio warnings */
 #ifdef _MSC_VER
 # if _MSC_VER >= 1400
@@ -188,9 +188,10 @@ void SignalWaitingParent(void);
 void CheckLogDir(void);
 char *read_infile(char *);
 void CleanupProtoNames(void);
-void CreatePidFile(const char *);
+void CreatePidFile(const char *, pid_t);
 void ClosePidFile(void);
 void SetUidGid(int, int);
+void InitGroups(int, int);
 void SetChroot(char *, char **);
 void DropStats(int);
 void *SPAlloc(unsigned long, struct _SPMemControl *);
@@ -201,6 +202,7 @@ void TimeStop(void);
 #define __attribute__(x)  /*NOTHING*/
 #endif
 void LogMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
+void WarningMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
 void ErrorMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
 NORETURN void FatalError(const char *, ...) __attribute__((format (printf, 1, 2)));
 int SnortSnprintf(char *, size_t, const char *, ...) __attribute__((format (printf, 3, 4)));
@@ -212,7 +214,7 @@ char *SnortStrndup(const char *, size_t);
 int SnortStrnlen(const char *, int);
 const char *SnortStrnPbrk(const char *s, int slen, const char *accept);
 const char *SnortStrnStr(const char *s, int slen, const char *searchstr);
-const char *SnortStrcasestr(const char *s, const char *substr);
+const char *SnortStrcasestr(const char *s, int slen, const char *substr);
 void *SnortAlloc(unsigned long);
 void *SnortAlloc2(size_t, const char *, ...);
 char *CurrentWorkingDir(void);
@@ -254,7 +256,7 @@ long int xatol(const char *, const char *);
 unsigned long int xatou(const char *, const char *);
 unsigned long int xatoup(const char *, const char *); // return > 0
 
-static INLINE long SnortStrtol(const char *nptr, char **endptr, int base)
+static inline long SnortStrtol(const char *nptr, char **endptr, int base)
 {
     long iRet;
     errno = 0;
@@ -263,7 +265,7 @@ static INLINE long SnortStrtol(const char *nptr, char **endptr, int base)
     return iRet;
 }
 
-static INLINE unsigned long SnortStrtoul(const char *nptr, char **endptr, int base)
+static inline unsigned long SnortStrtoul(const char *nptr, char **endptr, int base)
 {
         unsigned long iRet;
         errno = 0;
@@ -272,7 +274,7 @@ static INLINE unsigned long SnortStrtoul(const char *nptr, char **endptr, int ba
         return iRet;
 }
 
-static INLINE long SnortStrtolRange(const char *nptr, char **endptr, int base, long lo, long hi)
+static inline long SnortStrtolRange(const char *nptr, char **endptr, int base, long lo, long hi)
 {
     long iRet = SnortStrtol(nptr, endptr, base);
     if ((iRet > hi) || (iRet < lo))
@@ -281,7 +283,7 @@ static INLINE long SnortStrtolRange(const char *nptr, char **endptr, int base, l
     return iRet;
 }
 
-static INLINE unsigned long SnortStrtoulRange(const char *nptr, char **endptr, int base, unsigned long lo, unsigned long hi)
+static inline unsigned long SnortStrtoulRange(const char *nptr, char **endptr, int base, unsigned long lo, unsigned long hi)
 {
     unsigned long iRet = SnortStrtoul(nptr, endptr, base);
     if ((iRet > hi) || (iRet < lo))
@@ -290,9 +292,9 @@ static INLINE unsigned long SnortStrtoulRange(const char *nptr, char **endptr, i
     return iRet;
 }
 
-static INLINE int IsEmptyStr(char *str)
+static inline int IsEmptyStr(const char *str)
 {
-    char *end;
+    const char *end;
 
     if (str == NULL)
         return 1;

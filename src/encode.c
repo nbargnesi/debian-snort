@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -19,12 +19,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
+
+// @file    encode.c
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <string.h>
+#ifdef HAVE_DUMBNET_H
+#include <dumbnet.h>
+#else
 #include <dnet.h>
+#endif
 
 #include "encode.h"
 #include "sfdaq.h"
@@ -40,7 +48,9 @@
 #define ICMP_UNREACH_DATA    8  // (per RFC 792)
 #define IP_ID_COUNT       8192
 
-static INLINE int IsIcmp (int type)
+static uint8_t *dst_mac = NULL;
+
+static inline int IsIcmp (int type)
 {
     static int s_icmp[ENC_MAX] = { 0, 0, 1, 1, 1 };
     return ( s_icmp[type] );
@@ -102,7 +112,7 @@ static ENC_STATUS UN6_Encode(EncState*, Buffer*, Buffer*);
 
 //-------------------------------------------------------------------------
 
-static INLINE PROTO_ID NextEncoder (EncState* enc)
+static inline PROTO_ID NextEncoder (EncState* enc)
 {
     if ( enc->layer < enc->p->next_layer )
     {
@@ -203,7 +213,7 @@ const uint8_t* Encode_Response(
 // - original ttl is always used
 //-------------------------------------------------------------------------
 
-int Encode_Format (EncodeFlags f, const Packet* p, Packet* c)
+int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type)
 {
     DAQ_PktHdr_t* pkth = (DAQ_PktHdr_t*)c->pkth;
     uint8_t* pkt = (uint8_t*)c->pkt;
@@ -261,12 +271,35 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c)
     // setup payload info
     c->data = lyr->start + lyr->length;
     len = c->data - c->pkt;
-    c->max_dsize = PKT_SZ - len;
+
+    // should actually be max less specific layers
+    // but this is a safe limit
+    c->max_dsize = IP_MAXPACKET - len;
+
     c->proto_bits = p->proto_bits;
+    c->packet_flags |= PKT_PSEUDO;
+    c->pseudo_type = type;
+
+    switch ( type )
+    {
+        case PSEUDO_PKT_SMB_SEG:
+        case PSEUDO_PKT_DCE_SEG:
+        case PSEUDO_PKT_DCE_FRAG:
+        case PSEUDO_PKT_SMB_TRANS:
+            c->packet_flags |= PKT_REASSEMBLED_OLD;
+            break;
+        default:
+            break;
+    }
 
     // setup pkt capture header
     pkth->caplen = pkth->pktlen = len;
     pkth->ts = p->pkth->ts;
+
+    // cooked packet gets same policy as raw
+    c->configPolicyId = p->configPolicyId;
+
+    c->policyEngineData = p->policyEngineData;
 
     if ( !c->max_dsize )
         return -1;
@@ -294,7 +327,13 @@ void Encode_Update (Packet* p)
         Layer* lyr = p->layers + i;
         encoders[lyr->proto].fupdate(p, lyr, &len);
     }
-    pkth->caplen = pkth->pktlen = len;
+    // see IP6_Update() for an explanation of this ...
+    if ( !(p->packet_flags & PKT_MODIFIED)
+#ifdef NORMALIZER
+        || (p->packet_flags & PKT_RESIZED)
+#endif
+    )
+        pkth->caplen = pkth->pktlen = len;
 }
 
 //-------------------------------------------------------------------------
@@ -323,6 +362,11 @@ void Encode_Delete (Packet* p)
     free(p);
 }
 
+/* Set the destination MAC address*/
+void Encode_SetDstMAC(uint8_t *mac)
+{
+   dst_mac = mac;
+}
 //-------------------------------------------------------------------------
 // private implementation stuff
 //-------------------------------------------------------------------------
@@ -393,7 +437,7 @@ static void IpId_Term (void)
     s_rand = NULL;
 }
 
-static INLINE uint16_t IpId_Next ()
+static inline uint16_t IpId_Next ()
 {
 #ifdef REG_TEST
     uint16_t id = htons(s_id_index + 1);
@@ -412,16 +456,16 @@ static INLINE uint16_t IpId_Next ()
 // ttl considerations:
 //
 // we try to use the TTL captured for the session by the stream preprocessor
-// when the session started.  if that is not available, we adjust the current
-// TTL for forward packets and use the maximum for reverse packets.
+// when the session started.  if that is not available, we use the current
+// TTL for forward packets and use (maximum - current) TTL for reverse
+// packets.
 //
-// AdjTTL() was pulled from flexresp2.  there it was used for both directions.
-// however, it doesn't make sense to try to calculate TTL for one direction
-// from the other which is why the max is used as the fallback for the reverse
-// direction.
+// the reason we don't just force ttl to 255 (max) is to make it look a 
+// little more authentic.
 //
 // for reference, flexresp used a const rand >= 64 in both directions (the
-// number was determined at startup and never changed) and react used a const
+// number was determined at startup and never changed); flexresp2 used the
+// next higher multiple of 64 in both directions; and react used a const
 // 64 in both directions.
 //
 // note that the ip6 hop limit field is entirely equivalent to the ip4 TTL.
@@ -429,28 +473,45 @@ static INLINE uint16_t IpId_Next ()
 // field.
 //-------------------------------------------------------------------------
 
-static INLINE uint8_t GetTTL (const EncState* enc)
+static inline uint8_t GetTTL (const EncState* enc)
 {
     char dir;
+    uint8_t ttl;
+    int outer = !enc->ip_hdr;
+
+    if ( !enc->p->ssnptr )
+        return 0;
 
     if ( enc->p->packet_flags & PKT_FROM_CLIENT )
         dir = FORWARD(enc) ? SSN_DIR_CLIENT : SSN_DIR_SERVER;
     else
         dir = FORWARD(enc) ? SSN_DIR_SERVER : SSN_DIR_CLIENT;
 
-    return stream_api->get_session_ttl(
-        enc->p->ssnptr, dir, !enc->ip_hdr);
+    // outermost ip is considered to be outer here,
+    // even if it is the only ip layer ...
+    ttl = stream_api->get_session_ttl(enc->p->ssnptr, dir, outer);
+
+    // so if we don't get outer, we use inner
+    if ( 0 == ttl && outer )
+        ttl = stream_api->get_session_ttl(enc->p->ssnptr, dir, 0);
+
+    return ttl;
 }
 
-static INLINE uint8_t AdjTTL (uint8_t ttl)
+static inline uint8_t FwdTTL (const EncState* enc, uint8_t ttl)
 {
-    switch (ttl / 64) 
-    {   
-    case 3: return 255;
-    case 2: return 192;
-    case 1: return 128;
-    }   
-    return 64; 
+    uint8_t new_ttl = GetTTL(enc);
+    if ( !new_ttl )
+        new_ttl = ttl;
+    return new_ttl;
+}
+
+static inline uint8_t RevTTL (const EncState* enc, uint8_t ttl)
+{
+    uint8_t new_ttl = GetTTL(enc);
+    if ( !new_ttl )
+        new_ttl = ( MAX_TTL - ttl );
+    return new_ttl;
 }
 
 //-------------------------------------------------------------------------
@@ -469,34 +530,44 @@ static INLINE uint8_t AdjTTL (uint8_t ttl)
 
 static ENC_STATUS Eth_Encode (EncState* enc, Buffer* in, Buffer* out)
 {
-    int outer = 0;
-    int raw = enc->flags & ENC_FLAG_RAW;
+    // not raw ip -> encode layer 2
+    int raw = ( enc->flags & ENC_FLAG_RAW );
 
     EtherHdr* hi = (EtherHdr*)enc->p->layers[enc->layer-1].start;
     PROTO_ID next = NextEncoder(enc);
 
-    if ( raw && (out->off == out->end) )
+    // if not raw ip AND out buf is empty
+    if ( !raw && (out->off == out->end) )
     {
         // for alignment
         out->off = out->end = SPARC_TWIDDLE;
-        outer = 1;  // encoding outermost eth
     }
-    if ( raw || !outer )
+    // if not raw ip OR out buf is not empty
+    if ( !raw || (out->off != out->end) )
     {
-        // we get here for outer-most layer when raw is true;
+        // we get here for outer-most layer when not raw ip
         // we also get here for any encapsulated ethernet layer.
         EtherHdr* ho = (EtherHdr*)(out->base + out->end);
         UPDATE_BOUND(out, sizeof(*ho));
 
+        ho->ether_type = hi->ether_type;
         if ( FORWARD(enc) )
         {
-            memcpy(ho, hi, sizeof(*ho));
+            memcpy(ho->ether_src, hi->ether_src, sizeof(ho->ether_src));
+            /*If user configured remote MAC address, use it*/
+            if (NULL != dst_mac)
+                memcpy(ho->ether_dst, dst_mac, sizeof(ho->ether_dst));
+            else
+                memcpy(ho->ether_dst, hi->ether_dst, sizeof(ho->ether_dst));
         }
         else
         {
-            ho->ether_type = hi->ether_type;
             memcpy(ho->ether_src, hi->ether_dst, sizeof(ho->ether_src));
-            memcpy(ho->ether_dst, hi->ether_src, sizeof(ho->ether_dst));
+            /*If user configured remote MAC address, use it*/
+            if (NULL != dst_mac)
+                memcpy(ho->ether_dst, dst_mac, sizeof(ho->ether_dst));
+            else
+                memcpy(ho->ether_dst, hi->ether_src, sizeof(ho->ether_dst));
         }
     }
     if ( next < PROTO_MAX )
@@ -570,35 +641,17 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( FORWARD(enc) )
     {
-        uint8_t ttl = AdjTTL(hi->ip_ttl);
-
         ho->ip_src.s_addr = hi->ip_src.s_addr;
         ho->ip_dst.s_addr = hi->ip_dst.s_addr;
 
-        if ( enc->p->ssnptr )
-            ttl = GetTTL(enc);
-
-#ifdef NORMALIZER
-        if ( ttl < ScMinTTL() && ScNewTTL() )
-            ttl = ScNewTTL();
-#endif
-        ho->ip_ttl = ttl;
+        ho->ip_ttl = FwdTTL(enc, hi->ip_ttl);
     }
     else
     {
-        uint8_t ttl = MAX_TTL;
-
         ho->ip_src.s_addr = hi->ip_dst.s_addr;
         ho->ip_dst.s_addr = hi->ip_src.s_addr;
 
-        if ( enc->p->ssnptr )
-            ttl = GetTTL(enc);
-
-#ifdef NORMALIZER
-        if ( ttl < ScMinTTL() && ScNewTTL() )
-            ttl = ScNewTTL();
-#endif
-        ho->ip_ttl = ttl;
+        ho->ip_ttl = RevTTL(enc, hi->ip_ttl);
     }
 
     enc->ip_hdr = (uint8_t*)hi;
@@ -606,8 +659,8 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( next < PROTO_MAX )
     {
-        int err = encoders[next].fencode(enc, in, out);
-        if ( err ) return err;
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if ( ENC_OK != err ) return err;
     }  
     if ( enc->proto )
     {
@@ -615,7 +668,7 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
         enc->proto = 0;
     }
     len = out->end - start;
-    ho->ip_len = htons((u_int16_t)len);
+    ho->ip_len = htons((uint16_t)len);
     ip_checksum(ho, len);
 
     return ENC_OK;
@@ -632,10 +685,10 @@ static ENC_STATUS IP4_Update (Packet* p, Layer* lyr, uint32_t* len)
     {
         *len += p->dsize;
     }
-    h->ip_len = htons((u_int16_t)*len);
+    h->ip_len = htons((uint16_t)*len);
 
     if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) )
-    ip_checksum(h, *len);
+        ip_checksum(h, *len);
 
     return ENC_OK;
 }
@@ -674,7 +727,7 @@ static void IP4_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 // UNR encoder creates ICMP unreachable
 //-------------------------------------------------------------------------
 
-static INLINE int IcmpCode (EncodeType et) {
+static inline int IcmpCode (EncodeType et) {
     switch ( et ) {
     case ENC_UNR_NET:  return ICMP_UNREACH_NET;
     case ENC_UNR_HOST: return ICMP_UNREACH_HOST;
@@ -739,6 +792,40 @@ static void ICMP4_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 
 static ENC_STATUS UDP_Encode (EncState* enc, Buffer* in, Buffer* out)
 {
+    PROTO_ID next = PROTO_MAX;
+
+    if ( enc->layer < enc->p->next_layer )
+    {
+        next = enc->p->layers[enc->layer].proto;
+    }
+    if ((PROTO_GTP == next) && (encoders[next].fencode))
+    {
+        int len;
+        ENC_STATUS err;
+        uint32_t start = out->end;
+
+        UDPHdr* hi = (UDPHdr*)enc->p->layers[enc->layer-1].start;
+        UDPHdr* ho = (UDPHdr*)(out->base + out->end);
+        UPDATE_BOUND(out, sizeof(*ho));
+
+       if ( FORWARD(enc) )
+        {
+            ho->uh_sport = hi->uh_sport;
+            ho->uh_dport = hi->uh_dport;
+        }
+        else
+        {
+            ho->uh_sport = hi->uh_dport;
+            ho->uh_dport = hi->uh_sport;
+        }
+
+       next = NextEncoder(enc);
+       err = encoders[next].fencode(enc, in, out);
+       if (ENC_OK != err ) return err;
+       len = out->end - start;
+       ho->uh_len = htons((uint16_t)len);
+       return ENC_OK;
+    }
     if ( IP_VER((IPHdr*)enc->ip_hdr) == 4 )
         return UN4_Encode(enc, in, out);
 
@@ -750,7 +837,7 @@ static ENC_STATUS UDP_Update (Packet* p, Layer* lyr, uint32_t* len)
     UDPHdr* h = (UDPHdr*)(lyr->start);
 
     *len += sizeof(*h) + p->dsize;
-    h->uh_len = htons((u_int16_t)*len);
+    h->uh_len = htons((uint16_t)*len);
 
     // don't calculate the UDP checksum here;
     // dnet's ip_checksum() will do it
@@ -902,35 +989,17 @@ static ENC_STATUS IP6_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( FORWARD(enc) )
     {
-        uint8_t ttl = AdjTTL(hi->ip6hops);
-
         memcpy(ho->ip6_src.s6_addr, hi->ip6_src.s6_addr, sizeof(ho->ip6_src.s6_addr));
         memcpy(ho->ip6_dst.s6_addr, hi->ip6_dst.s6_addr, sizeof(ho->ip6_dst.s6_addr));
 
-        if ( enc->p->ssnptr )
-            ttl = GetTTL(enc);
-
-#ifdef NORMALIZER
-        if ( ttl < ScMinTTL() && ScNewTTL() )
-            ttl = ScNewTTL();
-#endif
-        ho->ip6hops = ttl;
+        ho->ip6hops = FwdTTL(enc, hi->ip6hops);
     }
     else
     {
-        uint8_t ttl = MAX_TTL;
-
         memcpy(ho->ip6_src.s6_addr, hi->ip6_dst.s6_addr, sizeof(ho->ip6_src.s6_addr));
         memcpy(ho->ip6_dst.s6_addr, hi->ip6_src.s6_addr, sizeof(ho->ip6_dst.s6_addr));
 
-        if ( enc->p->ssnptr )
-            ttl = GetTTL(enc);
-
-#ifdef NORMALIZER
-        if ( ttl < ScMinTTL() && ScNewTTL() )
-            ttl = ScNewTTL();
-#endif
-        ho->ip6hops = ttl;
+        ho->ip6hops = RevTTL(enc, hi->ip6hops);
     }
 
     enc->ip_hdr = (uint8_t*)hi;
@@ -938,8 +1007,8 @@ static ENC_STATUS IP6_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( next < PROTO_MAX )
     {
-        int err = encoders[next].fencode(enc, in, out);
-        if ( err ) return err;
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if ( ENC_OK != err ) return err;
     }
     if ( enc->proto )
     {
@@ -958,21 +1027,33 @@ static ENC_STATUS IP6_Update (Packet* p, Layer* lyr, uint32_t* len)
     IP6RawHdr* h = (IP6RawHdr*)(lyr->start);
     int i = lyr - p->layers;
 
-    if ( i + 1 == p->next_layer )
-        *len += p->dsize;
-
-    // TBD can't just add fixed ip6 hdr len until
-    // all extension headers are decoded as layers
-    //*len += sizeof(*h);
-
-    // the workaround is to do some pointer math
-    if ( i + 1 == p->next_layer )
-        *len += p->data - lyr->start;
+    // if we didn't trim payload or format this packet,
+    // we may not know the actual lengths because not all
+    // extension headers are decoded and we stop at frag6.
+    // in such case we do not modify the packet length.
+    if ( (p->packet_flags & PKT_MODIFIED)
+#ifdef NORMALIZER
+        && !(p->packet_flags & PKT_RESIZED)
+#endif
+    ) {
+        *len = ntohs(h->ip6plen) + sizeof(*h);
+    }
     else
-        *len += lyr[1].start - lyr->start;
+    {
+        if ( i + 1 == p->next_layer )
+            *len += lyr->length + p->dsize;
 
-    // len includes header, remove for payload
-    h->ip6plen = htons((uint16_t)(*len - sizeof(*h)));
+        // w/o all extension headers, can't use just the
+        // fixed ip6 header length so we compute header delta
+        else
+            *len += lyr[1].start - lyr->start;
+
+        // len includes header, remove for payload
+        h->ip6plen = htons((uint16_t)(*len - sizeof(*h)));
+    }
+
+    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) )
+        ip6_checksum(h, *len);
 
     return ENC_OK;
 }
@@ -1015,8 +1096,8 @@ static ENC_STATUS Opt6_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( next < PROTO_MAX )
     {
-        int err = encoders[next].fencode(enc, in, out);
-        if ( err ) return err;
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if ( ENC_OK != err ) return err;
     }
     return ENC_OK;
 }
@@ -1024,19 +1105,10 @@ static ENC_STATUS Opt6_Encode (EncState* enc, Buffer* in, Buffer* out)
 static ENC_STATUS Opt6_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     int i = lyr - p->layers;
+    *len += lyr->length;
 
     if ( i + 1 == p->next_layer )
         *len += p->dsize;
-
-    // TBD can't just add layer length until
-    // all extension headers are decoded as layers
-    //*len += lyr->length;
-
-    // the workaround is to do some pointer math
-    if ( i + 1 == p->next_layer )
-        *len += p->data - lyr->start;
-    else
-        *len += lyr[1].start - lyr->start;
 
     return ENC_OK;
 }
@@ -1096,12 +1168,95 @@ static void ICMP6_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 #endif
 
 //-------------------------------------------------------------------------
+// GTP functions
+//-------------------------------------------------------------------------
+
+static ENC_STATUS update_GTP_length(GTPHdr* h, int gtp_total_len )
+{
+    /*The first 3 bits are version number*/
+    uint8_t version = (h->flag & 0xE0) >> 5;
+    switch (version)
+    {
+    case 0: /*GTP v0*/
+        h->length = htons((uint16_t)(gtp_total_len - GTP_V0_HEADER_LEN));
+        break;
+    case 1: /*GTP v1*/
+        h->length = htons((uint16_t)(gtp_total_len - GTP_MIN_LEN));
+        break;
+    default:
+        return ENC_BAD_PROTO;
+    }
+    return ENC_OK;
+
+}
+
+static ENC_STATUS GTP_Encode (EncState* enc, Buffer* in, Buffer* out)
+{
+    int n = enc->p->layers[enc->layer-1].length;
+    int len;
+
+    GTPHdr* hi = (GTPHdr*) (enc->p->layers[enc->layer-1].start);
+    GTPHdr* ho = (GTPHdr*)(out->base + out->end);
+    uint32_t start = out->end;
+    PROTO_ID next = NextEncoder(enc);
+
+    UPDATE_BOUND(out, n);
+    memcpy(ho, hi, n);
+
+    if ( next < PROTO_MAX )
+    {
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if (ENC_OK != err ) return err;
+    }
+    len = out->end - start;
+    return( update_GTP_length(ho,len));
+}
+
+static ENC_STATUS GTP_Update (Packet* p, Layer* lyr, uint32_t* len)
+{
+    GTPHdr* h = (GTPHdr*)(lyr->start);
+    *len += lyr->length;
+    return( update_GTP_length(h,*len));
+}
+
+//-------------------------------------------------------------------------
+// PPPoE functions
+//-------------------------------------------------------------------------
+
+static ENC_STATUS PPPoE_Encode (EncState* enc, Buffer* in, Buffer* out)
+{
+    int n = enc->p->layers[enc->layer-1].length;
+    int len;
+
+    PPPoEHdr* hi = (PPPoEHdr*)(enc->p->layers[enc->layer-1].start);
+    PPPoEHdr* ho = (PPPoEHdr*)(out->base + out->end);
+
+    uint32_t start;
+    PROTO_ID next = NextEncoder(enc);
+
+    UPDATE_BOUND(out, n);
+    memcpy(ho, hi, n);
+
+    start = out->end;
+
+    if ( next < PROTO_MAX )
+    {
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if (ENC_OK != err ) return err;
+    }
+    len = out->end - start;
+    ho->length = htons((uint16_t)len);
+
+    return ENC_OK;
+}
+
+//-------------------------------------------------------------------------
 // XXX (generic) functions
 //-------------------------------------------------------------------------
 
 static ENC_STATUS XXX_Encode (EncState* enc, Buffer* in, Buffer* out)
 {
-    int n = enc->p->layers[enc->layer].length;
+    int n = enc->p->layers[enc->layer-1].length;
 
     uint8_t* hi = enc->p->layers[enc->layer-1].start;
     uint8_t* ho = (uint8_t*)(out->base + out->end);
@@ -1112,8 +1267,8 @@ static ENC_STATUS XXX_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     if ( next < PROTO_MAX )
     {
-        int err = encoders[next].fencode(enc, in, out);
-        if ( err ) return err;
+        ENC_STATUS err = encoders[next].fencode(enc, in, out);
+        if (ENC_OK != err ) return err;
     }
     return ENC_OK;
 }
@@ -1163,10 +1318,12 @@ static EncoderFunctions encoders[PROTO_MAX] = {
 #ifdef GRE
     { XXX_Encode,  XXX_Update,   GRE_Format   },
 #endif
-    { XXX_Encode,  XXX_Update,   XXX_Format   },  // PPP
+    { PPPoE_Encode,XXX_Update,   XXX_Format   },
+    { XXX_Encode,  XXX_Update,   XXX_Format   },  // PPP Encap
 #ifdef MPLS
     { XXX_Encode,  XXX_Update,   XXX_Format   },  // MPLS
 #endif
-    { XXX_Encode,  XXX_Update,   XXX_Format,  }   // ARP
+    { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ARP
+    { GTP_Encode,  GTP_Update,   XXX_Format,  }   // GTP
 };
 

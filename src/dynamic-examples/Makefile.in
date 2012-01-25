@@ -98,7 +98,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -113,7 +115,8 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
-INCLUDES = @INCLUDES@ 
+ICONFIGFLAGS = @ICONFIGFLAGS@
+INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -149,13 +152,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -215,8 +224,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 BUILT_SOURCES = \
-	include/bounds.h \
-	include/debug.h \
+	include/snort_bounds.h \
+	include/snort_debug.h \
 	include/preprocids.h \
 	include/profiler.h \
 	include/cpuclock.h \
@@ -238,6 +247,7 @@ BUILT_SOURCES = \
 	include/sfsnort_dynamic_detection_lib.c \
 	include/sfsnort_dynamic_detection_lib.h \
 	include/sf_snort_packet.h \
+    include/sf_protocols.h \
 	include/sf_snort_plugin_api.h \
 	include/pcap_pkthdr32.h \
 	include/stream_api.h \
@@ -256,7 +266,10 @@ BUILT_SOURCES = \
 	include/plugin_enum.h \
 	include/obfuscation.h \
 	include/rule_option_types.h \
-	include/event.h
+	include/event.h \
+	include/attribute_table_api.h \
+	include/sfcontrol.h \
+	include/idle_processing.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
@@ -733,7 +746,7 @@ uninstall-am:
 
 
 # From main src tree
-include/debug.h: $(srcdir)/../debug.h 
+include/snort_debug.h: $(srcdir)/../snort_debug.h
 	@src_header=$?; dst_header=$@; $(copy_debug_header)
 
 include/preprocids.h: $(srcdir)/../preprocids.h
@@ -748,10 +761,10 @@ include/cpuclock.h: $(srcdir)/../cpuclock.h
 include/pcap_pkthdr32.h: $(srcdir)/../pcap_pkthdr32.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-include/bounds.h: $(srcdir)/../bounds.h 
+include/snort_bounds.h: $(srcdir)/../snort_bounds.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
-include/ipv6_port.h: $(srcdir)/../ipv6_port.h 
+include/ipv6_port.h: $(srcdir)/../ipv6_port.h
 	@src_header=$?; dst_header=$@; $(massage_ipv6_headers)
 
 include/sf_types.h: $(srcdir)/../sf_types.h
@@ -764,6 +777,12 @@ include/rule_option_types.h: $(srcdir)/../rule_option_types.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/event.h: $(srcdir)/../event.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sfcontrol.h: $(srcdir)/../control/sfcontrol.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/idle_processing.h: $(srcdir)/../idle_processing.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins
@@ -781,6 +800,9 @@ include/sf_dynamic_meta.h: $(srcdir)/../dynamic-plugins/sf_dynamic_meta.h
 
 include/sf_dynamic_preprocessor.h: $(srcdir)/../dynamic-plugins/sf_dynamic_preprocessor.h
 	@src_header=$?; dst_header=$@; $(massage_headers)
+
+include/attribute_table_api.h: $(srcdir)/../dynamic-plugins/attribute_table_api.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
 
 # From dynamic-plugins/sf_preproc_example
 include/sf_dynamic_preproc_lib.c: $(srcdir)/../dynamic-plugins/sf_preproc_example/sf_dynamic_preproc_lib.c
@@ -844,6 +866,9 @@ include/sfsnort_dynamic_detection_lib.h: $(srcdir)/../dynamic-plugins/sf_engine/
 
 # From dynamic-plugins/sf_engine
 include/sf_snort_packet.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_packet.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_protocols.h: $(srcdir)/../sf_protocols.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/sf_snort_plugin_api.h: $(srcdir)/../dynamic-plugins/sf_engine/sf_snort_plugin_api.h

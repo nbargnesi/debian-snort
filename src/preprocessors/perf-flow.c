@@ -4,7 +4,7 @@
 ** perf-flow.c
 **
 **
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 ** Dan Roelker <droelker@sourcefire.com>
 **
@@ -12,7 +12,7 @@
 **   4.10.02 - Initial Checkin.  Norton
 **   5.5.02  - Changed output format and added output structure for
 **             easy stat printing. Roelker
-**   5.29.02 - Added ICMP traffic stats and overall protocol flow 
+**   5.29.02 - Added ICMP traffic stats and overall protocol flow
 **             stats. Roelker
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@
 **   PacketLen vs Packet Count
 **   TCP-Port vs Packet Count
 **   UDP-Port vs Packet Count
-**   TCP High<->High Port Count 
+**   TCP High<->High Port Count
 **   UDP High<->High Port Count
 **
 **
@@ -52,6 +52,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "snort.h"
 #include "util.h"
 #include "sf_types.h"
@@ -91,7 +96,7 @@ int InitFlowStats(SFFLOW *sfFlow)
 
     if (first)
     {
-        sfFlow->pktLenCnt = (uint64_t*)SnortAlloc(sizeof(uint64_t) * (SF_MAX_PKT_LEN + 1));
+        sfFlow->pktLenCnt = (uint64_t*)SnortAlloc(sizeof(uint64_t) * (SF_MAX_PKT_LEN + 2));
         sfFlow->portTcpSrc = (uint64_t*)SnortAlloc(sizeof(uint64_t) * SF_MAX_PORT);
         sfFlow->portTcpDst = (uint64_t*)SnortAlloc(sizeof(uint64_t) * SF_MAX_PORT);
         sfFlow->portUdpSrc = (uint64_t*)SnortAlloc(sizeof(uint64_t) * SF_MAX_PORT);
@@ -102,7 +107,7 @@ int InitFlowStats(SFFLOW *sfFlow)
     }
     else
     {
-        memset(sfFlow->pktLenCnt, 0, sizeof(uint64_t) * (SF_MAX_PKT_LEN + 1));
+        memset(sfFlow->pktLenCnt, 0, sizeof(uint64_t) * (SF_MAX_PKT_LEN + 2));
         memset(sfFlow->portTcpSrc, 0, sizeof(uint64_t) * SF_MAX_PORT);
         memset(sfFlow->portTcpDst, 0, sizeof(uint64_t) * SF_MAX_PORT);
         memset(sfFlow->portUdpSrc, 0, sizeof(uint64_t) * SF_MAX_PORT);
@@ -120,7 +125,7 @@ int InitFlowStats(SFFLOW *sfFlow)
     sfFlow->portUdpTotal=0;
 
     sfFlow->typeIcmpTotal = 0;
-    
+
     return 0;
 }
 
@@ -198,12 +203,12 @@ int UpdateTCPFlowStats(SFFLOW *sfFlow, int sport, int dport, int len)
     {
         sfFlow->portTcpSrc  [ sport ]+= len;
     }
-   
+
     if( dport < sfFlow->maxPortToTrack )
     {
         sfFlow->portTcpDst  [ dport ]+= len;
     }
-    
+
     if( sport > 1023 && dport > 1023 )
     {
         sfFlow->portTcpHigh += len;
@@ -227,7 +232,7 @@ int UpdateTCPFlowStats(SFFLOW *sfFlow, int sport, int dport, int len)
     {
         sfFlow->portTcpSrc  [ sport ]+= len;
         sfFlow->portTcpDst  [ dport ]+= len;
-        
+
         sfFlow->portTcpHigh += len;
     }
 
@@ -269,7 +274,7 @@ int UpdateUDPFlowStats(SFFLOW *sfFlow, int sport, int dport, int len )
     {
         sfFlow->portUdpSrc  [ sport ]+= len;
         sfFlow->portUdpDst  [ dport ]+= len;
-        
+
         sfFlow->portUdpHigh += len;
     }
 
@@ -394,14 +399,18 @@ int UpdateFlowIPState(SFFLOW *sfFlow, snort_ip_p src_addr, snort_ip_p dst_addr, 
 *
 *   Packet lengths
 */
-int UpdateFlowStats(SFFLOW *sfFlow, const unsigned char *pucPacket, int len, int iRebuiltPkt)
+int UpdateFlowStats(SFFLOW *sfFlow, const unsigned char *pucPacket, uint32_t len, int iRebuiltPkt)
 {
     /*
     * Track how many packets of each length
     */
-    if( (!iRebuiltPkt)&&(len <= SF_MAX_PKT_LEN) )
+    if(!iRebuiltPkt)
     {
-        sfFlow->pktLenCnt[ len ]++;
+        if (len <= SF_MAX_PKT_LEN)
+            sfFlow->pktLenCnt[ len ]++;
+        else
+            sfFlow->pktLenCnt[ SF_MAX_PKT_LEN + 1 ]++;
+
         sfFlow->pktTotal++;
         sfFlow->byteTotal += len;
     }
@@ -437,16 +446,16 @@ int ProcessFlowStats(SFFLOW *sfFlow)
                    (double)sfFlow->portUdpTotal +
                    (double)sfFlow->typeIcmpTotal)) /
                    (double)sfFlow->byteTotal;
-    
+
     /*
     **  Calculate Packet percent of total pkt length
     **  distribution.
     */
-    for(i=1;i<SF_MAX_PKT_LEN;i++)
+    for(i=1;i<SF_MAX_PKT_LEN + 2;i++)
     {
         if( !sfFlow->pktLenCnt[i]  ) continue;
-     
-        rate =  100.0 * (double)(sfFlow->pktLenCnt[i]) / 
+
+        rate =  100.0 * (double)(sfFlow->pktLenCnt[i]) /
                 (double)(sfFlow->pktTotal);
 
         if( rate > .10 )
@@ -456,8 +465,8 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         else
         {
             sfFlowStats.pktLenPercent[i] = 0;
-        }  
-      
+        }
+
         sfFlow->pktLenCnt[i]=0;
     }
 
@@ -475,12 +484,12 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         }
 
         totperc = 100.0 * tot / sfFlow->portTcpTotal;
-        
+
         if(totperc > .1)
         {
             srate =  100.0 * (double)(sfFlow->portTcpSrc[i]) / tot ;
             drate =  100.0 * (double)(sfFlow->portTcpDst[i]) / tot ;
-        
+
             sfFlowStats.portflowTCP.totperc[i]    = totperc;
             sfFlowStats.portflowTCP.sport_rate[i] = srate;
             sfFlowStats.portflowTCP.dport_rate[i] = drate;
@@ -489,7 +498,7 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         {
             sfFlowStats.portflowTCP.totperc[i] = 0;
         }
-        
+
         sfFlow->portTcpSrc[i] = sfFlow->portTcpDst[i] = 0;
     }
 
@@ -501,7 +510,7 @@ int ProcessFlowStats(SFFLOW *sfFlow)
     */
     sfFlow->portTcpHigh=0;
     sfFlow->portTcpTotal=0;
-    
+
     /*
     **  Calculate UDP port processing based on src, dst and
     **  total distributions.
@@ -516,7 +525,7 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         }
 
         totperc= 100.0 * tot / sfFlow->portUdpTotal;
-        
+
         if(totperc > .1)
         {
             srate =  100.0 * (double)(sfFlow->portUdpSrc[i]) / tot ;
@@ -530,7 +539,7 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         {
             sfFlowStats.portflowUDP.totperc[i] = 0;
         }
-        
+
         sfFlow->portUdpSrc[i] = sfFlow->portUdpDst[i] = 0;
     }
 
@@ -556,7 +565,7 @@ int ProcessFlowStats(SFFLOW *sfFlow)
         }
 
         totperc= 100.0 * tot / sfFlow->typeIcmpTotal;
-        
+
         if(totperc > .1)
         {
             sfFlowStats.flowICMP.totperc[i]  = totperc;
@@ -572,11 +581,11 @@ int ProcessFlowStats(SFFLOW *sfFlow)
     sfFlow->typeIcmpTotal = 0;
 
     sfFlow->byteTotal = 0;
-   
-    sfFlow->pktTotal  = 0; 
+
+    sfFlow->pktTotal  = 0;
 
     DisplayFlowStats(&sfFlowStats);
- 
+
     return 0;
 }
 
@@ -593,7 +602,7 @@ int ProcessFlowIPStats(SFFLOW *sfFlow, FILE *fh)
 static int DisplayFlowStats(SFFLOW_STATS *sfFlowStats)
 {
     int i;
-  
+
     LogMessage("\n");
     LogMessage("\n");
     LogMessage("Protocol Byte Flows - %%Total Flow\n");
@@ -606,21 +615,24 @@ static int DisplayFlowStats(SFFLOW_STATS *sfFlowStats)
     LogMessage("\n");
     LogMessage("\n");
     LogMessage("PacketLen - %%TotalPackets\n");
-    LogMessage(    "-------------------------\n"); 
-    for(i=1;i<SF_MAX_PKT_LEN;i++)
+    LogMessage(    "-------------------------\n");
+    for(i=1;i<SF_MAX_PKT_LEN + 1;i++)
     {
         if( sfFlowStats->pktLenPercent[i] < .1 ) continue;
-     
+
         LogMessage("Bytes[%d] %.2f%%\n", i, sfFlowStats->pktLenPercent[i]);
     }
+
+    if( sfFlowStats->pktLenPercent[SF_MAX_PKT_LEN + 1] >= .1 )
+       LogMessage("Bytes[>%d] %.2f%%\n", SF_MAX_PKT_LEN, sfFlowStats->pktLenPercent[SF_MAX_PKT_LEN + 1]);
 
     LogMessage("\n");
     LogMessage("\n");
     LogMessage("TCP Port Flows\n");
-    LogMessage(    "--------------\n"); 
+    LogMessage(    "--------------\n");
     for(i=0;i<SF_MAX_PORT;i++)
     {
-        if(sfFlowStats->portflowTCP.totperc[i] && 
+        if(sfFlowStats->portflowTCP.totperc[i] &&
            sfFlowStats->portflowTCP.dport_rate[i]  )
         {
             LogMessage("Port[%d] %.2f%% of Total, Src: %6.2f%% Dst: %6.2f%%\n",
@@ -632,17 +644,17 @@ static int DisplayFlowStats(SFFLOW_STATS *sfFlowStats)
 
     if(sfFlowStats->portflowHighTCP > .1)
     {
-        LogMessage("Ports[High<->High]: %.2f%%\n", 
+        LogMessage("Ports[High<->High]: %.2f%%\n",
                 sfFlowStats->portflowHighTCP);
     }
 
     LogMessage("\n");
     LogMessage("\n");
     LogMessage("UDP Port Flows\n");
-    LogMessage(    "--------------\n"); 
+    LogMessage(    "--------------\n");
     for(i=0;i<SF_MAX_PORT;i++)
     {
-        if(sfFlowStats->portflowUDP.totperc[i] && 
+        if(sfFlowStats->portflowUDP.totperc[i] &&
            sfFlowStats->portflowUDP.dport_rate[i]  )
         {
             LogMessage("Port[%d] %.2f%% of Total, Src: %6.2f%% Dst: %6.2f%%\n",
@@ -654,7 +666,7 @@ static int DisplayFlowStats(SFFLOW_STATS *sfFlowStats)
 
     if(sfFlowStats->portflowHighUDP > .1)
     {
-        LogMessage("Ports[High<->High]: %.2f%%\n", 
+        LogMessage("Ports[High<->High]: %.2f%%\n",
                 sfFlowStats->portflowHighUDP);
     }
 

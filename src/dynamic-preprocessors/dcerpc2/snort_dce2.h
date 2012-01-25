@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************
- * 
+ *
  ****************************************************************************/
 
 #ifndef _SNORT_DCE2_H_
@@ -27,7 +27,7 @@
 #include "dce2_session.h"
 #include "sf_snort_packet.h"
 #include "sf_types.h"
-#include "debug.h"
+#include "snort_debug.h"
 
 /********************************************************************
  * Macros
@@ -78,8 +78,8 @@ void DCE2_FreeGlobals(void);
 /********************************************************************
  * Inline function prototypes
  ********************************************************************/
-static INLINE void DCE2_ResetRopts(DCE2_Roptions *);
-static INLINE void DCE2_DisableDetect(SFSnortPacket *);
+static inline void DCE2_ResetRopts(DCE2_Roptions *);
+static inline void DCE2_DisableDetect(SFSnortPacket *);
 
 /********************************************************************
  * Function:
@@ -91,7 +91,7 @@ static INLINE void DCE2_DisableDetect(SFSnortPacket *);
  * Returns: None
  *
  ********************************************************************/
-static INLINE void DCE2_ResetRopts(DCE2_Roptions *ropts)
+static inline void DCE2_ResetRopts(DCE2_Roptions *ropts)
 {
     ropts->first_frag = DCE2_SENTINEL;
     ropts->opnum = DCE2_SENTINEL;
@@ -110,7 +110,7 @@ static INLINE void DCE2_ResetRopts(DCE2_Roptions *ropts)
  * Returns:
  *
  *********************************************************************/
-static INLINE void DCE2_DisableDetect(SFSnortPacket *p)
+static inline void DCE2_DisableDetect(SFSnortPacket *p)
 {
     _dpd.disableAllDetect(p);
     _dpd.setPreprocBit(p, PP_SFPORTSCAN);

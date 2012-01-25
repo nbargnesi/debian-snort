@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  */
 #ifndef _SF_DYNAMIC_COMMON_H_
@@ -26,10 +26,21 @@
 #include <stdint.h>
 #endif
 
+typedef enum {
+    SF_FLAG_ALT_DECODE         = 0x0001,
+    SF_FLAG_ALT_DETECT         = 0x0002,
+    SF_FLAG_DETECT_ALL         = 0xffff
+} SFDetectFlagType;
+
 typedef void (*LogMsgFunc)(const char *, ...);
-typedef void (*DebugMsgFunc)(int, char *, ...);
-#ifdef HAVE_WCHAR_H
-typedef void (*DebugWideMsgFunc)(int, wchar_t *, ...);
+typedef void (*DebugMsgFunc)(uint64_t, char *, ...);
+typedef int (*GetAltDetectFunc)(uint8_t **, uint16_t *);
+typedef void (*SetAltDetectFunc)(uint8_t *,uint16_t );
+typedef int (*IsDetectFlagFunc)(SFDetectFlagType);
+typedef void (*DetectFlagDisableFunc)(SFDetectFlagType);
+#ifdef SF_WCHAR
+#include <wchar.h>
+typedef void (*DebugWideMsgFunc)(uint64_t, wchar_t *, ...);
 #endif
 
 #define STD_BUF 1024
@@ -61,20 +72,13 @@ typedef struct _UriInfo
 } UriInfo;
 
 typedef struct {
+    uint8_t *data;
+    uint16_t len;
+} SFDataPointer;
+
+typedef struct {
     uint8_t data[DECODE_BLEN];
     uint16_t len;
 } SFDataBuffer;
-
-#define SetAltBuffer(pktPtr, altLen) \
-{ \
-    pktPtr->flags |= FLAG_ALT_DECODE; \
-    _dpd.altBuffer->len = altLen; \
-}
-
-#define ResetAltBuffer(pktPtr) \
-{ \
-    pktPtr->flags &= ~FLAG_ALT_DECODE; \
-    _dpd.altBuffer->len = 0; \
-}
 
 #endif /* _SF_DYNAMIC_COMMON_H_ */

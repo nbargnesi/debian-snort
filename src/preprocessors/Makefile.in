@@ -50,8 +50,8 @@ ARFLAGS = cru
 libspp_a_AR = $(AR) $(ARFLAGS)
 libspp_a_LIBADD =
 am__libspp_a_SOURCES_DIST = spp_arpspoof.c spp_arpspoof.h spp_bo.c \
-	spp_bo.h spp_rpc_decode.c spp_rpc_decode.h stream_ignore.c \
-	stream_ignore.h spp_perfmonitor.c spp_perfmonitor.h perf.c \
+	spp_bo.h spp_rpc_decode.c spp_rpc_decode.h stream_expect.c \
+	stream_expect.h spp_perfmonitor.c spp_perfmonitor.h perf.c \
 	perf.h perf-base.c perf-base.h perf-flow.c perf-flow.h \
 	perf-event.c perf-event.h sfprocpidstats.c sfprocpidstats.h \
 	spp_httpinspect.c spp_httpinspect.h snort_httpinspect.c \
@@ -62,7 +62,7 @@ am__libspp_a_SOURCES_DIST = spp_arpspoof.c spp_arpspoof.h spp_bo.c \
 	normalize.h
 @BUILD_PROCPIDSTATS_TRUE@am__objects_1 = sfprocpidstats.$(OBJEXT)
 am_libspp_a_OBJECTS = spp_arpspoof.$(OBJEXT) spp_bo.$(OBJEXT) \
-	spp_rpc_decode.$(OBJEXT) stream_ignore.$(OBJEXT) \
+	spp_rpc_decode.$(OBJEXT) stream_expect.$(OBJEXT) \
 	spp_perfmonitor.$(OBJEXT) perf.$(OBJEXT) perf-base.$(OBJEXT) \
 	perf-flow.$(OBJEXT) perf-event.$(OBJEXT) $(am__objects_1) \
 	spp_httpinspect.$(OBJEXT) snort_httpinspect.$(OBJEXT) \
@@ -135,7 +135,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -150,6 +152,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONFIGFLAGS = @ICONFIGFLAGS@
 INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -186,13 +189,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -256,7 +265,7 @@ SUBDIRS = HttpInspect Stream5
 @BUILD_PROCPIDSTATS_TRUE@PROCPIDSTATS_SOURCE = sfprocpidstats.c sfprocpidstats.h
 libspp_a_SOURCES = spp_arpspoof.c spp_arpspoof.h spp_bo.c spp_bo.h \
 spp_rpc_decode.c spp_rpc_decode.h  \
-stream_ignore.c stream_ignore.h \
+stream_expect.c stream_expect.h \
 spp_perfmonitor.c spp_perfmonitor.h \
 perf.c perf.h \
 perf-base.c perf-base.h \

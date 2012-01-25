@@ -1,4 +1,9 @@
 AUTOMAKE_OPTIONS=foreign no-dependencies
-SUBDIRS = u2boat u2spewfoo
+
+if BUILD_CONTROL_SOCKET
+CONTROL_DIR = control
+endif
+
+SUBDIRS = u2boat u2spewfoo $(CONTROL_DIR)
 
 INCLUDES = @INCLUDES@

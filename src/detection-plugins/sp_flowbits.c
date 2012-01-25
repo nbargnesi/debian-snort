@@ -2,10 +2,10 @@
 ** $Id$
 **
 ** sp_flowbits
-** 
+**
 ** Purpose:
 **
-** Wouldn't it be nice if we could do some simple state tracking 
+** Wouldn't it be nice if we could do some simple state tracking
 ** across multiple packets?  Well, this allows you to do just that.
 **
 ** Effect:
@@ -13,8 +13,8 @@
 ** - [Un]set a bitmask stored with the session
 ** - Check the value of the bitmask
 **
-** Copyright (C) 2003-2010 Sourcefire, Inc.
-** 
+** Copyright (C) 2003-2011 Sourcefire, Inc.
+**
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
 ** published by the Free Software Foundation.  You may not use, modify or
@@ -36,12 +36,17 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "plugin_enum.h"
 #include "snort.h"
@@ -80,7 +85,7 @@ static void FlowBitsCleanExit(int, void *);
 
 
 /****************************************************************************
- * 
+ *
  * Function: FlowBitsHashInit(void)
  *
  * Purpose: Initialize the hash table and queue storage for flowbits IDs
@@ -122,7 +127,7 @@ void FlowBitsGrpHashInit(void)
         FatalError("%s(%d) Could not create flowbits group hash.\n",
                    __FILE__, __LINE__);
     }
-    
+
 }
 
 void FlowItemFree(void *d)
@@ -169,7 +174,7 @@ int FlowBitsCompare(void *l, void *r)
 
     if (!left || !right)
         return DETECTION_OPTION_NOT_EQUAL;
-                                
+
     if (( left->id == right->id) &&
         ( left->type == right->type))
     {
@@ -180,7 +185,7 @@ int FlowBitsCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupFlowBits()
  *
  * Purpose: Generic detection engine plugin template.  Registers the
@@ -210,7 +215,7 @@ void SetupFlowBits(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FlowBitsInit(char *, OptTreeNode *)
  *
  * Purpose: Configure the flow init option to register the appropriate checks
@@ -231,19 +236,19 @@ static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
      * We avoid adding the flowbit twice by skipping it here. */
     if (otn->sigInfo.generator == 3)
         return;
- 
+
     /* Flow bits are handled by Stream5 if its enabled */
     if( stream_api && stream_api->version != STREAM_API_VERSION5)
     {
         if (ScConfErrorOut())
         {
-            FatalError("Warning: %s (%d) => flowbits without Stream5. "
+            FatalError("WARNING: %s (%d) => flowbits without Stream5. "
                 "Stream5 must be enabled for this plugin.\n",
                 file_name,file_line);
         }
         else
         {
-            LogMessage("Warning: %s (%d) => flowbits without Stream5. "
+            LogMessage("WARNING: %s (%d) => flowbits without Stream5. "
                 "Stream5 must be enabled for this plugin.\n",
                 file_name,file_line);
         }
@@ -285,17 +290,17 @@ static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
     fpl->type = RULE_OPTION_TYPE_FLOWBIT;
 
     /*
-     * attach it to the context node so that we can call each instance 
+     * attach it to the context node so that we can call each instance
      * individually
      */
-    
+
     fpl->context = (void *) flowbits;
     return;
 }
 
 
 /****************************************************************************
- * 
+ *
  * Function: FlowBitsParse(char *, FlowBits *flowbits, OptTreeNode *)
  *
  * Purpose: parse the arguments to the flow plugin and alter the otn
@@ -331,7 +336,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     toks = mSplit(data, ",", 0, &num_toks, 0);
     if(num_toks < 1)
     {
-        FatalError("%s (%d): ParseFlowArgs: Must specify flowbits operation.\n", 
+        FatalError("%s (%d): ParseFlowArgs: Must specify flowbits operation.\n",
                 file_name, file_line);
     }
     token = toks[0];
@@ -339,7 +344,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     if(!strcasecmp("set",token))
     {
         flowbits->type = FLOWBITS_SET;
-    } 
+    }
     else if(!strcasecmp("unset",token))
     {
         flowbits->type = FLOWBITS_UNSET;
@@ -355,7 +360,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     else if(!strcasecmp("isnotset",token))
     {
         flowbits->type = FLOWBITS_ISNOTSET;
-    } 
+    }
     else if(!strcasecmp("noalert", token))
     {
         if(num_toks > 1)
@@ -382,7 +387,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
         flowbits->id   = 0;
         mSplitFree(&toks, num_toks);
         return;
-    } 
+    }
     else
     {
         FatalError("%s(%d) ParseFlowArgs: Invalid token %s\n",
@@ -399,7 +404,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     }
     token = toks[1];
     pch = strtok(token, " ,\t" );
-    
+
     if(pch && (pch != token ))
     {
         FatalError("%s (%d): flowbits tag id cannot include spaces or "
@@ -408,14 +413,14 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
 
     flowbits_item = (FLOWBITS_OBJECT *)sfghash_find(flowbits_hash, token);
 
-    if (flowbits_item != NULL) 
+    if (flowbits_item != NULL)
     {
         id = flowbits_item->id;
         found = 1;
     }
     else
     {
-        flowbits_item = 
+        flowbits_item =
             (FLOWBITS_OBJECT *)SnortAlloc(sizeof(FLOWBITS_OBJECT));
 
         if (sfqueue_count(flowbits_bit_queue) > 0)
@@ -439,7 +444,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
         }
 
         hstatus = sfghash_add(flowbits_hash, token, flowbits_item);
-        if(hstatus != SFGHASH_OK) 
+        if(hstatus != SFGHASH_OK)
         {
             FatalError("Could not add flowbits key (%s) to hash.\n",token);
         }
@@ -466,7 +471,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
 
     flowbits->id = id;
     flowbits->name = SnortStrdup(token);
-    
+
     if(num_toks < 3)
     {
         if (flowbits->type == FLOWBITS_SET || flowbits->type == FLOWBITS_TOGGLE)
@@ -506,8 +511,8 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     {
         if (strcmp((flowbits_item->group), token) != 0)
         {
-            FatalError("%s(%d) Flowbits already belongs to a group\n",
-                       __FILE__, __LINE__);
+            FatalError("%s(%d) Flowbits %s already belongs to a group %s\n",
+                       file_name, file_line, flowbits->name, flowbits_item->group);
         }
     }
     else
@@ -526,7 +531,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
 
 }
 
-static INLINE int boSetGrpBit(BITOP *BitOp, char *group, unsigned int uiPos)
+static inline int boSetGrpBit(BITOP *BitOp, char *group, unsigned int uiPos)
 {
     FLOWBITS_GRP *flowbits_grp;
     BITOP *GrpBitOp;
@@ -534,10 +539,10 @@ static INLINE int boSetGrpBit(BITOP *BitOp, char *group, unsigned int uiPos)
     flowbits_grp = (FLOWBITS_GRP *)sfghash_find(flowbits_grp_hash, group);
     if( flowbits_grp == NULL )
         return 0;
-    if((BitOp == NULL) || (BitOp->uiMaxBits <= uiPos) || (BitOp->uiMaxBits <= flowbits_grp->max_id) || flowbits_grp->count <= 1)
+    if((BitOp == NULL) || (BitOp->uiMaxBits <= uiPos) || (BitOp->uiMaxBits <= flowbits_grp->max_id) || flowbits_grp->count <= 0)
         return 0;
     GrpBitOp = &(flowbits_grp->GrpBitOp);
-    BitOp->pucBitBuffer[uiPos >> 3] = 0;
+    boClearBit(BitOp, uiPos);
     for ( i = 0; i <= flowbits_grp->max_id ; i++ )
     {
         BitOp->pucBitBuffer[i >> 3] &= GrpBitOp->pucBitBuffer[i >> 3];
@@ -546,10 +551,10 @@ static INLINE int boSetGrpBit(BITOP *BitOp, char *group, unsigned int uiPos)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: FlowBitsCheck(Packet *, struct _OptTreeNode *, OptFpList *)
  *
- * Purpose: Check flow bits foo 
+ * Purpose: Check flow bits foo
  *
  * Arguments: data => argument data
  *            otn => pointer to the current rule's OTN
@@ -587,7 +592,7 @@ int FlowBitsCheck(void *option_data, Packet *p)
     );
 
     if(((flowbits->type == FLOWBITS_SET) || (((flowbits->type == FLOWBITS_TOGGLE) &&
-            (!boIsBitSet(&(flowdata->boFlowbits),flowbits->id))))) && 
+            (!boIsBitSet(&(flowdata->boFlowbits),flowbits->id))))) &&
             (flowbits->group && (strcasecmp(flowbits->group, DEFAULT_FLOWBIT_GROUP) != 0 )))
     {
         if ( (iRet = boSetGrpBit(&(flowdata->boFlowbits), flowbits->group, flowbits->id)) == 0 )
@@ -664,7 +669,7 @@ int FlowBitsCheck(void *option_data, Packet *p)
             PREPROC_PROFILE_END(flowBitsPerfStats);
             return rval;
     }
-    
+
     /*
     **  Now return what we found
     */
@@ -678,12 +683,12 @@ int FlowBitsCheck(void *option_data, Packet *p)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: FlowBitsVerify()
  *
  * Purpose: Check flow bits foo to make sure its valid
  *
- * Arguments: 
+ * Arguments:
  *
  * Returns: 0 on failure
  *
@@ -697,8 +702,8 @@ void FlowBitsVerify(void)
     if (flowbits_hash == NULL)
         return;
 
-    for (n = sfghash_findfirst(flowbits_hash); 
-         n != NULL; 
+    for (n = sfghash_findfirst(flowbits_hash);
+         n != NULL;
          n= sfghash_findnext(flowbits_hash))
     {
         fb = (FLOWBITS_OBJECT *)n->data;
@@ -717,12 +722,12 @@ void FlowBitsVerify(void)
 
         if ((fb->set > 0) && (fb->isset == 0))
         {
-            LogMessage("Warning: flowbits key '%s' is set but not ever checked.\n",
+            LogMessage("WARNING: flowbits key '%s' is set but not ever checked.\n",
                     (char*)n->key);
         }
         else if ((fb->isset > 0) && (fb->set == 0))
         {
-            LogMessage("Warning: flowbits key '%s' is checked but not ever set.\n",
+            LogMessage("WARNING: flowbits key '%s' is checked but not ever set.\n",
                     (char*)n->key);
         }
         else if ((fb->set == 0) && (fb->isset == 0))
@@ -735,7 +740,7 @@ void FlowBitsVerify(void)
 
     flowbits_toggle ^= 1;
 
-    LogMessage("%d out of %d flowbits in use.\n", 
+    LogMessage("%d out of %d flowbits in use.\n",
                num_flowbits, giFlowbitSize<<3);
 }
 

@@ -1,3 +1,23 @@
+/****************************************************************************
+ *
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License Version 2 as
+ * published by the Free Software Foundation.  You may not use, modify or
+ * distribute this program under any other version of the GNU General
+ * Public License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ ****************************************************************************/
 /* $Id$ */
 
 #ifndef __CONFIG_H__
@@ -57,6 +77,10 @@
 /* Define to 1 if you have zlib support. */
 #define HAVE_ZLIB 1
 
+#ifndef SIZEOF_LONG_INT
+#define SIZEOF_LONG_INT 4
+#endif
+
 /* Version number of package */
 #ifdef ENABLE_ODBC
     #define VERSION_ENABLE_ODBC "-ODBC"
@@ -101,7 +125,7 @@
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.9.0.1"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.9.2"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 #define IFNAMSIZ   255
@@ -175,10 +199,10 @@ typedef long		ssize_t;
 
 
 // #define SIGKILL                  9       /* kill (cannot be caught or ignored) */
-#define SIGQUIT                  3       /* quit */
-#define SIGHUP                   1       /* hangup */
-#define SIGUSR1 30               /* user defined signal 1 */
-#define SIGUSR2 31               /* user defined signal 2 */
+#define SIGQUIT                   3       /* quit */
+#define SIGNAL_SNORT_RELOAD       1       /* Reload */
+#define SIGNAL_SNORT_DUMP_STATS   30      /* Dump stats */
+#define SIGNAL_SNORT_ROTATE_STATS 31      /* Rotate stats */
 #define SIGPIPE 13               /* write on a pipe with no one to read it */
 // #define EEXIST                   17              /* File exists */
 #ifndef W_OK
@@ -202,6 +226,7 @@ typedef long		ssize_t;
 #define strcasecmp               stricmp
 #if _MSC_VER < 1500  /* VC9 defines this */
 #define vsnprintf                _vsnprintf
+#define strdup                   _strdup
 #endif
 #define IXDR_GET_LONG(buf)       ((long)ntohl((u_long)*(buf)++))
 #define IXDR_GET_ENUM(buf, t)    ((t)IXDR_GET_LONG(buf))

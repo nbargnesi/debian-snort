@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -20,6 +20,10 @@
 
 /* Necessary hash/wrapper functions to put a .so rule's HdrOptCheck option
  * directly on the rule option tree. */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "sp_hdr_opt_wrap.h"
 #include "sf_engine/sf_snort_plugin_api.h"

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -19,7 +19,7 @@
  */
 
 /* sp_isdataat
- * 
+ *
  * Purpose:
  *    Test a specific byte to see if there is data.  (Basicly, rule keyword
  *    into inBounds)
@@ -29,7 +29,7 @@
  *    ["relative"]  look for byte location relative to the end of the last
  *                  pattern match
  *    ["rawbytes"]  force use of the non-normalized buffer.
- *   
+ *
  * Sample:
  *   alert tcp any any -> any 110 (msg:"POP3 user overflow"; \
  *      content:"USER"; isdataat:30,relative; content:!"|0a|"; within:30;)
@@ -47,13 +47,14 @@
 #endif
 #include <errno.h>
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "mstring.h"
 
@@ -105,7 +106,7 @@ int IsDataAtCompare(void *l, void *r)
 
     if (!left || !right)
         return DETECTION_OPTION_NOT_EQUAL;
-                                
+
     if (( left->offset == right->offset) &&
         ( left->flags == right->flags) &&
         ( left->offset_var == right->offset_var) )
@@ -117,7 +118,7 @@ int IsDataAtCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupIsDataAt()
  *
  * Purpose: Load 'er up
@@ -140,10 +141,10 @@ void SetupIsDataAt(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IsDataAt(char *, OptTreeNode *, int protocol)
  *
- * Purpose: Generic rule configuration function.  Handles parsing the rule 
+ * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -166,11 +167,11 @@ void IsDataAtInit(char *data, OptTreeNode *otn, int protocol)
 
     if(idx == NULL)
     {
-        FatalError("%s(%d): Unable to allocate IsDataAt data node\n", 
+        FatalError("%s(%d): Unable to allocate IsDataAt data node\n",
                 file_name, file_line);
     }
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     IsDataAtParse(data, idx, otn);
 
@@ -182,7 +183,7 @@ void IsDataAtInit(char *data, OptTreeNode *otn, int protocol)
 
     fpl = AddOptFuncToList(IsDataAt, otn);
     fpl->type = RULE_OPTION_TYPE_IS_DATA_AT;
-    
+
     /* attach it to the context node so that we can call each instance
      * individually
      */
@@ -195,7 +196,7 @@ void IsDataAtInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IsDataAt(char *, IsDataAtData *, OptTreeNode *)
  *
  * Purpose: This is the function that is used to process the option keyword's
@@ -219,10 +220,10 @@ void IsDataAtParse(char *data, IsDataAtData *idx, OptTreeNode *otn)
 
     toks = mSplit(data, ",", 3, &num_toks, 0);
 
-    if(num_toks > 3) 
+    if(num_toks > 3)
         FatalError("%s (%d): Bad arguments to IsDataAt: %s\n", file_name,
                 file_line, data);
-    offset = toks[0]; 
+    offset = toks[0];
     if(*offset == '!')
     {
         idx->flags |= ISDATAAT_NOT_FLAG;
@@ -285,7 +286,7 @@ void IsDataAtParse(char *data, IsDataAtData *idx, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IsDataAt(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -296,7 +297,7 @@ void IsDataAtParse(char *data, IsDataAtData *idx, OptTreeNode *otn)
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int IsDataAt(void *option_data, Packet *p)
@@ -326,29 +327,22 @@ int IsDataAt(void *option_data, Packet *p)
         /* Rawbytes specified, force use of that buffer */
         dsize = p->dsize;
         start_ptr = p->data;
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "Using RAWBYTES buffer!\n"););
     }
-    else if( IsMimeDecodeBuf(doe_ptr) )
+    else if (Is_DetectFlag(FLAG_ALT_DETECT))
     {
-        dsize = mime_decode_size;
-        start_ptr = file_data_ptr;
+        dsize = DetectBuffer.len;
+        start_ptr = DetectBuffer.data;
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                    "Using MIME Decode buffer!\n"););
+                "Using Alternative Detect buffer!\n"););
     }
-    else if( IsBase64DecodeBuf(doe_ptr) )
-    {
-        dsize = base64_decode_size;
-        start_ptr = base64_decode_buf;
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Using Base64 Decode buffer!\n"););
-    }
-    else if(p->packet_flags & PKT_ALT_DECODE)
+    else if(Is_DetectFlag(FLAG_ALT_DECODE))
     {
         /* If normalized buffer available, use it... */
         dsize = DecodeBuffer.len;
         start_ptr = DecodeBuffer.data;
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, 
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                     "Using Alternative Decode buffer!\n"););
     }
     else
@@ -362,13 +356,18 @@ int IsDataAt(void *option_data, Packet *p)
 
     base_ptr = start_ptr;
     end_ptr = start_ptr + dsize;
-    
+
     if((isdata->flags & ISDATAAT_RELATIVE_FLAG) && doe_ptr)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "Checking relative offset!\n"););
 
-        if(!inBounds(start_ptr, end_ptr, doe_ptr))
+       /*  Because doe_ptr can be "end" in the last match,
+        *  use end + 1 for upper bound
+        *  Bound checked also after offset is applied
+        *
+        */
+        if(!inBounds(start_ptr, end_ptr + 1, doe_ptr))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                     "[*] isdataat bounds check failed..\n"););

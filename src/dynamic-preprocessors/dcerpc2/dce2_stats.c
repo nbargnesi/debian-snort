@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -17,9 +17,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************
- * 
+ *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "dce2_stats.h"
 #include "dce2_utils.h"
 #include "dce2_memory.h"
@@ -35,7 +40,7 @@ char **dce2_trans_strs = NULL;
 /********************************************************************
  * Private function prototypes
  ********************************************************************/
-static INLINE void DCE2_CreateTransStr(char **, DCE2_TransType, char *);
+static inline void DCE2_CreateTransStr(char **, DCE2_TransType, char *);
 
 /********************************************************************
  * Function:
@@ -128,7 +133,7 @@ void DCE2_StatsInit(void)
  * Returns:
  *
  ********************************************************************/
-static INLINE void DCE2_CreateTransStr(char **trans_buf, DCE2_TransType ttype, char *trans_str)
+static inline void DCE2_CreateTransStr(char **trans_buf, DCE2_TransType ttype, char *trans_str)
 {
     if ((trans_buf == NULL) || (trans_str == NULL))
         return;

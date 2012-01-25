@@ -1,17 +1,17 @@
 ; $Id$
 ;
-; NSIS Installation script for Snort 2.9.0.1 Win32
+; NSIS Installation script for Snort 2.9.2 Win32
 ; Written by Chris Reid <chris.reid@codecraftconsultants.com>
 ; Updated by Steven Sturges <ssturges@sourcefire.com>
 ;
-; This script will create a Win32 installer for Snort 2.9.0.1 (Win32 only).
+; This script will create a Win32 installer for Snort 2.9.2 (Win32 only).
 ; For more information about NSIS, see their homepage:
 ;     http://nsis.sourceforge.net/
 ;
 ; Note that this NSIS script is designed for NSIS version 2.09.
 ;
 
-Name "Snort 2.9.0.1"
+Name "Snort 2.9.2"
 
 CRCCheck On
 
@@ -23,7 +23,7 @@ CRCCheck On
 ;Configuration
 
   ;General
-  OutFile "Snort_2_9_0_1_Installer.exe"  ; The name of the installer executable
+  OutFile "Snort_2_9_2_Installer.exe"  ; The name of the installer executable
 
   ;Folder selection page
   InstallDir "C:\Snort"
@@ -228,7 +228,7 @@ Section "Dynamic Modules" Dynamic
   CreateDirectory "$INSTDIR\lib"
   CreateDirectory "$INSTDIR\lib\snort_dynamicpreprocessor"
   SetOutPath "$INSTDIR\lib\snort_dynamicpreprocessor"
-  StrCmp $1 "IPv4" 0 +9
+  StrCmp $1 "IPv4" 0 +16
   File "..\..\dynamic-preprocessors\ftptelnet\Release\sf_ftptelnet.dll"
   File "..\..\dynamic-preprocessors\smtp\Release\sf_smtp.dll"
   File "..\..\dynamic-preprocessors\ssh\Release\sf_ssh.dll"
@@ -236,7 +236,14 @@ Section "Dynamic Modules" Dynamic
   File "..\..\dynamic-preprocessors\ssl\Release\sf_ssl.dll"
   File "..\..\dynamic-preprocessors\dcerpc2\Release\sf_dce2.dll"
   File "..\..\dynamic-preprocessors\sdf\Release\sf_sdf.dll"
-  StrCmp $1 "IPv6" 0 +9
+  File "..\..\dynamic-preprocessors\sip\Release\sf_sip.dll"
+  File "..\..\dynamic-preprocessors\imap\Release\sf_imap.dll"
+  File "..\..\dynamic-preprocessors\pop\Release\sf_pop.dll"
+  File "..\..\dynamic-preprocessors\reputation\Release\sf_reputation.dll"
+  File "..\..\dynamic-preprocessors\modbus\Release\sf_modbus.dll"
+  File "..\..\dynamic-preprocessors\dnp3\Release\sf_dnp3.dll"
+  File "..\..\dynamic-preprocessors\gtp\Release\sf_gtp.dll"
+  StrCmp $1 "IPv6" 0 +16
   File "..\..\dynamic-preprocessors\ftptelnet\IPv6_Release\sf_ftptelnet.dll"
   File "..\..\dynamic-preprocessors\smtp\IPv6_Release\sf_smtp.dll"
   File "..\..\dynamic-preprocessors\ssh\IPv6_Release\sf_ssh.dll"
@@ -244,6 +251,13 @@ Section "Dynamic Modules" Dynamic
   File "..\..\dynamic-preprocessors\ssl\IPv6_Release\sf_ssl.dll"
   File "..\..\dynamic-preprocessors\dcerpc2\IPv6_Release\sf_dce2.dll"
   File "..\..\dynamic-preprocessors\sdf\IPv6_Release\sf_sdf.dll"
+  File "..\..\dynamic-preprocessors\sip\IPv6_Release\sf_sip.dll"
+  File "..\..\dynamic-preprocessors\imap\IPv6_Release\sf_imap.dll"
+  File "..\..\dynamic-preprocessors\pop\IPv6_Release\sf_pop.dll"
+  File "..\..\dynamic-preprocessors\reputation\IPv6_Release\sf_reputation.dll"
+  File "..\..\dynamic-preprocessors\modbus\IPv6_Release\sf_modbus.dll"
+  File "..\..\dynamic-preprocessors\dnp3\IPv6_Release\sf_dnp3.dll"
+  File "..\..\dynamic-preprocessors\gtp\IPv6_Release\sf_gtp.dll"
 
   CreateDirectory "$INSTDIR\lib\snort_dynamicengine"
   SetOutPath "$INSTDIR\lib\snort_dynamicengine"

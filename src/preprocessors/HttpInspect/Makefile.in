@@ -54,7 +54,7 @@ libhttp_inspect_a_DEPENDENCIES = user_interface/hi_ui_config.o \
 	session_inspection/hi_si.o mode_inspection/hi_mi.o \
 	anomaly_detection/hi_ad.o utils/hi_util_kmap.o \
 	utils/hi_util_xmalloc.o utils/hi_util_hbm.o \
-	utils/hi_cmd_lookup.o event_output/hi_eo_log.o \
+	utils/hi_cmd_lookup.o utils/hi_paf.o event_output/hi_eo_log.o \
 	client/hi_client.o client/hi_client_norm.o server/hi_server.o \
 	server/hi_server_norm.o normalization/hi_norm.o
 am_libhttp_inspect_a_OBJECTS =
@@ -123,7 +123,9 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CCONFIGFLAGS = @CCONFIGFLAGS@
 CFLAGS = @CFLAGS@
+CONFIGFLAGS = @CONFIGFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -138,6 +140,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONFIGFLAGS = @ICONFIGFLAGS@
 INCLUDES = @INCLUDES@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -174,13 +177,19 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
+RAZORBACK_CFLAGS = @RAZORBACK_CFLAGS@
+RAZORBACK_LIBS = @RAZORBACK_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGNAL_SNORT_DUMP_STATS = @SIGNAL_SNORT_DUMP_STATS@
+SIGNAL_SNORT_READ_ATTR_TBL = @SIGNAL_SNORT_READ_ATTR_TBL@
+SIGNAL_SNORT_RELOAD = @SIGNAL_SNORT_RELOAD@
+SIGNAL_SNORT_ROTATE_STATS = @SIGNAL_SNORT_ROTATE_STATS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 XCCFLAGS = @XCCFLAGS@
@@ -255,6 +264,7 @@ utils/hi_util_kmap.o \
 utils/hi_util_xmalloc.o \
 utils/hi_util_hbm.o \
 utils/hi_cmd_lookup.o \
+utils/hi_paf.o \
 event_output/hi_eo_log.o \
 client/hi_client.o \
 client/hi_client_norm.o  \

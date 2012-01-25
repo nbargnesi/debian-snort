@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -33,12 +33,13 @@
 #include <strings.h>
 #endif
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugin_enum.h"
 #include "util.h"
 
@@ -97,7 +98,7 @@ int IpTosCheckCompare(void *l, void *r)
 
 
 /****************************************************************************
- * 
+ *
  * Function: SetupIpTosCheck()
  *
  * Purpose: Associate the tos keyword with IpTosCheckInit
@@ -119,7 +120,7 @@ void SetupIpTosCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IpTosCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Setup the tos data struct and link the function into option
@@ -134,7 +135,7 @@ void SetupIpTosCheck(void)
 void IpTosCheckInit(char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_IP_TOS_CHECK])
     {
         FatalError("%s(%d): Multiple IP tos options in rule\n", file_name,
@@ -146,11 +147,11 @@ void IpTosCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_IP_TOS_CHECK] = (IpTosCheckData *)
             SnortAlloc(sizeof(IpTosCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseIpTos(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(IpTosCheckEq, otn);
     fpl->type = RULE_OPTION_TYPE_IP_TOS;
@@ -160,10 +161,10 @@ void IpTosCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseIpTos(char *, OptTreeNode *)
  *
- * Purpose: Convert the tos option argument to data and plug it into the 
+ * Purpose: Convert the tos option argument to data and plug it into the
  *          data structure
  *
  * Arguments: data => argument data
@@ -238,7 +239,7 @@ void ParseIpTos(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: IpTosCheckEq(char *, OptTreeNode *)
  *
  * Purpose: Test the ip header's tos field to see if its value is equal to the
@@ -272,7 +273,7 @@ int IpTosCheckEq(void *option_data, Packet *p)
         /* you can put debug comments here or not */
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,"No match\n"););
     }
-    
+
     /* if the test isn't successful, return 0 */
     PREPROC_PROFILE_END(ipTosPerfStats);
     return rval;

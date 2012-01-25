@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,10 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- **************************************************************************** 
+ ****************************************************************************
  *
  ****************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
 #include "dce2_memory.h"
 #include "dce2_utils.h"
 #include "dce2_config.h"
@@ -483,9 +488,6 @@ void DCE2_Free(void *mem, uint32_t size, DCE2_MemType mtype)
 
     DCE2_UnRegMem(size, mtype);
     free(mem);
-
-    if (dce2_mem_state == DCE2_MEM_STATE__MEMCAP)
-        dce2_mem_state = DCE2_MEM_STATE__OKAY;
 }
 
 /********************************************************************

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,39 +18,41 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
-#include "debug.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "sf_types.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "log.h"
 #include "util.h"
 #include "generators.h"
 #include "event_queue.h"
 #include "snort.h"
-#include "sf_types.h"
 
 #include "snort_stream5_session.h"
 #include "stream5_common.h"
 #include "portscan.h"
 #include "sftarget_protocol_reference.h"
-#include "sp_dynamic.h" 
+#include "sp_dynamic.h"
 #include "snort_stream5_tcp.h"
 #include "snort_stream5_udp.h"
 #include "snort_stream5_icmp.h"
-#include "parser.h" 
-#include "active.h" 
-
-extern tSfPolicyUserContextId s5_config;
+#include "parser.h"
+#include "active.h"
 
 static void printIgnoredRules(
         IgnoredRuleList *pIgnoredRuleList,
         int any_any_flow
         );
 static void addRuleToIgnoreList(
-        IgnoredRuleList **ppIgnoredRuleList, 
+        IgnoredRuleList **ppIgnoredRuleList,
         OptTreeNode *otn);
 
 /*  M A C R O S  **************************************************/
-static INLINE uint64_t CalcJiffies(Packet *p)
+static inline uint64_t CalcJiffies(Packet *p)
 {
     uint64_t ret = 0;
     uint64_t sec = (p->pkth->ts.tv_sec * TCP_HZ);
@@ -59,7 +61,7 @@ static INLINE uint64_t CalcJiffies(Packet *p)
     ret = sec + usec;
 
     return ret;
-    //return (p->pkth->ts.tv_sec * TCP_HZ) + 
+    //return (p->pkth->ts.tv_sec * TCP_HZ) +
     //       (p->pkth->ts.tv_usec / (1000000UL/TCP_HZ));
 }
 
@@ -72,7 +74,7 @@ int Stream5Expire(Packet *p, Stream5LWSession *lwssn)
         /* Not yet set, not expired */
         return 0;
     }
-    
+
     if((int)(pkttime - lwssn->expire_time) > 0)
     {
         sfBase.iStreamTimeouts++;
@@ -100,7 +102,7 @@ int Stream5Expire(Packet *p, Stream5LWSession *lwssn)
     return 0;
 }
 
-void Stream5SetExpire(Packet *p, 
+void Stream5SetExpire(Packet *p,
         Stream5LWSession *lwssn, uint32_t timeout)
 {
     lwssn->expire_time = CalcJiffies(p) + (timeout * TCP_HZ);
@@ -133,7 +135,7 @@ void Stream5ActiveResponse(Packet* p, Stream5LWSession *lwssn)
             ( (lwssn->session_state & STREAM5_STATE_DROP_CLIENT) &&
               (lwssn->session_state & STREAM5_STATE_DROP_SERVER) ) ?
             ENC_FLAG_FWD : 0;  // reverse dir is always true
-   
+
         Active_KillSession(p, &flags);
         ++lwssn->response_count;
         Stream5SetExpire(p, lwssn, delay);
@@ -144,35 +146,29 @@ void Stream5ActiveResponse(Packet* p, Stream5LWSession *lwssn)
 
 void SetTTL (Stream5LWSession* ssn, Packet* p, int client)
 {
-    Layer* inner = NULL, *outer = NULL;
-    int i;
+    uint8_t inner_ttl = 0, outer_ttl = 0;
+#ifdef SUP_IP6
+    if ( p->outer_iph_api )
+        outer_ttl = p->outer_iph_api->iph_ret_ttl(p);
 
-    for ( i = 0; i < p->next_layer; i++ )
+    if ( p->iph_api )
+        inner_ttl = p->iph_api->iph_ret_ttl(p);
+#else
+    if ( p->outer_iph )
+        outer_ttl = p->outer_iph->ip_ttl;
+
+    if ( p->iph )
+        inner_ttl = p->iph->ip_ttl;
+#endif
+    if ( client )
     {
-        if ( p->layers[i].proto == PROTO_IP4 
-            // || p->layers[i].proto == PROTO_IP6
-        ) {
-            outer = inner;
-            inner = p->layers + i;
-        }
+        ssn->outer_client_ttl = outer_ttl;
+        ssn->inner_client_ttl = inner_ttl;
     }
-    if ( outer )
+    else
     {
-        if ( outer->proto == PROTO_IP4 )
-        {
-            uint8_t ttl = ((IP4Hdr*)outer->start)->ip_ttl;
-            if ( client ) ssn->outer_client_ttl = ttl;
-            else ssn->outer_server_ttl = ttl;
-        }
-    }
-    if ( inner )
-    {
-        if ( inner->proto == PROTO_IP4 )
-        {
-            uint8_t ttl = ((IP4Hdr*)inner->start)->ip_ttl;
-            if ( client ) ssn->inner_client_ttl = ttl;
-            else ssn->inner_server_ttl = ttl;
-        }
+        ssn->outer_server_ttl = outer_ttl;
+        ssn->inner_server_ttl = inner_ttl;
     }
 }
 #endif
@@ -184,12 +180,8 @@ void MarkupPacketFlags(Packet *p, Stream5LWSession *lwssn)
 
     if((lwssn->session_flags & SSNFLAG_ESTABLISHED) != SSNFLAG_ESTABLISHED)
     {
-        if((lwssn->session_flags & (SSNFLAG_SEEN_SERVER|SSNFLAG_SEEN_CLIENT)) ==
+        if((lwssn->session_flags & (SSNFLAG_SEEN_SERVER|SSNFLAG_SEEN_CLIENT)) !=
             (SSNFLAG_SEEN_SERVER|SSNFLAG_SEEN_CLIENT))
-        {
-            p->packet_flags |= PKT_STREAM_UNEST_BI;
-        }
-        else
         {
             p->packet_flags |= PKT_STREAM_UNEST_UNI;
         }
@@ -202,16 +194,18 @@ void MarkupPacketFlags(Packet *p, Stream5LWSession *lwssn)
             p->packet_flags ^= PKT_STREAM_UNEST_UNI;
         }
     }
+    if ( lwssn->session_flags & SSNFLAG_STREAM_ORDER_BAD )
+        p->packet_flags |= PKT_STREAM_ORDER_BAD;
 }
 
 #if 0
 /** Get rule list for a specific protocol
  *
- * @param rule  
- * @param ptocool protocol type 
+ * @param rule
+ * @param ptocool protocol type
  * @returns RuleTreeNode* rule list for specific protocol
  */
-static INLINE RuleTreeNode * protocolRuleList(RuleListNode *rule, int protocol)
+static inline RuleTreeNode * protocolRuleList(RuleListNode *rule, int protocol)
 {
     switch (protocol)
     {
@@ -227,7 +221,7 @@ static INLINE RuleTreeNode * protocolRuleList(RuleListNode *rule, int protocol)
     return NULL;
 }
 #endif
-static INLINE char * getProtocolName (int protocol)
+static inline char * getProtocolName (int protocol)
 {
     static char *protocolName[] = {"TCP", "UDP", "ICMP"};
     switch (protocol)
@@ -265,12 +259,12 @@ int Stream5OtnHasFlowOrFlowbit(OptTreeNode *otn)
 }
 
 /**initialize given port list from the given ruleset, for a given policy
- * @param portList pointer to array of MAX_PORTS+1 uint8_t. This array content 
+ * @param portList pointer to array of MAX_PORTS+1 uint8_t. This array content
  * is changed by walking through the rulesets.
  * @param protocol - protocol type
  */
 void setPortFilterList(
-        uint8_t *portList, 
+        uint16_t *portList,
         int protocol,
         int ignoreAnyAnyRules,
         tSfPolicyId policyId
@@ -323,7 +317,7 @@ void setPortFilterList(
         }
 
         if (rtn->proto == protocol)
-        { 
+        {
             //do operation
             inspectSrc = inspectDst = 0;
             if (PortObjectHasAny(rtn->src_portobject))
@@ -411,15 +405,15 @@ void setPortFilterList(
 
     if (any_any_flow == 1)
     {
-        LogMessage("Warning: 'ignore_any_rules' option for Stream5 %s "
-            "disabled because of %s rule with flow or flowbits option\n", 
+        LogMessage("WARNING: 'ignore_any_rules' option for Stream5 %s "
+            "disabled because of %s rule with flow or flowbits option.\n",
             protocolName, protocolName);
     }
 
     else if (pIgnoredRuleList)
     {
-        LogMessage("Warning: Rules (GID:SID) effectively ignored because of "
-            "'ignore_any_rules' option for Stream5 %s:\n", protocolName);
+        LogMessage("WARNING: Rules (GID:SID) effectively ignored because of "
+            "'ignore_any_rules' option for Stream5 %s.\n", protocolName);
     }
     // free list; print iff any_any_flow
     printIgnoredRules(pIgnoredRuleList, any_any_flow);
@@ -428,7 +422,7 @@ void setPortFilterList(
 
 /**Determines whether any_any_flow should be ignored or not.
  *
- * Dont ignore any_any_flows if flow bit is set on an any_any_flow, 
+ * Dont ignore any_any_flows if flow bit is set on an any_any_flow,
  * or ignoreAnyAnyRules is not set.
  * @param portList port list
  * @param rtn Rule tree node
@@ -438,9 +432,9 @@ void setPortFilterList(
  * @returns
  */
 int Stream5AnyAnyFlow(
-        uint8_t *portList, 
+        uint16_t *portList,
         OptTreeNode *otn,
-        RuleTreeNode *rtn, 
+        RuleTreeNode *rtn,
         int any_any_flow,
         IgnoredRuleList **ppIgnoredRuleList,
         int ignoreAnyAnyRules
@@ -536,7 +530,7 @@ static void printIgnoredRules(
             }
             else
             {
-                SnortSnprintfAppend(buf, STD_BUF-1, ", %d:%d", 
+                SnortSnprintfAppend(buf, STD_BUF-1, ", %d:%d",
                         ignored_rule->otn->sigInfo.generator,
                         ignored_rule->otn->sigInfo.id);
             }
@@ -562,7 +556,7 @@ static void printIgnoredRules(
 
 static int Stream5FreeConfigsPolicy(
         tSfPolicyUserContextId config,
-        tSfPolicyId policyId, 
+        tSfPolicyId policyId,
         void* pData
         )
 {

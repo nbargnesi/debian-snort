@@ -1,7 +1,7 @@
 
 /****************************************************************************
  *
- * Copyright (C) 2003-2010 Sourcefire, Inc.
+ * Copyright (C) 2003-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -22,7 +22,7 @@
  
 /**
  * @file   log_text.h
- * @author Russ Combs <cmg@sourcefire.com>
+ * @author Russ Combs <rcombs@sourcefire.com>
  * @date   Fri Jun 27 10:34:37 2003
  * 
  * @brief  logging to text file

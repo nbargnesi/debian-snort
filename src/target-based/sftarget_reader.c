@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2010 Sourcefire, Inc.
+** Copyright (C) 2006-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -55,8 +55,10 @@
 
 #include "snort.h"
 
-#include "debug.h"
+#include "snort_debug.h"
 #include "sfPolicy.h"
+
+#include "sftarget_reader_live.h"
 
 typedef struct
 {
@@ -160,7 +162,7 @@ char *SFAT_LookupAttributeNameById(int id)
 
     if (!pConfig->next.mapTable)
         return NULL;
-    
+
     entry = sfxhash_find(pConfig->next.mapTable, &id);
 
     if (entry)
@@ -250,7 +252,7 @@ void FreeHostEntry(HostAttributeEntry *host)
 
 void PrintAttributeData(char *prefix, AttributeData *data)
 {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     DebugMessage(DEBUG_ATTRIBUTE, "AttributeData for %s\n", prefix);
     if (data->type == ATTRIBUTE_NAME)
     {
@@ -338,7 +340,7 @@ int SFAT_SetHostIp4(char *ip)
     tmp_host = sfrt_lookup(&ipAddr, pConfig->next.lookupTable);
 
     /*** If found, free current_host and set current_host to the one found */
-    if (tmp_host && 
+    if (tmp_host &&
         (tmp_host->ipAddr == ipAddr) &&
         (tmp_host->bits == bits))
     {
@@ -518,7 +520,7 @@ int SFAT_SetApplicationAttribute(AttributeData *data, int attribute)
     return SFAT_OK;
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
 void PrintHostAttributeEntry(HostAttributeEntry *host)
 {
     ApplicationEntry *app;
@@ -683,9 +685,9 @@ int SFAT_AddHostEntryToMap(void)
 }
 
 #ifdef SUP_IP6
-HostAttributeEntry *SFAT_LookupHostEntryByIP(sfip_t *ipAddr)
+HostAttributeEntry *fileLookupHostEntryByIP(sfip_t *ipAddr)
 #else
-HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(uint32_t ipAddr)
+HostAttributeEntry *fileLookupHostEntryByIP(uint32_t ipAddr)
 #endif
 {
     tTargetBasedPolicyConfig *pConfig = NULL;
@@ -726,6 +728,34 @@ HostAttributeEntry *SFAT_LookupHostEntryByIp4Addr(uint32_t ipAddr)
     return host;
 }
 
+#ifdef SUP_IP6
+HostAttributeEntry *SFAT_LookupHostEntryByIP(sfip_t *ipAddr)
+#else
+HostAttributeEntry *SFAT_LookupHostEntryByIP(uint32_t ipAddr)
+#endif
+{
+    if (IsAdaptiveConfigured(getRuntimePolicy(), 0))
+    {
+        HostAttributeEntry *pEntry = fileLookupHostEntryByIP(ipAddr);
+#ifdef SUP_IP6
+		if (!pEntry)
+        {
+            pEntry = SFLAT_findHost(ipAddr);
+        }
+#endif
+        return (pEntry);
+    }
+#ifdef SUP_IP6
+    else
+    {
+        return (SFLAT_findHost(ipAddr));
+    }
+#endif
+	return NULL;
+}
+
+
+
 HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p)
 {
 #ifdef SUP_IP6
@@ -741,7 +771,7 @@ HostAttributeEntry *SFAT_LookupHostEntryBySrc(Packet *p)
 
     ipAddr = ntohl(p->iph->ip_src.s_addr);
 
-    return SFAT_LookupHostEntryByIp4Addr(ipAddr);
+    return SFAT_LookupHostEntryByIP(ipAddr);
 #endif
 }
 
@@ -760,7 +790,7 @@ HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p)
 
     ipAddr = ntohl(p->iph->ip_dst.s_addr);
 
-    return SFAT_LookupHostEntryByIp4Addr(ipAddr);
+    return SFAT_LookupHostEntryByIP(ipAddr);
 #endif
 }
 
@@ -952,7 +982,7 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
      */
     while (!attribute_reload_thread_stop)
     {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
         DebugMessage(DEBUG_ATTRIBUTE,
             "AttrReloadThread: Checking for new attr table...\n");
 #endif
@@ -963,7 +993,7 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
         {
             if (check_attribute_table_flag(ATTRIBUTE_TABLE_AVAILABLE_FLAG))
             {
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
                 DebugMessage(DEBUG_ATTRIBUTE,
                     "AttrReloadThread: Freeing old attr table...\n");
 #endif
@@ -971,7 +1001,7 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
                  * prev.mapTable and prev.lookupTable */
                 sfxhash_delete(pConfig->prev.mapTable);
                 pConfig->prev.mapTable = NULL;
-    
+
                 sfrt_cleanup(pConfig->prev.lookupTable, SFAT_CleanupCallback);
                 sfrt_free(pConfig->prev.lookupTable);
                 pConfig->prev.lookupTable = NULL;
@@ -987,7 +1017,7 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
         {
             /* Is there an new table ready? */
             set_attribute_table_flag(ATTRIBUTE_TABLE_RELOADING_FLAG);
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             DebugMessage(DEBUG_ATTRIBUTE,
                 "AttrReloadThread: loading new attr table.\n");
 #endif
@@ -1062,14 +1092,14 @@ void *SFAT_ReloadAttributeTableThread(void *arg)
         else
         {
             /* Sleep for 60 seconds */
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
             DebugMessage(DEBUG_ATTRIBUTE,
                 "AttrReloadThread: Checked for new attr table... sleeping.\n");
 #endif
             sleep(60);
         }
     }
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     DebugMessage(DEBUG_ATTRIBUTE,
         "AttrReloadThread: exiting... Handled %d reloads\n", reloads);
 #endif
@@ -1092,7 +1122,7 @@ void AttributeTableReloadCheck(void)
                  * flag... */
     }
     /* Swap the attribute table pointers. */
-    else if ((pConfig != NULL) && 
+    else if ((pConfig != NULL) &&
             check_attribute_table_flag(ATTRIBUTE_TABLE_AVAILABLE_FLAG))
     {
         LogMessage("Swapping Attribute Tables.\n");
@@ -1121,6 +1151,7 @@ void AttributeTableReloadCheck(void)
     }
 }
 
+/**called once during initialization. Reads attribute table for the first time.*/
 int SFAT_ParseAttributeTable(char *args)
 {
     char **toks;
@@ -1202,8 +1233,9 @@ int SFAT_ParseAttributeTable(char *args)
     if (!ScDisableAttrReload())
     {
         /* Register signal handler for attribute table. */
-        signal(SIGNAL_SNORT_READ_ATTR_TBL, SigAttributeTableReloadHandler);
-        if(errno!=0) errno=0;
+        SnortAddSignal(SIGNAL_SNORT_READ_ATTR_TBL,SigAttributeTableReloadHandler,0);
+        if(errno != 0)
+            errno = 0;
     }
 #endif
 

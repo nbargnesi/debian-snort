@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2004-2010 Sourcefire, Inc.
+ * Copyright (C) 2004-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -25,11 +25,11 @@
 #ifndef __SP_FLOWBITS_H__
 #define __SP_FLOWBITS_H__
 
-#include "stream_api.h"
 #include "sfghash.h"
 #include "sf_types.h"
 #include "decode.h"
 #include "bitop_funcs.h"
+#include "snort_debug.h"
 
 /* Normally exported functions, for plugin registration. */
 void SetupFlowBits(void);
@@ -83,8 +83,6 @@ typedef struct _FLOWBITS_GRP
     BITOP GrpBitOp;
 } FLOWBITS_GRP;
 
-
-
 #define FLOWBITS_SET       0x01  
 #define FLOWBITS_UNSET     0x02
 #define FLOWBITS_TOGGLE    0x04
@@ -92,5 +90,15 @@ typedef struct _FLOWBITS_GRP
 #define FLOWBITS_ISNOTSET  0x10
 #define FLOWBITS_RESET     0x20
 #define FLOWBITS_NOALERT   0x40
+
+static inline int FlowBits_SetOperation(void *option_data)
+{
+    FLOWBITS_OP *flowbits = (FLOWBITS_OP*)option_data;
+    if (flowbits->type & (FLOWBITS_SET | FLOWBITS_UNSET | FLOWBITS_TOGGLE | FLOWBITS_RESET))
+    {
+        return 1;
+    }
+    return 0;
+}
 
 #endif  /* __SP_FLOWBITS_H__ */

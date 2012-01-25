@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -20,11 +20,18 @@
  *
  ****************************************************************************/
 
+// @file    active.c
+// @author  Russ Combs <rcombs@sourcefire.com>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "dnet.h"
+#ifdef HAVE_DUMBNET_H
+#include <dumbnet.h>
+#else
+#include <dnet.h>
+#endif
 
 #include "active.h"
 #include "stream_api.h"
@@ -40,7 +47,7 @@
 // these can't be pkt flags because we do the handling
 // of these flags following all processing and the drop
 // or response may have been produced by a pseudopacket.
-int active_drop_pkt = 0;
+tActiveDrop active_drop_pkt = ACTIVE_ALLOW;
 int active_drop_ssn = 0;
 // TBD consider performance of replacing active_drop_pkt/ssn
 // with a active_verdict.  change over if it is a wash or better.
@@ -69,7 +76,7 @@ typedef int (*send_t) (
 static send_t s_send = DAQ_Inject;
 static uint64_t s_injects = 0;
 
-static INLINE PROTO_ID GetInnerProto (const Packet* p)
+static inline PROTO_ID GetInnerProto (const Packet* p)
 {
     if ( !p->next_layer ) return PROTO_MAX;
     return ( p->layers[p->next_layer-1].proto );
@@ -102,7 +109,7 @@ int Active_QueueResponse (Active_ResponseFunc f, void* pv)
 }
 
 // helper function
-static INLINE void Active_ClearQueue (void)
+static inline void Active_ClearQueue (void)
 {
     s_rejFunc = s_rspFunc = NULL;
     s_rejData = s_rspData = NULL;
@@ -143,17 +150,17 @@ void Active_KillSession (Packet* p, EncodeFlags* pf)
     EncodeFlags flags = pf ? *pf : ENC_FLAG_FWD;
 
     switch ( GET_IPH_PROTO(p) )
-    {   
+    {
         case IPPROTO_TCP:
             Active_SendReset(p, 0);
             if ( flags & ENC_FLAG_FWD )
                 Active_SendReset(p, ENC_FLAG_FWD);
             break;
 
-        case IPPROTO_UDP:
+        default:
             Active_SendUnreach(p, ENC_UNR_PORT);
             break;
-    }   
+    }
 }
 
 //--------------------------------------------------------------------
@@ -166,12 +173,18 @@ int Active_Init (SnortConfig* sc)
 
     if ( s_enabled && (!DAQ_CanInject() || sc->respond_device) )
     {
+
         if ( ScReadMode() || Active_Open(sc->respond_device) )
         {
             LogMessage("WARNING: active responses disabled since DAQ "
                 "can't inject packets.\n");
+#ifndef REG_TEST
             s_attempts = s_enabled = 0;
+#endif
         }
+
+        if (NULL != sc->eth_dst)
+            Encode_SetDstMAC(sc->eth_dst);
     }
     return 0;
 }
@@ -186,7 +199,7 @@ int Active_IsEnabled (void) { return s_enabled; }
 
 void Active_SetEnabled (int on_off) { s_enabled = on_off; }
 
-static INLINE uint32_t GetFlags (void)
+static inline uint32_t GetFlags (void)
 {
     uint32_t flags = ENC_FLAG_ID;
     if ( DAQ_RawInjection() || s_ipnet ) flags |= ENC_FLAG_RAW;
@@ -222,20 +235,9 @@ void Active_SendUnreach(Packet* p, EncodeType type)
     uint32_t len;
     const uint8_t* rej;
     uint32_t flags = GetFlags();
-    PROTO_ID proto;
 
     if ( !s_attempts )
         return;
-
-    // do not send ICMP responses to ICMP packets
-    proto = GetInnerProto(p);
-
-    if ( (proto == IPPROTO_ICMP) || (proto == IPPROTO_ICMPV6) )
-    {
-        ErrorMessage(
-            "Active_SendUnreach: ignoring UNR for ICMP packet.\n");
-        return;
-    }
 
     rej = Encode_Reject(type, flags, p, &len);
     if ( !rej ) return;
@@ -250,7 +252,7 @@ void Active_SendData (
     flags |= GetFlags();
 
     for ( i = 0; i < s_attempts; i++ )
-    {   
+    {
         uint32_t plen = 0;
         const uint8_t* seg;
 
@@ -261,7 +263,7 @@ void Active_SendData (
 
         if ( !seg ) return;
         s_send(p->pkth, !(flags & ENC_FLAG_FWD), seg, plen);
-    }   
+    }
 }
 
 //--------------------------------------------------------------------
@@ -274,7 +276,7 @@ int Active_IsRSTCandidate(const Packet* p)
     if ( !p->tcph )
         return 0;
 
-    /* 
+    /*
     **  This ensures that we don't reset packets that we just
     **  spoofed ourselves, thus inflicting a self-induced DOS
     **  attack.
@@ -284,12 +286,15 @@ int Active_IsRSTCandidate(const Packet* p)
 
 int Active_IsUNRCandidate(const Packet* p)
 {
+    // FIXTHIS allow unr to tcp/udp/icmp4/icmp6 only or for all
     switch ( GetInnerProto(p) ) {
-    case PROTO_TCP:
-        return ( p->tcph != NULL );
-
     case PROTO_UDP:
-        return ( p->udph != NULL );
+    case PROTO_TCP:
+    case PROTO_ICMP4:
+#ifdef SUP_IP6
+    case PROTO_ICMP6:
+#endif
+        return 1;
 
     default:
         break;
@@ -342,10 +347,8 @@ static uint32_t Strafe (int i, uint32_t flags, const Packet* p)
 //--------------------------------------------------------------------
 // support for decoder and rule actions
 
-int Active_IgnoreSession (Packet* p)
+static inline void _Active_DoIgnoreSession(Packet *p)
 {
-    Active_DropPacket();
-
     if ( ScInlineMode() || ScTreatDropAsIgnore() )
     {
         if (p->ssnptr && stream_api)
@@ -356,33 +359,67 @@ int Active_IgnoreSession (Packet* p)
         //drop this and all following fragments
         frag3DropAllFragments(p);
     }
+}
+
+int Active_IgnoreSession (Packet* p)
+{
+    Active_DropPacket();
+
+    _Active_DoIgnoreSession(p);
+
     return 0;
 }
 
+int Active_ForceDropAction(Packet *p)
+{
+    // explicitly drop packet
+    Active_ForceDropPacket();
+
+    _Active_DoIgnoreSession(p);
+    return 0;
+}
+
+static inline int _Active_DoReset(Packet *p)
+{
+#ifdef ACTIVE_RESPONSE
+    if ( !Active_IsEnabled() )
+        return 0;
+
+    if ( !IPH_IS_VALID(p) )
+        return 0;
+
+    switch ( GET_IPH_PROTO(p) )
+    {
+        case IPPROTO_TCP:
+            if ( Active_IsRSTCandidate(p) )
+                Active_QueueReject();
+            break;
+
+        // FIXTHIS send unr to udp/icmp4/icmp6 only or for all non-tcp?
+        case IPPROTO_UDP:
+        case IPPROTO_ICMP:
+        case IPPROTO_ICMPV6:
+            if ( Active_IsUNRCandidate(p) )
+                Active_QueueReject();
+            break;
+    }
+#endif
+
+    return 0;
+}
 
 int Active_DropAction (Packet* p)
 {
     Active_IgnoreSession(p);
 
-#ifdef ACTIVE_RESPONSE
-    if ( !Active_IsEnabled() )
-        return 0;
+    return _Active_DoReset(p);
+}
 
-    switch ( GET_IPH_PROTO(p) )
-    {   
-        case IPPROTO_TCP:
-            if ( Active_IsRSTCandidate(p) )
-                Active_QueueReject(); 
-            break;
-
-        case IPPROTO_UDP:
-            if ( Active_IsUNRCandidate(p) )
-                Active_QueueReject(); 
-            break;
-    }   
-#endif
-
-    return 0;
+int Active_ForceDropResetAction(Packet *p)
+{
+    Active_ForceDropAction(p);
+    
+    return _Active_DoReset(p);
 }
 
 //--------------------------------------------------------------------
@@ -392,23 +429,23 @@ int Active_DropAction (Packet* p)
 static int Active_Open (const char* dev)
 {
     if ( dev && strcasecmp(dev, "ip") )
-    {   
+    {
         s_link = eth_open(dev);
 
         if ( !s_link )
             FatalError("%s: can't open %s!\n",
                 "Active response", dev);
         s_send = Active_SendEth;
-    }   
+    }
     else
-    {   
+    {
         s_ipnet = ip_open();
 
         if ( !s_ipnet )
             FatalError("%s: can't open ip!\n",
                 "Active response");
         s_send = Active_SendIp;
-    }   
+    }
     return ( s_link || s_ipnet ) ? 0 : -1;
 }
 

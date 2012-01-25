@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- **************************************************************************** 
+ ****************************************************************************
  *
  ****************************************************************************/
 
@@ -27,7 +27,7 @@
 #include "config.h"  /* For WORDS_BIGENDIAN */
 #endif
 
-#include "debug.h"   /* For INLINE */
+#include "snort_debug.h"   /* For inline */
 #include "sf_types.h"
 
 /********************************************************************
@@ -87,7 +87,7 @@
  * NULL terminated ASCII strings unless Unicode is specified
  * in the NT LM 1.0 SMB header in which case they are NULL
  * terminated unicode strings
- */ 
+ */
 #define SMB_FMT__DATA_BLOCK  1
 #define SMB_FMT__ASCII       4
 
@@ -664,13 +664,13 @@ typedef struct _SmbLm21_TreeConnectAndXResp    /* smb_wct = 3 */
                                 bit0 = 1, exclusive search bits supported */
     uint16_t smb_bcc;        /* min value = 3 */
 #if 0
-    uint8_t  smb_nativefs[]; /* native file system for this connection */ 
+    uint8_t  smb_nativefs[]; /* native file system for this connection */
 #endif
 } SmbLm21_TreeConnectAndXResp;
 
 
 /********************************************************************
- * Tree Disconnect :: smb_com = SMB_COM_TREE_DIS 
+ * Tree Disconnect :: smb_com = SMB_COM_TREE_DIS
  *
  ********************************************************************/
 typedef struct _SmbCore_TreeDisconnectReq   /* smb_wct = 0 */
@@ -1363,82 +1363,82 @@ typedef struct _SmbCore_RenameResp  /* smb_wct = 0 */
 /********************************************************************
  * Inline functions prototypes
  ********************************************************************/
-static INLINE uint32_t NbssLen(const NbssHdr *);
-static INLINE uint8_t NbssType(const NbssHdr *);
-static INLINE uint16_t SmbNtohs(const uint16_t *);
-static INLINE uint32_t SmbNtohl(const uint32_t *);
-static INLINE uint16_t SmbHtons(const uint16_t *);
-static INLINE uint32_t SmbHtonl(const uint32_t *);
+static inline uint32_t NbssLen(const NbssHdr *);
+static inline uint8_t NbssType(const NbssHdr *);
+static inline uint16_t SmbNtohs(const uint16_t *);
+static inline uint32_t SmbNtohl(const uint32_t *);
+static inline uint16_t SmbHtons(const uint16_t *);
+static inline uint32_t SmbHtonl(const uint32_t *);
 
-static INLINE uint32_t SmbId(const SmbNtHdr *);
-static INLINE uint32_t SmbNtStatus(const SmbNtHdr *);
-static INLINE int SmbError(const SmbNtHdr *);
-static INLINE int SmbType(const SmbNtHdr *);
-static INLINE uint8_t SmbCom(const SmbNtHdr *);
-static INLINE int SmbUnicode(const SmbNtHdr *);
-static INLINE uint16_t SmbUid(const SmbNtHdr *);
-static INLINE uint16_t SmbTid(const SmbNtHdr *);
-static INLINE uint16_t SmbPid(const SmbNtHdr *);
-static INLINE uint16_t SmbMid(const SmbNtHdr *);
+static inline uint32_t SmbId(const SmbNtHdr *);
+static inline uint32_t SmbNtStatus(const SmbNtHdr *);
+static inline int SmbError(const SmbNtHdr *);
+static inline int SmbType(const SmbNtHdr *);
+static inline uint8_t SmbCom(const SmbNtHdr *);
+static inline int SmbUnicode(const SmbNtHdr *);
+static inline uint16_t SmbUid(const SmbNtHdr *);
+static inline uint16_t SmbTid(const SmbNtHdr *);
+static inline uint16_t SmbPid(const SmbNtHdr *);
+static inline uint16_t SmbMid(const SmbNtHdr *);
 
-static INLINE uint8_t SmbWct(const SmbCommon *);
-static INLINE uint16_t SmbBcc(const uint8_t *, uint16_t);
-static INLINE uint8_t SmbAndXCom2(const SmbAndXCommon *);
-static INLINE uint16_t SmbAndXOff2(const SmbAndXCommon *);
-static INLINE uint8_t SmbEmptyComWct(const SmbEmptyCom *);
-static INLINE uint16_t SmbEmptyComBcc(const SmbEmptyCom *);
+static inline uint8_t SmbWct(const SmbCommon *);
+static inline uint16_t SmbBcc(const uint8_t *, uint16_t);
+static inline uint8_t SmbAndXCom2(const SmbAndXCommon *);
+static inline uint16_t SmbAndXOff2(const SmbAndXCommon *);
+static inline uint8_t SmbEmptyComWct(const SmbEmptyCom *);
+static inline uint16_t SmbEmptyComBcc(const SmbEmptyCom *);
 
-static INLINE uint16_t SmbGet16(const uint8_t *);
-static INLINE uint32_t SmbGet32(const uint8_t *);
+static inline uint16_t SmbGet16(const uint8_t *);
+static inline uint32_t SmbGet32(const uint8_t *);
 
-static INLINE uint16_t SmbLm10_TreeConAndXReqPassLen(const SmbLm10_TreeConnectAndXReq *);
+static inline uint16_t SmbLm10_TreeConAndXReqPassLen(const SmbLm10_TreeConnectAndXReq *);
 
-static INLINE uint16_t SmbCore_OpenRespFid(const SmbCore_OpenResp *);
-static INLINE uint16_t SmbLm10_OpenAndXRespFid(const SmbLm10_OpenAndXResp *);
+static inline uint16_t SmbCore_OpenRespFid(const SmbCore_OpenResp *);
+static inline uint16_t SmbLm10_OpenAndXRespFid(const SmbLm10_OpenAndXResp *);
 
-static INLINE uint16_t SmbNt10_NtCreateAndXRespFid(const SmbNt10_NtCreateAndXResp *);
+static inline uint16_t SmbNt10_NtCreateAndXRespFid(const SmbNt10_NtCreateAndXResp *);
 
-static INLINE uint16_t SmbCore_CloseReqFid(const SmbCore_CloseReq *);
+static inline uint16_t SmbCore_CloseReqFid(const SmbCore_CloseReq *);
 
-static INLINE uint16_t SmbCore_WriteReqFid(const SmbCore_WriteReq *);
+static inline uint16_t SmbCore_WriteReqFid(const SmbCore_WriteReq *);
 
-static INLINE uint16_t SmbLm10_WriteAndCloseReqFid(const SmbLm10_WriteAndCloseReq6 *);
-static INLINE uint16_t SmbLm10_WriteAndCloseReqCount(const SmbLm10_WriteAndCloseReq6 *);
+static inline uint16_t SmbLm10_WriteAndCloseReqFid(const SmbLm10_WriteAndCloseReq6 *);
+static inline uint16_t SmbLm10_WriteAndCloseReqCount(const SmbLm10_WriteAndCloseReq6 *);
 
-static INLINE uint16_t SmbLm10_WriteAndXReqFid(const SmbLm10_WriteAndXReq *);
-static INLINE uint16_t SmbLm10_WriteAndXReqDoff(const SmbLm10_WriteAndXReq *);
-static INLINE uint16_t SmbLm10_WriteAndXReqDsize(const SmbLm10_WriteAndXReq *);
+static inline uint16_t SmbLm10_WriteAndXReqFid(const SmbLm10_WriteAndXReq *);
+static inline uint16_t SmbLm10_WriteAndXReqDoff(const SmbLm10_WriteAndXReq *);
+static inline uint16_t SmbLm10_WriteAndXReqDsize(const SmbLm10_WriteAndXReq *);
 
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqFunc(const SmbLm10_TransactNamedPipeReq *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqFid(const SmbLm10_TransactNamedPipeReq *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqDoff(const SmbLm10_TransactNamedPipeReq *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqTotalDcnt(const SmbLm10_TransactNamedPipeReq *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqDcnt(const SmbLm10_TransactNamedPipeReq *);
+static inline uint16_t SmbLm10_TransactNamedPipeReqFunc(const SmbLm10_TransactNamedPipeReq *);
+static inline uint16_t SmbLm10_TransactNamedPipeReqFid(const SmbLm10_TransactNamedPipeReq *);
+static inline uint16_t SmbLm10_TransactNamedPipeReqDoff(const SmbLm10_TransactNamedPipeReq *);
+static inline uint16_t SmbLm10_TransactNamedPipeReqTotalDcnt(const SmbLm10_TransactNamedPipeReq *);
+static inline uint16_t SmbLm10_TransactNamedPipeReqDcnt(const SmbLm10_TransactNamedPipeReq *);
 
-static INLINE uint16_t SmbLm10_TransactSecReqDoff(const SmbLm10_TransactionSecondaryReq *);
-static INLINE uint16_t SmbLm10_TransactSecReqTotalDcnt(const SmbLm10_TransactionSecondaryReq *);
-static INLINE uint16_t SmbLm10_TransactSecReqDcnt(const SmbLm10_TransactionSecondaryReq *);
-static INLINE uint16_t SmbLm10_TransactSecReqTotalDdisp(const SmbLm10_TransactionSecondaryReq *);
+static inline uint16_t SmbLm10_TransactSecReqDoff(const SmbLm10_TransactionSecondaryReq *);
+static inline uint16_t SmbLm10_TransactSecReqTotalDcnt(const SmbLm10_TransactionSecondaryReq *);
+static inline uint16_t SmbLm10_TransactSecReqDcnt(const SmbLm10_TransactionSecondaryReq *);
+static inline uint16_t SmbLm10_TransactSecReqTotalDdisp(const SmbLm10_TransactionSecondaryReq *);
 
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespDoff(const SmbLm10_TransactNamedPipeResp *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDcnt(const SmbLm10_TransactNamedPipeResp *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespDcnt(const SmbLm10_TransactNamedPipeResp *);
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDdisp(const SmbLm10_TransactNamedPipeResp *);
+static inline uint16_t SmbLm10_TransactNamedPipeRespDoff(const SmbLm10_TransactNamedPipeResp *);
+static inline uint16_t SmbLm10_TransactNamedPipeRespTotalDcnt(const SmbLm10_TransactNamedPipeResp *);
+static inline uint16_t SmbLm10_TransactNamedPipeRespDcnt(const SmbLm10_TransactNamedPipeResp *);
+static inline uint16_t SmbLm10_TransactNamedPipeRespTotalDdisp(const SmbLm10_TransactNamedPipeResp *);
 
-static INLINE uint16_t SmbLm10_TransRespParamCnt(const SmbLm10_TransactionResp *);
+static inline uint16_t SmbLm10_TransRespParamCnt(const SmbLm10_TransactionResp *);
 
-static INLINE uint16_t SmbCore_ReadReqFid(const SmbCore_ReadReq *);
+static inline uint16_t SmbCore_ReadReqFid(const SmbCore_ReadReq *);
 
-static INLINE uint16_t SmbLm10_ReadAndXReqFid(const SmbLm10_ReadAndXReq *);
-static INLINE uint16_t SmbLm10_ReadAndXRespDoff(const SmbLm10_ReadAndXResp *);
-static INLINE uint16_t SmbLm10_ReadAndXRespDsize(const SmbLm10_ReadAndXResp *);
+static inline uint16_t SmbLm10_ReadAndXReqFid(const SmbLm10_ReadAndXReq *);
+static inline uint16_t SmbLm10_ReadAndXRespDoff(const SmbLm10_ReadAndXResp *);
+static inline uint16_t SmbLm10_ReadAndXRespDsize(const SmbLm10_ReadAndXResp *);
 
-static INLINE uint16_t SmbLm10_WriteBlockRawReqTotCount(const SmbLm10_WriteBlockRawReq *);
-static INLINE uint16_t SmbLm10_WriteBlockRawReqFid(const SmbLm10_WriteBlockRawReq *);
-static INLINE uint16_t SmbLm10_WriteBlockRawReqDoff(const SmbLm10_WriteBlockRawReq *);
-static INLINE uint16_t SmbLm10_WriteBlockRawReqDsize(const SmbLm10_WriteBlockRawReq *);
+static inline uint16_t SmbLm10_WriteBlockRawReqTotCount(const SmbLm10_WriteBlockRawReq *);
+static inline uint16_t SmbLm10_WriteBlockRawReqFid(const SmbLm10_WriteBlockRawReq *);
+static inline uint16_t SmbLm10_WriteBlockRawReqDoff(const SmbLm10_WriteBlockRawReq *);
+static inline uint16_t SmbLm10_WriteBlockRawReqDsize(const SmbLm10_WriteBlockRawReq *);
 
-static INLINE uint16_t SmbLm10_ReadBlockRawReqFid(const SmbLm10_ReadBlockRawReq *);
+static inline uint16_t SmbLm10_ReadBlockRawReqFid(const SmbLm10_ReadBlockRawReq *);
 
 /********************************************************************
  * Function:
@@ -1450,7 +1450,7 @@ static INLINE uint16_t SmbLm10_ReadBlockRawReqFid(const SmbLm10_ReadBlockRawReq 
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t NbssLen(const NbssHdr *nb)
+static inline uint32_t NbssLen(const NbssHdr *nb)
 {
     /* Treat first bit of flags as the upper byte to length */
     return ((nb->flags & 0x01) << 16) | ntohs(nb->length);
@@ -1466,7 +1466,7 @@ static INLINE uint32_t NbssLen(const NbssHdr *nb)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint8_t NbssType(const NbssHdr *nb)
+static inline uint8_t NbssType(const NbssHdr *nb)
 {
     return nb->type;
 }
@@ -1481,7 +1481,7 @@ static INLINE uint8_t NbssType(const NbssHdr *nb)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbNtohs(const uint16_t *ptr)
+static inline uint16_t SmbNtohs(const uint16_t *ptr)
 {
     uint16_t value;
 
@@ -1511,7 +1511,7 @@ static INLINE uint16_t SmbNtohs(const uint16_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t SmbNtohl(const uint32_t *ptr)
+static inline uint32_t SmbNtohl(const uint32_t *ptr)
 {
     uint32_t value;
 
@@ -1543,7 +1543,7 @@ static INLINE uint32_t SmbNtohl(const uint32_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbHtons(const uint16_t *ptr)
+static inline uint16_t SmbHtons(const uint16_t *ptr)
 {
     return SmbNtohs(ptr);
 }
@@ -1558,7 +1558,7 @@ static INLINE uint16_t SmbHtons(const uint16_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t SmbHtonl(const uint32_t *ptr)
+static inline uint32_t SmbHtonl(const uint32_t *ptr)
 {
     return SmbNtohl(ptr);
 }
@@ -1573,7 +1573,7 @@ static INLINE uint32_t SmbHtonl(const uint32_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t SmbId(const SmbNtHdr *hdr)
+static inline uint32_t SmbId(const SmbNtHdr *hdr)
 {
 #ifdef WORDS_MUSTALIGN
     uint8_t *idf = (uint8_t *)hdr->smb_idf;
@@ -1593,7 +1593,7 @@ static INLINE uint32_t SmbId(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t SmbNtStatus(const SmbNtHdr *hdr)
+static inline uint32_t SmbNtStatus(const SmbNtHdr *hdr)
 {
     return SmbNtohl(&hdr->smb_status.smb_nt_status);
 }
@@ -1608,7 +1608,7 @@ static INLINE uint32_t SmbNtStatus(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE int SmbError(const SmbNtHdr *hdr)
+static inline int SmbError(const SmbNtHdr *hdr)
 {
     if (SmbNtohs(&hdr->smb_flg2) & SMB_FLG2__NT_CODES)
     {
@@ -1654,7 +1654,7 @@ static INLINE int SmbError(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE int SmbType(const SmbNtHdr *hdr)
+static inline int SmbType(const SmbNtHdr *hdr)
 {
     if (hdr->smb_flg & SMB_FLG__TYPE)
         return SMB_TYPE__RESPONSE;
@@ -1672,7 +1672,7 @@ static INLINE int SmbType(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint8_t SmbCom(const SmbNtHdr *hdr)
+static inline uint8_t SmbCom(const SmbNtHdr *hdr)
 {
     return hdr->smb_com;
 }
@@ -1687,7 +1687,7 @@ static INLINE uint8_t SmbCom(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE int SmbUnicode(const SmbNtHdr *hdr)
+static inline int SmbUnicode(const SmbNtHdr *hdr)
 {
     return SmbNtohs(&hdr->smb_flg2) & SMB_FLG2__UNICODE;
 }
@@ -1702,7 +1702,7 @@ static INLINE int SmbUnicode(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbUid(const SmbNtHdr *hdr)
+static inline uint16_t SmbUid(const SmbNtHdr *hdr)
 {
     return SmbNtohs(&hdr->smb_uid);
 }
@@ -1717,7 +1717,7 @@ static INLINE uint16_t SmbUid(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbTid(const SmbNtHdr *hdr)
+static inline uint16_t SmbTid(const SmbNtHdr *hdr)
 {
     return SmbNtohs(&hdr->smb_tid);
 }
@@ -1732,7 +1732,7 @@ static INLINE uint16_t SmbTid(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbPid(const SmbNtHdr *hdr)
+static inline uint16_t SmbPid(const SmbNtHdr *hdr)
 {
     return SmbNtohs(&hdr->smb_pid);
 }
@@ -1747,7 +1747,7 @@ static INLINE uint16_t SmbPid(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbMid(const SmbNtHdr *hdr)
+static inline uint16_t SmbMid(const SmbNtHdr *hdr)
 {
     return SmbNtohs(&hdr->smb_mid);
 }
@@ -1762,7 +1762,7 @@ static INLINE uint16_t SmbMid(const SmbNtHdr *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint8_t SmbWct(const SmbCommon *hdr)
+static inline uint8_t SmbWct(const SmbCommon *hdr)
 {
     return hdr->smb_wct;
 }
@@ -1777,7 +1777,7 @@ static INLINE uint8_t SmbWct(const SmbCommon *hdr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbBcc(const uint8_t *ptr, uint16_t com_size)
+static inline uint16_t SmbBcc(const uint8_t *ptr, uint16_t com_size)
 {
     /* com_size must be at least the size of the command encasing */
     if (com_size < sizeof(SmbEmptyCom))
@@ -1796,7 +1796,7 @@ static INLINE uint16_t SmbBcc(const uint8_t *ptr, uint16_t com_size)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint8_t SmbAndXCom2(const SmbAndXCommon *andx)
+static inline uint8_t SmbAndXCom2(const SmbAndXCommon *andx)
 {
     return andx->smb_com2;
 }
@@ -1811,7 +1811,7 @@ static INLINE uint8_t SmbAndXCom2(const SmbAndXCommon *andx)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbAndXOff2(const SmbAndXCommon *andx)
+static inline uint16_t SmbAndXOff2(const SmbAndXCommon *andx)
 {
     return SmbNtohs(&andx->smb_off2);
 }
@@ -1826,7 +1826,7 @@ static INLINE uint16_t SmbAndXOff2(const SmbAndXCommon *andx)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint8_t SmbEmptyComWct(const SmbEmptyCom *ec)
+static inline uint8_t SmbEmptyComWct(const SmbEmptyCom *ec)
 {
     return ec->smb_wct;
 }
@@ -1841,7 +1841,7 @@ static INLINE uint8_t SmbEmptyComWct(const SmbEmptyCom *ec)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbEmptyComBcc(const SmbEmptyCom *ec)
+static inline uint16_t SmbEmptyComBcc(const SmbEmptyCom *ec)
 {
     return SmbNtohs(&ec->smb_bcc);
 }
@@ -1856,7 +1856,7 @@ static INLINE uint16_t SmbEmptyComBcc(const SmbEmptyCom *ec)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbGet16(const uint8_t *ptr)
+static inline uint16_t SmbGet16(const uint8_t *ptr)
 {
     return SmbNtohs((uint16_t *)ptr);
 }
@@ -1871,7 +1871,7 @@ static INLINE uint16_t SmbGet16(const uint8_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint32_t SmbGet32(const uint8_t *ptr)
+static inline uint32_t SmbGet32(const uint8_t *ptr)
 {
     return SmbNtohl((uint32_t *)ptr);
 }
@@ -1886,7 +1886,7 @@ static INLINE uint32_t SmbGet32(const uint8_t *ptr)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TreeConAndXReqPassLen(const SmbLm10_TreeConnectAndXReq *tcx)
+static inline uint16_t SmbLm10_TreeConAndXReqPassLen(const SmbLm10_TreeConnectAndXReq *tcx)
 {
     return SmbNtohs(&tcx->smb_spasslen);
 }
@@ -1901,7 +1901,7 @@ static INLINE uint16_t SmbLm10_TreeConAndXReqPassLen(const SmbLm10_TreeConnectAn
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbCore_OpenRespFid(const SmbCore_OpenResp *open)
+static inline uint16_t SmbCore_OpenRespFid(const SmbCore_OpenResp *open)
 {
     return SmbNtohs(&open->smb_fid);
 }
@@ -1916,7 +1916,7 @@ static INLINE uint16_t SmbCore_OpenRespFid(const SmbCore_OpenResp *open)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_OpenAndXRespFid(const SmbLm10_OpenAndXResp *openx)
+static inline uint16_t SmbLm10_OpenAndXRespFid(const SmbLm10_OpenAndXResp *openx)
 {
     return SmbNtohs(&openx->smb_fid);
 }
@@ -1931,7 +1931,7 @@ static INLINE uint16_t SmbLm10_OpenAndXRespFid(const SmbLm10_OpenAndXResp *openx
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbNt10_NtCreateAndXRespFid(const SmbNt10_NtCreateAndXResp *ntx)
+static inline uint16_t SmbNt10_NtCreateAndXRespFid(const SmbNt10_NtCreateAndXResp *ntx)
 {
     return SmbNtohs(&ntx->smb_fid);
 }
@@ -1946,7 +1946,7 @@ static INLINE uint16_t SmbNt10_NtCreateAndXRespFid(const SmbNt10_NtCreateAndXRes
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbCore_CloseReqFid(const SmbCore_CloseReq *close)
+static inline uint16_t SmbCore_CloseReqFid(const SmbCore_CloseReq *close)
 {
     return SmbNtohs(&close->smb_fid);
 }
@@ -1961,7 +1961,7 @@ static INLINE uint16_t SmbCore_CloseReqFid(const SmbCore_CloseReq *close)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbCore_WriteReqFid(const SmbCore_WriteReq *write)
+static inline uint16_t SmbCore_WriteReqFid(const SmbCore_WriteReq *write)
 {
     return SmbNtohs(&write->smb_fid);
 }
@@ -1976,7 +1976,7 @@ static INLINE uint16_t SmbCore_WriteReqFid(const SmbCore_WriteReq *write)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteAndCloseReqFid(const SmbLm10_WriteAndCloseReq6 *wc)
+static inline uint16_t SmbLm10_WriteAndCloseReqFid(const SmbLm10_WriteAndCloseReq6 *wc)
 {
     return SmbNtohs(&wc->smb_fid);
 }
@@ -1991,7 +1991,7 @@ static INLINE uint16_t SmbLm10_WriteAndCloseReqFid(const SmbLm10_WriteAndCloseRe
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteAndCloseReqCount(const SmbLm10_WriteAndCloseReq6 *wc)
+static inline uint16_t SmbLm10_WriteAndCloseReqCount(const SmbLm10_WriteAndCloseReq6 *wc)
 {
     return SmbNtohs(&wc->smb_count);
 }
@@ -2006,7 +2006,7 @@ static INLINE uint16_t SmbLm10_WriteAndCloseReqCount(const SmbLm10_WriteAndClose
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteAndXReqFid(const SmbLm10_WriteAndXReq *writex)
+static inline uint16_t SmbLm10_WriteAndXReqFid(const SmbLm10_WriteAndXReq *writex)
 {
     return SmbNtohs(&writex->smb_fid);
 }
@@ -2021,7 +2021,7 @@ static INLINE uint16_t SmbLm10_WriteAndXReqFid(const SmbLm10_WriteAndXReq *write
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteAndXReqDoff(const SmbLm10_WriteAndXReq *writex)
+static inline uint16_t SmbLm10_WriteAndXReqDoff(const SmbLm10_WriteAndXReq *writex)
 {
     return SmbNtohs(&writex->smb_doff);
 }
@@ -2036,7 +2036,37 @@ static INLINE uint16_t SmbLm10_WriteAndXReqDoff(const SmbLm10_WriteAndXReq *writ
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteAndXReqDsize(const SmbLm10_WriteAndXReq *writex)
+static inline uint16_t SmbLm10_WriteAndXReqRemaining(const SmbLm10_WriteAndXReq *writex)
+{
+    return SmbNtohs(&writex->smb_countleft);
+}
+
+/********************************************************************
+ * Function:
+ *
+ * Purpose:
+ *
+ * Arguments:
+ *
+ * Returns:
+ *
+ ********************************************************************/
+static inline uint32_t SmbLm10_WriteAndXReqOffset(const SmbLm10_WriteAndXReq *writex)
+{
+    return SmbNtohl(&writex->smb_offset);
+}
+
+/********************************************************************
+ * Function:
+ *
+ * Purpose:
+ *
+ * Arguments:
+ *
+ * Returns:
+ *
+ ********************************************************************/
+static inline uint16_t SmbLm10_WriteAndXReqDsize(const SmbLm10_WriteAndXReq *writex)
 {
     return SmbNtohs(&writex->smb_dsize);
 }
@@ -2051,7 +2081,7 @@ static INLINE uint16_t SmbLm10_WriteAndXReqDsize(const SmbLm10_WriteAndXReq *wri
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqFunc(const SmbLm10_TransactNamedPipeReq *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeReqFunc(const SmbLm10_TransactNamedPipeReq *trans)
 {
     return SmbNtohs(&trans->smb_setup1);
 }
@@ -2067,7 +2097,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeReqFunc(const SmbLm10_TransactNa
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqFid(const SmbLm10_TransactNamedPipeReq *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeReqFid(const SmbLm10_TransactNamedPipeReq *trans)
 {
     return SmbNtohs(&trans->smb_setup2);
 }
@@ -2082,7 +2112,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeReqFid(const SmbLm10_TransactNam
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqDoff(const SmbLm10_TransactNamedPipeReq *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeReqDoff(const SmbLm10_TransactNamedPipeReq *trans)
 {
     return SmbNtohs(&trans->smb_dsoff);
 }
@@ -2097,7 +2127,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeReqDoff(const SmbLm10_TransactNa
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqTotalDcnt(const SmbLm10_TransactNamedPipeReq *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeReqTotalDcnt(const SmbLm10_TransactNamedPipeReq *trans)
 {
     return SmbNtohs(&trans->smb_tdscnt);
 }
@@ -2112,7 +2142,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeReqTotalDcnt(const SmbLm10_Trans
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeReqDcnt(const SmbLm10_TransactNamedPipeReq *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeReqDcnt(const SmbLm10_TransactNamedPipeReq *trans)
 {
     return SmbNtohs(&trans->smb_dscnt);
 }
@@ -2127,7 +2157,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeReqDcnt(const SmbLm10_TransactNa
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactSecReqDoff(const SmbLm10_TransactionSecondaryReq *trans)
+static inline uint16_t SmbLm10_TransactSecReqDoff(const SmbLm10_TransactionSecondaryReq *trans)
 {
     return SmbNtohs(&trans->smb_dsoff);
 }
@@ -2142,7 +2172,7 @@ static INLINE uint16_t SmbLm10_TransactSecReqDoff(const SmbLm10_TransactionSecon
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactSecReqTotalDcnt(const SmbLm10_TransactionSecondaryReq *trans)
+static inline uint16_t SmbLm10_TransactSecReqTotalDcnt(const SmbLm10_TransactionSecondaryReq *trans)
 {
     return SmbNtohs(&trans->smb_tdscnt);
 }
@@ -2157,7 +2187,7 @@ static INLINE uint16_t SmbLm10_TransactSecReqTotalDcnt(const SmbLm10_Transaction
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactSecReqDcnt(const SmbLm10_TransactionSecondaryReq *trans)
+static inline uint16_t SmbLm10_TransactSecReqDcnt(const SmbLm10_TransactionSecondaryReq *trans)
 {
     return SmbNtohs(&trans->smb_dscnt);
 }
@@ -2172,7 +2202,7 @@ static INLINE uint16_t SmbLm10_TransactSecReqDcnt(const SmbLm10_TransactionSecon
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactSecReqTotalDdisp(const SmbLm10_TransactionSecondaryReq *trans)
+static inline uint16_t SmbLm10_TransactSecReqTotalDdisp(const SmbLm10_TransactionSecondaryReq *trans)
 {
     return SmbNtohs(&trans->smb_dsdisp);
 }
@@ -2187,7 +2217,7 @@ static INLINE uint16_t SmbLm10_TransactSecReqTotalDdisp(const SmbLm10_Transactio
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespDoff(const SmbLm10_TransactNamedPipeResp *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeRespDoff(const SmbLm10_TransactNamedPipeResp *trans)
 {
     return SmbNtohs(&trans->smb_droff);
 }
@@ -2202,7 +2232,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeRespDoff(const SmbLm10_TransactN
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDcnt(const SmbLm10_TransactNamedPipeResp *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeRespTotalDcnt(const SmbLm10_TransactNamedPipeResp *trans)
 {
     return SmbNtohs(&trans->smb_tdrcnt);
 }
@@ -2217,7 +2247,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDcnt(const SmbLm10_Tran
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespDcnt(const SmbLm10_TransactNamedPipeResp *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeRespDcnt(const SmbLm10_TransactNamedPipeResp *trans)
 {
     return SmbNtohs(&trans->smb_drcnt);
 }
@@ -2232,7 +2262,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeRespDcnt(const SmbLm10_TransactN
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDdisp(const SmbLm10_TransactNamedPipeResp *trans)
+static inline uint16_t SmbLm10_TransactNamedPipeRespTotalDdisp(const SmbLm10_TransactNamedPipeResp *trans)
 {
     return SmbNtohs(&trans->smb_drdisp);
 }
@@ -2247,7 +2277,7 @@ static INLINE uint16_t SmbLm10_TransactNamedPipeRespTotalDdisp(const SmbLm10_Tra
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_TransRespParamCnt(const SmbLm10_TransactionResp *trans)
+static inline uint16_t SmbLm10_TransRespParamCnt(const SmbLm10_TransactionResp *trans)
 {
     return SmbNtohs(&trans->smb_prcnt);
 }
@@ -2262,7 +2292,7 @@ static INLINE uint16_t SmbLm10_TransRespParamCnt(const SmbLm10_TransactionResp *
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbCore_ReadReqFid(const SmbCore_ReadReq *read)
+static inline uint16_t SmbCore_ReadReqFid(const SmbCore_ReadReq *read)
 {
     return SmbNtohs(&read->smb_fid);
 }
@@ -2277,7 +2307,7 @@ static INLINE uint16_t SmbCore_ReadReqFid(const SmbCore_ReadReq *read)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_ReadAndXReqFid(const SmbLm10_ReadAndXReq *readx)
+static inline uint16_t SmbLm10_ReadAndXReqFid(const SmbLm10_ReadAndXReq *readx)
 {
     return SmbNtohs(&readx->smb_fid);
 }
@@ -2292,7 +2322,7 @@ static INLINE uint16_t SmbLm10_ReadAndXReqFid(const SmbLm10_ReadAndXReq *readx)
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_ReadAndXRespDoff(const SmbLm10_ReadAndXResp *readx)
+static inline uint16_t SmbLm10_ReadAndXRespDoff(const SmbLm10_ReadAndXResp *readx)
 {
     return SmbNtohs(&readx->smb_doff);
 }
@@ -2307,7 +2337,7 @@ static INLINE uint16_t SmbLm10_ReadAndXRespDoff(const SmbLm10_ReadAndXResp *read
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_ReadAndXRespDsize(const SmbLm10_ReadAndXResp *readx)
+static inline uint16_t SmbLm10_ReadAndXRespDsize(const SmbLm10_ReadAndXResp *readx)
 {
     return SmbNtohs(&readx->smb_dsize);
 }
@@ -2322,7 +2352,7 @@ static INLINE uint16_t SmbLm10_ReadAndXRespDsize(const SmbLm10_ReadAndXResp *rea
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteBlockRawReqTotCount(const SmbLm10_WriteBlockRawReq *wbr)
+static inline uint16_t SmbLm10_WriteBlockRawReqTotCount(const SmbLm10_WriteBlockRawReq *wbr)
 {
     return SmbNtohs(&wbr->smb_tcount);
 }
@@ -2337,7 +2367,7 @@ static INLINE uint16_t SmbLm10_WriteBlockRawReqTotCount(const SmbLm10_WriteBlock
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteBlockRawReqFid(const SmbLm10_WriteBlockRawReq *wbr)
+static inline uint16_t SmbLm10_WriteBlockRawReqFid(const SmbLm10_WriteBlockRawReq *wbr)
 {
     return SmbNtohs(&wbr->smb_fid);
 }
@@ -2352,7 +2382,7 @@ static INLINE uint16_t SmbLm10_WriteBlockRawReqFid(const SmbLm10_WriteBlockRawRe
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteBlockRawReqDoff(const SmbLm10_WriteBlockRawReq *wbr)
+static inline uint16_t SmbLm10_WriteBlockRawReqDoff(const SmbLm10_WriteBlockRawReq *wbr)
 {
     return SmbNtohs(&wbr->smb_doff);
 }
@@ -2367,7 +2397,7 @@ static INLINE uint16_t SmbLm10_WriteBlockRawReqDoff(const SmbLm10_WriteBlockRawR
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_WriteBlockRawReqDsize(const SmbLm10_WriteBlockRawReq *wbr)
+static inline uint16_t SmbLm10_WriteBlockRawReqDsize(const SmbLm10_WriteBlockRawReq *wbr)
 {
     return SmbNtohs(&wbr->smb_dsize);
 }
@@ -2382,7 +2412,7 @@ static INLINE uint16_t SmbLm10_WriteBlockRawReqDsize(const SmbLm10_WriteBlockRaw
  * Returns:
  *
  ********************************************************************/
-static INLINE uint16_t SmbLm10_ReadBlockRawReqFid(const SmbLm10_ReadBlockRawReq *rbr)
+static inline uint16_t SmbLm10_ReadBlockRawReqFid(const SmbLm10_ReadBlockRawReq *rbr)
 {
     return SmbNtohs(&rbr->smb_fid);
 }

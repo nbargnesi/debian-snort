@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2010 Sourcefire, Inc.
+** Copyright (C) 2006-2011 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -19,13 +19,6 @@
 
 #ifndef CPU_CLOCK_TICKS_H
 #define CPU_CLOCK_TICKS_H
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "debug.h"
-#include "sf_types.h"  /* for uint64_t */
 
 /* Assembly to find clock ticks. */
 #ifdef WIN32
@@ -92,7 +85,7 @@ __inline void __cputicks_msc(uint64_t *val)
 #else
 /* SPARC */
 #ifdef SPARCV9
-#ifdef _LP64 
+#ifdef _LP64
 #define get_clockticks(val) \
 { \
     __asm__ __volatile__("rd %%tick, %0" : "=r"(val)); \
@@ -116,7 +109,7 @@ __inline void __cputicks_msc(uint64_t *val)
 #endif /* I386 || AMD64 || X86_64 */
 #endif /* WIN32 */
 
-static INLINE double get_ticks_per_usec (void)
+static inline double get_ticks_per_usec (void)
 {
     uint64_t start = 0, end = 0;
     get_clockticks(start);

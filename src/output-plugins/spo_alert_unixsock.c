@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -21,11 +21,11 @@
 */
 
 /* spo_alert_unixsock
- * 
+ *
  * Purpose:  output plugin for Unix Socket alerting
  *
  * Arguments:  none (yet)
- *   
+ *
  * Effect:	???
  *
  */
@@ -45,12 +45,13 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "sf_types.h"
 #include "event.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 
 #include "snort.h"
@@ -95,7 +96,7 @@ static void CloseAlertSock(void);
 /*
  * Function: SetupAlertUnixSock()
  *
- * Purpose: Registers the output plugin keyword and initialization 
+ * Purpose: Registers the output plugin keyword and initialization
  *          function into the output plugin list.  This is the function that
  *          gets called from InitOutputPlugins() in plugbase.c.
  *
@@ -106,7 +107,7 @@ static void CloseAlertSock(void);
  */
 void AlertUnixSockSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("alert_unixsock", OUTPUT_TYPE_FLAG__ALERT, AlertUnixSockInit);
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Output plugin: AlertUnixSock is setup...\n"););
@@ -144,9 +145,9 @@ static void AlertUnixSockInit(char *args)
 /*
  * Function: ParseAlertUnixSockArgs(char *)
  *
- * Purpose: Process the preprocessor arguements from the rules file and 
+ * Purpose: Process the preprocessor arguements from the rules file and
  *          initialize the preprocessor's data struct.  This function doesn't
- *          have to exist if it makes sense to parse the args in the init 
+ *          have to exist if it makes sense to parse the args in the init
  *          function.
  *
  * Arguments: args => argument list
@@ -203,39 +204,39 @@ static void AlertUnixSock(Packet *p, char *msg, void *arg, Event *event)
     {
         if(p)
         {
-            if (p->eh) 
+            if (p->eh)
             {
                 alertpkt.dlthdr=(char *)p->eh-(char *)p->pkt;
             }
-    
+
             /* we don't log any headers besides eth yet */
-            if (IPH_IS_VALID(p) && p->pkt && IS_IP4(p)) 
+            if (IPH_IS_VALID(p) && p->pkt && IS_IP4(p))
             {
                 alertpkt.nethdr=(char *)p->iph-(char *)p->pkt;
-	
+
                 switch(GET_IPH_PROTO(p))
                 {
                     case IPPROTO_TCP:
-                       if (p->tcph) 
+                       if (p->tcph)
                        {
                            alertpkt.transhdr=(char *)p->tcph-(char *)p->pkt;
                        }
                        break;
-		    
+
                     case IPPROTO_UDP:
-                        if (p->udph) 
+                        if (p->udph)
                         {
                             alertpkt.transhdr=(char *)p->udph-(char *)p->pkt;
                         }
                         break;
-		    
+
                     case IPPROTO_ICMP:
-                       if (p->icmph) 
+                       if (p->icmph)
                        {
                            alertpkt.transhdr=(char *)p->icmph-(char *)p->pkt;
                        }
                        break;
-		    
+
                     default:
                         /* alertpkt.transhdr is null due to initial bzero */
                         alertpkt.val|=NO_TRANSHDR;
@@ -284,7 +285,7 @@ static void OpenAlertSock(void)
     }
 
     bzero((char *) &alertaddr, sizeof(alertaddr));
-    
+
     /* 108 is the size of sun_path */
     strncpy(alertaddr.sun_path, srv, 108);
 
@@ -296,13 +297,13 @@ static void OpenAlertSock(void)
     }
 }
 
-static void AlertUnixSockCleanExit(int signal, void *arg) 
+static void AlertUnixSockCleanExit(int signal, void *arg)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertUnixSockCleanExitFunc\n"););
     CloseAlertSock();
 }
 
-static void AlertUnixSockRestart(int signal, void *arg) 
+static void AlertUnixSockRestart(int signal, void *arg)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertUnixSockRestartFunc\n"););
     CloseAlertSock();

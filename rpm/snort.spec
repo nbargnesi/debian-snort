@@ -91,14 +91,14 @@
 
 Name: %{realname}%{inlinetext}
 %{?_with_inline:%define Name: %{realname}-inline }
-Version: 2.9.0.1
+Version: 2.9.2
 Epoch: 1
 Release: %{release}
 Summary: An open source Network Intrusion Detection System (NIDS)
 Group: Applications/Internet
 License: GPL
 Url: http://www.snort.org/
-Source0: http://www.snort.org/dl/2.9.0.1/%{realname}-%{version}.tar.gz
+Source0: http://www.snort.org/snort-downloads/2.9.1/%{realname}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Packager: Official Snort.org %{for_distro}
@@ -346,20 +346,13 @@ InstallSnort() {
 	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
 	%__install -p -m 0755 plain/src/dynamic-plugins/sf_engine/.libs/libsf_engine.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicengine
 	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicengine/libsf_engine.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicengine/libsf_engine.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_smtp_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_smtp_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_smtp_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_ftptelnet_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ftptelnet_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ftptelnet_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_dns_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dns_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dns_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_ssh_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssh_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssh_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_ssl_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssl_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssl_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_dce2_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dce2_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dce2_preproc.so
-	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/libsf_sdf_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-	%__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_sdf_preproc.so.0 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_sdf_preproc.so
+	%__install -p -m 0755 plain/src/dynamic-preprocessors/build/%{_prefix}/lib/snort_dynamicpreprocessor/*.so* $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor
+	
+    for file in $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicpreprocessor/*.so;  do  
+          preprocessor=`basename $file`
+          %__ln_s -f %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/$preprocessor.0 $file     
+    done   
+	
 	%__install -p -m 0644 snort.8 $RPM_BUILD_ROOT%{_mandir}/man8
 	%__gzip $RPM_BUILD_ROOT%{_mandir}/man8/snort.8
 	%__install -p -m 0755 rpm/snortd $RPM_BUILD_ROOT%{_initrddir}
@@ -529,13 +522,8 @@ fi
 %attr(0755,root,root) %dir %{_libdir}/%{realname}-%{version}_dynamicengine
 %attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicengine/libsf_engine.*
 %attr(0755,root,root) %dir %{_libdir}/%{realname}-%{version}_dynamicpreprocessor
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_smtp_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ftptelnet_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dns_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssh_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_ssl_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_dce2_preproc.*
-%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_sdf_preproc.*
+%attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicpreprocessor/libsf_*_preproc.*
+
 %dir %{_docdir}/%{realname}-%{version}
 %docdir %{_docdir}/%{realname}-%{version}
 

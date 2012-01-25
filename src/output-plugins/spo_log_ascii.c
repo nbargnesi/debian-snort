@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **           (C) 2002 Sourcefire, Inc.
 **
@@ -24,13 +24,13 @@
 /* $Id$ */
 
 /* spo_log_ascii
- * 
+ *
  * Purpose:
  *
  * This output module provides the default packet logging funtionality
  *
  * Arguments:
- *   
+ *
  * None.
  *
  * Effect:
@@ -63,7 +63,7 @@
 #include "plugbase.h"
 #include "spo_plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "decode.h"
 #include "event.h"
 #include "log.h"
@@ -91,7 +91,7 @@ static FILE *OpenLogFile(int mode, Packet * p);
 
 void LogAsciiSetup(void)
 {
-    /* link the preprocessor keyword to the init function in 
+    /* link the preprocessor keyword to the init function in
        the preproc list */
     RegisterOutputPlugin("log_ascii", OUTPUT_TYPE_FLAG__LOG, LogAsciiInit);
 
@@ -113,7 +113,7 @@ static void LogAscii(Packet *p, char *msg, void *arg, Event *event)
     FILE *log_ptr = NULL;
     DEBUG_WRAP(DebugMessage(DEBUG_LOG, "LogPkt started\n"););
     if(p)
-    { 
+    {
         if(IPH_IS_VALID(p))
             log_ptr = OpenLogFile(0, p);
 #ifndef NO_NON_ETHER_DECODER
@@ -128,14 +128,14 @@ static void LogAscii(Packet *p, char *msg, void *arg, Event *event)
 
     if(!log_ptr)
         FatalError("Unable to open packet log file\n");
-    
+
     if(msg)
     {
         fwrite("[**] ", 5, 1, log_ptr);
 
         /*
          * Protect against potential log injection,
-         * check for delimiters and newlines in msg 
+         * check for delimiters and newlines in msg
          */
         if(  !strstr(msg,"[**]") && !strchr(msg,'\n') )
         {
@@ -227,7 +227,7 @@ static FILE *OpenLogFile(int mode, Packet * p)
             log_ptr = fopen(log_file, "a");
             if (!log_ptr)
             {
-                FatalError("OpenLogFile() => fopen(%s) log file: %s\n", 
+                FatalError("OpenLogFile() => fopen(%s) log file: %s\n",
                            log_file, strerror(errno));
             }
             return log_ptr;
@@ -246,19 +246,19 @@ static FILE *OpenLogFile(int mode, Packet * p)
         if((p->iph->ip_src.s_addr & snort_conf->netmask) != snort_conf->homenet)
 #endif
         {
-            SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                     inet_ntoa(GET_SRC_ADDR(p)));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                         inet_ntoa(GET_SRC_ADDR(p)));
             }
             else
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                         inet_ntoa(GET_DST_ADDR(p)));
             }
         }
@@ -272,19 +272,19 @@ static FILE *OpenLogFile(int mode, Packet * p)
         if((p->iph->ip_src.s_addr & snort_conf->netmask) == snort_conf->homenet)
 #endif
         {
-            SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+            SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                     inet_ntoa(GET_DST_ADDR(p)));
         }
         else
         {
             if(p->sp >= p->dp)
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                         inet_ntoa(GET_SRC_ADDR(p)));
             }
             else
             {
-                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir, 
+                SnortSnprintf(log_path, STD_BUF, "%s/%s", snort_conf->log_dir,
                         inet_ntoa(GET_DST_ADDR(p)));
             }
         }

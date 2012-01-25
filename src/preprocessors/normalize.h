@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -48,34 +48,34 @@ typedef struct _NormalizerContext
 int Norm_SetConfig(NormalizerContext*);
 int Norm_Packet(NormalizerContext*, Packet*);
 
-static INLINE void Norm_Enable(NormalizerContext* nc, NormFlags nf)
+static inline void Norm_Enable(NormalizerContext* nc, NormFlags nf)
 {
     nc->normalizer_flags |= nf;
 }
 
-static INLINE void Norm_Disable(NormalizerContext* nc, NormFlags nf)
+static inline void Norm_Disable(NormalizerContext* nc, NormFlags nf)
 {
     nc->normalizer_flags &= ~nf;
 }
 
-static INLINE int Norm_IsEnabled(const NormalizerContext* nc, NormFlags nf)
+static inline int Norm_IsEnabled(const NormalizerContext* nc, NormFlags nf)
 {
     return ( (nc->normalizer_flags & nf) != 0 );
 }
 
-static INLINE void Norm_TcpPassOption(NormalizerContext* nc, uint8_t opt)
+static inline void Norm_TcpPassOption(NormalizerContext* nc, uint8_t opt)
 {
     uint8_t byte = (opt >> 3), bit = (1 << (opt & 0x07));
     nc->normalizer_options[byte] |= bit;
 }
 
-static INLINE void Norm_TcpDropOption(NormalizerContext* nc, uint8_t opt)
+static inline void Norm_TcpDropOption(NormalizerContext* nc, uint8_t opt)
 {
     uint8_t byte = (opt >> 3), bit = (1 << (opt & 0x07));
     nc->normalizer_options[byte] &= ~bit;
 }
 
-static INLINE int Norm_TcpIsOptional(const NormalizerContext* nc, uint8_t opt)
+static inline int Norm_TcpIsOptional(const NormalizerContext* nc, uint8_t opt)
 {
     uint8_t byte = (opt >> 3), bit = (1 << (opt & 0x07));
     return ( (nc->normalizer_options[byte] & bit) != 0 );

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  ****************************************************************************/
- 
+
 #ifndef _PREPROC_IDS_H
 #define _PREPROC_IDS_H
 
@@ -31,7 +31,7 @@
 **  during preprocessing.
 **
 **  Currently, the order in which the preprocessors are
-**  placed in the snort.conf determine the order of 
+**  placed in the snort.conf determine the order of
 **  evaluation.  So if one module wants to turn off
 **  another module, it must come first in the order.
 */
@@ -47,7 +47,7 @@
 #define PP_HTTPINSPECT             5
 #define PP_PERFMONITOR             6
 #define PP_RPCDECODE               7
-#define PP_RULES                   8
+#define PP_SHARED_RULES            8
 #define PP_SFPORTSCAN              9
 #define PP_SMTP                   10
 #define PP_SSH                    11
@@ -58,10 +58,17 @@
 #define PP_DCE2                   16
 #define PP_SDF                    17
 #define PP_NORMALIZE              18
-
-// used externally
-#define PP_ISAKMP                 19
-#define PP_SKYPE                  20
+#define PP_ISAKMP                 19  // used externally
+#define PP_SKYPE                  20  // used externally
+#define PP_SIP                    21
+#define PP_POP                    22
+#define PP_IMAP                   23
+#define PP_APPLICATION_IDENTIFICATION 24  // used externally
+#define PP_RULE_ENGINE            25  // used externally
+#define PP_REPUTATION             26
+#define PP_GTP                    27
+#define PP_MODBUS                 28
+#define PP_DNP3                   29
 
 #define PP_ALL_ON         0xFFFFFFFF
 #define PP_ALL_OFF        0x00000000

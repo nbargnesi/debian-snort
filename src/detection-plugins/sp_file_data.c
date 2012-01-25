@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2010 Sourcefire, Inc.
+ ** Copyright (C) 1998-2011 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  */
 
 /* sp_file_data
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,12 +33,13 @@
 #endif
 #include <errno.h>
 
-#include "bounds.h"
+#include "sf_types.h"
+#include "snort_bounds.h"
 #include "rules.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "util.h"
 #include "mstring.h"
 
@@ -93,7 +94,7 @@ int FileDataCompare(void *l, void *r)
 
 
 /****************************************************************************
- * 
+ *
  * Function: SetupFileData()
  *
  * Purpose: Load 'er up
@@ -116,10 +117,10 @@ void SetupFileData(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FileDataInit(char *, OptTreeNode *, int protocol)
  *
- * Purpose: Generic rule configuration function.  Handles parsing the rule 
+ * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
  *          the OTN.
  *
@@ -155,18 +156,18 @@ static void FileDataInit(char *data, OptTreeNode *otn, int protocol)
         free(idx);
         idx = idx_dup;
     }
-    
+
     fpl = AddOptFuncToList(FileDataEval, otn);
     fpl->type = RULE_OPTION_TYPE_FILE_DATA;
     fpl->context = (void *)idx;
-   
-    return; 
+
+    return;
 }
 
 
 
 /****************************************************************************
- * 
+ *
  * Function: FileDataParse(char *, OptTreeNode *)
  *
  * Purpose: This is the function that is used to process the option keyword's
@@ -187,7 +188,7 @@ void FileDataParse(char *data, FileData *idx, OptTreeNode *otn)
     }
     else if(!strcasecmp("mime",data))
     {
-        idx->mime_decode_flag = 1;
+        ParseWarning("The argument 'mime' to 'file_data' rule option is deprecated.\n");
     }
     else
     {
@@ -201,7 +202,7 @@ void FileDataParse(char *data, FileData *idx, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: FileDataEval(char *, OptTreeNode *, OptFpList *)
  *
  * Purpose: Use this function to perform the particular detection routine
@@ -212,19 +213,24 @@ void FileDataParse(char *data, FileData *idx, OptTreeNode *otn)
  *            fp_list => pointer to the function pointer list
  *
  * Returns: If the detection test fails, this function *must* return a zero!
- *          On success, it calls the next function in the detection list 
+ *          On success, it calls the next function in the detection list
  *
  ****************************************************************************/
 int FileDataEval(void *option_data, Packet *p)
 {
     int rval = DETECTION_OPTION_NO_MATCH;
+    uint8_t *data;
+    uint16_t len;
     FileData *idx;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(fileDataPerfStats);
     idx = (FileData *)option_data;
 
-    if ((p->dsize == 0) || (!IsTCP(p) && !IsUDP(p)) || (file_data_ptr == NULL) || !idx)
+    data = file_data_ptr.data;
+    len = file_data_ptr.len;
+
+    if ((p->dsize == 0) || (data == NULL)|| (len == 0) || !idx)
     {
         PREPROC_PROFILE_END(fileDataPerfStats);
         return rval;
@@ -235,7 +241,8 @@ int FileDataEval(void *option_data, Packet *p)
     else
         mime_present = 0;
 
-    SetDoePtr(file_data_ptr,  DOE_BUF_STD);
+    SetDoePtr(data,  DOE_BUF_STD);
+    SetAltDetect(data, len);
     rval = DETECTION_OPTION_MATCH;
 
     PREPROC_PROFILE_END(fileDataPerfStats);

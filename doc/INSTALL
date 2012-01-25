@@ -15,14 +15,16 @@ short version.
 
 5.) sudo make install
 
-6.) Create a sample rules file (if you want to use rules, check out the 
-    included snort.conf file)
+6.) Check your rules file.  By default, step 3 configures Snort for the features 
+    required by the included etc/snort.conf.  You can validate it with:
+
+    src/snort -c etc/snort.conf -T
 
 7.) snort -?
 
 8.) If you've used previous versions of Snort, you may need to rewrite your
-    rules to make them compliant to the rules format.  See 
-    snort_manual.pdf or http://www.snort.org for more information. 
+    rules to make them compliant to the rules format.  See snort_manual.pdf
+    or http://www.snort.org for more information. 
 
 9.) If you used previous versions of Snort and the new Snort dies upon startup,
     try this and then restart:
@@ -43,6 +45,10 @@ Snort Configure-time switches
 `--enable-pthread'
      Enable pthread support (causes snort to be linked with libpthread).
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! The Prelude output plugin is considered deprecated as of Snort 2.9.2 and
+!! will be removed in Snort 2.9.3.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 `--enable-prelude'
      Enable Prelude Hydrid IDS support.
 
@@ -54,6 +60,10 @@ Snort Configure-time switches
 `--enable-dynamicplugin'
      Enable dynamically loadable preprocessors, detection engine
      and rules libraries.
+
+`--enable-so-with-static-lib`
+     Enable linking of dynamically loaded preprocessors with a static
+     preprocessor library.
 
 `--enable-timestats'
      Enable real-time performance statistics.
@@ -71,6 +81,10 @@ Snort Configure-time switches
      Enable the 'Flexible Response, version 3' code, that allows you to
      reset hostile sessions.  See README.active for details.
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! The Aruba output plugin is considered deprecated as of Snort 2.9.2 and will
+!! be removed in Snort 2.9.3.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 `--enable-aruba'
      Enable the Aruba output plugin capability that allows you to
      send information to an Aruba Networks Mobility Controller.  See
@@ -81,16 +95,32 @@ Snort Configure-time switches
      Only supports GRE over IP.  Only one layer of encapsulation will be
      decoded - packets with multiple GRE headers will be alerted and
      discarded/blocked.
-
+     
+`--enable-sourcefire'
+     Enable Sourcefire specific build options, encompasing --enable-perfprofiling,
+     --enable-decoder-preprocessor-rules, --enable-ppm.
+     
 `--with-snmp'
      Enable SNMP alerting code.
 
-` --with-dnet-includes=DIR'
+`--with-dnet-includes=DIR'
      Specify libdnet include directory.
 
-` --with-dnet-libraries=DIR'
+`--with-dnet-libraries=DIR'
      Specify libdnet library directory.
 
+`--with-libpcap-includes=DIR'
+     If the configuration script can't find the libpcap include files on its 
+     own, the path can be set manually with this switch.
+
+`--with-libpcap-libraries=DIR'
+     If the configuration script can't find the libpcap library files on its 
+     own, the path can be set manually with this switch.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Database output plugins are considered deprecated as of Snort 2.9.2 and will
+!! be removed in Snort 2.9.3.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 `--with-mysql=DIR'
     Support for mysql, turn this on if you want to use ACID with MySQL.
     NOTE: Specifying a directory will be deprecated in the future.
@@ -112,9 +142,6 @@ Snort Configure-time switches
 `--with-oracle=DIR'
     Support for Oracle databases, turn this on if you want to use ACID with 
     Oracle.
-    
-`--with-openssl=DIR'
-    Support for openssl (used by the XML output plugin).
 
 `--with-libpq-includes=DIR'
      Set the include directories for Postgres SQL database support to DIR.
@@ -122,29 +149,8 @@ Snort Configure-time switches
 `--with-libpq-libraries=DIR'
      Set the library directories for Postgres SQL database support to DIR.  
      Setting both of these values enables the Postgres output plugin module.
-
-`--with-libpcap-includes=DIR'
-     If the configuration script can't find the libpcap include files on its 
-     own, the path can be set manually with this switch.
-
-`--with-libpcap-libraries=DIR'
-     If the configuration script can't find the libpcap library files on its 
-     own, the path can be set manually with this switch.
-
-`--with-libxml2-includes=DIR'  
-    Libxml2 include directory.
-
-`--with-libxml2-libraries=DIR'  
-    Libxml2 library directory.
-    
-`--with-libntp-libraries=DIR' 
-    Libntp library directory.
-    
-`--with-libidmef-includes=DIR'  
-    Libidmef include directory.
-    
-`--with-libidmef-libraries=DIR'  
-    Libidmef library directory.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 Basic Installation
 ==================
@@ -469,6 +475,12 @@ $ make
 
 * Open BSD / Free BSD / MAC OSX
 -------------------------------
+For Open BSD and some versions of Free BSD, use the --disable-static-daq
+option to Snort's configure script.  This is a work-around to an issue with
+building shared libraries that link against a static library.  Without this
+option to configure, libsf_engine.so and the dynamic preprocessors may not
+be built correctly.
+
 On certain BSD-based platforms, the make install may not symlink the version
 specific shared libraries to the non-versioned shared library.  This could
 cause a failure to load when using dynamic libraries.

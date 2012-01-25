@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -32,13 +32,14 @@
 #endif
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugin_enum.h"
 
 #include "snort.h"
@@ -96,7 +97,7 @@ int TcpWinCheckCompare(void *l, void *r)
 
 
 /****************************************************************************
- * 
+ *
  * Function: SetupTcpWinCheck()
  *
  * Purpose: Associate the window keyword with TcpWinCheckInit
@@ -117,7 +118,7 @@ void SetupTcpWinCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: TcpWinCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Setup the window data struct and link the function into option
@@ -134,27 +135,27 @@ void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
     OptFpList *fpl;
     if(protocol != IPPROTO_TCP)
     {
-        FatalError("%s(%d): TCP Options on non-TCP rule\n", 
+        FatalError("%s(%d): TCP Options on non-TCP rule\n",
                    file_name, file_line);
     }
 
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_TCP_WIN_CHECK])
     {
         FatalError("%s(%d): Multiple TCP window options in rule\n", file_name,
                 file_line);
     }
-        
+
     /* allocate the data structure and attach it to the
        rule's data struct list */
     otn->ds_list[PLUGIN_TCP_WIN_CHECK] = (TcpWinCheckData *)
             SnortAlloc(sizeof(TcpWinCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseTcpWin(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(TcpWinCheckEq, otn);
     fpl->type = RULE_OPTION_TYPE_TCP_WIN;
@@ -164,10 +165,10 @@ void TcpWinCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseTcpWin(char *, OptTreeNode *)
  *
- * Purpose: Convert the tos option argument to data and plug it into the 
+ * Purpose: Convert the tos option argument to data and plug it into the
  *          data structure
  *
  * Arguments: data => argument data
@@ -180,7 +181,7 @@ void ParseTcpWin(char *data, OptTreeNode *otn)
 {
     TcpWinCheckData *ds_ptr;  /* data struct pointer */
     void *ds_ptr_dup;
-    int win_size;
+    int win_size = 0;
     char *endTok;
     char *start;
 
@@ -234,8 +235,8 @@ void ParseTcpWin(char *data, OptTreeNode *otn)
 
     ds_ptr->tcp_win = htons((uint16_t)win_size);
 
-#ifdef DEBUG
-    printf("TCP Window set to 0x%X\n", ds_ptr->tcp_win);
+#ifdef DEBUG_MSGS
+    DebugMessage(DEBUG_PLUGIN,"TCP Window set to 0x%X\n", ds_ptr->tcp_win);
 #endif
 
     if (add_detection_option(RULE_OPTION_TYPE_TCP_WIN, (void *)ds_ptr, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
@@ -247,11 +248,11 @@ void ParseTcpWin(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: TcpWinCheckEq(char *, OptTreeNode *)
  *
  * Purpose: Test the TCP header's window to see if its value is equal to the
- *          value in the rule.  
+ *          value in the rule.
  *
  * Arguments: data => argument data
  *            otn => pointer to the current rule's OTN
@@ -275,7 +276,7 @@ int TcpWinCheckEq(void *option_data, Packet *p)
     {
         rval = DETECTION_OPTION_MATCH;
     }
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     else
     {
         /* you can put debug comments here or not */

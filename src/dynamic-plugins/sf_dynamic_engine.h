@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -24,10 +24,6 @@
 #ifndef _SF_DYNAMIC_ENGINE_H_
 #define _SF_DYNAMIC_ENGINE_H_
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #ifndef WIN32
 #include <sys/types.h>
 #else
@@ -36,9 +32,8 @@
 
 #include "sf_dynamic_define.h"
 #include "sf_dynamic_meta.h"
-#include "sf_types.h"
 
-/* specifies that a function does not return 
+/* specifies that a function does not return
  * used for quieting Visual Studio warnings
  */
 #ifdef WIN32
@@ -71,44 +66,35 @@ typedef struct _FPContentInfo
     char fp;
     char fp_only;
     char uri_buffer;
-    u_int16_t fp_offset;
-    u_int16_t fp_length;
+    uint16_t fp_offset;
+    uint16_t fp_length;
     struct _FPContentInfo *next;
 
 } FPContentInfo;
 
-/* Parameters are rule info pointer, int to indicate URI or NORM,
- * and list pointer */
-#define CONTENT_NORMAL            0x01
-#define CONTENT_HTTP_URI          0x02
-#define CONTENT_HTTP_HEADER       0x04
-#define CONTENT_HTTP_CLIENT_BODY  0x08
-#define CONTENT_HTTP_METHOD       0x10
-#define CONTENT_HTTP (CONTENT_HTTP_URI|CONTENT_HTTP_HEADER|\
-        CONTENT_HTTP_CLIENT_BODY|CONTENT_HTTP_METHOD)
 typedef int (*GetDynamicContentsFunction)(void *, int, FPContentInfo **);
 typedef int (*GetDynamicPreprocOptFpContentsFunc)(void *, FPContentInfo **);
 typedef void (*RuleFreeFunc)(void *);
 
 /* ruleInfo is passed to OTNCheckFunction when the fast pattern matches. */
 typedef int (*RegisterRule)(
-    u_int32_t, u_int32_t, void *,
+    uint32_t, uint32_t, void *,
     OTNCheckFunction, OTNHasFunction,
     int, GetDynamicContentsFunction, RuleFreeFunc,
     GetDynamicPreprocOptFpContentsFunc
 );
-typedef u_int32_t (*RegisterBit)(char *, int);
+typedef uint32_t (*RegisterBit)(char *, int);
 typedef void (*UnregisterBit)(char *, int);
-typedef int (*CheckFlowbit)(void *, int, u_int32_t);
-typedef int (*DetectAsn1)(void *, void *, const u_int8_t *);
-typedef int (*PreprocOptionEval)(void *p, const u_int8_t **cursor, void *dataPtr);
+typedef int (*CheckFlowbit)(void *, int, uint32_t);
+typedef int (*DetectAsn1)(void *, void *, const uint8_t *);
+typedef int (*PreprocOptionEval)(void *p, const uint8_t **cursor, void *dataPtr);
 typedef int (*PreprocOptionInit)(char *, char *, void **dataPtr);
 typedef void (*PreprocOptionCleanup)(void *dataPtr);
-typedef int (*SfUnfold)(const u_int8_t *, u_int32_t , u_int8_t *, u_int32_t , u_int32_t *);
-typedef int (*SfBase64Decode)(u_int8_t *, u_int32_t , u_int8_t *, u_int32_t , u_int32_t *);
+typedef int (*SfUnfold)(const uint8_t *, uint32_t , uint8_t *, uint32_t , uint32_t *);
+typedef int (*SfBase64Decode)(uint8_t *, uint32_t , uint8_t *, uint32_t , uint32_t *);
 #define PREPROC_OPT_EQUAL       0
 #define PREPROC_OPT_NOT_EQUAL   1
-typedef u_int32_t (*PreprocOptionHash)(void *);
+typedef uint32_t (*PreprocOptionHash)(void *);
 typedef int (*PreprocOptionKeyCompare)(void *, void *);
 /* Function prototype for rule options that want to add patterns to the
  * fast pattern matcher */
@@ -152,7 +138,9 @@ typedef struct _DynamicEngineData
 {
     int version;
 
-    SFDataBuffer* altBuffer;
+    SFDataBuffer *altBuffer;
+    SFDataPointer *altDetect;
+    SFDataPointer *fileDataBuf;
     UriInfo *uriBuffers[HTTP_BUFFER_MAX];
 
     RegisterRule ruleRegister;
@@ -170,7 +158,7 @@ typedef struct _DynamicEngineData
     GetRuleData getRuleData;
 
     DebugMsgFunc debugMsg;
-#ifdef HAVE_WCHAR_H
+#ifdef SF_WCHAR
     DebugWideMsgFunc debugWideMsg;
 #endif
 
@@ -180,10 +168,12 @@ typedef struct _DynamicEngineData
     PCRECompileFunc pcreCompile;
     PCREStudyFunc pcreStudy;
     PCREExecFunc pcreExec;
-    const u_char **fileDataBuf;
-    uint32_t *mime_size;
     SfUnfold sfUnfold;
     SfBase64Decode sfbase64decode;
+    GetAltDetectFunc GetAltDetect;
+    SetAltDetectFunc SetAltDetect;
+    IsDetectFlagFunc Is_DetectFlag;
+    DetectFlagDisableFunc DetectFlag_Disable;
 
     AllocRuleData allocRuleData;
     FreeRuleData freeRuleData;
@@ -191,6 +181,8 @@ typedef struct _DynamicEngineData
     UnregisterBit flowbitUnregister;
 
 } DynamicEngineData;
+
+extern DynamicEngineData _ded;
 
 /* Function prototypes for Dynamic Engine Plugins */
 void CloseDynamicEngineLibs(void);

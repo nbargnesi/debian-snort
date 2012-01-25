@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2010 Sourcefire, Inc.
+ * Copyright (C) 2005-2011 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -35,7 +35,8 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <stdarg.h>
-#include "debug.h"
+#include "sf_types.h"
+#include "snort_debug.h"
 #include "sf_dynamic_define.h"
 #include "sf_snort_packet.h"
 #include "sf_snort_plugin_api.h"
@@ -43,10 +44,11 @@
 #include "sf_dynamic_engine.h"
 #include "sfghash.h"
 #include "bmh.h"
+#include "sf_snort_detection_engine.h"
 
 #define MAJOR_VERSION   1
-#define MINOR_VERSION   12
-#define BUILD_VERSION   18  
+#define MINOR_VERSION   15
+#define BUILD_VERSION   18
 #define DETECT_NAME     "SF_SNORT_DETECTION_ENGINE"
 
 #ifdef WIN32
@@ -79,13 +81,6 @@ NORETURN void DynamicEngineFatalMessage(const char *format, ...)
     exit(1);
 }
 
-extern int BoyerContentSetup(Rule *rule, ContentInfo *content);
-extern int PCRESetup(Rule *rule, PCREInfo *pcreInfo);
-extern int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData);
-extern void ContentSetup(void);
-extern int ByteExtractInitialize(Rule *rule, ByteExtract *extractData);
-extern int LoopInfoInitialize(Rule *rule, LoopInfo *loopInfo);
-
 ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
 {
     int i;
@@ -96,6 +91,9 @@ ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
 
     _ded.version = ded->version;
     _ded.altBuffer = ded->altBuffer;
+    _ded.altDetect = ded->altDetect;
+    _ded.fileDataBuf = ded->fileDataBuf;
+
     for (i=0;i<HTTP_BUFFER_MAX;i++)
     {
         _ded.uriBuffers[i] = ded->uriBuffers[i];
@@ -113,7 +111,7 @@ ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
     _ded.getRuleData = ded->getRuleData;
 
     _ded.debugMsg = ded->debugMsg;
-#ifdef HAVE_WCHAR_H
+#ifdef SF_WCHAR
     _ded.debugWideMsg = ded->debugWideMsg;
 #endif
     _ded.debugMsgFile = ded->debugMsgFile;
@@ -122,10 +120,12 @@ ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
     _ded.pcreStudy = ded->pcreStudy;
     _ded.pcreCompile = ded->pcreCompile;
     _ded.pcreExec = ded->pcreExec;
-    _ded.fileDataBuf = ded->fileDataBuf;
-    _ded.mime_size = ded->mime_size;
     _ded.sfUnfold = ded->sfUnfold;
     _ded.sfbase64decode = ded->sfbase64decode;
+    _ded.GetAltDetect = ded->GetAltDetect;
+    _ded.SetAltDetect = ded->SetAltDetect;
+    _ded.Is_DetectFlag = ded->Is_DetectFlag;
+    _ded.DetectFlag_Disable = ded->DetectFlag_Disable;
 
     _ded.allocRuleData = ded->allocRuleData;
     _ded.freeRuleData = ded->freeRuleData;
@@ -225,6 +225,8 @@ static int GetDynamicContents(void *r, int type, FPContentInfo **contents)
     RuleOption *option;
     FPContentInfo *tail = NULL;
     int i = 0;
+    int base64_buf_flag = 0;
+    int mime_buf_flag = 0;
 
     if ((r == NULL) || (contents == NULL))
         return -1;
@@ -235,80 +237,113 @@ static int GetDynamicContents(void *r, int type, FPContentInfo **contents)
             option != NULL;
             option = rule->options[++i])
     {
-        if (option->optionType == OPTION_TYPE_CONTENT)
+        switch(option->optionType)
         {
-            FPContentInfo *fp_content;
-            ContentInfo *content = option->option_u.content;
-            int flags = content->flags;
+            case OPTION_TYPE_CONTENT:
+                {
+                    FPContentInfo *fp_content;
+                    ContentInfo *content = option->option_u.content;
+                    int flags = content->flags;
 
-            switch (type)
-            {
-                case CONTENT_NORMAL:
-                    if (!(flags & NORMAL_CONTENT_BUFS))
+                    switch (type)
+                    {
+                        case CONTENT_NORMAL:
+                            if (!(flags & NORMAL_CONTENT_BUFS))
+                                continue;
+                            else if(base64_buf_flag || mime_buf_flag)
+                                continue;
+                            break;
+                        case CONTENT_HTTP:
+                            base64_buf_flag = 0;
+                            mime_buf_flag = 0;
+                            if (!(flags & URI_CONTENT_BUFS)
+                                    || (!(flags & URI_FAST_PATTERN_BUFS)))
+                                continue;
+                            break;
+                        default:
+                            break;  /* Just get them all */
+                    }
+
+                    fp_content = (FPContentInfo *)calloc(1, sizeof(FPContentInfo));
+                    if (fp_content == NULL)
+                        DynamicEngineFatalMessage("Failed to allocate memory\n");
+
+                    fp_content->length = content->patternByteFormLength;
+                    fp_content->content = (char *)malloc(fp_content->length);
+                    if (fp_content->content == NULL)
+                        DynamicEngineFatalMessage("Failed to allocate memory\n");
+                    memcpy(fp_content->content, content->patternByteForm, fp_content->length);
+                    fp_content->offset = content->offset;
+                    fp_content->depth = content->depth;
+                    if (content->flags & CONTENT_RELATIVE)
+                        fp_content->is_relative = 1;
+                    if (content->flags & CONTENT_NOCASE)
+                        fp_content->noCaseFlag = 1;
+                    if (content->flags & CONTENT_FAST_PATTERN)
+                        fp_content->fp = 1;
+                    if (content->flags & NOT_FLAG)
+                        fp_content->exception_flag = 1;
+                    if (content->flags & CONTENT_BUF_URI)
+                        fp_content->uri_buffer |= CONTENT_HTTP_URI;
+                    if (content->flags & CONTENT_BUF_HEADER)
+                        fp_content->uri_buffer |= CONTENT_HTTP_HEADER;
+                    if (content->flags & CONTENT_BUF_POST)
+                        fp_content->uri_buffer |= CONTENT_HTTP_CLIENT_BODY;
+
+                    /* Fast pattern only and specifying an offset and length are
+                     * technically mutually exclusive - see
+                     * detection-plugins/sp_pattern_match.c */
+                    if (option->option_u.content->flags & CONTENT_FAST_PATTERN_ONLY)
+                    {
+                        fp_content->fp_only = 1;
+                    }
+                    else
+                    {
+                        fp_content->fp_offset = option->option_u.content->fp_offset;
+                        fp_content->fp_length = option->option_u.content->fp_length;
+                    }
+
+                    if (tail == NULL)
+                        *contents = fp_content;
+                    else
+                        tail->next = fp_content;
+
+                    tail = fp_content;
+                }
+                break;
+
+            case OPTION_TYPE_BASE64_DECODE:
+                base64_buf_flag =1;
+                continue;
+
+            case OPTION_TYPE_FILE_DATA:
+                {
+                    CursorInfo *cursor = option->option_u.cursor;
+                    if (cursor->flags & BUF_FILE_DATA_MIME)
+                    {
+                        mime_buf_flag = 1;
                         continue;
-                    break;
-                case CONTENT_HTTP:
-                    if (!(flags & URI_CONTENT_BUFS)
-                            || (!(flags & URI_FAST_PATTERN_BUFS)))
-                        continue;
-                    break;
-                default:
-                    break;  /* Just get them all */
-            }
+                    }
+                }
+                break;
 
-            fp_content = (FPContentInfo *)calloc(1, sizeof(FPContentInfo));
-            if (fp_content == NULL)
-                DynamicEngineFatalMessage("Failed to allocate memory\n");
+            case OPTION_TYPE_PKT_DATA:
+                base64_buf_flag = 0;
+                mime_buf_flag = 0;
+                continue;
 
-            fp_content->length = content->patternByteFormLength;
-            fp_content->content = (char *)malloc(fp_content->length);
-            if (fp_content->content == NULL)
-                DynamicEngineFatalMessage("Failed to allocate memory\n");
-            memcpy(fp_content->content, content->patternByteForm, fp_content->length);
-            fp_content->offset = content->offset;
-            fp_content->depth = content->depth;
-            if (content->flags & CONTENT_RELATIVE)
-                fp_content->is_relative = 1;
-            if (content->flags & CONTENT_NOCASE)
-                fp_content->noCaseFlag = 1;
-            if (content->flags & CONTENT_FAST_PATTERN)
-                fp_content->fp = 1;
-            if (content->flags & NOT_FLAG)
-                fp_content->exception_flag = 1;
-            if (content->flags & CONTENT_BUF_URI)
-                fp_content->uri_buffer |= CONTENT_HTTP_URI;
-            if (content->flags & CONTENT_BUF_HEADER)
-                fp_content->uri_buffer |= CONTENT_HTTP_HEADER;
-            if (content->flags & CONTENT_BUF_POST)
-                fp_content->uri_buffer |= CONTENT_HTTP_CLIENT_BODY;
-            if (content->flags & CONTENT_BUF_METHOD)
-                fp_content->uri_buffer |= CONTENT_HTTP_METHOD;
+            case OPTION_TYPE_BASE64_DATA:
+                base64_buf_flag =1;
+                continue;
 
-            /* Fast pattern only and specifying an offset and length are
-             * technically mutually exclusive - see
-             * detection-plugins/sp_pattern_match.c */
-            if (option->option_u.content->flags & CONTENT_FAST_PATTERN_ONLY)
-            {
-                fp_content->fp_only = 1;
-            }
-            else
-            {
-                fp_content->fp_offset = option->option_u.content->fp_offset;
-                fp_content->fp_length = option->option_u.content->fp_length;
-            }
-
-            if (tail == NULL)
-                *contents = fp_content;
-            else
-                tail->next = fp_content;
-
-            tail = fp_content;
+            default:
+                continue;
         }
     }
 
     if (*contents == NULL)
         return -1;
-    
+
     return 0;
 }
 
@@ -379,9 +414,9 @@ static int GetDynamicPreprocOptFpContents(void *r, FPContentInfo **fp_contents)
 static int DecodeContentPattern(Rule *rule, ContentInfo *content)
 {
     int pat_len;
-    const u_int8_t *pat_begin = content->pattern;
-    const u_int8_t *pat_idx;
-    const u_int8_t *pat_end;
+    const uint8_t *pat_begin = content->pattern;
+    const uint8_t *pat_idx;
+    const uint8_t *pat_end;
     char tmp_buf[2048];
     char *raw_idx;
     char *raw_end;
@@ -437,7 +472,7 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
                         if(!hex_len || hex_len % 2)
                         {
                             DynamicEngineFatalMessage("Content hexmode argument has invalid "
-                                                      "number of hex digits for dynamic rule [%d:%d].\n", 
+                                                      "number of hex digits for dynamic rule [%d:%d].\n",
                                                       rule->info.genID, rule->info.sigID);
                         }
 
@@ -501,8 +536,8 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
                             pending--;
 
                             if(raw_idx < raw_end)
-                            {                            
-                                tmp_buf[tmp_len] = (u_char) 
+                            {
+                                tmp_buf[tmp_len] = (u_char)
                                     strtol(hex_encoded, (char **) NULL, 16)&0xFF;
 
                                 tmp_len++;
@@ -526,7 +561,7 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
                                                       "binary buffer for dynamic rule [%d:%d]? "
                                                       "Valid hex values only please! "
                                                       "(0x0 - 0xF) Position: %d\n",
-                                                      (char) *pat_idx, (char) *pat_idx, 
+                                                      (char) *pat_idx, (char) *pat_idx,
                                                       rule->info.genID, rule->info.sigID, char_count);
                         }
                     }
@@ -564,7 +599,7 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
                         else
                         {
                             DynamicEngineFatalMessage("character value out of range, try a "
-                                                      "binary buffer for dynamic rule [%d:%d]\n", 
+                                                      "binary buffer for dynamic rule [%d:%d]\n",
                                                       rule->info.genID, rule->info.sigID);
                         }
                     }
@@ -577,9 +612,9 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
         pat_idx++;
         char_count++;
     }
-    
+
     /* Now, tmp_buf contains the decoded ascii & raw binary from the patter */
-    content->patternByteForm = (u_int8_t *)calloc(tmp_len, sizeof(u_int8_t));
+    content->patternByteForm = (uint8_t *)calloc(tmp_len, sizeof(uint8_t));
     if (content->patternByteForm == NULL)
     {
         DynamicEngineFatalMessage("Failed to allocate memory\n");
@@ -594,7 +629,7 @@ static int DecodeContentPattern(Rule *rule, ContentInfo *content)
 static unsigned int getNonRepeatingLength(char *data, int data_len)
 {
     int i, j;
-    
+
     j = 0;
     for ( i = 1; i < data_len; i++ )
     {
@@ -745,13 +780,6 @@ static int Base64DecodeInitialize(Rule *rule, base64DecodeData *content)
                 "Base64Decode relative flag needs to 0 or 1");
     }
 
-    if(content->bytes <= 0)
-    {
-        _ded.errMsg(content_error,
-                    rule->info.genID, rule->info.sigID,
-                    "Base64Decode bytes to decode cannot be negative or zero");
-        return -1;
-    }
     return 0;
 }
 
@@ -903,7 +931,38 @@ int RegisterOneRule(Rule *rule, int registerRule)
 
             case OPTION_TYPE_BYTE_TEST:
             case OPTION_TYPE_BYTE_JUMP:
+                {
+                    ByteData *byte = option->option_u.byte;
+                    result = ByteDataInitialize(rule, byte);
+
+                    if (result)
+                    {
+                        rule->initialized = 0;
+                        FreeOneRule(rule);
+                        return -1;
+                    }
+                }
+
+                break;
+
+            case OPTION_TYPE_CURSOR:
+                {
+                    CursorInfo *cursor = option->option_u.cursor;
+                    result = CursorInfoInitialize(rule, cursor);
+
+                    if (result)
+                    {
+                        rule->initialized = 0;
+                        FreeOneRule(rule);
+                        return -1;
+                    }
+                }
+
+                break;
+
             case OPTION_TYPE_FILE_DATA:
+            case OPTION_TYPE_PKT_DATA:
+            case OPTION_TYPE_BASE64_DATA:
             default:
                 /* nada */
                 break;
@@ -1053,6 +1112,8 @@ static void FreeOneRule(void *data)
             case OPTION_TYPE_BYTE_TEST:
             case OPTION_TYPE_BYTE_JUMP:
             case OPTION_TYPE_FILE_DATA:
+            case OPTION_TYPE_PKT_DATA:
+            case OPTION_TYPE_BASE64_DATA:
             default:
                 break;
         }
@@ -1120,6 +1181,9 @@ static int DumpRule(FILE *fp, Rule *rule)
                     break;
                 case FLOWBIT_ISNOTSET:
                     fprintf(fp, "isnotset,");
+                    break;
+                case FLOWBIT_TOGGLE:
+                    fprintf(fp, "toggle,");
                     break;
                 case FLOWBIT_RESET:
                     fprintf(fp, "reset; ");
@@ -1196,7 +1260,7 @@ ENGINE_LINKAGE int DumpRules(char *rulesFileName, Rule **rules)
     if ((strlen(_ded.dataDumpDirectory) + strlen(DIR_SEP) + strlen(rulesFileName) + strlen(".rules")) > PATH_MAX)
         return -1;
 
-    snprintf(ruleFile, PATH_MAX, "%s%s%s.rules", 
+    snprintf(ruleFile, PATH_MAX, "%s%s%s.rules",
                 _ded.dataDumpDirectory, DIR_SEP, rulesFileName);
     ruleFile[PATH_MAX] = '\0';
     ruleFP = fopen(ruleFile, "w");

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2010 Sourcefire, Inc.
+ * Copyright (C) 2008-2011 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
  *
  ****************************************************************************
  * Provides convenience functions for parsing and querying configuration.
- * 
+ *
  * 8/17/2008 - Initial implementation ... Todd Wease <twease@sourcefire.com>
  *
  ****************************************************************************/
@@ -270,40 +270,40 @@ extern DCE2_Config *dce2_eval_config;
 /********************************************************************
  * Inline function prototypes
  ********************************************************************/
-static INLINE uint32_t DCE2_GcMemcap(void);
-static INLINE int DCE2_GcMaxFrag(void);
-static INLINE uint16_t DCE2_GcMaxFragLen(void);
-static INLINE int DCE2_GcAlertOnEvent(DCE2_EventFlag);
-static INLINE int DCE2_GcReassembleEarly(void);
-static INLINE uint16_t DCE2_GcReassembleThreshold(void);
-static INLINE DCE2_CS DCE2_GcDceDefrag(void);
-static INLINE DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *);
-static INLINE int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
-static INLINE int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
-static INLINE DCE2_CS DCE2_ScAutodetectHttpProxyPorts(const DCE2_ServerConfig *);
-static INLINE uint8_t DCE2_ScSmbMaxChain(const DCE2_ServerConfig *);
-static INLINE DCE2_List * DCE2_ScSmbInvalidShares(const DCE2_ServerConfig *);
-static INLINE uint8_t DCE2_ScSmb2MaxCompound(const DCE2_ServerConfig *);
-static INLINE uint8_t DCE2_ScIsValidSmbVersion(const DCE2_ServerConfig *, DCE2_ValidSmbVersionFlag);
+static inline uint32_t DCE2_GcMemcap(void);
+static inline int DCE2_GcMaxFrag(void);
+static inline uint16_t DCE2_GcMaxFragLen(void);
+static inline int DCE2_GcAlertOnEvent(DCE2_EventFlag);
+static inline int DCE2_GcReassembleEarly(void);
+static inline uint16_t DCE2_GcReassembleThreshold(void);
+static inline DCE2_CS DCE2_GcDceDefrag(void);
+static inline DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *);
+static inline int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
+static inline int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
+static inline DCE2_CS DCE2_ScAutodetectHttpProxyPorts(const DCE2_ServerConfig *);
+static inline uint8_t DCE2_ScSmbMaxChain(const DCE2_ServerConfig *);
+static inline DCE2_List * DCE2_ScSmbInvalidShares(const DCE2_ServerConfig *);
+static inline uint8_t DCE2_ScSmb2MaxCompound(const DCE2_ServerConfig *);
+static inline uint8_t DCE2_ScIsValidSmbVersion(const DCE2_ServerConfig *, DCE2_ValidSmbVersionFlag);
 
-static INLINE int DCE2_IsPortSet(const uint8_t *, const uint16_t);
-static INLINE void DCE2_SetPort(uint8_t *, const uint16_t);
-static INLINE void DCE2_SetPortRange(uint8_t *, uint16_t, uint16_t);
-static INLINE void DCE2_ClearPorts(uint8_t *);
+static inline int DCE2_IsPortSet(const uint8_t *, const uint16_t);
+static inline void DCE2_SetPort(uint8_t *, const uint16_t);
+static inline void DCE2_SetPortRange(uint8_t *, uint16_t, uint16_t);
+static inline void DCE2_ClearPorts(uint8_t *);
 
-static INLINE int DCE2_IsWordChar(const char, const DCE2_WordCharPosition);
-static INLINE int DCE2_IsGraphChar(const char);
-static INLINE int DCE2_IsQuoteChar(const char);
-static INLINE int DCE2_IsListSepChar(const char);
-static INLINE int DCE2_IsOptEndChar(const char);
-static INLINE int DCE2_IsSpaceChar(const char);
-static INLINE int DCE2_IsConfigEndChar(const char);
-static INLINE int DCE2_IsPortChar(const char);
-static INLINE int DCE2_IsPortRangeChar(const char);
-static INLINE int DCE2_IsListStartChar(const char);
-static INLINE int DCE2_IsListEndChar(const char);
-static INLINE int DCE2_IsIpChar(const char);
-static INLINE DCE2_Ret DCE2_CheckAndSetMask(int, int *);
+static inline int DCE2_IsWordChar(const char, const DCE2_WordCharPosition);
+static inline int DCE2_IsGraphChar(const char);
+static inline int DCE2_IsQuoteChar(const char);
+static inline int DCE2_IsListSepChar(const char);
+static inline int DCE2_IsOptEndChar(const char);
+static inline int DCE2_IsSpaceChar(const char);
+static inline int DCE2_IsConfigEndChar(const char);
+static inline int DCE2_IsPortChar(const char);
+static inline int DCE2_IsPortRangeChar(const char);
+static inline int DCE2_IsListStartChar(const char);
+static inline int DCE2_IsListEndChar(const char);
+static inline int DCE2_IsIpChar(const char);
+static inline DCE2_Ret DCE2_CheckAndSetMask(int, int *);
 
 /********************************************************************
  * Public function prototypes
@@ -338,7 +338,7 @@ void DCE2_FreeConfig(DCE2_Config *);
  *      The memcap configured for the preprocessor.
  *
  ********************************************************************/
-static INLINE uint32_t DCE2_GcMemcap(void)
+static inline uint32_t DCE2_GcMemcap(void)
 {
     return dce2_eval_config->gconfig->memcap;
 }
@@ -357,7 +357,7 @@ static INLINE uint32_t DCE2_GcMemcap(void)
  *      0 if it was not configured.
  *
  ********************************************************************/
-static INLINE int DCE2_GcMaxFrag(void)
+static inline int DCE2_GcMaxFrag(void)
 {
     if (dce2_eval_config->gconfig->max_frag_len != DCE2_SENTINEL) return 1;
     return 0;
@@ -379,7 +379,7 @@ static INLINE int DCE2_GcMaxFrag(void)
  *      UINT16_MAX if not configured.
  *
  ********************************************************************/
-static INLINE uint16_t DCE2_GcMaxFragLen(void)
+static inline uint16_t DCE2_GcMaxFragLen(void)
 {
     if (DCE2_GcMaxFrag())
         return (uint16_t)dce2_eval_config->gconfig->max_frag_len;
@@ -403,7 +403,7 @@ static INLINE uint16_t DCE2_GcMaxFragLen(void)
  *      Zero if we are not configured to alert on this event type.
  *
  ********************************************************************/
-static INLINE int DCE2_GcAlertOnEvent(DCE2_EventFlag eflag)
+static inline int DCE2_GcAlertOnEvent(DCE2_EventFlag eflag)
 {
     return dce2_eval_config->gconfig->event_mask & eflag;
 }
@@ -424,7 +424,7 @@ static INLINE int DCE2_GcAlertOnEvent(DCE2_EventFlag eflag)
  *          defragmentation.
  *
  ********************************************************************/
-static INLINE DCE2_CS DCE2_GcDceDefrag(void)
+static inline DCE2_CS DCE2_GcDceDefrag(void)
 {
     return dce2_eval_config->gconfig->dce_defrag;
 }
@@ -443,7 +443,7 @@ static INLINE DCE2_CS DCE2_GcDceDefrag(void)
  *      0 if it was not configured.
  *
  ********************************************************************/
-static INLINE int DCE2_GcReassembleEarly(void)
+static inline int DCE2_GcReassembleEarly(void)
 {
     if (dce2_eval_config->gconfig->reassemble_threshold > 0)
         return 1;
@@ -466,7 +466,7 @@ static INLINE int DCE2_GcReassembleEarly(void)
  *      UINT16_MAX if not configured.
  *
  ********************************************************************/
-static INLINE uint16_t DCE2_GcReassembleThreshold(void)
+static inline uint16_t DCE2_GcReassembleThreshold(void)
 {
     if (DCE2_GcReassembleEarly())
         return dce2_eval_config->gconfig->reassemble_threshold;
@@ -489,7 +489,7 @@ static INLINE uint16_t DCE2_GcReassembleThreshold(void)
  *      DCE2_POLICY__NONE if a NULL pointer is passed in.
  *
  ********************************************************************/
-static INLINE DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *sc)
+static inline DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *sc)
 {
     if (sc == NULL) return DCE2_POLICY__NONE;
     return sc->policy;
@@ -518,7 +518,7 @@ static INLINE DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *sc)
  *          is NULL.
  *
  *********************************************************************/
-static INLINE int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *sc, const uint16_t port,
+static inline int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *sc, const uint16_t port,
                                          const DCE2_TransType ttype)
 {
     const uint8_t *port_array;
@@ -573,7 +573,7 @@ static INLINE int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *sc, const uint
  *          is NULL.
  *
  *********************************************************************/
-static INLINE int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *sc, const uint16_t port,
+static inline int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *sc, const uint16_t port,
                                              const DCE2_TransType ttype)
 {
     const uint8_t *port_array;
@@ -625,7 +625,7 @@ static INLINE int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *sc, const 
  *          rpc over http proxy ports.
  *
  ********************************************************************/
-static INLINE DCE2_CS DCE2_ScAutodetectHttpProxyPorts(const DCE2_ServerConfig *sc)
+static inline DCE2_CS DCE2_ScAutodetectHttpProxyPorts(const DCE2_ServerConfig *sc)
 {
     if (sc == NULL) return DCE2_CS__ENABLED;
     return sc->autodetect_http_proxy_ports;
@@ -647,7 +647,7 @@ static INLINE DCE2_CS DCE2_ScAutodetectHttpProxyPorts(const DCE2_ServerConfig *s
  *      0 is returned if the server configuration passed in is NULL.
  *
  ********************************************************************/
-static INLINE uint8_t DCE2_ScSmbMaxChain(const DCE2_ServerConfig *sc)
+static inline uint8_t DCE2_ScSmbMaxChain(const DCE2_ServerConfig *sc)
 {
     if (sc == NULL) return 0;
     return sc->smb_max_chain;
@@ -671,7 +671,7 @@ static INLINE uint8_t DCE2_ScSmbMaxChain(const DCE2_ServerConfig *sc)
  *          configuration passed in is NULL.
  *
  ********************************************************************/
-static INLINE DCE2_List * DCE2_ScSmbInvalidShares(const DCE2_ServerConfig *sc)
+static inline DCE2_List * DCE2_ScSmbInvalidShares(const DCE2_ServerConfig *sc)
 {
     if (sc == NULL) return NULL;
     return sc->smb_invalid_shares;
@@ -693,7 +693,7 @@ static INLINE DCE2_List * DCE2_ScSmbInvalidShares(const DCE2_ServerConfig *sc)
  *      0 is returned if the server configuration passed in is NULL.
  *
  ********************************************************************/
-static INLINE uint8_t DCE2_ScSmb2MaxCompound(const DCE2_ServerConfig *sc)
+static inline uint8_t DCE2_ScSmb2MaxCompound(const DCE2_ServerConfig *sc)
 {
     if (sc == NULL) return 0;
     return sc->smb2_max_compound;
@@ -716,7 +716,7 @@ static INLINE uint8_t DCE2_ScSmb2MaxCompound(const DCE2_ServerConfig *sc)
  *      0 if the flag is not set
  *
  ********************************************************************/
-static INLINE uint8_t DCE2_ScIsValidSmbVersion(
+static inline uint8_t DCE2_ScIsValidSmbVersion(
         const DCE2_ServerConfig *sc, DCE2_ValidSmbVersionFlag vflag)
 {
     if (sc == NULL) return 0;
@@ -741,7 +741,7 @@ static INLINE uint8_t DCE2_ScIsValidSmbVersion(
  *      Zero if the port is not set.
  *
  *********************************************************************/
-static INLINE int DCE2_IsPortSet(const uint8_t *port_array, const uint16_t port)
+static inline int DCE2_IsPortSet(const uint8_t *port_array, const uint16_t port)
 {
     return port_array[(port / 8)] & (1 << (port % 8));
 }
@@ -760,7 +760,7 @@ static INLINE int DCE2_IsPortSet(const uint8_t *port_array, const uint16_t port)
  * Returns: None
  *
  *********************************************************************/
-static INLINE void DCE2_SetPort(uint8_t *port_array, const uint16_t port)
+static inline void DCE2_SetPort(uint8_t *port_array, const uint16_t port)
 {
     port_array[(port / 8)] |= (1 << (port % 8));
 }
@@ -782,7 +782,7 @@ static INLINE void DCE2_SetPort(uint8_t *port_array, const uint16_t port)
  * Returns: None
  *
  *********************************************************************/
-static INLINE void DCE2_SetPortRange(uint8_t *port_array, uint16_t lo_port, uint16_t hi_port)
+static inline void DCE2_SetPortRange(uint8_t *port_array, uint16_t lo_port, uint16_t hi_port)
 {
     unsigned int i;
 
@@ -809,7 +809,7 @@ static INLINE void DCE2_SetPortRange(uint8_t *port_array, uint16_t lo_port, uint
  * Returns: None
  *
  ********************************************************************/
-static INLINE void DCE2_ClearPorts(uint8_t *port_array)
+static inline void DCE2_ClearPorts(uint8_t *port_array)
 {
     memset(port_array, 0, DCE2_PORTS__MAX_INDEX);
 }
@@ -834,7 +834,7 @@ static INLINE void DCE2_ClearPorts(uint8_t *port_array)
  *      0 if not a valid word character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsWordChar(const char c, const DCE2_WordCharPosition pos)
+static inline int DCE2_IsWordChar(const char c, const DCE2_WordCharPosition pos)
 {
     if (pos == DCE2_WORD_CHAR_POSITION__START)
     {
@@ -877,7 +877,7 @@ static INLINE int DCE2_IsWordChar(const char c, const DCE2_WordCharPosition pos)
  *      0 if not a valid list separator character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsListSepChar(const char c)
+static inline int DCE2_IsListSepChar(const char c)
 {
     if (c == DCE2_CFG_TOK__LIST_SEP) return 1;
     return 0;
@@ -899,7 +899,7 @@ static INLINE int DCE2_IsListSepChar(const char c)
  *      0 if not a valid option end character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsOptEndChar(const char c)
+static inline int DCE2_IsOptEndChar(const char c)
 {
     if (c == DCE2_CFG_TOK__OPT_SEP) return 1;
     return 0;
@@ -921,7 +921,7 @@ static INLINE int DCE2_IsOptEndChar(const char c)
  *      0 if not a valid space character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsSpaceChar(const char c)
+static inline int DCE2_IsSpaceChar(const char c)
 {
     if (isspace((int)c)) return 1;
     return 0;
@@ -944,7 +944,7 @@ static INLINE int DCE2_IsSpaceChar(const char c)
  *      0 if not a valid end of configuration character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsConfigEndChar(const char c)
+static inline int DCE2_IsConfigEndChar(const char c)
 {
     if (c == DCE2_CFG_TOK__END) return 1;
     return 0;
@@ -966,7 +966,7 @@ static INLINE int DCE2_IsConfigEndChar(const char c)
  *      0 if not a valid port character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsPortChar(const char c)
+static inline int DCE2_IsPortChar(const char c)
 {
     if (isdigit((int)c)) return 1;
     return 0;
@@ -988,7 +988,7 @@ static INLINE int DCE2_IsPortChar(const char c)
  *      0 if not a valid port range character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsPortRangeChar(const char c)
+static inline int DCE2_IsPortRangeChar(const char c)
 {
     if (c == DCE2_CFG_TOK__PORT_RANGE) return 1;
     return 0;
@@ -1011,7 +1011,7 @@ static INLINE int DCE2_IsPortRangeChar(const char c)
  *      0 if not a valid DCE/RPC opnum character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsOpnumChar(const char c)
+static inline int DCE2_IsOpnumChar(const char c)
 {
     if (isdigit((int)c)) return 1;
     return 0;
@@ -1033,7 +1033,7 @@ static INLINE int DCE2_IsOpnumChar(const char c)
  *      0 if not a valid DCE/RPC opnum range character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsOpnumRangeChar(const char c)
+static inline int DCE2_IsOpnumRangeChar(const char c)
 {
     if (c == DCE2_CFG_TOK__OPNUM_RANGE) return 1;
     return 0;
@@ -1055,7 +1055,7 @@ static INLINE int DCE2_IsOpnumRangeChar(const char c)
  *      0 if not a valid start of list character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsListStartChar(const char c)
+static inline int DCE2_IsListStartChar(const char c)
 {
     if (c == DCE2_CFG_TOK__LIST_START) return 1;
     return 0;
@@ -1077,7 +1077,7 @@ static INLINE int DCE2_IsListStartChar(const char c)
  *      0 if not a valid end of list character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsListEndChar(const char c)
+static inline int DCE2_IsListEndChar(const char c)
 {
     if (c == DCE2_CFG_TOK__LIST_END) return 1;
     return 0;
@@ -1099,7 +1099,7 @@ static INLINE int DCE2_IsListEndChar(const char c)
  *      0 if not a valid quote character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsQuoteChar(const char c)
+static inline int DCE2_IsQuoteChar(const char c)
 {
     if (c == DCE2_CFG_TOK__QUOTE) return 1;
     return 0;
@@ -1121,7 +1121,7 @@ static INLINE int DCE2_IsQuoteChar(const char c)
  *      0 if not a valid IP character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsIpChar(const char c)
+static inline int DCE2_IsIpChar(const char c)
 {
     if (isxdigit((int)c) ||
         (c == DCE2_CFG_TOK__IP6_TET_SEP) ||
@@ -1151,7 +1151,7 @@ static INLINE int DCE2_IsIpChar(const char c)
  *      0 if not a valid graphical character.
  *
  ********************************************************************/
-static INLINE int DCE2_IsGraphChar(const char c)
+static inline int DCE2_IsGraphChar(const char c)
 {
     if (!DCE2_IsListStartChar(c) && !DCE2_IsListEndChar(c) &&
         !DCE2_IsQuoteChar(c) && !DCE2_IsListSepChar(c) &&
@@ -1165,7 +1165,7 @@ static INLINE int DCE2_IsGraphChar(const char c)
  * Function: DCE2_CheckAndSetMask()
  *
  * Checks to see if a flag passed in is already set in the mask
- * passed in.  If it is, error is returned.  If it is not, the 
+ * passed in.  If it is, error is returned.  If it is not, the
  * flag is set in the mask.
  *
  * Arguments:
@@ -1180,7 +1180,7 @@ static INLINE int DCE2_IsGraphChar(const char c)
  *      DCE2_RET__SUCCESS if the flag is not already set in the mask.
  *
  *********************************************************************/
-static INLINE DCE2_Ret DCE2_CheckAndSetMask(int flag, int *mask)
+static inline DCE2_Ret DCE2_CheckAndSetMask(int flag, int *mask)
 {
     if (*mask & flag)
         return DCE2_RET__ERROR;

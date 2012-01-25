@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2010 Sourcefire, Inc.
+** Copyright (C) 2002-2011 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,13 +28,14 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "sf_types.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "decode.h"
 #include "plugbase.h"
 #include "parser.h"
 #include "util.h"
-#include "debug.h"
+#include "snort_debug.h"
 #include "plugin_enum.h"
 
 #include "snort.h"
@@ -88,7 +89,7 @@ int TcpSeqCheckCompare(void *l, void *r)
 }
 
 /****************************************************************************
- * 
+ *
  * Function: SetupTcpSeqCheck()
  *
  * Purpose: Link the seq keyword to the initialization function
@@ -111,7 +112,7 @@ void SetupTcpSeqCheck(void)
 
 
 /****************************************************************************
- * 
+ *
  * Function: TcpSeqCheckInit(char *, OptTreeNode *)
  *
  * Purpose: Attach the option data to the rule data struct and link in the
@@ -131,7 +132,7 @@ void TcpSeqCheckInit(char *data, OptTreeNode *otn, int protocol)
         FatalError("Line %s (%d): TCP Options on non-TCP rule\n", file_name, file_line);
     }
 
-    /* multiple declaration check */ 
+    /* multiple declaration check */
     if(otn->ds_list[PLUGIN_TCP_SEQ_CHECK])
     {
         FatalError("%s(%d): Multiple TCP seq options in rule\n", file_name,
@@ -143,11 +144,11 @@ void TcpSeqCheckInit(char *data, OptTreeNode *otn, int protocol)
     otn->ds_list[PLUGIN_TCP_SEQ_CHECK] = (TcpSeqCheckData *)
             SnortAlloc(sizeof(TcpSeqCheckData));
 
-    /* this is where the keyword arguments are processed and placed into the 
+    /* this is where the keyword arguments are processed and placed into the
        rule option's data structure */
     ParseTcpSeq(data, otn);
 
-    /* finally, attach the option's detection function to the rule's 
+    /* finally, attach the option's detection function to the rule's
        detect function pointer list */
     fpl = AddOptFuncToList(CheckTcpSeqEq, otn);
     fpl->type = RULE_OPTION_TYPE_TCP_SEQ;
@@ -157,7 +158,7 @@ void TcpSeqCheckInit(char *data, OptTreeNode *otn, int protocol)
 
 
 /****************************************************************************
- * 
+ *
  * Function: ParseTcpSeq(char *, OptTreeNode *)
  *
  * Purpose: Attach the option rule's argument to the data struct.
@@ -180,7 +181,7 @@ void ParseTcpSeq(char *data, OptTreeNode *otn)
 
     ds_ptr->tcp_seq = strtoul(data, ep, 0);
     ds_ptr->tcp_seq = htonl(ds_ptr->tcp_seq);
- 
+
     if (add_detection_option(RULE_OPTION_TYPE_TCP_SEQ, (void *)ds_ptr, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
     {
         otn->ds_list[PLUGIN_TCP_SEQ_CHECK] = ds_ptr_dup;
@@ -193,7 +194,7 @@ void ParseTcpSeq(char *data, OptTreeNode *otn)
 
 
 /****************************************************************************
- * 
+ *
  * Function: CheckTcpSeqEq(char *, OptTreeNode *)
  *
  * Purpose: Check to see if the packet's TCP ack field is equal to the rule
@@ -221,7 +222,7 @@ int CheckTcpSeqEq(void *option_data, Packet *p)
     {
         rval = DETECTION_OPTION_MATCH;
     }
-#ifdef DEBUG
+#ifdef DEBUG_MSGS
     else
     {
         /* you can put debug comments here or not */
