@@ -1,3 +1,22 @@
+snort (2.9.2-3) unstable; urgency=low
+
+  * Restore code from the 2.8.5.2-5 package onwards which was lost when
+    the version of experimental was moved to the archive. 
+     - Now /var/lib/snort is created through package configuration, as
+       it should have been
+     - Remove md5sum files when purging (Closes: #657038)
+  * debian/rules: 
+      - Enable IPv6 support which was optional in version 2.8 for the Snort
+        binary package. This is not enabled for the database binary packages
+        (snort-pgsql and snort-mysql) as the database schemas do not support
+        IPv6.  (Closes: #633064)
+      - Include the quilt makefile and add dependencies in -stamp and 
+        clean targets
+  * debian/README-database.Debian: Indicate that database support will be
+    deprecated in 2.9 and document that IPv6 is not supported either
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Wed, 25 Jan 2012 22:24:30 +0100
+
 snort (2.9.2-2) unstable; urgency=low
 
   * debian/control:  Add net-tools to Depends: of snort, snort-mysql and
@@ -17,6 +36,8 @@ snort (2.9.2-1) unstable; urgency=low
        using the -v option (Closes: 553584)
      - The package no longer build-depends on iptables-dev and the negated list
        of architectures is no longer used (Closes: 634660)
+     - debian/patches/config: Patch the configuration file to remove include
+       files not currently available (Closes: #619446)
   * Switch to dpkg-source 3.0 (quilt) format
   * Port across all changes from Snort 2.8.5.2-5 and later in unstable
   * debian/snort.postinst: create the directory that the checksum for
