@@ -263,7 +263,7 @@ snort (2.8.4.1-4) unstable; urgency=low
     if 'start' was executed. (Closes: #540450)
   * Add information on how the init.d script works (Closes: #512810)
   * Fix name of file in README-database.Debian, remove the database
-    information from the main README.Debian file.
+    information from the main README.Debian file. (LP: #302218)
   * Fix bug in debian/clean-sources.sh script (Closes: #547316)
   * Use a patch provided by Dave Walker <DaveWalker_AT_ubuntu.com>
     to prevent starting snort-mysql|pgsql if the database is not configured 

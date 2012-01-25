@@ -9,3 +9,4 @@ usr/sbin
 usr/share/doc/snort
 usr/share/man/man8
 var/log/snort
+var/lib/snort
