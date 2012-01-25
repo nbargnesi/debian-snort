@@ -4,6 +4,8 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
+include /usr/share/quilt/quilt.make
+
 export DH_VERBOSE=1
 
 TMP=`pwd`/debian
