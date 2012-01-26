@@ -217,7 +217,7 @@ install-indep:
 	cp rules/*.rules $(TMP)/snort-rules-default/etc/snort/rules/
 #	mkdir -p $(TMP)/snort-rules-default/usr/share/snort/
 #	install -m 644 -o root -g root `pwd`/debian/oldrules.md5 $(TMP)/snort-rules-default/usr/share/snort/oldrules.md5
-	install -m 644 etc/sid-msg.map $(TMP)/snort-rules-default/etc/snort/
+#	install -m 644 etc/sid-msg.map $(TMP)/snort-rules-default/etc/snort/
 	install -m 644 etc/gen-msg.map $(TMP)/snort-rules-default/etc/snort/
 	install -m 644 etc/community-sid-msg.map $(TMP)/snort-rules-default/etc/snort/
 	install -m 644 etc/classification.config $(TMP)/snort-rules-default/etc/snort/
