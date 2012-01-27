@@ -3,16 +3,44 @@ Section: net
 Priority: optional
 Maintainer: Javier Fernández-Sanguino Peña <jfs@debian.org>
 Uploaders: Andrew Pollock <apollock@debian.org>
-Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 5.0.0), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, libgnutls-dev, libdumbnet-dev, libdaq-dev, flex, bison, quilt
-Build-Depends-Indep: texlive, texlive-latex-base, ghostscript
+Build-Depends: 
+    libnet1-dev, 
+    libpcap0.8-dev, 
+    libpcre3-dev, 
+    debhelper (>= 5.0.0), 
+    libmysqlclient15-dev | libmysqlclient-dev, 
+    libpq-dev, 
+    po-debconf (>= 0.5.0), 
+    libprelude-dev, 
+    libgnutls-dev, 
+    libdumbnet-dev, 
+    libdaq-dev, 
+    flex, 
+    bison, 
+    quilt
+Build-Depends-Indep: 
+    texlive, 
+    texlive-latex-base, 
+    ghostscript
 Standards-Version:  3.9.1
 Homepage: http://www.snort.org/
 
 Package: snort
 Architecture: any
 Pre-Depends: adduser (>= 3.11)
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools,${misc:Depends}
-Conflicts: snort-mysql, snort-pgsql
+Depends: 
+    snort-common-libraries (>=${binary:Version}),
+    snort-rules-default (>= ${source:Version}), 
+    snort-common (>= ${source:Version}),
+    debconf (>= 0.2.80) | debconf-2.0,
+    rsyslog | system-log-daemon,
+    logrotate,
+    net-tools,
+    ${shlibs:Depends},
+    ${misc:Depends}
+Conflicts: 
+    snort-mysql, 
+    snort-pgsql
 Replaces: snort-common (<< 2.0.2-3)
 Recommends: iproute
 Suggests: snort-doc
@@ -32,7 +60,12 @@ Description: flexible Network Intrusion Detection System
 Package: snort-common
 Architecture: all
 Pre-Depends: adduser (>= 3.11)
-Depends: perl-modules, debconf (>= 0.2.80) | debconf-2.0, ${shlibs:Depends}, lsb-base, ${misc:Depends}
+Depends: 
+    perl-modules, 
+    debconf (>= 0.2.80) | debconf-2.0,
+    lsb-base,
+    ${shlibs:Depends},
+    ${misc:Depends}
 Conflicts: snort (<< ${binary:Version})
 Replaces: snort (<< 1.8.4beta1-1)
 Suggests: snort-doc
@@ -69,10 +102,21 @@ Provides: snort
 Architecture: any
 Priority: extra
 Pre-Depends: adduser (>= 3.11)
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools, ${misc:Depends}
+Depends: 
+    snort-common-libraries (>=${binary:Version}),
+    snort-rules-default (>= ${source:Version}),
+    snort-common (>= ${source:Version}),
+    debconf (>= 0.2.80) | debconf-2.0,
+    rsyslog | system-log-daemon,
+    logrotate,
+    net-tools,
+    ${shlibs:Depends},
+    ${misc:Depends}
 Recommends: iproute
 Suggests: snort-doc
-Conflicts: snort, snort-pgsql
+Conflicts: 
+    snort,
+    snort-pgsql
 Homepage: http://www.snort.org/
 Description: flexible Network Intrusion Detection System [MySQL]
  Distribution of Snort with support for logging to a MySQL database.
@@ -90,10 +134,22 @@ Package: snort-pgsql
 Provides: snort
 Architecture: any
 Priority: optional
-Depends: snort-common-libraries (>=${binary:Version}), snort-rules-default (>= ${source:Version}), debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), rsyslog | system-log-daemon, ${shlibs:Depends}, snort-common (>= ${source:Version}), logrotate, net-tools, ${misc:Depends}
+Depends: 
+    snort-common-libraries (>=${binary:Version}), 
+    snort-rules-default (>= ${source:Version}),
+    snort-common (>= ${source:Version}),
+    debconf (>= 0.2.80) | debconf-2.0,
+    adduser (>= 3.11),  
+    rsyslog | system-log-daemon,
+    logrotate,
+    net-tools,
+    ${shlibs:Depends},
+    ${misc:Depends}
 Recommends: iproute
 Suggests: snort-doc
-Conflicts: snort, snort-mysql
+Conflicts: 
+    snort, 
+    snort-mysql
 Description: flexible Network Intrusion Detection System [PostgreSQL]
  Distribution of Snort with support for logging to a PostgreSQL dbase.
  .
@@ -109,7 +165,11 @@ Description: flexible Network Intrusion Detection System [PostgreSQL]
 Package: snort-rules-default
 Provides: snort-rules
 Architecture: all
-Depends: debconf (>= 0.2.80) | debconf-2.0, adduser (>= 3.11), ${shlibs:Depends}, ${misc:Depends}
+Depends: 
+    debconf (>= 0.2.80) | debconf-2.0, 
+    adduser (>= 3.11), 
+    ${shlibs:Depends}, 
+    ${misc:Depends}
 Suggests: snort (>= 2.2.0) | snort-pgsql (>= 2.2.0) | snort-mysql (>= 2.2.0)
 Recommends: oinkmaster
 Homepage: http://www.snort.org/snort-rules/
