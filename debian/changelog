@@ -19,7 +19,7 @@ snort (2.9.2-3) unstable; urgency=low
      - Add VCS entries
      - Put the complete maintainer's name in UTF-8
      - Change Uploaders, add Andrew Pollock and remove Pascal Hakim
-
+     - Update Standards Version
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Wed, 25 Jan 2012 22:24:30 +0100
 
