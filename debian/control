@@ -22,7 +22,7 @@ Build-Depends-Indep:
     texlive, 
     texlive-latex-base, 
     ghostscript
-Standards-Version:  3.9.1
+Standards-Version:  3.9.2
 Homepage: http://www.snort.org/
 Vcs-Git: git://git.debian.org/git/pkg-snort/pkg-snort.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-snort/pkg-snort.git
