@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Javier Fernández-Sanguino Peña <jfs@debian.org>
 Uploaders: Andrew Pollock <apollock@debian.org>
-Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 5.0.0), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, libgnutls-dev, libdumbnet-dev, libdaq-dev, flex, bison
+Build-Depends: libnet1-dev, libpcap0.8-dev, libpcre3-dev, debhelper (>= 5.0.0), libmysqlclient15-dev | libmysqlclient-dev, libpq-dev, po-debconf (>= 0.5.0), libprelude-dev, libgnutls-dev, libdumbnet-dev, libdaq-dev, flex, bison, quilt
 Build-Depends-Indep: texlive, texlive-latex-base, ghostscript
 Standards-Version:  3.9.1
 Homepage: http://www.snort.org/
