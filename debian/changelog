@@ -17,7 +17,8 @@ snort (2.9.2-3) unstable; urgency=low
         the db-pending-config semaphore is found.  Remove it instead and
         continue. This can happen if a database-related package was installed,
         removed and then 'snort' is installed afterwards. 
-        (LP: #316878, #639755, #722488, #754230, #798608, #876615, #816634, #891904, #918250)
+        (LP: #316878, #639755, #722488, #754230, #798608, #876615, #816634)
+        (LP: #891904, #918250)
   * debian/snort-{mysql,pgsql}.postrm:
       - Remove the db-pending-config semaphore file when removing the package.
         This prevents errors with the snort.init.d logic if a database package
