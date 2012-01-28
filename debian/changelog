@@ -9,9 +9,13 @@ snort (2.9.2-3) unstable; urgency=low
       - Enable IPv6 support which was optional in version 2.8 for the Snort
         binary package. This is not enabled for the database binary packages
         (snort-pgsql and snort-mysql) as the database schemas do not support
-        IPv6.  (Closes: #633064)
+        IPv6.  (Closes: #633064) (LP: #703707)
       - Include the quilt makefile and add dependencies in -stamp and 
         clean targets
+  * debian/snort.init.d: 
+      - Do not abort if the package is not configured to use a database but
+        the db-pending-config semaphore is found. Remove it instead and
+        continue.
   * debian/README-database.Debian: Indicate that database support will be
     deprecated in 2.9 and document that IPv6 is not supported either
   * debian/control:
