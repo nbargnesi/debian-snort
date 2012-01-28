@@ -22,6 +22,15 @@ TODO things for Snort in Debian
 
   REVIEW: How does Snort use this to expand it in HOME_NET
 
+  Note, this has been requested at least in 
+  https://bugs.launchpad.net/ubuntu/+source/snort/+bug/566543
+
+- Fix bugs related to an interface being used which is not available
+  
+  This seems to break when configuring the package:
+  https://bugs.launchpad.net/ubuntu/+source/snort/+bug/655116
+
+  
 
 - snort-{mysql,pgsl}:
  Database configuration should ensure that only valid characters are included
