@@ -14,8 +14,9 @@ snort (2.9.2-3) unstable; urgency=low
         clean targets
   * debian/snort.init.d: 
       - Do not abort if the package is not configured to use a database but
-        the db-pending-config semaphore is found. Remove it instead and
-        continue.
+        the db-pending-config semaphore is found.  Remove it instead and
+        continue. This can happen if a database-related package was installed,
+        removed and then 'snort' is installed afterwards. (LP: #316878)
   * debian/README-database.Debian: Indicate that database support will be
     deprecated in 2.9 and document that IPv6 is not supported either
   * debian/control:
@@ -48,6 +49,7 @@ snort (2.9.2-1) unstable; urgency=low
        of architectures is no longer used (Closes: 634660)
      - debian/patches/config: Patch the configuration file to remove include
        files not currently available (Closes: #619446)
+     - This version is fully supported rule-wise (LP: #872582)
   * Switch to dpkg-source 3.0 (quilt) format
   * Port across all changes from Snort 2.8.5.2-5 and later in unstable
   * debian/snort.postinst: create the directory that the checksum for
