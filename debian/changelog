@@ -16,7 +16,13 @@ snort (2.9.2-3) unstable; urgency=low
       - Do not abort if the package is not configured to use a database but
         the db-pending-config semaphore is found.  Remove it instead and
         continue. This can happen if a database-related package was installed,
-        removed and then 'snort' is installed afterwards. (LP: #316878)
+        removed and then 'snort' is installed afterwards. 
+        (LP: #316878, #639755, #722488, #754230, #798608, #876615, #816634, #891904, #918250)
+  * debian/snort-{mysql,pgsql}.postrm:
+      - Remove the db-pending-config semaphore file when removing the package.
+        This prevents errors with the snort.init.d logic if a database package
+        is left unconfigured and then replaced with the snort (non-database)
+        package.
   * debian/README-database.Debian: Indicate that database support will be
     deprecated in 2.9 and document that IPv6 is not supported either
   * debian/control:
@@ -363,7 +369,7 @@ snort (2.7.0-25) unstable; urgency=low
     (Closes: 510704)
   * Move the code that detects if interfaces are down over to snort-pgsql and
     snort-mysql.  This way, if the interface defined is not available it will
-    prompt again, raising the debconf priority (Closes: #502084)
+    prompt again, raising the debconf priority (Closes: #502084) 
   * Change all the config_parameters debconf input from 'medium' to 'error'
   * Change all the needs_db_config debconf questions from 'medium' to 'high'
     since users that do not see this note will end up with a non-functioning
