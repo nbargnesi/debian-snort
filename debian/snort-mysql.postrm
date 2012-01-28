@@ -62,9 +62,11 @@ case "$1" in
 		fi
 		;;
        remove|upgrade|failed-upgrade|abort-install|abort-upgrade)
-		# nothing
 		# We may not delete the user snort, as there may be
 		# files owned by it in /var/log/snort and /etc/snort.
+		if [ -e /etc/snort/db-pending-config ] ; then
+			rm /etc/snort/db-pending-config
+		fi
         	;;
 esac
 
