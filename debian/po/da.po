@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2011-01-02 02:11+0100\n"
+"POT-Creation-Date: 2012-02-14 00:33+0100\n"
 "PO-Revision-Date: 2011-08-20 19:25+0200\n"
 "Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
 "Language-Team: Danish <debian-l10n-danish@lists.debian.org>\n"
@@ -68,12 +68,12 @@ msgstr "Grænseflader som Snort skal lytte på:"
 #: ../snort-pgsql.templates:2001
 msgid ""
 "This value is usually 'eth0', but this may be inappropriate in some network "
-"environments; for a dialup connection 'ppp0' might be more appropiate (see "
+"environments; for a dialup connection 'ppp0' might be more appropriate (see "
 "the output of '/sbin/ifconfig')."
 msgstr ""
 "Værdien er normalt »eth0«, men dette kan være upassende i nogle "
-"netværksmiljøer; for en opkaldsforbindelse kan »ppp0« være mere passende "
-"(se uddata for »/sbin/ifconfig«)."
+"netværksmiljøer; for en opkaldsforbindelse kan »ppp0« være mere passende (se "
+"uddata for »/sbin/ifconfig«)."
 
 #. Type: string
 #. Description
@@ -100,12 +100,13 @@ msgid ""
 "this interface (either connected to a 'port mirroring/spanning' port in a "
 "switch, to a hub or to a tap)."
 msgstr ""
-"Det er heller ikke unormalt at bruge en grænseflade uden IP-adresse konfigureret "
-"i fuldstændig åben tilstand. I sådanne tilfælde så vælg grænsefladen i dette "
-"system som er fysisk forbundet med netværket, som skal inspiceres, aktiver "
-"fuldstændig åben (promiscuous) tilstand senere og sikr dig at netværkstrafikken "
-"sendes til denne grænseflade (enten forbundet til en »port mirroring/spanning« port "
-"i en netværksveksler (switch), en hub eller en tap)."
+"Det er heller ikke unormalt at bruge en grænseflade uden IP-adresse "
+"konfigureret i fuldstændig åben tilstand. I sådanne tilfælde så vælg "
+"grænsefladen i dette system som er fysisk forbundet med netværket, som skal "
+"inspiceres, aktiver fuldstændig åben (promiscuous) tilstand senere og sikr "
+"dig at netværkstrafikken sendes til denne grænseflade (enten forbundet til "
+"en »port mirroring/spanning« port i en netværksveksler (switch), en hub "
+"eller en tap)."
 
 #. Type: string
 #. Description
@@ -136,8 +137,8 @@ msgid ""
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
 "separated (without spaces)."
 msgstr ""
-"Brug venligst CIDR-formen - for eksempel 192.168.1.0/24 - for en blok af "
-"256 adresser eller 192.168.1.42/32 for bare en. Flere værdier skal være "
+"Brug venligst CIDR-formen - for eksempel 192.168.1.0/24 - for en blok af 256 "
+"adresser eller 192.168.1.42/32 for bare en. Flere værdier skal være "
 "kommaadskilt (uden mellemrum)."
 
 #. Type: string
@@ -148,8 +149,9 @@ msgid ""
 "Please note that if Snort is configured to use multiple interfaces, it will "
 "use this value as the HOME_NET definition for all of them."
 msgstr ""
-"Bemærk venligst at hvis Snort er konfigureret til at bruge flere grænseflader "
-"vil den bruge denne værdi som HOME_NET-definitionen for dem alle."
+"Bemærk venligst at hvis Snort er konfigureret til at bruge flere "
+"grænseflader vil den bruge denne værdi som HOME_NET-definitionen for dem "
+"alle."
 
 #. Type: boolean
 #. Description
@@ -157,7 +159,8 @@ msgstr ""
 #: ../snort-pgsql.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr ""
-"Skal Snort deaktivere fuldstændig åben (promiscuous) tilstand på grænsefladen?"
+"Skal Snort deaktivere fuldstændig åben (promiscuous) tilstand på "
+"grænsefladen?"
 
 #. Type: boolean
 #. Description
@@ -283,8 +286,8 @@ msgid ""
 "As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
 "changes to take place."
 msgstr ""
-"Da Snort startes manuelt, skal du køre »/etc/init.d/snort« for at ændringerne "
-"træder i kraft."
+"Da Snort startes manuelt, skal du køre »/etc/init.d/snort« for at "
+"ændringerne træder i kraft."
 
 #. Type: error
 #. Description
@@ -447,7 +450,8 @@ msgid ""
 "the package is installed:"
 msgstr ""
 "Snort kræver en konfigureret database, før den kan starte op. For at oprette "
-"strukturen skal du køre de følgende kommandoer EFTER at pakken er installeret:"
+"strukturen skal du køre de følgende kommandoer EFTER at pakken er "
+"installeret:"
 
 #. Type: note
 #. Description
@@ -530,11 +534,12 @@ msgid ""
 "configuration file to be replaced with the one provided in this package or "
 "fix it manually by removing deprecated options."
 msgstr ""
-"Snorts konfigurationsfil (/etc/snort/snort.conf) bruger forældede indstillinger, "
-"som ikke længere er tilgængelige for denne Snortudgivelse. Snort vil ikke kunne "
-"starte med mindre, at du angiver en gyldig konfigurationsfil. Tillad enten at "
-"konfigurationsfilen bliver erstattet med konfigurationsfilen i denne pakke "
-"eller ret det manuelt ved at fjerne forældede indstillinger."
+"Snorts konfigurationsfil (/etc/snort/snort.conf) bruger forældede "
+"indstillinger, som ikke længere er tilgængelige for denne Snortudgivelse. "
+"Snort vil ikke kunne starte med mindre, at du angiver en gyldig "
+"konfigurationsfil. Tillad enten at konfigurationsfilen bliver erstattet med "
+"konfigurationsfilen i denne pakke eller ret det manuelt ved at fjerne "
+"forældede indstillinger."
 
 #. Type: note
 #. Description
@@ -569,6 +574,5 @@ msgid ""
 "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -T -"
 "c <file>'."
 msgstr ""
-"For at diagnosticere en fejl i en Snortkonfigurationsfil så brug »/usr/sbin/snort "
-"-T -c <fil>«."
-
+"For at diagnosticere en fejl i en Snortkonfigurationsfil så brug »/usr/sbin/"
+"snort -T -c <fil>«."

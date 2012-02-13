@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2011-12-27 14:03-0800\n"
+"POT-Creation-Date: 2012-02-14 00:33+0100\n"
 "PO-Revision-Date: 2007-03-07 17:31+0530\n"
 "Last-Translator: Dr.T.Vasudevan <agnihot3@gmail.com>\n"
 "Language-Team: TAMIL <ubuntu-l10n-tam@lists.ubuntu.com>\n"
@@ -75,7 +75,7 @@ msgstr "எந்த இடை முகத்தில் ஸ்னோர்ட
 #: ../snort-pgsql.templates:2001
 msgid ""
 "This value is usually 'eth0', but this may be inappropriate in some network "
-"environments; for a dialup connection 'ppp0' might be more appropiate (see "
+"environments; for a dialup connection 'ppp0' might be more appropriate (see "
 "the output of '/sbin/ifconfig')."
 msgstr ""
 
