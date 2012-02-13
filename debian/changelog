@@ -1,3 +1,10 @@
+snort (2.9.2-4) UNRELEASED; urgency=low
+
+  * Fix typo (appropiate --> apppropriate) in all the Snort templates. Also
+    update translations and manually unfuzzy them
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 14 Feb 2012 00:38:01 +0100
+
 snort (2.9.2-3) unstable; urgency=low
 
   * Restore code from the 2.8.5.2-5 package onwards which was lost when
