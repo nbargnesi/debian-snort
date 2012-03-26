@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -216,7 +216,8 @@ ENGINE_LINKAGE int checkHdrOpt(void *p, HdrOptCheck *optData)
         value = IS_IP6(pkt) ? ntohl(GET_IPH_ID(pkt)) : ntohs((uint16_t)GET_IPH_ID(pkt));
         break;
     case IP_HDR_PROTO:
-        value = pkt->ip4_header->proto;
+        //value = pkt->ip4_header->proto;
+        value = GET_IPH_PROTO(pkt);
         break;
     case IP_HDR_FRAGBITS:
         return checkBits(optData->value, optData->op, ((ntohs(GET_IPH_OFF(pkt)) & 0xe000) & ~optData->mask_value));
@@ -225,10 +226,12 @@ ENGINE_LINKAGE int checkHdrOpt(void *p, HdrOptCheck *optData)
         value = ntohs(GET_IPH_OFF((pkt))) & 0x1FFF;
         break;
     case IP_HDR_TOS:
-        value = pkt->ip4_header->type_service;
+        //value = pkt->ip4_header->type_service;
+        value = GET_IPH_TOS(pkt);
         break;
     case IP_HDR_TTL:
-        value = pkt->ip4_header->time_to_live;
+        //value = pkt->ip4_header->time_to_live;
+        value = GET_IPH_TTL(pkt);
         break;
     case IP_HDR_OPTIONS:
         return checkOptions(optData->value, optData->op, pkt->ip_options, pkt->num_ip_options);

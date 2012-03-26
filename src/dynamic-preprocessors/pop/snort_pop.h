@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -130,7 +130,7 @@ typedef enum _POPCmdEnum
 
 typedef enum _POPRespEnum
 {
-    RESP_OK = 0,
+    RESP_OK = 1,
     RESP_ERR,
     RESP_LAST
 
@@ -180,6 +180,7 @@ typedef struct _POPPcre
 typedef struct _POP
 {
     int state;
+    int prev_response;
     int data_state;
     int state_flags;
     int session_flags;

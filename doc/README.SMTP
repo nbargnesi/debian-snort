@@ -234,9 +234,6 @@ In case of multiple configs, the max_mime_mem of the non-default configs will be
 default config's value. Hence user needs to define it in the default config with the new keyword
 disabled (used to disable SMTP preprocessor in a config).
 
-When the memcap for decoding (max_mime_mem) is exceeded the SMTP preprocessor alert with sid 9 is 
-generated (when enabled). 
-
 * log_mailfrom *
 This option enables SMTP preprocessor to parse and log the sender's email address extracted 
 from the "MAIL FROM" command along with all the generated events for that session. The maximum 

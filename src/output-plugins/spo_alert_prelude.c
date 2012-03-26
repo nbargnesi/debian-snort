@@ -792,7 +792,6 @@ void AlertPreludeSetupAfterSetuid(void)
 
         AddFuncToOutputList(snort_alert_prelude, OUTPUT_TYPE__ALERT, client);
         AddFuncToCleanExitList(snort_alert_prelude_clean_exit, client);
-        AddFuncToRestartList(snort_alert_prelude_clean_exit, client);
 }
 
 

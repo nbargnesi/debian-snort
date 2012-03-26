@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -309,7 +309,7 @@ int CheckDsize(void *option_data, Packet *p)
     if (!ds_ptr)
         return rval;
 
-    PREPROC_PROFILE_END(dsizePerfStats);
+    PREPROC_PROFILE_START(dsizePerfStats);
 
     /* fake packet dsizes are always wrong */
     /* (unless they are PDUs) */

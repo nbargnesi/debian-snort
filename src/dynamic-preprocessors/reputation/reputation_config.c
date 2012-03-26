@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -105,9 +105,10 @@ static unsigned long total_duplicates;
 static unsigned long total_invalids;
 
 void **IPtables;
-table_flat_t *emptyIPtables;
+
 #ifdef SHARED_REP
 ReputationConfig *reputation_shmem_config;
+table_flat_t *emptyIPtables;
 #endif
 /*
  * Function prototype(s)
@@ -217,7 +218,7 @@ int LoadFileIntoShmem(void* ptrSegment, ShmemDataFileList** file_list, int num_f
      */
     table = sfrt_flat_new(DIR_8x16, IPv6, reputation_shmem_config->numEntries, reputation_shmem_config->memcap);
 #else
-    table = sfrt_flat_new(DIR_8x4, IPv4, reputation_shmem_config->numEntries, reputation_load_config->memcap);
+    table = sfrt_flat_new(DIR_8x4, IPv4, reputation_shmem_config->numEntries, reputation_shmem_config->memcap);
 
 #endif
     if (table == NULL)
@@ -379,10 +380,10 @@ int InitPerProcessZeroSegment(void*** data_ptr)
  *********************************************************************/
 void initShareMemory(void *conf)
 {
-    int segment_number;
     uint32_t snortID;
     ReputationConfig *config = (ReputationConfig *)conf;
 
+    switch_state = SWITCHING;
     reputation_shmem_config = config;
     if (InitShmemDataMgmtFunctions(InitPerProcessZeroSegment,
             GetSegmentSizeFromFileList,LoadFileIntoShmem))
@@ -394,21 +395,23 @@ void initShareMemory(void *conf)
     snortID = _dpd.getSnortInstance();
     if (SHMEM_SERVER_ID_1 == snortID)
     {
-        if ((segment_number = InitShmemWriter(snortID,IPREP,GROUP_0,NUMA_0,
+        if ((available_segment = InitShmemWriter(snortID,IPREP,GROUP_0,NUMA_0,
                 config->sharedMem.path, &IPtables,config->sharedMem.updateInterval)) == NO_ZEROSEG)
         {
             DynamicPreprocessorFatalMessage("Unable to init share memory writer\n");
 
         }
+        switch_state = SWITCHED;
     }
     else
     {
-        if ((segment_number = InitShmemReader(snortID,IPREP,GROUP_0,NUMA_0,
+        if ((available_segment = InitShmemReader(snortID,IPREP,GROUP_0,NUMA_0,
                 config->sharedMem.path, &IPtables,config->sharedMem.updateInterval)) == NO_ZEROSEG)
         {
             DynamicPreprocessorFatalMessage("Unable to init share memory reader\n");
 
         }
+        switch_state = SWITCHED;
     }
 
 }
@@ -986,12 +989,6 @@ void Reputation_FreeConfig (ReputationConfig *config)
 
     if (config == NULL)
         return;
-
-
-    if (config->emptySegment != NULL)
-    {
-        free(config->emptySegment);
-    }
 
     if (config->localSegment != NULL)
     {

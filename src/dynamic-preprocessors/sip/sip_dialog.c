@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -77,7 +77,7 @@ static int SIP_processRequest(SIPMsg *sipMsg, SIP_DialogData *dialog, SIP_Dialog
 	/*If dialog not exist, create one */
     if((NULL == dialog)&&(SIP_METHOD_CANCEL != sipMsg->methodFlag))
     {
-    	dialog = SIP_addDialog(sipMsg, *dList, dList);
+    	dialog = SIP_addDialog(sipMsg, dList->head, dList);
     }
 
     methodFlag = sipMsg->methodFlag;
@@ -583,21 +583,21 @@ static SIP_DialogData* SIP_addDialog(SIPMsg *sipMsg, SIP_DialogData *currDialog,
 	    if (NULL != currDialog->prevD)
 	    	currDialog->prevD->nextD = dialog;
 	    else
-	    	*dList = dialog;  // become the head
+	    	dList->head = dialog;  // become the head
 	    currDialog->prevD = dialog;
 	}
 	else
 	{
 		// The first dialog
 		dialog->prevD = NULL;
-		*dList = dialog;
+		dList->head = dialog;
 	}
 	dialog->dlgID = sipMsg->dlgID;
 	dialog->creator = sipMsg->methodFlag;
 	dialog->state = SIP_DLG_CREATE;
 
 	SIP_updateMedias(sipMsg->mediaSession, &dialog->mediaSessions);
-
+    dList->num_dialogs++;
 	return dialog;
 
 }
@@ -625,7 +625,7 @@ static int SIP_deleteDialog(SIP_DialogData *currDialog, SIP_DialogList *dList)
     {
     	if(NULL != currDialog->nextD)
     		currDialog->nextD->prevD = NULL;
-    	*dList = currDialog->nextD;
+    	dList->head = currDialog->nextD;
     }
     else
     {
@@ -635,6 +635,8 @@ static int SIP_deleteDialog(SIP_DialogData *currDialog, SIP_DialogList *dList)
     }
     sip_freeMediaList(currDialog->mediaSessions);
     free(currDialog);
+    if( dList->num_dialogs > 0)
+        dList->num_dialogs--;
 	return SIP_SUCCESS;
 }
 /********************************************************************
@@ -654,6 +656,7 @@ static int SIP_deleteDialog(SIP_DialogData *currDialog, SIP_DialogList *dList)
 int SIP_updateDialog(SIPMsg *sipMsg, SIP_DialogList *dList, SFSnortPacket *p)
 {
    	SIP_DialogData* dialog;
+   	SIP_DialogData* oldDialog = NULL;
    	int ret;
 
    	if ((NULL == sipMsg)||(0 == sipMsg->dlgID.callIdHash))
@@ -661,7 +664,8 @@ int SIP_updateDialog(SIPMsg *sipMsg, SIP_DialogList *dList, SFSnortPacket *p)
 
    	DEBUG_WRAP(DebugMessage(DEBUG_SIP, "Updating Dialog id: %u, From: %u, To: %u\n",
    			sipMsg->dlgID.callIdHash,sipMsg->dlgID.fromTagHash,sipMsg->dlgID.toTagHash));
-   	dialog = *dList;
+
+   	dialog = dList->head;
 
    	/*Find out the dialog in the dialog list*/
 
@@ -676,7 +680,15 @@ int SIP_updateDialog(SIPMsg *sipMsg, SIP_DialogList *dList, SFSnortPacket *p)
    			break;
 
    		}
+   		oldDialog = dialog;
    		dialog = dialog->nextD;
+   	}
+
+   	/*If the number of dialogs exceeded, release the oldest one*/
+   	if((dList->num_dialogs >= sip_eval_config->maxNumDialogsInSession) && (!dialog))
+   	{
+   	    ALERT(SIP_EVENT_MAX_DIALOGS_IN_A_SESSION, SIP_EVENT_MAX_DIALOGS_IN_A_SESSION_STR);
+   	    SIP_deleteDialog(oldDialog, dList);
    	}
 
    	/*Update the  dialog information*/
@@ -704,10 +716,10 @@ int SIP_updateDialog(SIPMsg *sipMsg, SIP_DialogList *dList, SFSnortPacket *p)
  * Returns: None
  *
  ********************************************************************/
-void sip_freeDialogs (SIP_DialogList list)
+void sip_freeDialogs (SIP_DialogList *list)
 {
 	SIP_DialogData *nextNode;
-	SIP_DialogData *curNode = list;
+	SIP_DialogData *curNode = list->head;
 
 	while (NULL != curNode)
 	{

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -119,6 +119,23 @@ int DAQ_PrintTypes (FILE* f)
     }
     daq_free_module_list(list, nMods);
     return 0;
+}
+
+DAQ_Mode DAQ_GetInterfaceMode(const DAQ_PktHdr_t *h)
+{
+#ifdef DAQ_PKT_FLAG_NOT_FORWARDING
+    // interface is not inline, so return passive
+    if (h->flags & DAQ_PKT_FLAG_NOT_FORWARDING)
+        return DAQ_MODE_PASSIVE;
+#endif
+    // interface is inline
+    if ( ScAdapterInlineMode() )
+    {
+        return DAQ_MODE_INLINE;
+    }
+
+    // interface is passive or readback
+    return DAQ_MODE_PASSIVE;
 }
 
 DAQ_Mode DAQ_GetMode (const SnortConfig* sc)

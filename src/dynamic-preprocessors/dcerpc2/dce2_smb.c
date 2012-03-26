@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -127,8 +127,8 @@ static inline DCE2_SmbFidTrackerNode * DCE2_SmbGetReadFidNode(DCE2_SmbSsnData *)
 static void DCE2_SmbChained(DCE2_SmbSsnData *, const SmbNtHdr *, const SmbAndXCommon *,
                             const int, const uint8_t *, uint32_t);
 
-static void DCE2_SmbIncComStat(const SmbNtHdr *);
-static void DCE2_SmbIncChainedStat(const SmbNtHdr *, const int, const SmbAndXCommon *);
+static void DCE2_SmbIncComStat(const SmbNtHdr *, int);
+static void DCE2_SmbIncChainedStat(const SmbNtHdr *, const int, const SmbAndXCommon *, int);
 
 static void DCE2_WriteCoProcess(DCE2_SmbSsnData *, const SmbNtHdr *,
                                 const uint16_t, const uint8_t *, uint16_t);
@@ -181,6 +181,34 @@ static inline int DCE2_SmbIsRawData(DCE2_SmbSsnData *);
 
 static inline DCE2_SmbSeg * DCE2_SmbGetSegPtr(DCE2_SmbSsnData *);
 static inline uint32_t * DCE2_SmbGetIgnorePtr(DCE2_SmbSsnData *);
+
+static inline int DCE2_SmbType(DCE2_SmbSsnData *);
+
+
+/********************************************************************
+ * Function: DCE2_SmbType()
+ *
+ * Purpose:
+ *  Since Windows and Samba don't seem to care or even look at the
+ *  actual flag in the SMB header, make the determination based on
+ *  whether from client or server.
+ *
+ * Arguments:
+ *  DCE2_SmbSsnData * - session data structure that has the raw
+ *     packet and packet flags to make determination
+ *
+ * Returns:
+ *  SMB_TYPE__REQUEST if packet is from client
+ *  SMB_TYPE__RESPONSE if packet is from server
+ *
+ ********************************************************************/
+static inline int DCE2_SmbType(DCE2_SmbSsnData *ssd)
+{
+    if (DCE2_SsnFromClient(ssd->sd.wire_pkt))
+        return SMB_TYPE__REQUEST;
+    else
+        return SMB_TYPE__RESPONSE;
+}
 
 /********************************************************************
  * Function:
@@ -358,40 +386,21 @@ void DCE2_SmbProcess(DCE2_SmbSsnData *ssd)
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "Processing SMB packet.\n"));
     dce2_stats.smb_pkts++;
 
-    /* If we missed packets previously and couldn't autodetect, we've
-     * already reset for missed packets.  If we can autodetect, move on */
-    if (ssd->missed_pkts)
+    if (DCE2_SsnMissedPkts(&ssd->sd))
     {
-        if (DCE2_SmbAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-            return;
-
-        ssd->missed_pkts = 0;
-    }
-    else if (DCE2_SsnMissedPkts(&ssd->sd))
-    {
-        uint32_t missed_bytes = DCE2_SsnGetMissedBytes(&ssd->sd);
-
-        if (*ignore_bytes != 0)
-        {
-            if (*ignore_bytes > missed_bytes)
-            {
-                *ignore_bytes -= missed_bytes;
-                missed_bytes = 0;
-            }
-            else
-            {
-                *ignore_bytes = 0;
-                missed_bytes -= *ignore_bytes;
-            }
-        }
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "Missed packets.\n"));
 
         DCE2_SmbResetForMissedPkts(ssd);
 
-        if ((missed_bytes != 0) && (DCE2_SmbAutodetect(p) == DCE2_TRANS_TYPE__NONE))
+        if (DCE2_SmbAutodetect(p) == DCE2_TRANS_TYPE__NONE)
         {
-            ssd->missed_pkts = 1;
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB,
+                        "Missing bytes and autodetect failed - not inspecting.\n"));
             return;
         }
+
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "Autodetect succeeded - continue processing.\n"));
+        DCE2_SsnClearMissedPkts(&ssd->sd);
     }
 
     if (overlap_bytes != 0)
@@ -699,8 +708,12 @@ static uint32_t DCE2_IgnoreJunkData(const uint8_t *data_ptr, uint16_t data_len,
 
     while ((tmp_ptr + sizeof(uint32_t)) <= (data_ptr + data_len))
     {
-        if (SmbId((SmbNtHdr *)tmp_ptr) == DCE2_SMB_ID)
+        if ((SmbId((SmbNtHdr *)tmp_ptr) == DCE2_SMB_ID)
+                || (SmbId((SmbNtHdr *)tmp_ptr) == DCE2_SMB2_ID))
+        {
             break;
+        }
+
         tmp_ptr++;
     }
 
@@ -734,9 +747,12 @@ static int DCE2_SmbInspect(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr)
     DCE2_Policy policy = DCE2_ScPolicy(ssd->sd.sconfig);
     int smb_com = SmbCom(smb_hdr);
 
-    /* Don't support SMB2 yet */
+    /* XXX Don't support SMB2 yet */
     if (SmbId(smb_hdr) == DCE2_SMB2_ID)
+    {
+        DCE2_SetNoInspect(&ssd->sd);
         return 0;
+    }
 
     /* See if this is something we need to inspect */
     switch (smb_com)
@@ -808,17 +824,31 @@ static void DCE2_SmbHandleCom(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                               const uint8_t *nb_ptr, uint32_t nb_len)
 {
     DCE2_Ret status;
+    int smb_type = DCE2_SmbType(ssd);
 
-    DCE2_SmbIncComStat(smb_hdr);
+    DCE2_SmbIncComStat(smb_hdr, smb_type);
 
     /* In case we get a reassembled packet */
     ssd->uid = SmbUid(smb_hdr);
     ssd->tid = SmbTid(smb_hdr);
 
-    if (SmbType(smb_hdr) == SMB_TYPE__REQUEST)
+    if (smb_type == SMB_TYPE__REQUEST)
     {
-        ssd->req_uid = SmbUid(smb_hdr);
-        ssd->req_tid = SmbTid(smb_hdr);
+        // Only relevant for Samba policies that allow for
+        // OpenAndX -> SessionSetupAndX
+        // OpenAndX -> TreeConnectAndX
+        switch (DCE2_ScPolicy(ssd->sd.sconfig))
+        {
+            case DCE2_POLICY__SAMBA_3_0_20:
+            case DCE2_POLICY__SAMBA_3_0_22:
+            case DCE2_POLICY__SAMBA_3_0_37:
+            case DCE2_POLICY__SAMBA:
+                ssd->req_uid = SmbUid(smb_hdr);
+                ssd->req_tid = SmbTid(smb_hdr);
+                break;
+            default:
+                break;
+        }
     }
 
     /* Handle the command */
@@ -834,7 +864,7 @@ static void DCE2_SmbHandleCom(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
 
         case SMB_COM_TREE_CON:
             status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-            if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) && (status == DCE2_RET__SUCCESS))
+            if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) && (status == DCE2_RET__SUCCESS))
                 DCE2_SmbTreeConnectEnqueue(ssd, smb_hdr, status);
             break;
 
@@ -920,7 +950,7 @@ static void DCE2_SmbHandleCom(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
 static int DCE2_SmbGetComSize(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                               const SmbCommon *sc, const int com)
 {
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     uint8_t wct = SmbWct(sc);
     int alert = 0;
 
@@ -1464,7 +1494,7 @@ static int DCE2_SmbGetComSize(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
 static int DCE2_SmbGetBcc(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                           const SmbCommon *com_ptr, const uint16_t com_size, const int com)
 {
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const uint8_t wct = SmbWct(com_ptr);
     const uint16_t bcc = SmbBcc((uint8_t *)com_ptr, com_size);
     int alert = 0;
@@ -1951,10 +1981,11 @@ static DCE2_Ret DCE2_SmbHdrChecks(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr)
         else
             DCE2_Alert(&ssd->sd, DCE2_EVENT__SMB_BAD_TYPE);
 
-        return DCE2_RET__IGNORE;
+        // Continue looking at traffic.  Neither Windows nor Samba seem
+        // to care, or even look at this flag
     }
 
-    if (SmbId(smb_hdr) != DCE2_SMB_ID)
+    if ((SmbId(smb_hdr) != DCE2_SMB_ID) && (SmbId(smb_hdr) != DCE2_SMB2_ID))
     {
         if (is_seg_buf)
             DCE2_SmbSegAlert(ssd, DCE2_EVENT__SMB_BAD_ID);
@@ -1981,7 +2012,7 @@ static void DCE2_SmbSessSetupAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                   const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_SESS_SETUP_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2038,7 +2069,7 @@ static void DCE2_SmbLogoffAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                const uint8_t *nb_ptr, uint32_t nb_len, int ssx_chained)
 {
     const int smb_com = SMB_COM_LOGOFF_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2130,7 +2161,7 @@ static DCE2_Ret DCE2_SmbTreeConnect(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hd
                                     const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_TREE_CON;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2299,7 +2330,7 @@ static void DCE2_SmbTreeConnectEnqueue(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb
 {
     DCE2_Ret status;
 
-    if (SmbType(smb_hdr) != SMB_TYPE__REQUEST)
+    if (DCE2_SmbType(ssd) != SMB_TYPE__REQUEST)
         return;
 
     if (ssd->tc_queue == NULL)
@@ -2335,7 +2366,7 @@ static void DCE2_SmbTreeConnectAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hd
                                     const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_TREE_CON_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2505,7 +2536,7 @@ static void DCE2_SmbTreeDisconnect(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr
                                    const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_TREE_DIS;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2554,7 +2585,7 @@ static void DCE2_SmbOpen(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                          const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_OPEN;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2601,7 +2632,7 @@ static void DCE2_SmbOpenAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                              const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_OPEN_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2693,7 +2724,7 @@ static void DCE2_SmbNtCreateAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                  const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_NT_CREATE_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2780,7 +2811,7 @@ static void DCE2_SmbClose(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                           const uint8_t *nb_ptr, uint32_t nb_len, int open_chain)
 {
     const int smb_com = SMB_COM_CLOSE;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2840,7 +2871,7 @@ static void DCE2_SmbWrite(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                           const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_WRITE;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -2930,7 +2961,7 @@ static void DCE2_SmbWriteBlockRaw(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                   const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_WRITE_BLOCK_RAW;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -3031,7 +3062,7 @@ static void DCE2_SmbWriteAndClose(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                   const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_WRITE_AND_CLOSE;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -3116,7 +3147,7 @@ static void DCE2_SmbWriteAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                               const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_WRITE_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -3552,7 +3583,7 @@ static void DCE2_SmbTrans(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                           const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_TRANS;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
     DCE2_SmbFidTrackerNode *ft_node = NULL;
@@ -3744,7 +3775,7 @@ static void DCE2_SmbTransSec(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                              const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_TRANS_SEC;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
     const uint8_t *doff_ptr;
@@ -3876,7 +3907,7 @@ static void DCE2_SmbReadBlockRaw(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                                  const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_READ_BLOCK_RAW;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
     DCE2_SmbFidTrackerNode *ft_node = NULL;
@@ -4036,7 +4067,7 @@ static void DCE2_SmbReadAndX(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                              const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_READ_ANDX;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbAndXCommon *andx = (SmbAndXCommon *)nb_ptr;
     int com_size, bcc;
     uint16_t uid = SmbUid(smb_hdr);
@@ -4127,7 +4158,7 @@ static void DCE2_SmbRead(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                          const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_READ;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
     uint16_t uid = SmbUid(smb_hdr);
@@ -4212,7 +4243,7 @@ static void DCE2_SmbRename(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr,
                            const uint8_t *nb_ptr, uint32_t nb_len)
 {
     const int smb_com = SMB_COM_RENAME;
-    const int smb_type = SmbType(smb_hdr);
+    const int smb_type = DCE2_SmbType(ssd);
     const SmbCommon *sc = (SmbCommon *)nb_ptr;
     int com_size, bcc;
 
@@ -4316,7 +4347,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
 #define DCE2_SMB_CHAINED__RESET_STATICS { first = 1; num_chained = 0; num_sess = 0; \
                                           num_tree = 0; open_chain = 0; }
 
-    DCE2_SmbIncChainedStat(smb_hdr, smb_com, andx);
+    DCE2_SmbIncChainedStat(smb_hdr, smb_com, andx, DCE2_SmbType(ssd));
 
     num_chained++;
     if (DCE2_ScSmbMaxChain(ssd->sd.sconfig) &&
@@ -4400,7 +4431,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
         switch (smb_com)
         {
             case SMB_COM_SESS_SETUP_ANDX:
-                if (SmbType(smb_hdr) == SMB_TYPE__RESPONSE)
+                if (DCE2_SmbType(ssd) == SMB_TYPE__RESPONSE)
                     ssd->req_uid = DCE2_SENTINEL;
 
                 switch (smb_com2)
@@ -4430,7 +4461,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA:
                                 {
                                     DCE2_Ret status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-                                    if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) &&
+                                    if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) &&
                                         (status == DCE2_RET__SUCCESS))
                                     {
                                         DCE2_SmbTreeConnectEnqueue(ssd, smb_hdr, status);
@@ -4591,7 +4622,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__WINXP:
                             case DCE2_POLICY__WIN2008:
                             case DCE2_POLICY__WIN7:
-                                if (SmbType(smb_hdr) == SMB_TYPE__RESPONSE)
+                                if (DCE2_SmbType(ssd) == SMB_TYPE__RESPONSE)
                                 {
                                     uint16_t uid = SmbUid(smb_hdr);
 
@@ -4633,7 +4664,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                 break;
 
             case SMB_COM_TREE_CON_ANDX:
-                if (SmbType(smb_hdr) == SMB_TYPE__RESPONSE)
+                if (DCE2_SmbType(ssd) == SMB_TYPE__RESPONSE)
                     ssd->req_tid = DCE2_SENTINEL;
 
                 switch (smb_com2)
@@ -4853,7 +4884,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                                     DCE2_Ret status;
                                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "OpenAndX => TreeConnect\n"));
                                     status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-                                    if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) &&
+                                    if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) &&
                                         (status == DCE2_RET__SUCCESS))
                                     {
                                         ssd->chained_tc = 1;
@@ -4878,7 +4909,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA:
                                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "OpenAndX => TreeConnectAndX\n"));
                                 DCE2_SmbTreeConnectAndX(ssd, smb_hdr, nb_ptr, nb_len);
-                                if (SmbType(smb_hdr) == SMB_TYPE__REQUEST)
+                                if (DCE2_SmbType(ssd) == SMB_TYPE__REQUEST)
                                     ssd->chained_tc = 1;
                                 break;
 
@@ -5037,7 +5068,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                                     DCE2_Ret status;
                                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "OpenAndX => TreeConnect\n"));
                                     status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-                                    if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) &&
+                                    if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) &&
                                         (status == DCE2_RET__SUCCESS))
                                     {
                                         ssd->chained_tc = 1;
@@ -5062,7 +5093,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA:
                                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__SMB, "OpenAndX => TreeConnectAndX\n"));
                                 DCE2_SmbTreeConnectAndX(ssd, smb_hdr, nb_ptr, nb_len);
-                                if (SmbType(smb_hdr) == SMB_TYPE__REQUEST)
+                                if (DCE2_SmbType(ssd) == SMB_TYPE__REQUEST)
                                     ssd->chained_tc = 1;
                                 break;
 
@@ -5217,7 +5248,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA:
                                 {
                                     DCE2_Ret status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-                                    if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) &&
+                                    if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) &&
                                         (status == DCE2_RET__SUCCESS))
                                     {
                                         ssd->chained_tc = 1;
@@ -5241,7 +5272,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA_3_0_37:
                             case DCE2_POLICY__SAMBA:
                                 DCE2_SmbTreeConnectAndX(ssd, smb_hdr, nb_ptr, nb_len);
-                                if (SmbType(smb_hdr) == SMB_TYPE__REQUEST)
+                                if (DCE2_SmbType(ssd) == SMB_TYPE__REQUEST)
                                     ssd->chained_tc = 1;
                                 break;
 
@@ -5409,7 +5440,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA_3_0_37:
                                 {
                                     DCE2_Ret status = DCE2_SmbTreeConnect(ssd, smb_hdr, nb_ptr, nb_len);
-                                    if ((SmbType(smb_hdr) == SMB_TYPE__REQUEST) &&
+                                    if ((DCE2_SmbType(ssd) == SMB_TYPE__REQUEST) &&
                                         (status == DCE2_RET__SUCCESS))
                                     {
                                         ssd->chained_tc = 1;
@@ -5431,7 +5462,7 @@ static void DCE2_SmbChained(DCE2_SmbSsnData *ssd, const SmbNtHdr *smb_hdr, const
                             case DCE2_POLICY__SAMBA:
                             case DCE2_POLICY__SAMBA_3_0_37:
                                 DCE2_SmbTreeConnectAndX(ssd, smb_hdr, nb_ptr, nb_len);
-                                if (SmbType(smb_hdr) == SMB_TYPE__REQUEST)
+                                if (DCE2_SmbType(ssd) == SMB_TYPE__REQUEST)
                                     ssd->chained_tc = 1;
                                 break;
 
@@ -6870,8 +6901,16 @@ static inline void DCE2_SmbResetForMissedPkts(DCE2_SmbSsnData *ssd)
     if (ssd == NULL)
         return;
 
-    DCE2_BufferEmpty(ssd->cli_seg.buf);
-    DCE2_BufferEmpty(ssd->srv_seg.buf);
+    if (DCE2_SsnFromClient(ssd->sd.wire_pkt))
+    {
+        ssd->cli_ignore_bytes = 0;
+        DCE2_BufferEmpty(ssd->cli_seg.buf);
+    }
+    else
+    {
+        ssd->srv_ignore_bytes = 0;
+        DCE2_BufferEmpty(ssd->srv_seg.buf);
+    }
 
     ssd->req_uid = DCE2_SENTINEL;
     ssd->req_tid = DCE2_SENTINEL;
@@ -7102,10 +7141,9 @@ static void DCE2_SmbPMDataFree(void *data)
  * Returns:
  *
  ********************************************************************/
-static void DCE2_SmbIncComStat(const SmbNtHdr *smb_hdr)
+static void DCE2_SmbIncComStat(const SmbNtHdr *smb_hdr, int smb_type)
 {
     uint8_t smb_com = SmbCom(smb_hdr);
-    int smb_type = SmbType(smb_hdr);
 
     switch (smb_com)
     {
@@ -7285,9 +7323,9 @@ static void DCE2_SmbIncComStat(const SmbNtHdr *smb_hdr)
  * Returns:
  *
  ********************************************************************/
-static void DCE2_SmbIncChainedStat(const SmbNtHdr *smb_hdr, const int smb_com, const SmbAndXCommon *andx)
+static void DCE2_SmbIncChainedStat(const SmbNtHdr *smb_hdr, const int smb_com,
+        const SmbAndXCommon *andx, int smb_type)
 {
-    const int smb_type = SmbType(smb_hdr);
     const int smb_com2 = SmbAndXCom2(andx);
 
     switch (smb_com)

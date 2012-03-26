@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
- ** Copyright (C) 2011-2011 Sourcefire, Inc.
+ ** Copyright (C) 2011-2012 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -545,7 +545,7 @@ static void FreeSIPData( void* idatap )
         numSessions--;
 
     /*Free all the dialog data*/
-    sip_freeDialogs(ssn->dialogs);
+    sip_freeDialogs(&ssn->dialogs);
 
     /*Clean the configuration data*/
     if (ssn->config != NULL)

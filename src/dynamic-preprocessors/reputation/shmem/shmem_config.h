@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -63,7 +63,7 @@
 #define SLEEP_TIME      2  // in micro seconds
 
 #define TBMAP                 99
-#define UNUSED_TIMEOUT         5 //this number is multiplied with outofband check time to determine timeout.
+#define UNUSED_TIMEOUT        10 //this number is multiplied with outofband check time to determine timeout.
 #define OUT_OF_BAND_CHEK_TIME 10 
 
 typedef struct shmemUserInfo {
@@ -75,7 +75,7 @@ typedef struct shmemUserInfo {
     char      mgmtSeg[MAX_NAME];
     char      dataSeg[MAX_SEGMENTS][MAX_NAME];
     char      path[MAX_NAME];
-    uint16_t  instance_polltime;
+    uint32_t  instance_polltime;
 }ShmemUserInfo;
 
 typedef struct
@@ -101,7 +101,7 @@ void PrintConfig(void);
 
 int InitShmemUser(
    uint32_t instance_num, int instance_type, int dataset, int group_id,
-   int numa_node, const char* path, uint16_t instance_polltime);
+   int numa_node, const char* path, uint32_t instance_polltime);
 
 int InitShmemDataMgmtFunctions(
     CreateMallocZero create_malloc_zero, GetDataSize get_data_size,

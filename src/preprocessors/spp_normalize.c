@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2010-2011 Sourcefire, Inc.
+ ** Copyright (C) 2010-2012 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -137,7 +137,7 @@ static NormalizerContext* Init_GetContext ()
         sfPolicyUserDataSetCurrent(base_set, pc);
 
         AddFuncToPreprocList(
-            Preproc_Execute, PRIORITY_NETWORK, PP_NORMALIZE, PROTO_BITS);
+            Preproc_Execute, PRIORITY_NORMALIZE, PP_NORMALIZE, PROTO_BITS);
     }
     return pc;
 }
@@ -732,7 +732,7 @@ static NormalizerContext* Reload_GetContext ()
         sfPolicyUserDataSetCurrent(swap_set, pc);
 
         AddFuncToPreprocList(
-            Preproc_Execute, PRIORITY_NETWORK, PP_NORMALIZE, PROTO_BITS);
+            Preproc_Execute, PRIORITY_NORMALIZE, PP_NORMALIZE, PROTO_BITS);
     }
     return pc;
 }

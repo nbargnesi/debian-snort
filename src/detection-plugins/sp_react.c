@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -81,6 +81,7 @@ extern PreprocStats ruleOTNEvalPerfStats;
 extern SnortConfig* snort_conf_for_parsing;
 
 static const char* MSG_KEY = "<>";
+static const char* MSG_PERCENT = "%";
 
 static const char* DEFAULT_HTTP =
     "HTTP/1.1 403 Forbidden\r\n"
@@ -269,7 +270,6 @@ static void React_Init(char *data, OptTreeNode *otn, int protocol)
     if ( s_init )
     {
         AddFuncToCleanExitList(React_Cleanup, NULL);
-        AddFuncToRestartList(React_Cleanup, NULL);
 
         React_GetPage();
 
@@ -313,6 +313,7 @@ static void React_Cleanup(int signal, void* data)
 static void React_GetPage (void)
 {
     char* msg;
+    char* percent_s;
     struct stat fs;
     FILE* fd;
     size_t n;
@@ -346,6 +347,21 @@ static void React_GetPage (void)
     s_page[n] = '\0';
     msg = strstr(s_page, MSG_KEY);
     if ( msg ) strncpy(msg, "%s", 2);
+
+    // search for %
+    percent_s = strstr(s_page, MSG_PERCENT);
+    if (percent_s)
+    {
+        percent_s += strlen(MSG_PERCENT); // move past current
+        // search for % again
+        percent_s = strstr(percent_s, MSG_PERCENT);
+        if (percent_s)
+        {
+            FatalError("react: %s(%d) can't specify more than one %%s or other "
+                "printf style formatting characters in react page '%s'.\n",
+                file_name, file_line, sc->react_page);
+        }
+    }
 }
 
 //--------------------------------------------------------------------

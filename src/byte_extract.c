@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2003-2011 Sourcefire, Inc.
+** Copyright (C) 2003-2012 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #endif
 
 #include "snort.h"
+#include "util.h"
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -179,12 +180,8 @@ int string_extract(int bytes_to_grab, int base, const uint8_t *ptr,
 
     byte_array[bytes_to_grab] = '\0';
 
-    *value = strtoul(byte_array, &parse_helper, base);
-
-    if(byte_array == parse_helper)
-    {
+    if (SnortStrToU32(byte_array, &parse_helper, value, base) != 0)
         return -1;
-    }
 
 #ifdef TEST_BYTE_EXTRACT
     printf("[----]\n");

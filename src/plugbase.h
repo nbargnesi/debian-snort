@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -426,7 +426,9 @@ typedef struct _PluginSignalFuncNode
 } PluginSignalFuncNode;
 
 /* Used for both rule options and output.  Preprocessors have their own */
-void AddFuncToRestartList(PluginSignalFunc, void *);
+#ifdef SNORT_RELOAD
+void AddFuncToReloadList(PluginSignalFunc, void *);
+#endif
 void AddFuncToCleanExitList(PluginSignalFunc, void *);
 void AddFuncToShutdownList(PluginSignalFunc, void *);
 void AddFuncToPostConfigList(PluginSignalFunc, void *);

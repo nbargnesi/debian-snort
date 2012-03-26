@@ -77,7 +77,7 @@ in the default policy even when the HTTP inspect preprocessor is turned off usin
 
 * max_gzip_mem *
 This option determines (in bytes) the maximum amount of memory the HTTP Inspect preprocessor 
-will use for decompression. This value can be set from 3276 bytes to 100MB. This option
+will use for decompression. The minimum allowed value for this option is 3276 bytes. This option
 along with compress and decompress depth determines the gzip sessions that will be 
 decompressed at any given instant. The default value for this option is 838860.
 
@@ -948,6 +948,11 @@ SID   Description
 25    Hostname exceeds 255 characters
 27    Chunked encoding - excessive consecutive small chunks
 28    Unbounded POST (without Content-Length or Transfer-Encoding: chunked)
+29    multiple true IPs in a session
+30    both true_client_ip and XFF hdrs present
+31    unknown method
+32    simple request (HTTP/0.9)
+
 
 The following alert is generated with generator ID 120:
 

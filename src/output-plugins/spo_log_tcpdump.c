@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -107,7 +107,6 @@ static void TcpdumpInitLogFileFinalize(int unused, void *arg);
 static void TcpdumpInitLogFile(LogTcpdumpData *, int);
 static void TcpdumpRollLogFile(LogTcpdumpData*);
 static void SpoLogTcpdumpCleanExitFunc(int, void *);
-static void SpoLogTcpdumpRestartFunc(int, void *);
 static void LogTcpdumpSingle(Packet *, char *, void *, Event *);
 static void LogTcpdumpStream(Packet *, char *, void *, Event *);
 //static void DirectLogTcpdump(DAQ_PktHdr_t *, uint8_t *);
@@ -165,7 +164,6 @@ static void LogTcpdumpInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(LogTcpdump, OUTPUT_TYPE__LOG, data);
     AddFuncToCleanExitList(SpoLogTcpdumpCleanExitFunc, data);
-    AddFuncToRestartList(SpoLogTcpdumpRestartFunc, data);
 }
 
 /*
@@ -491,11 +489,6 @@ static void SpoLogTcpdumpCleanup(int signal, void *arg, const char* msg)
 static void SpoLogTcpdumpCleanExitFunc(int signal, void *arg)
 {
     SpoLogTcpdumpCleanup(signal, arg, "SpoLogTcpdumpCleanExitFunc");
-}
-
-static void SpoLogTcpdumpRestartFunc(int signal, void *arg)
-{
-    SpoLogTcpdumpCleanup(signal, arg, "SpoLogTcpdumpRestartFunc");
 }
 
 void LogTcpdumpReset(void)

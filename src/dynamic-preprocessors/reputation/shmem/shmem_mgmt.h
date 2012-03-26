@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -58,11 +58,11 @@ extern void *zeroseg_ptr;
 
 //reader
 int   InitShmemReader(uint32_t instance_num, int dataset, int group_id, int numa_node,
-                      const char* path, void*** data_ptr, uint16_t instance_polltime);
+                      const char* path, void*** data_ptr, uint32_t instance_polltime);
 int   CheckForSharedMemSegment(void);
 //writer
 int   InitShmemWriter(uint32_t instance_num, int dataset, int group_id, int numa_node,
-                      const char* path, void*** data_ptr, uint16_t instance_polltime);
+                      const char* path, void*** data_ptr, uint32_t instance_polltime);
 int   LoadSharedMemDataSegmentForWriter(int startup);
 void  SwitchToActiveSegment(int segment_num,void*** data_ptr);
 void  UnmapInactiveSegments(void);

@@ -13,7 +13,7 @@
 ** - [Un]set a bitmask stored with the session
 ** - Check the value of the bitmask
 **
-** Copyright (C) 2003-2011 Sourcefire, Inc.
+** Copyright (C) 2003-2012 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -273,6 +273,8 @@ static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
     FlowBitsParse(data, flowbits, otn);
     if (add_detection_option(RULE_OPTION_TYPE_FLOWBIT, (void *)flowbits, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
+        char *group_name =  ((FLOWBITS_OP *)idx_dup)->group;
+
 #ifdef DEBUG_RULE_OPTION_TREE
         LogMessage("Duplicate FlowBit:\n%d %c\n%d %c\n\n",
             flowbits->id,
@@ -280,6 +282,11 @@ static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
             ((FLOWBITS_OP *)idx_dup)->id,
             ((FLOWBITS_OP *)idx_dup)->type);
 #endif
+        if (group_name && flowbits->group && strcmp(group_name, flowbits->group))
+        {
+            free(group_name);
+            ((FLOWBITS_OP *)idx_dup)->group = SnortStrdup(flowbits->group);
+        }
         free(flowbits->name);
         free(flowbits->group);
         free(flowbits);
@@ -511,8 +518,20 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     {
         if (strcmp((flowbits_item->group), token) != 0)
         {
-            FatalError("%s(%d) Flowbits %s already belongs to a group %s\n",
-                       file_name, file_line, flowbits->name, flowbits_item->group);
+            if (strcmp((flowbits_item->group), DEFAULT_FLOWBIT_GROUP) == 0)
+            {
+                free(flowbits_item->group);
+                flowbits_item->group = SnortStrdup(token);
+                flowbits_grp->count++;
+                if ( flowbits_grp->max_id < id )
+                    flowbits_grp->max_id = id;
+                boClearBit(&(flowbits_grp->GrpBitOp),flowbits->id);
+            }
+            else if (!default_grp)
+            {
+                FatalError("%s(%d) Flowbits %s already belongs to a group %s\n",
+                        file_name, file_line, flowbits->name, flowbits_item->group);
+            }
         }
     }
     else
@@ -526,7 +545,7 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
         }
         flowbits_item->group = SnortStrdup(token);
     }
-    flowbits->group = SnortStrdup(token);
+    flowbits->group = SnortStrdup(flowbits_item->group);
     mSplitFree(&toks, num_toks);
 
 }

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -86,7 +86,6 @@ static void AlertSyslogInit(char *);
 static SyslogData *ParseSyslogArgs(char *);
 static void AlertSyslog(Packet *, char *, void *, Event *);
 static void AlertSyslogCleanExit(int, void *);
-static void AlertSyslogRestart(int, void *);
 
 
 
@@ -140,7 +139,6 @@ static void AlertSyslogInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertSyslog, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertSyslogCleanExit, data);
-    AddFuncToRestartList(AlertSyslogRestart, data);
 }
 
 
@@ -481,7 +479,7 @@ static SyslogData *ParseSyslogArgs(char *args)
         else
 #endif
         {
-            LogMessage("WARNING %s (%d) => Unrecognized syslog "
+            LogMessage("WARNING: %s (%d) => Unrecognized syslog "
                     "facility/priority: %s\n",
                     file_name, file_line, tmp);
         }
@@ -627,11 +625,3 @@ static void AlertSyslogCleanExit(int signal, void *arg)
         free(data);
 }
 
-static void AlertSyslogRestart(int signal, void *arg)
-{
-    SyslogData *data = (SyslogData *)arg;
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG, "AlertSyslogRestartFunc\n"););
-    /* free memory from SyslogData */
-    if(data)
-        free(data);
-}

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -124,6 +124,10 @@ static uint32_t s5_paf_flush (
     if ( !at || !s5_len )
         return 0;
 
+    // safety - prevent seq + at < seq
+    if ( at > 0x7FFFFFFF )
+        at = 0x7FFFFFFF;
+
     if ( !ps->tot )
         *flags |= PKT_PDU_HEAD;
 
@@ -137,7 +141,7 @@ static uint32_t s5_paf_flush (
 
 //--------------------------------------------------------------------
 
-static inline PAF_Status s5_paf_callback (
+static bool s5_paf_callback (
     PAF_State* ps, void* ssn,
     const uint8_t* data, uint32_t len, uint32_t flags) 
 {
@@ -151,6 +155,9 @@ static inline PAF_Status s5_paf_callback (
         uint8_t bit = (1<<i);
         if ( bit & mask )
         {
+            DEBUG_WRAP(DebugMessage(DEBUG_STREAM_PAF,
+                "%s: mask=%d, i=%u\n", __FUNCTION__, mask, i);)
+
             paf = s5_cb[i](ssn, &ps->user, data, len, flags, &ps->fpt);
 
             if ( paf == PAF_ABORT )
@@ -287,13 +294,19 @@ uint32_t s5_paf_check (
     PAF_Config* pc = pv;
 
     DEBUG_WRAP(DebugMessage(DEBUG_STREAM_PAF,
-        "%s: len=%u, tot=%u, seq=%u, cur=%u\n",
-        __FUNCTION__, len, total, seq, ps->seq);)
+        "%s: len=%u, amt=%u, seq=%u, cur=%u, pos=%u, fpt=%u, tot=%u, paf=%d\n",
+        __FUNCTION__, len, total, seq, ps->seq, ps->pos, ps->fpt, ps->tot, ps->paf);)
 
     if ( !s5_paf_initialized(ps) )
     {
         ps->seq = ps->pos = seq;
         ps->paf = PAF_SEARCH;
+    }
+    else if ( SEQ_GT(seq, ps->seq) )
+    {
+        // if seq jumped we have a gap, so abort paf
+        *flags = 0;
+        return 0;
     }
     else if ( SEQ_LEQ(seq + len, ps->seq) )
     {
@@ -329,14 +342,17 @@ uint32_t s5_paf_check (
 
             return fp;
         }
+        if ( !cont )
+            break;
+
         if ( s5_idx > idx )
         {
             shift = s5_idx - idx;
+            if ( shift > len )
+                shift = len;
             data += shift;
             len -= shift;
         }
-        if ( !cont )
-            break;
 
     } while ( 1 );
 

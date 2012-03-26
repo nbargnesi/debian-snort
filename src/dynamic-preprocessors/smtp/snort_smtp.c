@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -267,7 +267,7 @@ static void SetSmtpBuffers(SMTP *ssn)
         }
         else
         {
-            SMTP_GenerateAlert(SMTP_DECODE_MEMCAP_EXCEEDED, "%s", SMTP_DECODE_MEMCAP_EXCEEDED_STR);
+            smtp_stats.memcap_exceeded++;
         }
     }
 }
@@ -304,6 +304,12 @@ static void SetLogBuffers(SMTP *ssn)
         }
     }
 }
+
+static inline void SMTP_UpdateDecodeStats(Email_DecodeState *ds)
+{
+    smtp_stats.decoded_bytes[ds->decode_type] += ds->decoded_bytes;
+}
+
 
 
 void SMTP_InitCmds(SMTPConfig *config)
@@ -571,6 +577,10 @@ static SMTP * SMTP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
     ssn->policy_id = policy_id;
     ssn->config = smtp_config;
     pPolicyConfig->ref_count++;
+    smtp_stats.sessions++;
+    smtp_stats.conc_sessions++;
+    if(smtp_stats.max_conc_sessions < smtp_stats.conc_sessions)
+        smtp_stats.max_conc_sessions = smtp_stats.conc_sessions;
 
     return ssn;
 }
@@ -755,6 +765,8 @@ static void SMTP_SessionFree(void *session_data)
     }
 
     free(smtp);
+    if(smtp_stats.conc_sessions)
+        smtp_stats.conc_sessions--;
 }
 
 
@@ -1432,6 +1444,7 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
             }
             _dpd.detect(p);
             smtp_ssn->state_flags &= ~SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
+            SMTP_UpdateDecodeStats(smtp_ssn->decode_state);
             ResetEmailDecodeState(smtp_ssn->decode_state);
             p->flags |=FLAG_ALLOW_MULTIPLE_DETECT;
             /* Reset the log count when a packet goes through detection multiple times */
@@ -1461,6 +1474,7 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
     if(smtp_ssn->decode_state != NULL)
     {
         _dpd.setFileDataPtr(smtp_ssn->decode_state->decodePtr, (uint16_t)smtp_ssn->decode_state->decoded_bytes);
+        SMTP_UpdateDecodeStats(smtp_ssn->decode_state);
         ResetDecodedBytes(smtp_ssn->decode_state);
     }
 

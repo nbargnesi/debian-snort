@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2011 Sourcefire, Inc.
+ * Copyright (C) 2002-2012 Sourcefire, Inc.
  * Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  * Author: Adam Keeton
  *
@@ -124,6 +124,8 @@ typedef struct _u2iterator {
     u2record current;
 } u2iterator;
 
+static long s_pos = 0, s_off = 0;
+
 #define TO_IP(x) x >> 24, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff
 
 u2iterator *new_iterator(char *filename) {
@@ -166,6 +168,12 @@ int get_record(u2iterator *it, u2record *record) {
         return FAILURE;
     }
 
+    if ( s_off )
+    {
+        fseek(it->file, s_pos+s_off, SEEK_SET);
+        s_off = 0;
+    }
+
     /* read type and length */
     bytes_read = fread(record, 1, sizeof(uint32_t) * 2, it->file);
     /* But they're in network order! */
@@ -184,13 +192,21 @@ int get_record(u2iterator *it, u2record *record) {
         return FAILURE;
     }
 
+    s_pos = ftell(it->file);
+
     record->data = (uint8_t *)realloc(record->data, record->length);
     bytes_read = fread(record->data, 1, record->length, it->file);
 
     if(bytes_read != record->length) {
         puts("get_record: (2) Failed to read all of record data.");
         printf("\tRead %u of %u bytes\n", bytes_read, record->length);
-        return FAILURE;
+
+        if ( record->type != UNIFIED2_PACKET || 
+            bytes_read < ntohl(((Serial_Unified2Packet*)record->data)->packet_length)
+        )
+            return FAILURE;
+
+        clearerr(it->file);
     }
 
     return SUCCESS;
@@ -705,6 +721,10 @@ static void LogBuffer (const uint8_t* p, unsigned n)
 void packet_dump(u2record *record) {
     uint32_t counter;
     uint8_t *field;
+
+    unsigned offset = sizeof(Serial_Unified2Packet)-4;
+    unsigned reclen = record->length - offset;
+
     Serial_Unified2Packet packet;
     memcpy(&packet, record->data, sizeof(Serial_Unified2Packet));
 
@@ -724,7 +744,22 @@ void packet_dump(u2record *record) {
             packet.packet_second, packet.packet_microsecond, packet.linktype,
             packet.packet_length);
 
-    LogBuffer(record->data+sizeof(Serial_Unified2Packet)-4, packet.packet_length);
+    
+    if ( record->length <= offset )
+        return;
+
+    if ( packet.packet_length != reclen )
+    {
+        printf("ERROR: logged %u but packet_length = %u\n",
+            record->length-offset, packet.packet_length);
+
+        if ( packet.packet_length < reclen )
+        {
+            reclen = packet.packet_length;
+            s_off = reclen + offset;
+        }
+    }
+    LogBuffer(record->data+offset, reclen);
 }
 
 int u2dump(char *file) {

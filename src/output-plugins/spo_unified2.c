@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2011 Sourcefire, Inc.
+** Copyright (C) 2007-2012 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -148,7 +148,9 @@ static char io_buffer[sizeof(write_pkt_buffer_ng)];
 /* -------------------- Local Functions -----------------------*/
 static Unified2Config * Unified2ParseArgs(char *, char *);
 static void Unified2CleanExit(int, void *);
-static void Unified2Restart(int, void *);
+#ifdef SNORT_RELOAD
+static void Unified2Reload(int, void *);
+#endif
 
 /* Unified2 Output functions */
 static void Unified2Init(char *);
@@ -233,7 +235,9 @@ static void Unified2Init(char *args)
     AddFuncToOutputList(Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
 
     AddFuncToCleanExitList(Unified2CleanExit, config);
-    AddFuncToRestartList(Unified2Restart, config);
+#ifdef SNORT_RELOAD
+    AddFuncToReloadList(Unified2Reload, config);
+#endif
     AddFuncToPostConfigList(Unified2PostConfig, config);
 }
 
@@ -375,8 +379,16 @@ static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -449,8 +461,16 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -541,8 +561,16 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -623,8 +651,16 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -731,8 +767,16 @@ static void _AlertIP4_NG(Packet *p, char *msg, Unified2Config *config, Event *ev
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -852,8 +896,16 @@ static void _AlertIP6_NG(Packet *p, char *msg, Unified2Config *config, Event *ev
     {
         if ( Active_PacketWasDropped() )
         {
-            alertdata.impact_flag = U2_FLAG_BLOCKED;
-            alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
+            {
+                alertdata.impact_flag = U2_FLAG_BLOCKED;
+                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
+            }
+            else
+            {
+                // Set would be dropped if not inline interface
+                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
+            }
         }
         else if ( Active_PacketWouldBeDropped() )
         {
@@ -1626,35 +1678,26 @@ static void Unified2CleanExit(int signal, void *arg)
     }
 }
 
+#ifdef SNORT_RELOAD
 /*
- * Function: Restart()
+ * Function: Reload()
  *
- * Purpose: For restarts (SIGHUP usually) clean up structs that need it
+ * Purpose: For reloads (SIGHUP usually), over the output
  *
  * Arguments: signal => signal that caused this event
  *            arg => data ptr to reference this plugin's data
  *
  * Returns: void function
  */
-static void Unified2Restart(int signal, void *arg)
+static void Unified2Reload(int signal, void *arg)
 {
     Unified2Config *config = (Unified2Config *)arg;
 
-    DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified2: Restart\n"););
+    DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified2: Reload\n"););
 
-    log_config = alert_config = NULL;
-    /* free up initialized memory */
-    if (config != NULL)
-    {
-        if (config->stream != NULL)
-            fclose(config->stream);
-
-        if (config->base_filename != NULL)
-            free(config->base_filename);
-
-        free(config);
-    }
+    Unified2RotateFile(config);
 }
+#endif
 
 /* Unified2 Alert functions (deprecated) */
 static void Unified2AlertInit(char *args)
@@ -1683,7 +1726,9 @@ static void Unified2AlertInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
     AddFuncToCleanExitList(Unified2CleanExit, config);
-    AddFuncToRestartList(Unified2Restart, config);
+#ifdef SNORT_RELOAD
+    AddFuncToReloadList(Unified2Reload, config);
+#endif
     AddFuncToPostConfigList(Unified2PostConfig, config);
 }
 
@@ -1716,7 +1761,9 @@ static void Unified2LogInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
     AddFuncToCleanExitList(Unified2CleanExit, config);
-    AddFuncToRestartList(Unified2Restart, config);
+#ifdef SNORT_RELOAD
+    AddFuncToReloadList(Unified2Reload, config);
+#endif
     AddFuncToPostConfigList(Unified2PostConfig, config);
 }
 

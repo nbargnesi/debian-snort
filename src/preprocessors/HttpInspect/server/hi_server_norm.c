@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -84,6 +84,7 @@ int hi_server_norm(HI_SESSION *Session, HttpSessionData *hsd)
     {
         return HI_INVALID_ARG;
     }
+
 
     ServerResp = &Session->server.response;
     ServerResp->header_encode_type = 0;
@@ -322,7 +323,7 @@ int hi_server_norm(HI_SESSION *Session, HttpSessionData *hsd)
                 //Save before the <script> begins
                 if(js_start > ptr)
                 {
-                    status = SafeMemcpy(HttpDecodeBuf.data+index, ptr, (js_start - ptr), HttpDecodeBuf.data, HttpDecodeBuf.data + sizeof(HttpDecodeBuf.data));
+                    status = SafeBoundsMemmove(HttpDecodeBuf.data+index, ptr, (js_start - ptr), HttpDecodeBuf.data, HttpDecodeBuf.data + sizeof(HttpDecodeBuf.data));
                     if(status == SAFEMEM_SUCCESS)
                         index += (js_start - ptr);
                     else
@@ -353,7 +354,7 @@ int hi_server_norm(HI_SESSION *Session, HttpSessionData *hsd)
         {
             if( ptr < end )
             {
-                status = SafeMemcpy(HttpDecodeBuf.data+index, ptr, (end - ptr), HttpDecodeBuf.data, HttpDecodeBuf.data + sizeof(HttpDecodeBuf.data));
+                status = SafeBoundsMemmove(HttpDecodeBuf.data+index, ptr, (end - ptr), HttpDecodeBuf.data, HttpDecodeBuf.data + sizeof(HttpDecodeBuf.data));
                 if(status == SAFEMEM_SUCCESS)
                     index += (end - ptr);
             }

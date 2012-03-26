@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2011-2011 Sourcefire, Inc.
+ ** Copyright (C) 2011-2012 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -105,7 +105,7 @@ static TABLE_PTR _sub_table_flat_new(dir_table_flat_t *root, uint32_t dimension,
     for(index = 0; index < sub->num_entries; index++)
     {
         entries[index].value = prefill;
-        entries[index].length = (char)bit_length;
+        entries[index].length = (uint8_t)bit_length;
     }
 
     sub->cur_num = 0;
@@ -250,7 +250,7 @@ static inline void _dir_fill_all(uint32_t *allocated, uint32_t index, uint32_t f
         }
 
         entry[index].value = val;
-        entry[index].length = (char)length;
+        entry[index].length = (uint8_t)length;
     }
 }
 

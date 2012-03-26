@@ -1,3 +1,48 @@
+2012-03-26 - Snort 2.9.2.2
+[*] Improvements
+ * Updates to HTTP Inspect to handle normalization with large
+   number of directories, eliminate false positives when chunks
+   span multiple packets, and remove the upper limit on the
+   gzip memcap.
+
+ * Update stream handling for TCP session cleanup with RSTs and
+   other TCP state tracking.
+
+ * Update for responses to fragmented IPv6 traffic and to the
+   react page configuration.
+
+ * Updates SIP preprocessor to limit false positives.
+
+ * Update for correct logging in unified2 when interface is passive.
+
+ * Add stats for SMTP preprocessor at termination.
+
+ * State tracking improvements to SMB processing in the dcerpc2
+   preprocessor when missing packets on a session.
+
+ * 
+  
+2012-01-17 - Snort 2.9.2.1
+
+[*] New Additions
+ * Added new alerts for HTTP (undefined methods & HTTP 0.9 simple requests).
+
+[*] Improvements
+ * Updates to Stream preprocessor in TCP session tracking to avoid requeuing 
+   retransmitted data that was already flushed. Also varies tweaks for PAF flushing.
+
+ * Updates to reputation preprocessor to handle shared memory switching. 
+
+ * Updates to the SCADA preprocessors in handling PAF flushing and modbus request/response
+   length checking. Also tweaks in alert for reserved DNP3 functions.  
+
+ * Updates to flowbit groups to always use the group when some rules refer to a flow group 
+   while others do not refer to a group for the same flowbit. 
+
+ * Updates to GTP preprocessor to check invalid extension header length for GTPv1.
+ 
+ * Updates to sfrt library in calculating memory allocated and support for IPv6. 
+
 2011-12-14 - Snort 2.9.2
 [*] New Additions
  * SCADA (DNP3 and Modbus) preprocessors. Added two new preprocessors

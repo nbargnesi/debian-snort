@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -47,14 +47,32 @@
 #define MODBUS_SUB_FUNC_CANOPEN                         0x0D
 #define MODBUS_SUB_FUNC_READ_DEVICE_ID                  0x0E
 
-
-/* Other defines */
-#define MODBUS_PROTOCOL_ID 0
+/* Various Modbus lengths */
 #define MODBUS_BYTE_COUNT_SIZE 1
+#define MODBUS_DOUBLE_BYTE_COUNT_SIZE 2
 #define MODBUS_FILE_RECORD_SUB_REQUEST_SIZE 7
 #define MODBUS_FILE_RECORD_SUB_REQUEST_LEN_OFFSET 5
 #define MODBUS_READ_DEVICE_ID_HEADER_LEN 6
 #define MODBUS_READ_DEVICE_ID_NUM_OBJ_OFFSET 5
+
+#define MODBUS_EMPTY_DATA_LEN   0
+#define MODBUS_FOUR_DATA_BYTES  4
+#define MODBUS_BYTE_COUNT_SIZE  1
+#define MODBUS_WRITE_MULTIPLE_BYTE_COUNT_OFFSET 4
+#define MODBUS_WRITE_MULTIPLE_MIN_SIZE          5
+#define MODBUS_MASK_WRITE_REGISTER_SIZE         6
+#define MODBUS_READ_WRITE_MULTIPLE_BYTE_COUNT_OFFSET    8
+#define MODBUS_READ_WRITE_MULTIPLE_MIN_SIZE             9
+#define MODBUS_READ_FIFO_SIZE                           2
+#define MODBUS_MEI_MIN_SIZE                             1
+#define MODBUS_FUNC_READ_EXCEPTION_RESP_SIZE            1
+#define MODBUS_SUB_FUNC_READ_DEVICE_ID_SIZE             3
+#define MODBUS_SUB_FUNC_READ_DEVICE_START_LEN           2
+#define MODBUS_SUB_FUNC_READ_DEVICE_LENGTH_OFFSET       1
+
+
+/* Other defines */
+#define MODBUS_PROTOCOL_ID 0
 
 /* Modbus data structures */
 typedef struct _modbus_header
@@ -85,7 +103,7 @@ static void ModbusCheckRequestLengths(modbus_session_data_t *session, SFSnortPac
         case MODBUS_FUNC_WRITE_SINGLE_COIL:
         case MODBUS_FUNC_WRITE_SINGLE_REGISTER:
         case MODBUS_FUNC_DIAGNOSTICS:
-            if (modbus_payload_len == 4)
+            if (modbus_payload_len == MODBUS_FOUR_DATA_BYTES)
                 check_passed = 1;
             break;
 
@@ -93,42 +111,44 @@ static void ModbusCheckRequestLengths(modbus_session_data_t *session, SFSnortPac
         case MODBUS_FUNC_GET_COMM_EVENT_COUNTER:
         case MODBUS_FUNC_GET_COMM_EVENT_LOG:
         case MODBUS_FUNC_REPORT_SLAVE_ID:
-            if (modbus_payload_len == 0)
+            if (modbus_payload_len == MODBUS_EMPTY_DATA_LEN)
                 check_passed = 1;
             break;
         
         case MODBUS_FUNC_WRITE_MULTIPLE_COILS:
         case MODBUS_FUNC_WRITE_MULTIPLE_REGISTERS:
-            if (modbus_payload_len >= 5) /* start addr + quantity + byte count */
+            if (modbus_payload_len >= MODBUS_WRITE_MULTIPLE_MIN_SIZE)
             {
-                tmp_count = *(packet->payload + MODBUS_MIN_LEN + 5);
-                if (modbus_payload_len == tmp_count + 5)
+                tmp_count = *(packet->payload + MODBUS_MIN_LEN +
+                              MODBUS_WRITE_MULTIPLE_BYTE_COUNT_OFFSET);
+                if (modbus_payload_len == tmp_count + MODBUS_WRITE_MULTIPLE_MIN_SIZE)
                     check_passed = 1;
             }
             break;
 
         case MODBUS_FUNC_MASK_WRITE_REGISTER:
-            if (modbus_payload_len == 6)
+            if (modbus_payload_len == MODBUS_MASK_WRITE_REGISTER_SIZE)
                 check_passed = 1;
             break;
 
         case MODBUS_FUNC_READ_WRITE_MULTIPLE_REGISTERS:
-            if (modbus_payload_len >= 8)
+            if (modbus_payload_len >= MODBUS_READ_WRITE_MULTIPLE_MIN_SIZE)
             {
-                tmp_count = *(packet->payload + MODBUS_MIN_LEN + 8); /* byte count */
-                if (modbus_payload_len == 9 + tmp_count)
+                tmp_count = *(packet->payload + MODBUS_MIN_LEN +
+                              MODBUS_READ_WRITE_MULTIPLE_BYTE_COUNT_OFFSET);
+                if (modbus_payload_len == MODBUS_READ_WRITE_MULTIPLE_MIN_SIZE + tmp_count)
                     check_passed = 1;
             }
             break;
 
 
         case MODBUS_FUNC_READ_FIFO_QUEUE:
-            if (modbus_payload_len == 2)
+            if (modbus_payload_len == MODBUS_READ_FIFO_SIZE)
                 check_passed = 1;
             break;
 
         case MODBUS_FUNC_ENCAPSULATED_INTERFACE_TRANSPORT:
-            if (modbus_payload_len >= 1)
+            if (modbus_payload_len >= MODBUS_MEI_MIN_SIZE)
             {
                 uint8_t mei_type = *(packet->payload + MODBUS_MIN_LEN);
 
@@ -139,7 +159,8 @@ static void ModbusCheckRequestLengths(modbus_session_data_t *session, SFSnortPac
 
                    Other values are reserved.
                 */
-                if ((mei_type == 0x0E) && modbus_payload_len == 3)
+                if ((mei_type == MODBUS_SUB_FUNC_READ_DEVICE_ID) &&
+                    (modbus_payload_len == MODBUS_SUB_FUNC_READ_DEVICE_ID_SIZE))
                     check_passed = 1;
             }
             break;
@@ -148,10 +169,10 @@ static void ModbusCheckRequestLengths(modbus_session_data_t *session, SFSnortPac
         case MODBUS_FUNC_READ_FILE_RECORD:
             /* Modbus read file record request contains a byte count, followed
                by a set of 7-byte sub-requests. */
-            if (modbus_payload_len >= 1)
+            if (modbus_payload_len >= MODBUS_BYTE_COUNT_SIZE)
             {
                 tmp_count = *(packet->payload + MODBUS_MIN_LEN);
-                if ((tmp_count == modbus_payload_len - 1) &&
+                if ((tmp_count == modbus_payload_len - MODBUS_BYTE_COUNT_SIZE) &&
                     (tmp_count % MODBUS_FILE_RECORD_SUB_REQUEST_SIZE == 0))
                 {
                     check_passed = 1;
@@ -164,10 +185,10 @@ static void ModbusCheckRequestLengths(modbus_session_data_t *session, SFSnortPac
                by a set of sub-requests that contain a 7-byte header and a
                variable amount of data. */
 
-            if (modbus_payload_len >= 1)
+            if (modbus_payload_len >= MODBUS_BYTE_COUNT_SIZE)
             {
                 tmp_count = *(packet->payload + MODBUS_MIN_LEN);
-                if (tmp_count == modbus_payload_len - 1)
+                if (tmp_count == modbus_payload_len - MODBUS_BYTE_COUNT_SIZE)
                 {
                     uint16_t bytes_processed = 0;
 
@@ -226,21 +247,21 @@ static void ModbusCheckResponseLengths(modbus_session_data_t *session, SFSnortPa
         case MODBUS_FUNC_READ_DISCRETE_INPUTS:
         case MODBUS_FUNC_GET_COMM_EVENT_LOG:
         case MODBUS_FUNC_READ_WRITE_MULTIPLE_REGISTERS:
-            if (modbus_payload_len >= 1)
+            if (modbus_payload_len >= MODBUS_BYTE_COUNT_SIZE)
             {
                 tmp_count = *(packet->payload + MODBUS_MIN_LEN); /* byte count */
-                if (modbus_payload_len == 1 + tmp_count)
+                if (modbus_payload_len == MODBUS_BYTE_COUNT_SIZE + tmp_count)
                     check_passed = 1;
             }
             break;
 
         case MODBUS_FUNC_READ_HOLDING_REGISTERS:
         case MODBUS_FUNC_READ_INPUT_REGISTERS:
-            if (modbus_payload_len >= 1)
+            if (modbus_payload_len >= MODBUS_BYTE_COUNT_SIZE)
             {
                 /* count of 2-byte registers*/
                 tmp_count = *(packet->payload + MODBUS_MIN_LEN);
-                if (modbus_payload_len == 1 + 2*tmp_count)
+                if (modbus_payload_len == MODBUS_BYTE_COUNT_SIZE + 2*tmp_count)
                     check_passed = 1;
             }
             break;
@@ -251,29 +272,29 @@ static void ModbusCheckResponseLengths(modbus_session_data_t *session, SFSnortPa
         case MODBUS_FUNC_GET_COMM_EVENT_COUNTER:
         case MODBUS_FUNC_WRITE_MULTIPLE_COILS:
         case MODBUS_FUNC_WRITE_MULTIPLE_REGISTERS:
-            if (modbus_payload_len == 4)
+            if (modbus_payload_len == MODBUS_FOUR_DATA_BYTES)
                 check_passed = 1;
             break;
 
         case MODBUS_FUNC_READ_EXCEPTION_STATUS:
-            if (modbus_payload_len == 1)
+            if (modbus_payload_len == MODBUS_FUNC_READ_EXCEPTION_RESP_SIZE)
                 check_passed = 1;
             break;
 
         case MODBUS_FUNC_MASK_WRITE_REGISTER:
-            if (modbus_payload_len == 6)
+            if (modbus_payload_len == MODBUS_MASK_WRITE_REGISTER_SIZE)
                 check_passed = 1;
             break;
 
         case MODBUS_FUNC_READ_FIFO_QUEUE:
-            if (modbus_payload_len >= 2)
+            if (modbus_payload_len >= MODBUS_DOUBLE_BYTE_COUNT_SIZE)
             {
                 uint16_t tmp_count_16;
 
                 /* This function uses a 2-byte byte count!! */
                 tmp_count_16 = *(uint16_t *)(packet->payload + MODBUS_MIN_LEN);
                 tmp_count_16 = ntohs(tmp_count_16);
-                if (modbus_payload_len == 2 + tmp_count_16)
+                if (modbus_payload_len == MODBUS_DOUBLE_BYTE_COUNT_SIZE + tmp_count_16)
                     check_passed = 1;
             }
             break;
@@ -310,15 +331,15 @@ static void ModbusCheckResponseLengths(modbus_session_data_t *session, SFSnortPa
                     uint8_t sub_request_data_len;
 
                     /* Sub request starts with 2 bytes, type + len */
-                    if (offset + 2 > modbus_payload_len)
+                    if (offset + MODBUS_SUB_FUNC_READ_DEVICE_START_LEN > modbus_payload_len)
                         break;
 
                     /* Length is second byte in sub-request */
                     sub_request_data_len = *(packet->payload + MODBUS_MIN_LEN +
-                                            offset + 1);
+                                            offset + MODBUS_SUB_FUNC_READ_DEVICE_LENGTH_OFFSET);
 
                     /* Set offset to byte after sub-request */
-                    offset += (2 + sub_request_data_len);
+                    offset += (MODBUS_SUB_FUNC_READ_DEVICE_START_LEN + sub_request_data_len);
                 }
 
                 if ((i == num_objects) && (offset == modbus_payload_len))

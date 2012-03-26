@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -34,6 +34,7 @@
 #include <dnet.h>
 #endif
 
+#include "assert.h"
 #include "encode.h"
 #include "sfdaq.h"
 #include "sf_iph.h"
@@ -44,11 +45,14 @@
 #define GET_TCP_HDR_LEN(h) (((h)->th_offx2 & 0xf0) >> 2)
 #define SET_TCP_HDR_LEN(h, n) (h)->th_offx2 = ((n << 2) & 0xF0)
 
+#define MIN_TTL             64
 #define MAX_TTL            255
+
 #define ICMP_UNREACH_DATA    8  // (per RFC 792)
 #define IP_ID_COUNT       8192
 
-static uint8_t *dst_mac = NULL;
+static uint8_t* dst_mac = NULL;
+Packet* encode_pkt = NULL;
 
 static inline int IsIcmp (int type)
 {
@@ -85,7 +89,9 @@ typedef struct {
 #define FORWARD(e) (e->flags & ENC_FLAG_FWD)
 #define REVERSE(f) (!(f & ENC_FLAG_FWD))
 
-#define PKT_SZ (ETHERNET_HEADER_LEN + VLAN_HEADER_LEN + IP_MAXPACKET)
+// PKT_MAX is sized to ensure that any reassembled packet
+// can accommodate a full datagram at innermost layer
+#define PKT_MAX (ETHERNET_HEADER_LEN + VLAN_HEADER_LEN + ETHERNET_MTU + IP_MAXPACKET)
 
 // all layer encoders look like this:
 typedef ENC_STATUS (*Encoder)(EncState*, Buffer* in, Buffer* out);
@@ -182,6 +188,9 @@ const uint8_t* Encode_Reject(
     enc.ip_len = 0;
     enc.proto = 0;
 
+    if ( encode_pkt )
+        p = encode_pkt;
+
     return Encode_Packet(&enc, p, len);
 }
 
@@ -200,6 +209,9 @@ const uint8_t* Encode_Response(
     enc.ip_hdr = NULL;
     enc.ip_len = 0;
     enc.proto = 0;
+
+    if ( encode_pkt )
+        p = encode_pkt;
 
     return Encode_Packet(&enc, p, len);
 }
@@ -272,9 +284,8 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
     c->data = lyr->start + lyr->length;
     len = c->data - c->pkt;
 
-    // should actually be max less specific layers
-    // but this is a safe limit
-    c->max_dsize = IP_MAXPACKET - len;
+    assert(len < PKT_MAX - IP_MAXPACKET);
+    c->max_dsize = IP_MAXPACKET;
 
     c->proto_bits = p->proto_bits;
     c->packet_flags |= PKT_PSEUDO;
@@ -343,7 +354,7 @@ void Encode_Update (Packet* p)
 Packet* Encode_New ()
 {
     Packet* p = SnortAlloc(sizeof(*p));
-    uint8_t* b = SnortAlloc(sizeof(*p->pkth) + PKT_SZ + SPARC_TWIDDLE);
+    uint8_t* b = SnortAlloc(sizeof(*p->pkth) + PKT_MAX + SPARC_TWIDDLE);
 
     if ( !p || !b )
         FatalError("Encode_New() => Failed to allocate packet\n");
@@ -371,7 +382,7 @@ void Encode_SetDstMAC(uint8_t *mac)
 // private implementation stuff
 //-------------------------------------------------------------------------
 
-static uint8_t s_pkt[ETHERNET_HEADER_LEN+VLAN_HEADER_LEN+IP_MAXPACKET];
+static uint8_t s_pkt[PKT_MAX];
 
 static const uint8_t* Encode_Packet(
     EncState* enc, const Packet* p, uint32_t* len)
@@ -511,6 +522,8 @@ static inline uint8_t RevTTL (const EncState* enc, uint8_t ttl)
     uint8_t new_ttl = GetTTL(enc);
     if ( !new_ttl )
         new_ttl = ( MAX_TTL - ttl );
+    if ( new_ttl < MIN_TTL )
+        new_ttl = MIN_TTL;
     return new_ttl;
 }
 
@@ -933,6 +946,9 @@ static ENC_STATUS TCP_Encode (EncState* enc, Buffer* in, Buffer* out)
     {
         ho->th_flags = TH_RST | TH_ACK;
     }
+
+    // in case of ip6 extension headers, this gets next correct
+    enc->proto = IPPROTO_TCP;
 
     // we don't need to set th_sum here because dnet's
     // ip_checksum() sets both IP and TCP checksums and

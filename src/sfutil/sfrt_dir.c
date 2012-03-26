@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2011 Sourcefire, Inc.
+ * Copyright (C) 2006-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -102,7 +102,7 @@ static dir_sub_table_t *_sub_table_new(dir_table_t *root, uint32_t dimension,
      * to how specific the insertion that set the entry was.  It is necessary
      * so that the entry is not overwritten by less general routing
      * information if "RT_FAVOR_SPECIFIC" insertions are being performed. */
-    sub->lengths = (char*)malloc(sub->num_entries);
+    sub->lengths = (uint8_t*)malloc(sub->num_entries);
 
     if(!sub->lengths)
     {
@@ -115,7 +115,7 @@ static dir_sub_table_t *_sub_table_new(dir_table_t *root, uint32_t dimension,
     for(index = 0; index < sub->num_entries; index++)
     {
         sub->entries[index] = prefill;
-        sub->lengths[index] = (char)bit_length;
+        sub->lengths[index] = (uint8_t)bit_length;
     }
 
     sub->cur_num = 0;
@@ -125,7 +125,7 @@ static dir_sub_table_t *_sub_table_new(dir_table_t *root, uint32_t dimension,
     else
         sub->filledEntries = 0;
 
-    root->allocated += sizeof(dir_sub_table_t) + sizeof(word) * sub->num_entries;
+    root->allocated += sizeof(dir_sub_table_t) + sizeof(word) * sub->num_entries + sub->num_entries;
 
     root->cur_num++;
 
@@ -273,7 +273,7 @@ static inline void _dir_fill_all(uint32_t *allocated, uint32_t index, uint32_t f
         }
 
         table->entries[index] = val;
-        table->lengths[index] = (char)length;
+        table->lengths[index] = (uint8_t)length;
     }
 }
 

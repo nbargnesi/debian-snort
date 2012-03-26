@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -664,11 +664,11 @@ static int ProcessMaxGzipMem(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
         return -1;
     }
 
-    if(max_gzip_mem < GZIP_MEM_MIN || max_gzip_mem > GZIP_MEM_MAX)
+    if(max_gzip_mem < GZIP_MEM_MIN)
     {
         SnortSnprintf(ErrorString, ErrStrLen,
-                "Invalid argument to '%s'.  Must be between %d and "
-                "%d.", MAX_GZIP_MEM, GZIP_MEM_MIN, GZIP_MEM_MAX);
+                "Invalid argument to '%s'. This value must be equal to or greater than %d bytes."
+                , MAX_GZIP_MEM, GZIP_MEM_MIN);
 
         return -1;
     }

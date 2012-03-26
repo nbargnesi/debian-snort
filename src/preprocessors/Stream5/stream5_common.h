@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -238,6 +238,8 @@ typedef struct _FlushMgr
     uint16_t   last_size;
     uint8_t    flush_policy;
     uint8_t    flush_type;
+    uint8_t    auto_disable;
+    //uint8_t    spare;
 
 } FlushMgr;
 

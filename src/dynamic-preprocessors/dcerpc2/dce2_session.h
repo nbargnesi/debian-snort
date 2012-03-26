@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -40,9 +40,11 @@ typedef enum _DCE2_SsnFlag
     DCE2_SSN_FLAG__NONE               = 0x0000,
     DCE2_SSN_FLAG__SEEN_CLIENT        = 0x0001,
     DCE2_SSN_FLAG__SEEN_SERVER        = 0x0002,
-    DCE2_SSN_FLAG__MISSED_PKTS        = 0x0004,
-    DCE2_SSN_FLAG__AUTODETECTED       = 0x0008,
-    DCE2_SSN_FLAG__NO_INSPECT         = 0x0010,
+    DCE2_SSN_FLAG__CLI_MISSED_PKTS    = 0x0004,
+    DCE2_SSN_FLAG__SRV_MISSED_PKTS    = 0x0008,
+    DCE2_SSN_FLAG__AUTODETECTED       = 0x0010,
+    DCE2_SSN_FLAG__NO_INSPECT         = 0x0020,
+    DCE2_SSN_FLAG__PAF_ABORT          = 0x0040,
     DCE2_SSN_FLAG__ALL                = 0xffff
 
 } DCE2_SsnFlag;
@@ -62,11 +64,9 @@ typedef struct _DCE2_SsnData
 
     uint32_t cli_seq;
     uint32_t cli_nseq;
-    uint32_t cli_missed_bytes;
     uint16_t cli_overlap_bytes;
     uint32_t srv_seq;
     uint32_t srv_nseq;
-    uint32_t srv_missed_bytes;
     uint16_t srv_overlap_bytes;
 
     tSfPolicyId policy_id;
@@ -93,6 +93,11 @@ static inline int DCE2_SsnServerMissedInReassembled(const SFSnortPacket *);
 static inline void DCE2_SsnSetMissedPkts(DCE2_SsnData *);
 static inline int DCE2_SsnMissedPkts(DCE2_SsnData *);
 static inline void DCE2_SsnClearMissedPkts(DCE2_SsnData *);
+#ifdef ENABLE_PAF
+static inline bool DCE2_SsnIsPafActive(SFSnortPacket *);
+static inline void DCE2_SsnSetPafAbort(DCE2_SsnData *);
+static inline int DCE2_SsnPafAbort(DCE2_SsnData *);
+#endif
 static inline void DCE2_SsnSetSeenClient(DCE2_SsnData *);
 static inline int DCE2_SsnSeenClient(DCE2_SsnData *);
 static inline void DCE2_SsnSetSeenServer(DCE2_SsnData *);
@@ -102,9 +107,7 @@ static inline int DCE2_SsnAutodetected(DCE2_SsnData *);
 static inline int DCE2_SsnAutodetectDir(DCE2_SsnData *);
 static inline void DCE2_SsnSetNoInspect(DCE2_SsnData *);
 static inline int DCE2_SsnNoInspect(DCE2_SsnData *sd);
-
 static inline uint16_t DCE2_SsnGetOverlap(DCE2_SsnData *);
-static inline uint32_t DCE2_SsnGetMissedBytes(DCE2_SsnData *sd);
 
 /********************************************************************
  * Function: DCE2_SsnIsEstablished()
@@ -367,7 +370,10 @@ static inline int DCE2_SsnServerMissedInReassembled(const SFSnortPacket *p)
  ********************************************************************/
 static inline void DCE2_SsnSetMissedPkts(DCE2_SsnData *sd)
 {
-    sd->flags |= DCE2_SSN_FLAG__MISSED_PKTS;
+    if (DCE2_SsnFromClient(sd->wire_pkt))
+        sd->flags |= DCE2_SSN_FLAG__CLI_MISSED_PKTS;
+    else
+        sd->flags |= DCE2_SSN_FLAG__SRV_MISSED_PKTS;
 }
 
 /********************************************************************
@@ -386,7 +392,10 @@ static inline void DCE2_SsnSetMissedPkts(DCE2_SsnData *sd)
  ********************************************************************/
 static inline int DCE2_SsnMissedPkts(DCE2_SsnData *sd)
 {
-    return sd->flags & DCE2_SSN_FLAG__MISSED_PKTS;
+    if (DCE2_SsnFromClient(sd->wire_pkt))
+        return sd->flags & DCE2_SSN_FLAG__CLI_MISSED_PKTS;
+    else
+        return sd->flags & DCE2_SSN_FLAG__SRV_MISSED_PKTS;
 }
 
 /********************************************************************
@@ -403,8 +412,67 @@ static inline int DCE2_SsnMissedPkts(DCE2_SsnData *sd)
  ********************************************************************/
 static inline void DCE2_SsnClearMissedPkts(DCE2_SsnData *sd)
 {
-    sd->flags &= ~DCE2_SSN_FLAG__MISSED_PKTS;
+    if (DCE2_SsnFromClient(sd->wire_pkt))
+        sd->flags &= ~DCE2_SSN_FLAG__CLI_MISSED_PKTS;
+    else
+        sd->flags &= ~DCE2_SSN_FLAG__SRV_MISSED_PKTS;
 }
+
+#ifdef ENABLE_PAF
+/********************************************************************
+ * Function: DCE2_SsnIsPafActive()
+ *
+ * Purpose: Checks stream api to see if PAF is active for this side
+ *          of the session.
+ *
+ * Arguments:
+ *  DCE2_SsnData * - pointer to session data
+ *
+ * Returns:
+ *  bool - true if paf is active
+ *         false if not
+ *
+ ********************************************************************/
+static inline bool DCE2_SsnIsPafActive(SFSnortPacket *p)
+{
+    bool to_server = DCE2_SsnFromClient(p) ? true : false;
+    return _dpd.streamAPI->is_paf_active(p->stream_session_ptr, to_server);
+}
+
+/********************************************************************
+ * Function: DCE2_SsnSetPafAbort()
+ *
+ * Purpose: Sets paf abort flag
+ *
+ * Arguments:
+ *  DCE2_SsnData * - pointer to session data
+ *
+ * Returns: None
+ *
+ ********************************************************************/
+static inline void DCE2_SsnSetPafAbort(DCE2_SsnData *sd)
+{
+    sd->flags |= DCE2_SSN_FLAG__PAF_ABORT;
+}
+
+/********************************************************************
+ * Function: DCE2_SsnPafAbort()
+ *
+ * Purpose: Checks paf abort flag
+ *
+ * Arguments:
+ *  DCE2_SsnData * - pointer to session data
+ *
+ * Returns:
+ *  int - non-zero if abort flag is set
+ *        zero if abort flag not set
+ *
+ ********************************************************************/
+static inline int DCE2_SsnPafAbort(DCE2_SsnData *sd)
+{
+    return sd->flags & DCE2_SSN_FLAG__PAF_ABORT;
+}
+#endif
 
 /********************************************************************
  * Function: DCE2_SsnSetSeenClient()
@@ -564,6 +632,9 @@ static inline void DCE2_SsnClearAutodetected(DCE2_SsnData *sd)
 static inline void DCE2_SsnSetNoInspect(DCE2_SsnData *sd)
 {
     sd->flags |= DCE2_SSN_FLAG__NO_INSPECT;
+#ifdef ENABLE_PAF
+    DCE2_SsnSetPafAbort(sd);
+#endif
 }
 
 /********************************************************************
@@ -603,32 +674,6 @@ static inline uint16_t DCE2_SsnGetOverlap(DCE2_SsnData *sd)
     else if ((sd->srv_overlap_bytes != 0) && DCE2_SsnFromServer(sd->wire_pkt))
     {
         return sd->srv_overlap_bytes;
-    }
-
-    return 0;
-}
-
-/********************************************************************
- * Function: DCE2_SsnGetMissedBytes()
- *
- * Purpose: Returns the number of missed bytes.
- *
- * Arguments:
- *  DCE2_SsnData * - pointer to session data
- *
- * Returns:
- *  uint16_t - the number of overlapped bytes
- *
- ********************************************************************/
-static inline uint32_t DCE2_SsnGetMissedBytes(DCE2_SsnData *sd)
-{
-    if ((sd->cli_missed_bytes != 0) && DCE2_SsnFromClient(sd->wire_pkt))
-    {
-        return sd->cli_missed_bytes;
-    }
-    else if ((sd->srv_missed_bytes != 0) && DCE2_SsnFromServer(sd->wire_pkt))
-    {
-        return sd->srv_missed_bytes;
     }
 
     return 0;

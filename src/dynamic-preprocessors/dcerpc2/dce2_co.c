@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -287,8 +287,8 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 
         /* Reset tracker missed packets, since we've just
          * dealt with it */
-        if (cot->missed_pkts)
-            cot->missed_pkts = 0;
+        cot->missed_pkts = 0;
+        DCE2_SsnClearMissedPkts(sd);
     }
 
     while (data_len > 0)

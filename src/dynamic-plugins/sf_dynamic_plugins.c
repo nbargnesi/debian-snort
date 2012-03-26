@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -1061,6 +1061,8 @@ typedef struct _DynamicRuleSessionData
 } DynamicRuleSessionData;
 
 static uint32_t so_rule_memory = 0;
+/*Only only message will be logged within 60 seconds*/
+static ThrottleInfo error_throttleInfo = {0,60,0};
 
 static void * DynamicRuleDataAlloc(size_t size)
 {
@@ -1070,7 +1072,7 @@ static void * DynamicRuleDataAlloc(size_t size)
     if ((ScSoRuleMemcap() > 0)
             && (so_rule_memory + alloc_size) > ScSoRuleMemcap())
     {
-        ErrorMessage("SO rule memcap exceeded: Wanted to allocate "
+        ErrorMessageThrottled(&error_throttleInfo,"SO rule memcap exceeded: Wanted to allocate "
                 "%u bytes (and %d overhead) with memcap: %u and "
                 "current memory: %u\n", (uint32_t)size,
                 (int)sizeof(size_t), ScSoRuleMemcap(), so_rule_memory);

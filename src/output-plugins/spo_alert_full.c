@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -71,7 +71,6 @@ static void AlertFullInit(char *);
 static SpoAlertFullData *ParseAlertFullArgs(char *);
 static void AlertFull(Packet *, char *, void *, Event *);
 static void AlertFullCleanExit(int, void *);
-static void AlertFullRestart(int, void *);
 
 /*
  * not defined for backwards compatibility
@@ -126,7 +125,6 @@ static void AlertFullInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertFull, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertFullCleanExit, data);
-    AddFuncToRestartList(AlertFullRestart, data);
 }
 
 static void AlertFull(Packet *p, char *msg, void *arg, Event *event)
@@ -317,10 +315,5 @@ static void AlertFullCleanup(int signal, void *arg, const char* msg)
 static void AlertFullCleanExit(int signal, void *arg)
 {
     AlertFullCleanup(signal, arg, "AlertFullCleanExit");
-}
-
-static void AlertFullRestart(int signal, void *arg)
-{
-    AlertFullCleanup(signal, arg, "AlertFullRestart");
 }
 

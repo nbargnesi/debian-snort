@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -86,10 +86,41 @@ typedef struct _DCE2_PafTcpState
 
 
 // Local function prototypes
-static bool DCE2_PafSmbIsValidNetbiosHdr(uint32_t, bool);
+static inline bool DCE2_PafSmbIsValidNetbiosHdr(uint32_t, bool);
+static inline bool DCE2_PafAbort(void *, uint32_t);
 static PAF_Status DCE2_SmbPaf(void *, void **, const uint8_t *, uint32_t, uint32_t, uint32_t *);
 static PAF_Status DCE2_TcpPaf(void *, void **, const uint8_t *, uint32_t, uint32_t, uint32_t *);
 
+
+/*********************************************************************
+ * Function: DCE2_PafAbort()
+ *
+ * Purpose: Queries the dcerpc2 session data to see if paf abort
+ *          flag is set.
+ *
+ * Arguments:
+ *  void *   - stream session pointer
+ *  uint32_t - flags passed in to callback.
+ *             Should have PKT_FROM_CLIENT or PKT_FROM_SERVER set.
+ *
+ * Returns:
+ *  bool - true if missed packets, false if not
+ *
+ *********************************************************************/
+static inline bool DCE2_PafAbort(void *ssn, uint32_t flags)
+{
+    DCE2_SsnData *sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(ssn, PP_DCE2);
+
+    if (sd != NULL)
+    {
+        if (DCE2_SsnPafAbort(sd))
+            return true;
+        else if (!DCE2_SsnSeenClient(sd) && (flags & FLAG_FROM_SERVER))
+            return true;
+    }
+
+    return false;
+}
 
 /*********************************************************************
  * Function: DCE2_PafSmbIsValidNetbiosHdr()
@@ -105,7 +136,7 @@ static PAF_Status DCE2_TcpPaf(void *, void **, const uint8_t *, uint32_t, uint32
  *  bool - true if valid, false if not
  *
  *********************************************************************/
-static bool DCE2_PafSmbIsValidNetbiosHdr(uint32_t nb_hdr, bool junk)
+static inline bool DCE2_PafSmbIsValidNetbiosHdr(uint32_t nb_hdr, bool junk)
 {
     uint8_t type = (uint8_t)(nb_hdr >> 24);
     uint8_t bit = (uint8_t)((nb_hdr & 0x00ff0000) >> 16);
@@ -195,6 +226,12 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
 
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Start state: %u\n", ss->state));
 
+    if (DCE2_PafAbort(ssn, flags))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Aborting PAF\n"));
+        return PAF_ABORT;
+    }
+
     while (n < len)
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "data[n]: 0x%02x", data[n]));
@@ -240,7 +277,8 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
                                              "staying in State 7.\n"));
                     break;
                 }
-                if ((uint32_t)ss->nb_hdr != DCE2_SMB_ID)
+                if (((uint32_t)ss->nb_hdr != DCE2_SMB_ID)
+                        && ((uint32_t)ss->nb_hdr != DCE2_SMB2_ID))
                 {
                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Invalid SMB ID - "
                                              "staying in State 7.\n"));
@@ -377,6 +415,12 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
 
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Start state: %u\n", ds->state));
     start_state = (uint8_t)ds->state;  // determines how many bytes already looked at
+
+    if (DCE2_PafAbort(ssn, flags))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Aborting PAF\n"));
+        return PAF_ABORT;
+    }
 
     while (n < len)
     {

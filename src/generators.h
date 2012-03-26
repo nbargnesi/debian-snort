@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -265,6 +265,8 @@ enum {
 #define     HI_CLIENT_UNBOUNDED_POST                28
 #define     HI_CLIENT_MULTIPLE_TRUEIP_IN_SESSION    29
 #define     HI_CLIENT_BOTH_TRUEIP_XFF_HDRS          30 
+#define     HI_CLIENT_UNKNOWN_METHOD                31
+#define     HI_CLIENT_SIMPLE_REQUEST                32
 
 // these are either server specific or both client / server
 #define GENERATOR_SPP_HTTP_INSPECT                 120 
@@ -338,7 +340,8 @@ enum {
 #define     SMTP_ILLEGAL_CMD                       6
 #define     SMTP_HEADER_NAME_OVERFLOW              7
 #define     SMTP_XLINK2STATE_OVERFLOW              8
-#define     SMTP_DECODE_MEMCAP_EXCEEDED            9
+/* This alert is obsolete. *
+* #define     SMTP_DECODE_MEMCAP_EXCEEDED            9*/
 #define     SMTP_B64_DECODING_FAILED               10 
 #define     SMTP_QP_DECODING_FAILED                11
 #define     SMTP_BITENC_DECODING_FAILED            12
@@ -547,7 +550,7 @@ enum {
 #define DECODE_IPV4_INVALID_HEADER_LEN_STR "(snort_decoder) WARNING: hlen < IP_HEADER_LEN"
 #define DECODE_IPV4_DGRAM_LT_IPHDR_STR "(snort_decoder) WARNING: IP dgm len < IP Hdr len"
 #define DECODE_IPV4OPT_BADLEN_STR      "(snort_decoder) WARNING: Ipv4 Options found with bad lengths"
-#define DECODE_IPV4OPT_TRUNCATED_STR   "(snort_decoder) WARNING:Truncated Ipv4 Options"
+#define DECODE_IPV4OPT_TRUNCATED_STR   "(snort_decoder) WARNING: Truncated Ipv4 Options"
 #define DECODE_IPV4_DGRAM_GT_CAPLEN_STR "(snort_decoder) WARNING: IP dgm len > captured len"
 #define DECODE_NOT_IPV6_DGRAM_STR      "(snort_decoder) WARNING: Not an IPv6 datagram"
 

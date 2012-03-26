@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -171,11 +171,25 @@ int extractValueInternal(void *p, ByteData *byteData, uint32_t *value, const uin
     }
     else if (byteData->flags & EXTRACT_AS_STRING)
     {
+        const uint8_t *space_ptr = cursor + byteData->offset;
+
         if (byteData->bytes < 1 || byteData->bytes > (BYTE_STRING_LEN - 1))
         {
             /* Log Error message */
             return -2;
         }
+
+        // Only positive numbers should be processed and strtoul will
+        // eat up white space and process '-' and '+' so move past
+        // white space and check for a negative sign.
+        while ((space_ptr < (cursor + byteData->offset + byteData->bytes))
+                && isspace((int)*space_ptr))
+            space_ptr++;
+
+        // If all spaces or a negative sign is found, return error.
+        if ((space_ptr == (cursor + byteData->offset + byteData->bytes))
+                || (*space_ptr == '-'))
+            return -2;
 
         if (byteData->flags & EXTRACT_AS_DEC)
             base = 10;

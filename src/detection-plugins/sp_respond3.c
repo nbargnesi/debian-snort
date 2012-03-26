@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License Version 2 as published by
@@ -167,7 +167,6 @@ static void Resp3_Init(char* data, OptTreeNode* otn, int protocol)
     if ( s_init )
     {
         AddFuncToCleanExitList(Resp3_Cleanup, NULL);
-        AddFuncToRestartList(Resp3_Cleanup, NULL);
 
         Active_SetEnabled(1);
         s_init = 0;

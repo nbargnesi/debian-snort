@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -86,11 +86,7 @@ static DCE2_SsnData * DCE2_NewSession(SFSnortPacket *, tSfPolicyId);
 static DCE2_TransType DCE2_GetTransport(SFSnortPacket *, const DCE2_ServerConfig *, int *);
 static DCE2_TransType DCE2_GetDetectTransport(SFSnortPacket *, const DCE2_ServerConfig *);
 static DCE2_TransType DCE2_GetAutodetectTransport(SFSnortPacket *, const DCE2_ServerConfig *);
-static DCE2_Ret DCE2_ConfirmTransport(DCE2_SsnData *, SFSnortPacket *);
-
 static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *, SFSnortPacket *);
-static void DCE2_SetNoInspect(DCE2_SsnData *);
-
 static void DCE2_SsnFree(void *);
 
 /*********************************************************************
@@ -197,18 +193,8 @@ static DCE2_SsnData * DCE2_NewSession(SFSnortPacket *p, tSfPolicyId policy_id)
 
             if (DCE2_SsnIsStreamInsert(p))
             {
-#if 0
 #ifdef ENABLE_PAF
-                if (!_dpd.isPafEnabled())
-#endif
-                {
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Flushing opposite direction.\n"));
-                    //DCE2_SsnFlush(p);  // No need to flush since this is first data packet?
-                }
-#endif
-
-#ifdef ENABLE_PAF
-                if (!_dpd.isPafEnabled() || !PacketHasFullPDU(p))
+                if (!DCE2_SsnIsPafActive(p) || !PacketHasFullPDU(p))
 #endif
                 {
                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
@@ -282,7 +268,7 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
         if (DCE2_SsnIsStreamInsert(p))
         {
 #ifdef ENABLE_PAF
-            if (!_dpd.isPafEnabled())
+            if (!DCE2_SsnIsPafActive(p))
 #endif
             {
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Flushing opposite direction.\n"));
@@ -290,7 +276,7 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
             }
 
 #ifdef ENABLE_PAF
-            if (!_dpd.isPafEnabled() || !PacketHasFullPDU(p))
+            if (!DCE2_SsnIsPafActive(p) || !PacketHasFullPDU(p))
 #endif
             {
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Stream inserted - not inspecting.\n"));
@@ -325,13 +311,14 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
         DCE2_SsnClearAutodetected(sd);
     }
 
+    sd->wire_pkt = p;
+
     if (IsTCP(p) && (DCE2_SetSsnState(sd, p) != DCE2_RET__SUCCESS))
     {
         PREPROC_PROFILE_END(dce2_pstat_session);
         return DCE2_RET__NOT_INSPECTED;
     }
 
-    sd->wire_pkt = p;
     if (DCE2_PushPkt((void *)p) != DCE2_RET__SUCCESS)
     {
         DCE2_Log(DCE2_LOG_TYPE__ERROR,
@@ -398,7 +385,7 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
  * Returns:
  *
  ********************************************************************/
-static void DCE2_SetNoInspect(DCE2_SsnData *sd)
+void DCE2_SetNoInspect(DCE2_SsnData *sd)
 {
     if (sd == NULL)
         return;
@@ -448,65 +435,63 @@ static void DCE2_SetNoInspect(DCE2_SsnData *sd)
 static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
 {
     uint32_t pkt_seq = ntohl(p->tcp_header->sequence);
+    uint32_t pkt_ack = ntohl(p->tcp_header->acknowledgement);
 
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Payload size: %u\n", p->payload_size));
 
     if (DCE2_SsnFromClient(p) && !DCE2_SsnSeenClient(sd))
     {
-#if 0
-        // This code should be obsoleted by the junk data check in dce2_smb.c
-
-        /* Check to make sure we can continue processing */
-        if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
+        if (DCE2_SsnSeenServer(sd) && (sd->cli_seq != pkt_seq))
         {
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Couldn't confirm transport - "
-                                     "not inspecting\n"));
-
-            sd->cli_seq = pkt_seq;
-            sd->cli_nseq = pkt_seq;
-
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Initial client => seq: %u, next seq: %u\n"
-                                     "Setting current and next to the same thing, since we're "
-                                     "not inspecting this packet.\n", sd->cli_seq, sd->cli_nseq));
-
-            return DCE2_RET__NOT_INSPECTED;
-        }
+            DCE2_SsnSetMissedPkts(sd);
+#ifdef ENABLE_PAF
+            DCE2_SsnSetPafAbort(sd);
 #endif
+        }
 
         DCE2_SsnSetSeenClient(sd);
-
         sd->cli_seq = pkt_seq;
         sd->cli_nseq = pkt_seq + p->payload_size;
+
+        if (!DCE2_SsnSeenServer(sd))
+        {
+            sd->srv_seq = pkt_ack;
+        }
+        else
+        {
+            DCE2_SsnSetMissedPkts(sd);
+#ifdef ENABLE_PAF
+            // Saw server before client, missing packets, abort PAF
+            DCE2_SsnSetPafAbort(sd);
+#endif
+        }
 
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Initial client => seq: %u, next seq: %u\n",
                        sd->cli_seq, sd->cli_nseq));
     }
     else if (DCE2_SsnFromServer(p) && !DCE2_SsnSeenServer(sd))
     {
-#if 0
-        // This code should be obsoleted by the junk data check in dce2_smb.c
-
-        /* Check to make sure we can continue processing */
-        if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
+        if (DCE2_SsnSeenClient(sd) && (sd->srv_seq != pkt_seq))
         {
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Couldn't confirm transport - "
-                                     "not inspecting\n"));
-
-            sd->srv_seq = pkt_seq;
-            sd->srv_nseq = pkt_seq;
-
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Initial client => seq: %u, next seq: %u\n"
-                                     "Setting current and next to the same thing, since we're "
-                                     "not inspecting this packet.\n", sd->cli_seq, sd->cli_nseq));
-
-            return DCE2_RET__NOT_INSPECTED;
-        }
+            DCE2_SsnSetMissedPkts(sd);
+#ifdef ENABLE_PAF
+            DCE2_SsnSetPafAbort(sd);
 #endif
+        }
 
         DCE2_SsnSetSeenServer(sd);
-
         sd->srv_seq = pkt_seq;
         sd->srv_nseq = pkt_seq + p->payload_size;
+
+        if (!DCE2_SsnSeenClient(sd))
+        {
+            sd->cli_seq = pkt_ack;
+            DCE2_SsnSetMissedPkts(sd);
+#ifdef ENABLE_PAF
+            // Saw server before client, missing packets, abort PAF
+            DCE2_SsnSetPafAbort(sd);
+#endif
+        }
 
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Initial server => seq: %u, next seq: %u\n",
                        sd->srv_seq, sd->srv_nseq));
@@ -515,14 +500,12 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
     {
         uint32_t *ssn_seq;
         uint32_t *ssn_nseq;
-        uint32_t *missed_bytes;
         uint16_t *overlap_bytes;
 
         if (DCE2_SsnFromClient(p))
         {
             ssn_seq = &sd->cli_seq;
             ssn_nseq = &sd->cli_nseq;
-            missed_bytes = &sd->cli_missed_bytes;
             overlap_bytes = &sd->cli_overlap_bytes;
 
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Client last => seq: %u, next seq: %u\n",
@@ -534,7 +517,6 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
         {
             ssn_seq = &sd->srv_seq;
             ssn_nseq = &sd->srv_nseq;
-            missed_bytes = &sd->srv_missed_bytes;
             overlap_bytes = &sd->srv_overlap_bytes;
 
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Server last => seq: %u, next seq: %u\n",
@@ -553,7 +535,16 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Next expected sequence number (%u) is less than "
                                "this sequence number (%u).\n", *ssn_nseq, pkt_seq));
 
+                dce2_stats.missed_bytes += (pkt_seq - *ssn_nseq);
+
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Missed %u bytes.\n", (pkt_seq - *ssn_nseq)));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Currently missing %u bytes.\n",
+                            dce2_stats.missed_bytes));
+
                 DCE2_SsnSetMissedPkts(sd);
+#ifdef ENABLE_PAF
+                DCE2_SsnSetPafAbort(sd);
+#endif
             }
             else
             {
@@ -562,9 +553,6 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
                  * Actually this can happen if the stream seg list is empty */
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Overlap => seq: %u, next seq: %u\n",
                             pkt_seq, pkt_seq + p->payload_size));
-
-                if (DCE2_SsnMissedPkts(sd))
-                    DCE2_SsnClearMissedPkts(sd);
 
                 /* Do what we can and take the difference and only inspect what we
                  * haven't already inspected */
@@ -584,36 +572,6 @@ static DCE2_Ret DCE2_SetSsnState(DCE2_SsnData *sd, SFSnortPacket *p)
             }
 
             DCE2_DEBUG_CODE(DCE2_DEBUG__MAIN, DCE2_PrintPktData(p->payload, p->payload_size););
-        }
-        else if (DCE2_SsnMissedPkts(sd))
-        {
-            DCE2_SsnClearMissedPkts(sd);
-        }
-
-        if (DCE2_SsnMissedPkts(sd))
-        {
-            *missed_bytes += (pkt_seq - *ssn_nseq);
-            dce2_stats.missed_bytes += (pkt_seq - *ssn_nseq);
-
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Missed %u bytes.\n", (pkt_seq - *ssn_nseq)));
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Currently missing %u bytes.\n", *missed_bytes));
-
-            if (DCE2_ConfirmTransport(sd, p) != DCE2_RET__SUCCESS)
-            {
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Couldn't confirm transport - "
-                            "not inspecting\n"));
-
-                *ssn_seq = pkt_seq;
-                *ssn_nseq = pkt_seq + p->payload_size;
-
-                return DCE2_RET__NOT_INSPECTED;
-            }
-
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Autodetected - continue to inspect.\n"));
-        }
-        else if (*missed_bytes != 0)
-        {
-            *missed_bytes = 0;
         }
 
         *ssn_seq = pkt_seq;
@@ -816,98 +774,6 @@ static DCE2_TransType DCE2_GetAutodetectTransport(SFSnortPacket *p, const DCE2_S
     }
 
     return DCE2_TRANS_TYPE__NONE;
-}
-
-/*********************************************************************
- * Function: DCE2_ConfirmTransport()
- *
- * Called when we're not sure where we are, e.g. because of missed
- * packets.  This function makes sure we can process this packet, with
- * a decent amount of certainty, avoiding false positives.
- *
- * Arguments:
- *  SFSnortPacket *
- *      Pointer to packet structure.
- *  DCE2_TransType
- *      The transport to check.
- *
- * Returns:
- *  DCE2_Ret
- *      DCE2_RET__SUCCESS if we can autodetect the transport for
- *          which the session was created.
- *      DCE2_RET__ERROR if we can't autodetect the transport for
- *          which the session was created.
- *
- *********************************************************************/
-static DCE2_Ret DCE2_ConfirmTransport(DCE2_SsnData *sd, SFSnortPacket *p)
-{
-    if (IsTCP(p))
-    {
-        switch (sd->trans)
-        {
-            case DCE2_TRANS_TYPE__SMB:
-                if (DCE2_SmbAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-                    return DCE2_RET__ERROR;
-                break;
-
-            case DCE2_TRANS_TYPE__TCP:
-                if (DCE2_TcpAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-                    return DCE2_RET__ERROR;
-                break;
-
-            case DCE2_TRANS_TYPE__HTTP_SERVER:
-                if (!DCE2_SsnSeenServer(sd) && DCE2_SsnFromServer(p))
-                {
-                    if (DCE2_HttpAutodetectServer(p) == DCE2_TRANS_TYPE__NONE)
-                        return DCE2_RET__ERROR;
-                }
-                else if (DCE2_SsnSeenServer(sd) && DCE2_SsnSeenClient(sd))
-                {
-                    if (DCE2_TcpAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-                        return DCE2_RET__ERROR;
-                }
-
-                break;
-
-            case DCE2_TRANS_TYPE__HTTP_PROXY:
-                if (!DCE2_SsnSeenClient(sd) && DCE2_SsnFromClient(p))
-                {
-                    if (DCE2_HttpAutodetectProxy(p) == DCE2_TRANS_TYPE__NONE)
-                        return DCE2_RET__ERROR;
-                }
-                else if (DCE2_SsnSeenServer(sd) && DCE2_SsnSeenClient(sd))
-                {
-                    if (DCE2_TcpAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-                        return DCE2_RET__ERROR;
-                }
-
-                break;
-
-            default:
-                DCE2_Log(DCE2_LOG_TYPE__ERROR,
-                         "%s(%d) Invalid transport type: %d",
-                         __FILE__, __LINE__, sd->trans);
-                return DCE2_RET__ERROR;
-        }
-    }
-    else  /* it's UDP */
-    {
-        switch (sd->trans)
-        {
-            case DCE2_TRANS_TYPE__UDP:
-                if (DCE2_UdpAutodetect(p) == DCE2_TRANS_TYPE__NONE)
-                    return DCE2_RET__ERROR;
-                break;
-
-            default:
-                DCE2_Log(DCE2_LOG_TYPE__ERROR,
-                         "%s(%d) Invalid transport type: %d",
-                         __FILE__, __LINE__, sd->trans);
-                return DCE2_RET__ERROR;
-        }
-    }
-
-    return DCE2_RET__SUCCESS;
 }
 
 /*********************************************************************

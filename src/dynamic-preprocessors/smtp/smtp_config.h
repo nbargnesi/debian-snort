@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -32,6 +32,7 @@
 #define __SMTP_CONFIG_H__
 
 #include "sfPolicyUserData.h"
+#include "sf_email_attach_decode.h"
 #define CONF_SEPARATORS                  " \t\n\r"
 #define CONF_PORTS                       "ports"
 #define CONF_INSPECTION_TYPE             "inspection_type"
@@ -177,6 +178,19 @@ typedef struct _SMTPConfig
     uint32_t xtra_ehdrs_id;
 
 } SMTPConfig;
+
+typedef struct _SMTP_Stats
+{
+    uint64_t sessions;
+    uint64_t conc_sessions;
+    uint64_t max_conc_sessions;
+    uint64_t memcap_exceeded;
+    uint64_t attachments[DECODE_ALL];
+    uint64_t decoded_bytes[DECODE_ALL];
+
+} SMTP_Stats;
+
+extern SMTP_Stats smtp_stats;
 
 /* Function prototypes  */
 void SMTP_ParseArgs(SMTPConfig *, char *);

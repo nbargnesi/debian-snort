@@ -9,7 +9,7 @@
  */
 
 /*
- ** Copyright (C) 2004-2011 Sourcefire, Inc.
+ ** Copyright (C) 2004-2012 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -1449,7 +1449,7 @@ static void Frag3ParseGlobalArgs(Frag3Config *gconfig, char *args)
 
             if (gconfig->memcap < 16384)
             {
-                LogMessage("WARNING %s(%d) => Ludicrous (<16k) memcap "
+                LogMessage("WARNING: %s(%d) => Ludicrous (<16k) memcap "
                            "size, setting to default (%d bytes)\n",
                            file_name, file_line, FRAG_MEMCAP);
 
@@ -1482,7 +1482,7 @@ static void Frag3ParseGlobalArgs(Frag3Config *gconfig, char *args)
 
             if(memcap < 16384)
             {
-                LogMessage("WARNING %s(%d) => Ludicrous (<16k) prealloc_memcap "
+                LogMessage("WARNING: %s(%d) => Ludicrous (<16k) prealloc_memcap "
                            "size, setting to default (%d bytes)\n",
                            file_name, file_line, FRAG_MEMCAP);
                 memcap = FRAG_MEMCAP;
@@ -4093,7 +4093,7 @@ static void Frag3Rebuild(FragTracker *ft, Packet *p)
     }
 #endif
     SnortEventqPush();
-    ProcessPacket(NULL, dpkt->pkth, dpkt->pkt, ft);
+    ProcessPacket(dpkt, dpkt->pkth, dpkt->pkt, ft);
     SnortEventqPop();
 
     DEBUG_WRAP(DebugMessage(DEBUG_FRAG,

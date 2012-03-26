@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2011-2011 Sourcefire, Inc.
+ ** Copyright (C) 2011-2012 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@ typedef MEM_OFFSET ENTRIES_PTR;
 typedef struct
 {
     MEM_OFFSET value;
-    char length;
+    uint8_t length;
 
 }DIR_Entry;
 

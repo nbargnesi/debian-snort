@@ -65,9 +65,6 @@ Snort Configure-time switches
      Enable linking of dynamically loaded preprocessors with a static
      preprocessor library.
 
-`--enable-timestats'
-     Enable real-time performance statistics.
-
 `--enable-perfprofiling'
      Enable performance profiling of individual rules and preprocessors.
 
@@ -518,5 +515,5 @@ automake --add-missing --copy
 autoconf
 
 Then run configure with any desired options (--enable-dynamicplugin,
---enable-inline, etc).
+etc).
 

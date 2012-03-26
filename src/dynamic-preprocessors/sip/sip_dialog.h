@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -29,6 +29,6 @@
 #include "spp_sip.h"
 
 int SIP_updateDialog(SIPMsg *sipMsg, SIP_DialogList *dList, SFSnortPacket *p);
-void sip_freeDialogs (SIP_DialogList list);
+void sip_freeDialogs (SIP_DialogList *list);
 
 #endif /* SIP_DIALOG_H_ */

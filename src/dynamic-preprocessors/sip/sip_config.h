@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -111,6 +111,7 @@ typedef struct _sipConfig
 {
 	uint8_t  disabled;
 	uint32_t maxNumSessions;
+	uint32_t maxNumDialogsInSession;
 	uint8_t  ports[MAXPORTS/8];
 	uint32_t methodsConfig;
 	SIPMethodlist methods;

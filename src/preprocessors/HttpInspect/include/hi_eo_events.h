@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -60,6 +60,8 @@ typedef enum _HI_CLI_EVENTS
     HI_EO_CLIENT_UNBOUNDED_POST,
     HI_EO_CLIENT_MULTIPLE_TRUEIP_IN_SESSION,
     HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS,
+    HI_EO_CLIENT_UNKNOWN_METHOD,
+    HI_EO_CLIENT_SIMPLE_REQUEST,
     HI_EO_CLIENT_EVENT_NUM
 } HI_CLI_EVENTS;
 
@@ -143,6 +145,11 @@ typedef enum _HI_EVENTS
     "(http_inspect) MULTIPLE TRUE IPS IN A SESSION"
 #define HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS_STR            \
     "(http_inspect) BOTH TRUE_CLIENT_IP AND XFF HDRS PRESENT"
+#define HI_EO_CLIENT_UNKNOWN_METHOD_STR            \
+    "(http_inspect) UNKNOWN METHOD"
+#define HI_EO_CLIENT_SIMPLE_REQUEST_STR            \
+    "(http_inspect) SIMPLE REQUEST"
+    
 
 /*
 **  Server Events

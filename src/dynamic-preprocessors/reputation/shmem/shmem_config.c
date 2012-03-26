@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -55,7 +55,7 @@ static void ConstructSegmentNames (int dataset, int group_id, int numa_node)
 
 int InitShmemUser (
     uint32_t instance_num, int instance_type, int dataset,
-    int group_id, int numa_node, const char* path, uint16_t instance_polltime)
+    int group_id, int numa_node, const char* path, uint32_t instance_polltime)
 {
     int rval = SF_EINVAL, num_nodes;
 

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -77,6 +77,7 @@
 #include "mpse.h"
 #include "ppm.h"
 #include "active.h"
+#include "packet_time.h"
 
 #ifdef TARGET_BASED
 #include "sftarget_reader.h"
@@ -191,7 +192,7 @@ int DisplayBanner(void)
                BUILD,
                info);
     LogMessage("   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/snort/snort-team\n");
-    LogMessage("           Copyright (C) 1998-2011 Sourcefire, Inc., et al.\n");
+    LogMessage("           Copyright (C) 1998-2012 Sourcefire, Inc., et al.\n");
 #ifdef HAVE_PCAP_LIB_VERSION
     LogMessage("           Using %s\n", pcap_lib_version());
 #endif
@@ -446,6 +447,56 @@ void ErrorMessage(const char *format,...)
     }
     va_end(ap);
 }
+
+/*
+ * Function: ErrorMessageThrottled(ThrottleInfo *,const char *, ...)
+ *
+ * Purpose: Print a message to stderr, and throttle when
+ *          too many messages are printed.
+ * 
+ * Arguments: throttleInfo => point to the saved throttle state information
+ *            format => the formatted error string to print out
+ *            ... => format commands/fillers
+ *
+ * Returns: void function
+ */
+
+void ErrorMessageThrottled(ThrottleInfo *throttleInfo, const char *format,...)
+{
+    char buf[STD_BUF+1];
+    va_list ap;
+    time_t current_time = packet_timeofday();
+
+    if ((snort_conf == NULL)||(!throttleInfo))
+        return;
+
+    throttleInfo->count++;
+    DEBUG_WRAP(DebugMessage(DEBUG_INIT,"current_time: %d, throttle (%p): count "STDu64", last update: %d\n",
+            (int)current_time, throttleInfo, throttleInfo->count, (int)throttleInfo->lastUpdate );)
+    /*Note: we only output the first error message, 
+     * and the statistics after at least duration_to_log seconds 
+     * when the same type of error message is printed out again */
+    if (current_time - throttleInfo->duration_to_log > throttleInfo->lastUpdate)
+    {
+        int index;
+        va_start(ap, format);
+        index = vsnprintf(buf, STD_BUF, format, ap);
+        va_end(ap);
+
+        if (index && (throttleInfo->count > 1))
+        {
+           snprintf(&buf[index - 1], STD_BUF-index,
+                   " (suppressed "STDu64" times in the last %d seconds).\n",
+                   throttleInfo->count, (int) (current_time - throttleInfo->lastUpdate));
+        }
+
+        ErrorMessage("%s",buf);
+        throttleInfo->lastUpdate = current_time;
+        throttleInfo->count = 0;
+    }
+
+}
+
 
 /*
  * Function: LogMessage(const char *, ...)
@@ -822,7 +873,7 @@ void SetUidGid(int user_id, int group_id)
         if ( !DAQ_Unprivileged() )
         {
             LogMessage("WARNING: cannot set uid and gid - %s DAQ does not"
-                "support unprivileged operation.\n", DAQ_GetType());
+                " support unprivileged operation.\n", DAQ_GetType());
             return;
         }
 
@@ -837,7 +888,7 @@ void SetUidGid(int user_id, int group_id)
         if ( !DAQ_Unprivileged() )
         {
             LogMessage("WARNING: cannot set uid and gid - %s DAQ does not"
-                "support unprivileged operation.\n", DAQ_GetType());
+                " support unprivileged operation.\n", DAQ_GetType());
             return;
         }
 

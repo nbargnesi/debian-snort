@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2011 Sourcefire, Inc.
+** Copyright (C) 2005-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -181,7 +181,6 @@ typedef struct _DataHeader
 /* -------------------- Local Functions -----------------------*/
 static UnifiedConfig *UnifiedParseArgs(char *, char *);
 static void UnifiedCleanExit(int, void *);
-static void UnifiedRestart(int, void *);
 static void UnifiedLogInitFinalize(int, void *);
 
 /* Unified Output functions */
@@ -270,7 +269,6 @@ void UnifiedInit(char *args)
     AddFuncToOutputList(UnifiedLogPacketAlert, OUTPUT_TYPE__LOG, unifiedConfig);
 
     AddFuncToCleanExitList(UnifiedCleanExit, unifiedConfig);
-    AddFuncToRestartList(UnifiedRestart, unifiedConfig);
 }
 
 /*
@@ -968,29 +966,6 @@ static void UnifiedCleanExit(int signal, void *arg)
 
 
 
-/*
- * Function: Restart()
- *
- * Purpose: For restarts (SIGHUP usually) clean up structs that need it
- *
- * Arguments: signal => signal that caused this event
- *            arg => data ptr to reference this plugin's data
- *
- * Returns: void function
- */
-static void UnifiedRestart(int signal, void *arg)
-{
-    UnifiedConfig *data = (UnifiedConfig *)arg;
-
-    DEBUG_WRAP(DebugMessage(DEBUG_FLOW, "SpoUnified: Restart\n"););
-
-    fclose(data->stream);
-    free(data->filename);
-    free(data);
-}
-
-
-
 /* Unified Alert functions (deprecated) */
 void UnifiedAlertInit(char *args)
 {
@@ -1008,7 +983,6 @@ void UnifiedAlertInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(OldUnifiedLogAlert, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(UnifiedCleanExit, data);
-    AddFuncToRestartList(UnifiedRestart, data);
 }
 /*
  * Function: UnifiedInitAlertFile()
@@ -1108,7 +1082,6 @@ static void UnifiedLogInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(OldUnifiedLogPacketAlert, OUTPUT_TYPE__LOG, UnifiedInfo);
     AddFuncToCleanExitList(UnifiedCleanExit, UnifiedInfo);
-    AddFuncToRestartList(UnifiedRestart, UnifiedInfo);
 }
 
 static void UnifiedLogInitFinalize(int unused, void *arg)

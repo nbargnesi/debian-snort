@@ -113,7 +113,7 @@ Copyright \copyright 1998-2003 Martin Roesch
 
 Copyright \copyright 2001-2003 Chris Green
 
-Copyright \copyright 2003-2011 Sourcefire, Inc.
+Copyright \copyright 2003-2012 Sourcefire, Inc.
 
 \tableofcontents{}
 
@@ -125,8 +125,9 @@ Caswell $<$bmc@snort.org$>$ and now is maintained by the Snort Team.  If you
 have a better way to say something or find that something in the documentation
 is outdated, drop us a line and we will update it.  If you would like to submit
 patches for this document, you can find the latest version of the documentation
-in \LaTeX\ format in the Snort CVS repository at \verb!/doc/snort_manual.tex!.
-Small documentation updates are the easiest way to help out the Snort Project.
+in \LaTeX\ format in the most recent source tarball under
+\verb!/doc/snort_manual.tex!.  Small documentation updates are the easiest way
+to help out the Snort Project.
 
 \section{Getting Started}
 
@@ -567,29 +568,6 @@ You can specify the buffer size pcap uses with:
 
 Note that the pcap DAQ does not count filtered packets.
 
-\subsubsection{MMAPed pcap}
-
-On Linux, a modified version of libpcap is available that implements a shared
-memory ring buffer.  Phil Woods (cpw@lanl.gov) is the current maintainer of the
-libpcap implementation of the shared memory ring buffer.  The shared memory
-ring buffer libpcap can be downloaded from his website at
-\url{http://public.lanl.gov/cpw/}.
-
-Instead of the normal mechanism of copying the packets from kernel memory into
-userland memory, by using a shared memory ring buffer, libpcap is able to queue
-packets into a shared buffer that Snort is able to read directly.  This change
-speeds up Snort by limiting the number of times the packet is copied before
-Snort gets to perform its detection upon it.
-
-Once Snort linked against the shared memory libpcap, enabling the ring buffer
-is done via setting the environment variable \emph{PCAP\_FRAMES}.
-\emph{PCAP\_FRAMES} is the size of the ring buffer.  According to Phil, the
-maximum size is 32768, as this appears to be the maximum number of iovecs the
-kernel can handle.  By using \emph{PCAP\_FRAMES=max}, libpcap will
-automatically use the most frames possible.  On Ethernet, this ends up being
-1530 bytes per frame, for a total of around 52 Mbytes of memory for the ring
-buffer alone.
-
 \subsection{AFPACKET}
 
 afpacket functions similar to the memory mapped pcap DAQ but no external 
@@ -661,7 +639,7 @@ NFQ is the new and improved way to process iptables packets:
     <qlen> ::= 0..65535; default is 0
 \end{verbatim}
 
-Notes on iptables are given below.
+Notes on iptables can be found in the DAQ distro README.
 
 \subsection{IPQ}
 
@@ -682,8 +660,6 @@ Start the IPQ DAQ as follows:
     <dev> ::= ip | eth0, etc; default is IP injection
     <proto> ::= ip4 | ip6; default is ip4
 \end{verbatim}
-
-Notes on iptables are given below.
 
 \subsection{IPFW}
 
@@ -2387,14 +2363,6 @@ thresholding. Default is 1048576 bytes (1 megabyte). (This is deprecated.
 Use config event\_filter instead.)\\
 
 \hline
-\texttt{config timestats\_interval: <secs>} &
-
-Set the amount of time in seconds between logging time stats.  Default is 3600
-(1 hour).  Note this option is only available if Snort was built to use time
-stats with \texttt{--enable-timestats}. \\
-
-
-\hline
 \texttt{config umask: <umask>} & Sets umask when running (\texttt{snort -m}). \\
 
 \hline
@@ -3367,7 +3335,7 @@ Available options:
 \begin{itemize}
 \item \texttt{TCP}
 \item \texttt{UDP}
-\item \texttt{IGMP}
+\item \texttt{ICMP}
 \item \texttt{ip\_proto}
 \item \texttt{all}
 \end{itemize}
@@ -4039,8 +4007,8 @@ using the \texttt{disabled} keyword.
 \item \texttt{max\_gzip\_mem $<$integer$>$}
 
 This option determines (in bytes) the maximum amount of memory the HTTP Inspect 
-preprocessor will use for decompression. This value can be set from 3276 bytes 
-to 100MB. This option along with \texttt{compress\_depth} and \texttt{decompress\_depth} 
+preprocessor will use for decompression. The minimum allowed value for this option 
+is 3276 bytes. This option along with \texttt{compress\_depth} and \texttt{decompress\_depth} 
 determines the gzip sessions that will be decompressed at any given instant. The default 
 value for this option is 838860.
 
@@ -4540,8 +4508,8 @@ and 'decompress\_depth'.
 This option enables the normalization of Javascript within the HTTP response body.
 You should select the config option \texttt{extended\_response\_inspection} before configuring 
 this option. When this option is turned on, Http Inspect searches for a Javascript within the 
-HTTP response body by searching for the <script> tags and starts normalizing it. 
-When Http Inspect sees the <script> tag without a type, it is considered as a javascript.
+HTTP response body by searching for the $<$script$>$ tags and starts normalizing it. 
+When Http Inspect sees the $<$script$>$ tag without a type, it is considered as a javascript.
 The obfuscated data within the javascript functions such as unescape, String.fromCharCode, decodeURI, 
 decodeURIComponent will be normalized. The different encodings handled within the unescape/
 decodeURI/decodeURIComponent are \texttt{\%XX}, \texttt{\%uXXXX}, \texttt{\\XX} and \texttt{\\uXXXXi}. 
@@ -5320,9 +5288,6 @@ max smtp session = \texttt{max\_mime\_mem}/2*65535 (max value for \texttt{b64\_d
 In case of multiple configs, the \texttt{max\_mime\_mem} of the non-default configs will be overwritten by the
 default config's value. Hence user needs to define it in the default config with the new keyword
 disabled (used to disable SMTP preprocessor in a config).
-
-When the memcap for decoding (\texttt{max\_mime\_mem}) is exceeded the SMTP preprocessor alert with sid 9 is
-generated (when enabled)
 
 \item \texttt{log\_mailfrom}
 This option enables SMTP preprocessor to parse and log the sender's email address extracted 
@@ -8284,10 +8249,6 @@ Base normalizations enabled with "preprocessor \texttt{normalize\_ip4}" include:
 
 \begin{itemize} 
 \item
-Truncate packets with excess payload to the datagram length specified in the
-IP header.
-
-\item
 TTL normalization if enabled (explained below).
 
 \item
@@ -8378,8 +8339,6 @@ TCP normalizations are enabled with:
 Base normalizations enabled with "preprocessor \texttt{normalize\_tcp}" include:
 
 \begin{itemize} 
-\item
-Remove data on SYN.
 
 \item
 Clear the reserved bits in the TCP header.
@@ -8391,23 +8350,11 @@ Clear the urgent pointer if the urgent flag is not set.
 Clear the urgent pointer and the urgent flag if there is no payload.
 
 \item
-Set the urgent pointer to the payload length if it is greater than the
-payload length.
- 
-\item
 Clear the urgent flag if the urgent pointer is not set.
 
 \item
 Clear any option padding bytes.
 
-\item
-Remove any data from RST packet.
-
-\item
-Trim data to window.
-
-\item
-Trim data to MSS.
 \end{itemize} 
 
 Optional normalizations include:
@@ -8482,8 +8429,8 @@ described above) and the minimum and new TTL values are configured, as follows:
     <new_ttl> ::= (<min_ttl>+1..255)
 \end{verbatim}
 
-If \texttt{new\_ttl }> \texttt{min\_ttl}, then if a packet is received with a
-TTL < \texttt{min\_ttl}, the TTL will be set to \texttt{new\_ttl}.
+If \texttt{new\_ttl }$>$ \texttt{min\_ttl}, then if a packet is received with a
+TTL $<$ \texttt{min\_ttl}, the TTL will be set to \texttt{new\_ttl}.
 
 Note that this configuration item was deprecated in 2.8.6:
 
@@ -8538,6 +8485,8 @@ Option & Argument & Required & Default\\
 \hline
 \texttt{max\_sessions} & \texttt{<max\_sessions>} & NO & \texttt{max\_sessions 10000}\\
 \hline
+\texttt{max\_dialogs} & \texttt{<max\_dialogs>} & NO & \texttt{max\_dialogs 4}\\
+\hline
 \texttt{ports} & \texttt{<ports>} & NO & \texttt{ports \{ 5060 5061 \} }\\
 \hline
 \texttt{methods} & \texttt{<methods>} & NO & \texttt{methods \{ invite cancel ack bye 
@@ -8566,6 +8515,7 @@ Option & Argument & Required & Default\\
 \footnotesize
 \begin{verbatim}
      max_sessions        = 1024-4194303
+     max_dialogs         = 1-4194303
      methods             = "invite"|"cancel"|"ack"|"bye"|"register"| "options"\
                            |"refer" |"subscribe"|"update"|"join"|"info"|"message"\                
                            |"notify"|"prack"
@@ -8592,6 +8542,11 @@ Option & Argument & Required & Default\\
 \item[]  This specifies the maximum number of sessions that can be allocated. 
       Those sessions are stream sessions, so they are bounded by maximum number of 
       stream sessions. Default is 10000.
+\end{itemize}
+\item[] \texttt{max\_dialogs}
+\begin{itemize}
+\item[]   This specifies the maximum number of dialogs within one stream session. If exceeded,
+      the oldest dialog will be dropped. Default is 4.
 \end{itemize}
 \item[] \texttt{ports}
 \begin{itemize}
@@ -8801,6 +8756,8 @@ SID & Description\\
  25 &  Mismatch in Method of request and the CSEQ header\\
 \hline
  26 &  The method is unknown \\
+\hline
+ 27 &  The number of dialogs in the stream session exceeds the maximal value. \\
 \hline
 \end{longtable}
 \subsubsection{Rule Options}
@@ -9283,6 +9240,28 @@ Two components are developed: GTP decoder and GTP preprocessor.
 further inspection
 \end{itemize}
 
+When the decoder is enabled and configured, the decoder strips the GTP headers 
+and parses the underlying IP/TCP/UDP encapsulated packets. Therefore all rules
+and detection work as if there was no GTP header.
+
+Example:
+
+\begin{itemize}
+\item[]
+Most GTP packets look like this
+\begin{verbatim}
+IP -> UDP -> GTP -> IP -> TCP -> HTTP
+\end{verbatim}
+
+If you had a standard HTTP rule:
+\begin{verbatim}
+alert tcp any any ->  any $HTTP_PORTS (msg:"Test HTTP"; flow:to_server,established; 
+content:"SOMETHINGEVIL"; http_uri;  .... sid:X; rev:Y;)
+\end{verbatim}
+it would alert on the inner HTTP data that is encapsulated in GTP without any changes
+ to the rule other than enabling and configuring the GTP decoder.
+\end{itemize}
+
 \subsubsection{Dependency Requirements}
 
 For proper functioning of the preprocessor:
@@ -9315,7 +9294,7 @@ portvar GTP_PORTS [2152,3386]
 Different from GTP decoder, GTP preprocessor examines all signaling messages.
 The preprocessor configuration name is \texttt{gtp}.
 \begin{verbatim}
-preprocessor sip
+preprocessor gtp
 \end{verbatim}
 \textit{Option syntax}
 \begin{itemize}
@@ -9334,7 +9313,7 @@ Option & Argument & Required & Default\\
 \begin{itemize}
 \item[] \texttt{ports}
 \begin{itemize}
-\item[]  This specifies on what ports to check for SIP messages. Typically, 
+\item[]  This specifies on what ports to check for GTP messages. Typically, 
      this will include 5060, 5061.
 \item[] \textit{Syntax}
 \begin{verbatim}
@@ -11028,7 +11007,8 @@ unique destination IP addresses.  Ports or anything else are not tracked.\\
 \texttt{count c} &
 
 number of rule matching in s seconds that will cause \texttt{event\_filter}
-limit to be exceeded.  \texttt{c} must be nonzero value.\\
+limit to be exceeded.  \texttt{c} must be nonzero value.  A value of -1 disables
+the event filter and can be used to override the global \texttt{event\_filter}.\\
 
 \hline
 \texttt{seconds s} &
@@ -11150,7 +11130,7 @@ The suppress configuration has two forms:
 
 \begin{verbatim}
     suppress \
-        gen_id <gid>, sig_id <sid>, \
+        gen_id <gid>, sig_id <sid>
 \end{verbatim}
 
 \begin{verbatim}
@@ -11189,7 +11169,7 @@ if present, \texttt{ip} must be provided as well.\\
 \texttt{ip <list>} &
 
 Restrict the suppression to only source or destination IP addresses (indicated
-by \texttt{track} parameter) determined by <list>.  If track is provided, ip
+by \texttt{track} parameter) determined by $<$list$>$.  If track is provided, ip
 must be provided as well.\\
 
 \hline
@@ -11911,7 +11891,7 @@ only 1 file.
 
 \begin{itemize}
 \item \texttt{filename}: the name of the log file.  The default name is
-<logdir>/alert.  You may specify "stdout" for terminal output.  The name may
+$<$logdir$>$/alert.  You may specify "stdout" for terminal output.  The name may
 include an absolute or relative path.
 
 \item \texttt{packet}: this option will cause multiline entries with full
@@ -11948,7 +11928,7 @@ discouraged for all but the lightest traffic situations.
 
 \begin{itemize}
 \item \texttt{filename}: the name of the log file.  The default name is
-<logdir>/alert.  You may specify "stdout" for terminal output.  The name may
+$<$logdir$>$/alert.  You may specify "stdout" for terminal output.  The name may
 include an absolute or relative path.
 
 \item \texttt{limit}: an optional limit on file size which defaults to 128 MB.  
@@ -11994,7 +11974,7 @@ number of tools that are available for examining tcpdump-formatted files.
 
 \begin{itemize}
 \item \texttt{filename}: the name of the log file.  The default name is
-<logdir>/snort.log.  The name may include an absolute or relative path.  A
+$<$logdir$>$/snort.log.  The name may include an absolute or relative path.  A
 UNIX timestamp is appended to the filename.
 
 \item \texttt{limit}: an optional limit on file size which defaults to 128 MB.
@@ -12158,7 +12138,7 @@ importable to a database.  The output fields and their order may be customized.
 
 \begin{itemize}
 \item \texttt{filename}: the name of the log file.  The default name is
-<logdir>/alert.csv.  You may specify "stdout" for terminal output.  The name
+$<$logdir$>$/alert.csv.  You may specify "stdout" for terminal output.  The name
 may include an absolute or relative path.
 
 \item \texttt{format}: The list of formatting options is below. If the
@@ -13140,7 +13120,7 @@ necessary.
 Each attempt (sent in rapid succession) has a different sequence number.  Each
 active response will actually cause this number of TCP resets to be sent.  TCP
 data (sent for react) is multiplied similarly.  At most 1 ICMP unreachable is
-sent, if and only if attempts > 0.
+sent, if and only if attempts $>$ 0.
 
 \begin{verbatim}
     ./configure --enable-active-response
@@ -13255,6 +13235,10 @@ selected message, which defaults to:
         "You are attempting to access a forbidden site.<br />" \
         "Consult your system administrator for details.";
 \end{verbatim}
+
+Additional formatting operators beyond a single %s are prohibited, including
+%d, %x, %s, as well as any URL encodings such as as %20 (space) that may be
+within a reference URL.
 
 This is an example rule:
 
@@ -15238,11 +15222,17 @@ P, H, D, M, C, K, S and Y.
 
 \subsubsection{Example}
 
-This example performs a case-insensitive search for the string BLAH in the payload.
+This example performs a case-insensitive search for the HTTP URI \texttt{foo.php?id=<some numbers>}
 
 \begin{verbatim}
-    alert ip any any -> any any (pcre:"/BLAH/i";)
+    alert tcp any any -> any 80 (content:"/foo.php?id="; pcre:"/\/foo.php?id=[0-9]{1,10}/iU";)
 \end{verbatim}
+
+\begin{note}
+It is wise to have at least one \texttt{content} keyword in a rule that uses \texttt{pcre}.  This
+allows the fast-pattern matcher to filter out non-matching packets so that the pcre evaluation is
+not performed on each and every packet coming across the wire.
+\end{note}
 
 \begin{note}
 
@@ -17190,6 +17180,11 @@ Since potentially many events will be generated, a \texttt{detection\_filter}
 would normally be used in conjunction with an \texttt{event\_filter} to reduce
 the number of logged events.
 
+\begin{note}
+As mentioned above, Snort evaluates \texttt{detection\_filter} as the last step of 
+the detection and not in post-detection.
+\end{note}
+
 \subsection{Post-Detection Quick Reference}
 
 \begin{center}
@@ -18161,7 +18156,7 @@ typedef struct _CursorInfo
 \item {OptionType: Protocol Header \& Structure: {\em HdrOptCheck}}
 
 The {\em HdrOptCheck} structure defines an option to check a protocol header
-for a specific value.  It includes the header field, the operation (<,>,=,etc),
+for a specific value.  It includes the header field, the operation ($<$,$>$,=,etc),
 a value, a mask to ignore that part of the header field, and flags.
 
 \begin{verbatim}
@@ -18201,7 +18196,7 @@ typedef struct _HdrOptCheck
 
 The {\em ByteData} structure defines the information for both ByteTest and
 ByteJump operations.  It includes the number of bytes, an operation (for
-ByteTest, <,>,=,etc), a value, an offset, multiplier, and flags.  The flags
+ByteTest, $<$,$>$,=,etc), a value, an offset, multiplier, and flags.  The flags
 must specify the buffer.
 
 \begin{verbatim}

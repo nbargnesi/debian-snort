@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -204,6 +204,15 @@ void TimeStop(void);
 void LogMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
 void WarningMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
 void ErrorMessage(const char *, ...) __attribute__((format (printf, 1, 2)));
+typedef struct _ThrottleInfo
+{
+    time_t lastUpdate;
+    /*Within this duration (in seconds), maximal one distinct message is logged*/
+    uint32_t duration_to_log;
+    uint64_t count;
+}ThrottleInfo;
+void ErrorMessageThrottled(ThrottleInfo*,const char *, ...) __attribute__((format (printf, 2, 3)));
+
 NORETURN void FatalError(const char *, ...) __attribute__((format (printf, 1, 2)));
 int SnortSnprintf(char *, size_t, const char *, ...) __attribute__((format (printf, 3, 4)));
 int SnortSnprintfAppend(char *, size_t, const char *, ...) __attribute__((format (printf, 3, 4)));
@@ -272,6 +281,65 @@ static inline unsigned long SnortStrtoul(const char *nptr, char **endptr, int ba
         iRet = strtoul(nptr, endptr, base);
 
         return iRet;
+}
+
+// Checks to make sure we're not going to evaluate a negative number for which
+// strtoul() gladly accepts and parses returning an underflowed wrapped unsigned
+// long without error.
+//
+// Buffer passed in MUST be NULL terminated.
+//
+// Returns
+//  int
+//    -1 if buffer is nothing but spaces or first non-space character is a
+//       negative sign.  Also if errno is EINVAL (which may be due to a bad
+//       base) or there was nothing to convert.
+//     0 on success
+//
+// Populates pointer to uint32_t value passed in which should
+// only be used on a successful return from this function.
+//
+// Also will set errno to ERANGE on a value returned from strtoul that is
+// greater than UINT32_MAX, but still return success.
+//
+static inline int SnortStrToU32(const char *buffer, char **endptr,
+        uint32_t *value, int base)
+{
+    unsigned long int tmp;
+
+    if ((buffer == NULL) || (endptr == NULL) || (value == NULL))
+        return -1;
+
+    // Only positive numbers should be processed and strtoul will
+    // eat up white space and process '-' and '+' so move past
+    // white space and check for a negative sign.
+    while (isspace((int)*buffer))
+        buffer++;
+
+    // If all spaces or a negative sign is found, return error.
+    // XXX May also want to exclude '+' as well.
+    if ((*buffer == '\0') || (*buffer == '-'))
+        return -1;
+
+    tmp = SnortStrtoul(buffer, endptr, base);
+
+    // The user of the function should check for ERANGE in errno since this
+    // function can be used such that an ERANGE error is acceptable and
+    // value gets truncated to UINT32_MAX.
+    if ((errno == EINVAL) || (*endptr == buffer))
+        return -1;
+
+    // If value is greater than a UINT32_MAX set value to UINT32_MAX
+    // and errno to ERANGE
+    if (tmp > UINT32_MAX)
+    {
+        tmp = UINT32_MAX;
+        errno = ERANGE;
+    }
+
+    *value = (uint32_t)tmp;
+
+    return 0;
 }
 
 static inline long SnortStrtolRange(const char *nptr, char **endptr, int base, long lo, long hi)

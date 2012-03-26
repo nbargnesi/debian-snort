@@ -158,7 +158,6 @@ const ArubaResponseCode response_lookup[] = {
 void AlertArubaActionInit(char *);
 SpoAlertArubaActionData *ParseAlertArubaActionArgs(char *);
 void AlertArubaActionCleanExitFunc(int, void *);
-void AlertArubaActionRestartFunc(int, void *);
 void AlertArubaAction(Packet *, char *, void *, Event *);
 int ArubaSwitchConnect(SpoAlertArubaActionData *data);
 int ArubaSwitchSend(SpoAlertArubaActionData *data, uint8_t *post, int len);
@@ -220,7 +219,6 @@ void AlertArubaActionInit(char *args)
 	/* Set the preprocessor function into the function list */
 	AddFuncToOutputList(AlertArubaAction, OUTPUT_TYPE__ALERT, data);
 	AddFuncToCleanExitList(AlertArubaActionCleanExitFunc, data);
-	AddFuncToRestartList(AlertArubaActionRestartFunc, data);
 }
 
 void AlertArubaAction(Packet *p, char *msg, void *arg, Event *event)
@@ -645,14 +643,3 @@ void AlertArubaActionCleanExitFunc(int signal, void *arg)
 	free(data->role_name);
 	free(data);
 }
-
-void AlertArubaActionRestartFunc(int signal, void *arg)
-{
-	SpoAlertArubaActionData *data = (SpoAlertArubaActionData *)arg;
-
-	DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertArubaActionRestartFunc\n"););
-	free(data->secret);
-	free(data->role_name);
-	free(data);
-}
-

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -96,7 +96,6 @@ typedef struct _SpoAlertFastData
 static void AlertFastInit(char *);
 static SpoAlertFastData *ParseAlertFastArgs(char *);
 static void AlertFastCleanExitFunc(int, void *);
-static void AlertFastRestartFunc(int, void *);
 static void AlertFast(Packet *, char *, void *, Event *);
 
 /*
@@ -145,7 +144,6 @@ static void AlertFastInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertFast, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertFastCleanExitFunc, data);
-    AddFuncToRestartList(AlertFastRestartFunc, data);
 }
 
 static void AlertFast(Packet *p, char *msg, void *arg, Event *event)
@@ -369,10 +367,5 @@ static void AlertFastCleanup(int signal, void *arg, const char* msg)
 static void AlertFastCleanExitFunc(int signal, void *arg)
 {
     AlertFastCleanup(signal, arg, "AlertFastCleanExitFunc");
-}
-
-static void AlertFastRestartFunc(int signal, void *arg)
-{
-    AlertFastCleanup(signal, arg, "AlertFastRestartFunc");
 }
 

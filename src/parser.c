@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -12072,7 +12072,7 @@ void ParseWarning(const char *format, ...)
     buf[STD_BUF] = '\0';
 
     if (file_name != NULL)
-        LogMessage("WARNING %s(%d) %s\n", file_name, file_line, buf);
+        LogMessage("WARNING: %s(%d) %s\n", file_name, file_line, buf);
     else
         LogMessage("%s\n", buf);
 }
