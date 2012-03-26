@@ -1,4 +1,10 @@
-snort (2.9.2-4) UNRELEASED; urgency=low
+snort (2.9.2.2-1) unstable; urgency=low
+
+  * New upstream version (bug fix release)
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 27 Mar 2012 00:15:31 +0200
+
+snort (2.9.2-4) unstable; urgency=low
 
   * Fix typo (appropiate --> apppropriate) in all the Snort templates. Also
     update translations and manually unfuzzy them
