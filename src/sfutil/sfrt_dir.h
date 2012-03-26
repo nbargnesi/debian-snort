@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2011 Sourcefire, Inc.
+ * Copyright (C) 2006-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -38,7 +38,7 @@
 typedef struct
 {
     word *entries;
-    char *lengths;
+    uint8_t *lengths;
     int num_entries; /* Number of entries in this table */
     int width;       /* width of this table. */
                      /* While one determines the other, this way fewer

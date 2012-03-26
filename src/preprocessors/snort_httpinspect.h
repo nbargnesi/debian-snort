@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -66,7 +66,6 @@ extern DataBuffer HttpDecodeBuf;
 #ifdef ZLIB
 
 #define DEFAULT_MAX_GZIP_MEM 838860
-#define GZIP_MEM_MAX    104857600
 #define GZIP_MEM_MIN    3276
 #define MAX_GZIP_DEPTH    65535
 #define DEFAULT_COMP_DEPTH 1460
@@ -109,7 +108,7 @@ typedef struct s_HTTP_RESP_STATE
     uint8_t last_pkt_contlen;
     uint8_t last_pkt_chunked;
     uint32_t next_seq;
-    uint32_t last_chunk_size;
+    uint32_t chunk_remainder;
     int flow_depth_read;
     uint32_t max_seq;
     int is_max_seq;
@@ -296,7 +295,7 @@ static inline void ResetRespState(HTTP_RESP_STATE *ds)
     ds->last_pkt_chunked = 0;
     ds->inspect_reassembled = 0;
     ds->next_seq = 0;
-    ds->last_chunk_size = 0;
+    ds->chunk_remainder = 0;
     ds->flow_depth_read = 0;
     ds->max_seq = 0;
     ds->is_max_seq = 0;

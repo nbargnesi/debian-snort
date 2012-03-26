@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
 **
@@ -89,7 +89,6 @@ static void AlertUnixSockInit(char *);
 static void AlertUnixSock(Packet *, char *, void *, Event *);
 static void ParseAlertUnixSockArgs(char *);
 static void AlertUnixSockCleanExit(int, void *);
-static void AlertUnixSockRestart(int, void *);
 static void OpenAlertSock(void);
 static void CloseAlertSock(void);
 
@@ -138,7 +137,6 @@ static void AlertUnixSockInit(char *args)
     AddFuncToOutputList(AlertUnixSock, OUTPUT_TYPE__ALERT, NULL);
 
     AddFuncToCleanExitList(AlertUnixSockCleanExit, NULL);
-    AddFuncToRestartList(AlertUnixSockRestart, NULL);
 }
 
 
@@ -300,12 +298,6 @@ static void OpenAlertSock(void)
 static void AlertUnixSockCleanExit(int signal, void *arg)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertUnixSockCleanExitFunc\n"););
-    CloseAlertSock();
-}
-
-static void AlertUnixSockRestart(int signal, void *arg)
-{
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertUnixSockRestartFunc\n"););
     CloseAlertSock();
 }
 

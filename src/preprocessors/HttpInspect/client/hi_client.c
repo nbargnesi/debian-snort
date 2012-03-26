@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -125,7 +125,7 @@ extern const u_char *extract_http_transfer_encoding(HI_SESSION *, HttpSessionDat
 */
 int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *end,
         const u_char **post_end, u_char *iChunkBuf, uint32_t max_size,
-        uint32_t last_chunk_size, uint32_t *chunkSize, uint32_t *chunkRead, HttpSessionData *hsd,
+        uint32_t chunk_remainder, uint32_t *updated_chunk_remainder, uint32_t *chunkRead, HttpSessionData *hsd,
         int iInspectMode)
 {
     uint32_t iChunkLen   = 0;
@@ -143,33 +143,38 @@ int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *e
 
     ptr = start;
 
-    if(last_chunk_size)
+    if(chunk_remainder)
     {
-        if(last_chunk_size > max_size)
-        {
-            if(chunkSize)
-                *chunkSize = last_chunk_size - max_size ;
-            last_chunk_size = max_size;
-        }
-
         iDataLen = end - ptr;
 
-        if(last_chunk_size > iDataLen)
+        if( iDataLen < max_size)
         {
-            if(chunkSize)
-                *chunkSize = last_chunk_size - iDataLen ;
-            last_chunk_size = iDataLen;
+            if( chunk_remainder > iDataLen )
+            {
+                if(updated_chunk_remainder)
+                    *updated_chunk_remainder = chunk_remainder - iDataLen ;
+                chunk_remainder = iDataLen;
+            }
+        }
+        else
+        {
+            if( chunk_remainder > max_size )
+            {
+                if(updated_chunk_remainder)
+                    *updated_chunk_remainder = chunk_remainder - max_size ;
+                chunk_remainder = max_size;
+            }
         }
 
-        jump_ptr = ptr + last_chunk_size - 1;
+        jump_ptr = ptr + chunk_remainder - 1;
 
         if(hi_util_in_bounds(start, end, jump_ptr))
         {
             chunkPresent = 1;
             if(iChunkBuf)
             {
-                memcpy(iChunkBuf, ptr, last_chunk_size);
-                chunkBytesCopied = last_chunk_size;
+                memcpy(iChunkBuf, ptr, chunk_remainder);
+                chunkBytesCopied = chunk_remainder;
             }
             ptr = jump_ptr + 1;
         }
@@ -254,8 +259,8 @@ int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *e
 
                 if( iChunkLen > iDataLen)
                 {
-                    if(chunkSize)
-                        *chunkSize = iChunkLen - iDataLen;
+                    if(updated_chunk_remainder)
+                        *updated_chunk_remainder = iChunkLen - iDataLen;
                     iChunkLen = iDataLen;
                 }
 
@@ -2609,6 +2614,13 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     end = data + dsize;
 
     ptr = start;
+#ifdef ENABLE_PAF
+    if ( ScPafEnabled() )
+    {
+        if(stream_ins)
+            return HI_INVALID_ARG;
+    }
+#endif
 
     /*
     **  Apache and IIS strike again . . . Thanks Kanatoko
@@ -2647,15 +2659,21 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
             method_end = mthd++;
             break;
         }
-
-        /* isascii returns non-zero if it is ascii */
-        if (isascii((int)*mthd) == 0)
+#ifdef ENABLE_PAF
+        if ( !ScPafEnabled() )
         {
-            /* Possible post data or something else strange... */
-            method_end = mthd++;
-            non_ascii_mthd = 1;
-            break;
+#endif
+            /* isascii returns non-zero if it is ascii */
+            if (isascii((int)*mthd) == 0)
+            {
+                /* Possible post data or something else strange... */
+                method_end = mthd++;
+                non_ascii_mthd = 1;
+                break;
+            }
+#ifdef ENABLE_PAF
         }
+#endif
 
         mthd++;
     }
@@ -2689,15 +2707,35 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
 
         if(iRet == -1 || (CmdConf == NULL))
         {
-            sans_uri = 1;
+            if(hi_eo_generate_event(Session, HI_EO_CLIENT_UNKNOWN_METHOD))
+            {
+                hi_eo_client_event_log(Session, HI_EO_CLIENT_UNKNOWN_METHOD, NULL, NULL);
+            }
+
             Client->request.method = HI_UNKNOWN_METHOD;
         }
-
     }
     else
     {
-        sans_uri = 1;
-        Client->request.method = HI_UNKNOWN_METHOD;
+#ifdef ENABLE_PAF
+        if( ScPafEnabled() )
+        {
+            /* Might have gotten non-ascii characters, hence no method, but if
+             * PAF is in use, checking "!stream_ins" equates to PacketHasStartOfPDU()
+             * so we know we're looking for a method and not guessing that we're in
+             * the body or somewhere else because we found a non-ascii character */
+            if (!stream_ins && hi_eo_generate_event(Session, HI_EO_CLIENT_UNKNOWN_METHOD))
+                hi_eo_client_event_log(Session, HI_EO_CLIENT_UNKNOWN_METHOD, NULL, NULL);
+            Client->request.method = HI_UNKNOWN_METHOD;
+        }
+        else
+#endif
+        {
+            if (!stream_ins && hi_eo_generate_event(Session, HI_EO_CLIENT_UNKNOWN_METHOD))
+                hi_eo_client_event_log(Session, HI_EO_CLIENT_UNKNOWN_METHOD, NULL, NULL);
+            sans_uri = 1;
+            Client->request.method = HI_UNKNOWN_METHOD;
+        }
     }
 
     if (!sans_uri )
@@ -2722,8 +2760,7 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     }
 
     if(iRet == URI_END &&
-        !(ServerConf->uri_only) &&
-        !(Client->request.method & HI_UNKNOWN_METHOD))
+        !(ServerConf->uri_only))
     {
         Client->request.method_raw = method_ptr.uri;
         Client->request.method_size = method_ptr.uri_end - method_ptr.uri;

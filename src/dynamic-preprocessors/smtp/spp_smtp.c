@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -84,8 +84,8 @@ const char *PREPROC_NAME = "SF_SMTP";
 #define SetupSMTP DYNAMIC_PREPROC_SETUP
 
 MemPool *smtp_mime_mempool = NULL;
+SMTP_Stats smtp_stats;
 MemPool *smtp_mempool = NULL;
-
 tSfPolicyUserContextId smtp_config = NULL;
 SMTPConfig *smtp_eval_config = NULL;
 
@@ -99,6 +99,7 @@ static void SMTPResetFunction(int, void *);
 static void SMTPResetStatsFunction(int, void *);
 static void _addPortsToStream5Filter(SMTPConfig *, tSfPolicyId);
 static void SMTP_RegXtraDataFuncs(SMTPConfig *config);
+static void SMTP_PrintStats(int);
 #ifdef TARGET_BASED
 static void _addServicesToStream5Filter(tSfPolicyId);
 #endif
@@ -176,6 +177,7 @@ static void SMTPInit(char *args)
         /* _dpd.addPreproc(SMTPDetect, PRIORITY_APPLICATION, PP_SMTP, PROTO_BIT__TCP);*/
         _dpd.addPreprocExit(SMTPCleanExitFunction, NULL, PRIORITY_LAST, PP_SMTP);
         _dpd.addPreprocReset(SMTPResetFunction, NULL, PRIORITY_LAST, PP_SMTP);
+        _dpd.registerPreprocStats(SMTP_PROTO_REF_STR, SMTP_PrintStats);
         _dpd.addPreprocResetStats(SMTPResetStatsFunction, NULL, PRIORITY_LAST, PP_SMTP);
         _dpd.addPreprocConfCheck(SMTPCheckConfig);
 
@@ -514,6 +516,27 @@ static void SMTPCheckConfig(void)
                 }
             }
         }
+    }
+
+}
+
+static void SMTP_PrintStats(int exiting)
+{
+    _dpd.logMsg("SMTP Preprocessor Statistics\n");
+    _dpd.logMsg("  Total sessions                                    : "STDu64"\n", smtp_stats.sessions);
+    _dpd.logMsg("  Max concurrent sessions                           : "STDu64"\n", smtp_stats.max_conc_sessions);
+    if (smtp_stats.sessions > 0)
+    { 
+        _dpd.logMsg("  Base64 attachments decoded                        : "STDu64"\n", smtp_stats.attachments[DECODE_B64]);
+        _dpd.logMsg("  Total Base64 decoded bytes                        : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_B64]);
+        _dpd.logMsg("  Quoted-Printable attachments decoded              : "STDu64"\n", smtp_stats.attachments[DECODE_QP]);
+        _dpd.logMsg("  Total Quoted decoded bytes                        : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_QP]);
+        _dpd.logMsg("  UU attachments decoded                            : "STDu64"\n", smtp_stats.attachments[DECODE_UU]);
+        _dpd.logMsg("  Total UU decoded bytes                            : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_UU]);
+        _dpd.logMsg("  Bit/Binary/Text attachments extracted             : "STDu64"\n", smtp_stats.attachments[DECODE_BITENC]);
+        _dpd.logMsg("  Total Bit/Binary/Text bytes extracted             : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_BITENC]);
+        if ( smtp_stats.memcap_exceeded )
+            _dpd.logMsg("  Sessions not decoded due to memory unavailability : "STDu64"\n", smtp_stats.memcap_exceeded);
     }
 
 }

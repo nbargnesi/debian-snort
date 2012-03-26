@@ -14,6 +14,23 @@ GTP decoder extracts payload inside GTP PDU;
 GTP preprocessor inspects all the signaling messages and provide keywords for
 further inspection
 
+When the decoder is enabled and configured, the decoder strips the GTP headers 
+and parses the underlying IP/TCP/UDP encapsulated packets. Therefore all rules
+and detection work as if there was no GTP header.
+
+Example:
+
+Most GTP packets look like this
+
+IP -> UDP -> GTP -> IP -> TCP -> HTTP
+
+If you had a standard HTTP rule "alert tcp any any ->  any $HTTP_PORTS (msg:
+"Test HTTP"; flow:to_server,established; content:"SOMETHINGEVIL"; http_uri; 
+ .... sid:X; rev:Y;)",  it would alert on the inner HTTP data that is encapsulated
+in GTP without any changes to the rule other than enabling and configuring the GTP
+decoder.
+
+
 Sections:
     Dependency Requirements
     GTP Data Channel Decoder Configuration
@@ -51,7 +68,7 @@ GTP Control Channel Preprocessor Configuration
 Different from GTP decoder, GTP preprocessor examines all signaling messages.
 The preprocessor configuration name is "gtp".
 
-preprocessor sip
+preprocessor gtp
 
 Option              Argument          Required   Default
 ports               <ports>               No     ports { 2123 3386 }
@@ -73,10 +90,10 @@ Option explanations
 
 Configuration examples
      preprocessor gtp
-     preprocessor sip: ports { 2123 3386 2152  }
+     preprocessor gtp: ports { 2123 3386 2152  }
 
 Default configuration
-     preprocessor sip
+     preprocessor gtp
 
 GTP Decoder Events
 ================================================================================

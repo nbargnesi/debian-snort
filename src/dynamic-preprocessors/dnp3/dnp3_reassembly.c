@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -233,7 +233,7 @@ static int DNP3ReassembleTransport(dnp3_reassembly_data_t *rdata, char *buf, uin
 /* Check for reserved application-level function codes. */
 static void DNP3CheckReservedFunction(dnp3_session_data_t *session)
 {
-    if ( DNP3FuncIsDefined( (uint16_t)session->func) )
+    if ( !(DNP3FuncIsDefined( (uint16_t)session->func)) )
     {
         _dpd.alertAdd(GENERATOR_SPP_DNP3, DNP3_RESERVED_FUNCTION,
                         1, 0, 3, DNP3_RESERVED_FUNCTION_STR, 0);
@@ -330,22 +330,23 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
     *buflen = 0;
 
     /* Process whole 16-byte chunks (plus 2-byte CRC) */
-    while (bytes_left > 18)
+    while (bytes_left > (DNP3_CHUNK_SIZE + DNP3_CRC_SIZE))
     {
-        if ((config->check_crc) && (DNP3CheckCRC((unsigned char*)cursor, 18) == DNP3_FAIL))
+        if ((config->check_crc) &&
+            (DNP3CheckCRC((unsigned char*)cursor, (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE)) == DNP3_FAIL))
         {
             _dpd.alertAdd(GENERATOR_SPP_DNP3, DNP3_BAD_CRC, 1, 0, 3,
                           DNP3_BAD_CRC_STR, 0);
             return DNP3_FAIL;
         }
 
-        memcpy((buf + *buflen), cursor, 16);
-        *buflen += 16;
-        cursor += 18;
-        bytes_left -= 18;
+        memcpy((buf + *buflen), cursor, DNP3_CHUNK_SIZE);
+        *buflen += DNP3_CHUNK_SIZE;
+        cursor += (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE);
+        bytes_left -= (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE);
     }
     /* Process leftover chunk, under 16 bytes */
-    if (bytes_left > 2)
+    if (bytes_left > DNP3_CRC_SIZE)
     {
         if ((config->check_crc) && (DNP3CheckCRC((unsigned char*)cursor, bytes_left) == DNP3_FAIL))
         {
@@ -354,8 +355,8 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
             return DNP3_FAIL;
         }
 
-        memcpy((buf + *buflen), cursor, (bytes_left - 2));
-        *buflen += (bytes_left - 2);
+        memcpy((buf + *buflen), cursor, (bytes_left - DNP3_CRC_SIZE));
+        *buflen += (bytes_left - DNP3_CRC_SIZE);
         cursor += bytes_left;
         bytes_left = 0;
     }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -400,12 +400,7 @@ static int sip_startline_parse(SIPMsg *msg, const char *buff, char *end, char **
 		DEBUG_WRAP(DebugMessage(DEBUG_SIP, "method: %.*s\n", msg->methodLen, msg->method));
 
 		method = SIP_FindMethod (sip_eval_config->methods, msg->method, msg->methodLen);
-		if (NULL == method)
-		{
-		    ALERT(SIP_EVENT_UNKOWN_METHOD, SIP_EVENT_UNKOWN_METHOD_STR);
-		    return SIP_FAILURE;
-		}
-		else
+		if (method)
 		{
 		    msg->methodFlag = method->methodFlag;
 		    DEBUG_WRAP(DebugMessage(DEBUG_SIP, "Found the method: %s, Flag: 0x%x\n", method->methodName, method->methodFlag));
@@ -436,8 +431,12 @@ static int sip_startline_parse(SIPMsg *msg, const char *buff, char *end, char **
 		    ALERT(SIP_EVENT_INVALID_VERSION,SIP_EVENT_INVALID_VERSION_STR);
 		}
 
+        if (NULL == method)
+        {
+            ALERT(SIP_EVENT_UNKOWN_METHOD, SIP_EVENT_UNKOWN_METHOD_STR);
+            return SIP_FAILURE;
+        }
 	}
-
 
 	return SIP_SUCCESS;
 }
@@ -1178,7 +1177,7 @@ int sip_parse(SIPMsg *msg, const char *buff, char *end)
 	start = nextIndex;
 	msg->bodyLen = end - start;
 	/*Disable this check for TCP. Revisit this again when PAF enabled for SIP*/
-	if((!msg->isTcp)&&(msg->content_len != msg->bodyLen))
+	if((!msg->isTcp)&&(msg->content_len > msg->bodyLen))
 		ALERT(SIP_EVENT_MISMATCH_CONTENT_LEN,SIP_EVENT_MISMATCH_CONTENT_LEN_STR);
 
 	if (msg->content_len < msg->bodyLen)
@@ -1193,10 +1192,16 @@ int sip_parse(SIPMsg *msg, const char *buff, char *end)
 
 	// Find out whether multiple SIP messages in this packet
 	/*Disable this check for TCP. Revisit this again when PAF enabled for SIP*/
-    if ((!msg->isTcp) && (nextIndex < end))
+    if ((!msg->isTcp) && (msg->content_len < msg->bodyLen))
     {
-    	if (SIP_SUCCESS == sip_startline_parse(msg, nextIndex, end, &nextIndex))
+    	if (SIP_SUCCESS == sip_startline_parse(msg, start + msg->content_len, end, &nextIndex))
+    	{
     		ALERT(SIP_EVENT_MULTI_MSGS,SIP_EVENT_MULTI_MSGS_STR);
+    	}
+    	else
+    	{
+            ALERT(SIP_EVENT_MISMATCH_CONTENT_LEN,SIP_EVENT_MISMATCH_CONTENT_LEN_STR);
+    	}
     }
 	return status;
 }

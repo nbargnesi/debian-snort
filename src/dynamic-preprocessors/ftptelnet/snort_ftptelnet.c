@@ -1,7 +1,7 @@
 /*
  * snort_ftptelnet.c
  *
- * Copyright (C) 2004-2011 Sourcefire, Inc.
+ * Copyright (C) 2004-2012 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -330,9 +330,17 @@ static tSfPolicyId ftp_current_policy = 0;
 static void _addPortsToStream5(char *, tSfPolicyId, int);
 static void _addFtpServerConfPortsToStream5(void *);
 
+char* mystrtok (char* s, const char* delim)
+{
+    static char* last = NULL;
+    if ( s || last )
+        last = strtok(s, delim);
+    return last;
+}
+
 char *NextToken(char *delimiters)
 {
-    char *retTok = strtok(NULL, delimiters);
+    char *retTok = mystrtok(NULL, delimiters);
     if (retTok > maxToken)
         return NULL;
 
@@ -2679,7 +2687,7 @@ int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         {
             //list begin token matched
             ip_list = 1;
-            if ((pIpAddressList = strtok(NULL, END_IPADDR_LIST)) == NULL)
+            if ((pIpAddressList = mystrtok(NULL, END_IPADDR_LIST)) == NULL)
             {
                 snprintf(ErrorString, ErrStrLen,
                         "Invalid IP Address list in '%s' token.", CLIENT);
@@ -3188,7 +3196,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
     char firstIpAddress = 1;
     FTP_SERVER_PROTO_CONF *new_server_conf = NULL;
     char *ConfigParseResumePtr = NULL;
-    char *unused;  /* For unused token gotten from strtok */
+    char *unused;  /* For unused token gotten from mystrtok */
     char ip_list = 0;
     FTP_SERVER_PROTO_CONF *ftp_conf = NULL;
 
@@ -3209,7 +3217,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         {
             //list begin token matched
             ip_list = 1;
-            if ((pIpAddressList = strtok(NULL, END_IPADDR_LIST)) == NULL)
+            if ((pIpAddressList = mystrtok(NULL, END_IPADDR_LIST)) == NULL)
             {
                 snprintf(ErrorString, ErrStrLen,
                         "Invalid IP Address list in '%s' token.", SERVER);
@@ -3348,7 +3356,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         char *default_conf_str = DefaultConf(&default_conf_len);
 
         maxToken = default_conf_str + default_conf_len;
-        default_client = strtok(default_conf_str, CONF_SEPARATORS);
+        default_client = mystrtok(default_conf_str, CONF_SEPARATORS);
 
         iRet = ProcessFTPServerOptions(ftp_conf, ErrorString, ErrStrLen);
 
@@ -3361,10 +3369,10 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         }
     }
 
-    /* Okay, now we need to reset the strtok pointers so we can process
+    /* Okay, now we need to reset the mystrtok pointers so we can process
      * the specific server configuration.  Quick hack/trick here: reset
-     * the end of the client string to a conf separator, then call strtok.
-     * That will reset strtok's internal pointer to the next token after
+     * the end of the client string to a conf separator, then call mystrtok.
+     * That will reset mystrtok's internal pointer to the next token after
      * the client name, which is what we're expecting it to be.
       */
     if (ConfigParseResumePtr < maxToken)
@@ -3375,7 +3383,7 @@ int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *GlobalConf,
         else
             *ConfigParseResumePtr-- = CONF_SEPARATORS[0];
 
-        unused = strtok(ConfigParseResumePtr, CONF_SEPARATORS);
+        unused = mystrtok(ConfigParseResumePtr, CONF_SEPARATORS);
         iRet = ProcessFTPServerOptions(ftp_conf, ErrorString, ErrStrLen);
         if (iRet < 0)
         {

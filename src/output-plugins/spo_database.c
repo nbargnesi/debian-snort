@@ -298,7 +298,6 @@ static void          ParseDatabaseArgs(DatabaseData *data);
 static void          Database(Packet *, char *, void *, Event *);
 static char *        snort_escape_string(const char *, DatabaseData *);
 static void          SpoDatabaseCleanExitFunction(int, void *);
-static void          SpoDatabaseRestartFunction(int, void *);
 //static void          InitDatabase(void);
 static int           UpdateLastCid(DatabaseData *, int, int);
 static int           GetLastCid(DatabaseData *, int);
@@ -410,7 +409,6 @@ static void DatabaseInit(char *args)
     }
 
     AddFuncToCleanExitList(SpoDatabaseCleanExitFunction, data);
-    AddFuncToRestartList(SpoDatabaseRestartFunction, data);
     AddFuncToPostConfigList(DatabaseInitFinalize, data);
 
     ++instances;
@@ -3353,27 +3351,6 @@ static void SpoDatabaseCleanExitFunction(int signal, void *arg)
     DatabaseData *data = (DatabaseData *)arg;
 
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"database(debug): entered SpoDatabaseCleanExitFunction\n"););
-
-    if(data != NULL)
-    {
-       UpdateLastCid(data, data->shared->sid, data->shared->cid-1);
-       Disconnect(data);
-       free(data->args);
-       free(data);
-       data = NULL;
-    }
-
-    if(--instances == 0)
-    {
-       FreeSharedDataList();
-    }
-}
-
-static void SpoDatabaseRestartFunction(int signal, void *arg)
-{
-    DatabaseData *data = (DatabaseData *)arg;
-
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"database(debug): entered SpoDatabaseRestartFunction\n"););
 
     if(data != NULL)
     {

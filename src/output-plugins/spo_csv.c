@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2001 Brian Caswell <bmc@mitre.org>
 **
@@ -95,7 +95,6 @@ static void AlertCSVInit(char *);
 static AlertCSVData *AlertCSVParseArgs(char *);
 static void AlertCSV(Packet *, char *, void *, Event *);
 static void AlertCSVCleanExit(int, void *);
-static void AlertCSVRestart(int, void *);
 static void RealAlertCSV(
     Packet*, char* msg, char **args, int numargs, Event*, TextLog*
 );
@@ -146,7 +145,6 @@ static void AlertCSVInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertCSV, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertCSVCleanExit, data);
-    AddFuncToRestartList(AlertCSVRestart, data);
 }
 
 /*
@@ -259,12 +257,6 @@ static void AlertCSVCleanExit(int signal, void *arg)
 {
     AlertCSVCleanup(signal, arg, "AlertCSVCleanExit");
 }
-
-static void AlertCSVRestart(int signal, void *arg)
-{
-    AlertCSVCleanup(signal, arg, "AlertCSVRestart");
-}
-
 
 static void AlertCSV(Packet *p, char *msg, void *arg, Event *event)
 {

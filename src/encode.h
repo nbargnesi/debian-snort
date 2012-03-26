@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -27,6 +27,8 @@
 #define __ENCODE_H__
 
 #include "decode.h"
+
+extern Packet *encode_pkt;
 
 void Encode_Init(void);
 void Encode_Term(void);
@@ -73,6 +75,22 @@ void Encode_Update(Packet*);
 
 // Set the destination MAC address
 void Encode_SetDstMAC(uint8_t* );
+
+static inline void Encode_SetPkt(Packet* p)
+{
+    encode_pkt = p;
+}
+
+static inline Packet* Encode_GetPkt(void)
+{
+    return encode_pkt;
+}
+
+static inline void Encode_Reset(void)
+{
+    Encode_SetPkt(NULL);
+}
+
 
 #endif // __ENCODE_H__
 

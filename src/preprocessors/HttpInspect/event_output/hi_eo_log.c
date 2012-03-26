@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -114,7 +114,11 @@ static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
     {HI_EO_CLIENT_MULTIPLE_TRUEIP_IN_SESSION, HI_EO_MED_PRIORITY,
         HI_EO_CLIENT_MULTIPLE_TRUEIP_IN_SESSION_STR},
     {HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS, HI_EO_LOW_PRIORITY,
-        HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS_STR}
+        HI_EO_CLIENT_BOTH_TRUEIP_XFF_HDRS_STR},
+    {HI_EO_CLIENT_UNKNOWN_METHOD, HI_EO_MED_PRIORITY,
+        HI_EO_CLIENT_UNKNOWN_METHOD_STR},
+    {HI_EO_CLIENT_SIMPLE_REQUEST, HI_EO_HIGH_PRIORITY,
+        HI_EO_CLIENT_SIMPLE_REQUEST_STR}
 };
 
 static HI_EVENT_INFO server_event_info[HI_EO_SERVER_EVENT_NUM] = {

@@ -139,6 +139,10 @@ selected message, which defaults to:
         "You are attempting to access a forbidden site.<br />" \
         "Consult your system administrator for details.";
 
+Additional formatting operators beyond a single %s are prohibited, including
+%d, %x, %s, as well as any URL encodings such as as %20 (space) that may be
+within a reference URL.
+
 This is an example rule:
 
     drop tcp any any -> any $HTTP_PORTS ( \

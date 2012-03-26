@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -375,7 +375,12 @@ int Active_ForceDropAction(Packet *p)
     // explicitly drop packet
     Active_ForceDropPacket();
 
-    _Active_DoIgnoreSession(p);
+    switch ( GET_IPH_PROTO(p) )
+    {
+        case IPPROTO_TCP:
+        case IPPROTO_UDP:
+            _Active_DoIgnoreSession(p);
+    }
     return 0;
 }
 

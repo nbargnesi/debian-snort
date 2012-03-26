@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -145,7 +145,9 @@ extern PreprocSignalFuncNode *preproc_reset_stats_funcs;
 extern PreprocStatsFuncNode *preproc_stats_funcs;
 extern PluginSignalFuncNode *plugin_shutdown_funcs;
 extern PluginSignalFuncNode *plugin_clean_exit_funcs;
-extern PluginSignalFuncNode *plugin_restart_funcs;
+#ifdef SNORT_RELOAD
+extern PluginSignalFuncNode *plugin_reload_funcs;
+#endif
 extern OutputFuncNode *AlertList;
 extern OutputFuncNode *LogList;
 extern PeriodicCheckFuncNode *periodic_check_funcs;
@@ -549,7 +551,7 @@ void FreePluginSigFuncs(PluginSignalFuncNode *head)
 
         head = head->next;
 
-        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        /* don't free sig->arg, that's free'd by the CleanExit func */
         free(tmp);
     }
 }
@@ -1404,7 +1406,7 @@ void FreePreprocSigFuncs(PreprocSignalFuncNode *head)
     while (head != NULL)
     {
         tmp = head->next;
-        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        /* don't free sig->arg, that's free'd by the CleanExit func */
         free(head);
         head = tmp;
     }
@@ -1417,7 +1419,7 @@ void FreePeriodicFuncs(PeriodicCheckFuncNode *head)
     while (head != NULL)
     {
         tmp = head->next;
-        /* don't free sig->arg, that's free'd by the CleanExit/Restart func */
+        /* don't free sig->arg, that's free'd by the CleanExit func */
         free(head);
         head = tmp;
     }
@@ -1718,10 +1720,12 @@ void AppendOutputFuncList(OutputFunc o_func, void *arg, OutputFuncNode **list)
 
 /* functions to aid in cleaning up after plugins
  * Used for both rule options and output.  Preprocessors have their own */
-void AddFuncToRestartList(PluginSignalFunc pl_sig_func, void *arg)
+#ifdef SNORT_RELOAD
+void AddFuncToReloadList(PluginSignalFunc pl_sig_func, void *arg)
 {
-    AddFuncToSignalList(pl_sig_func, arg, &plugin_restart_funcs);
+    AddFuncToSignalList(pl_sig_func, arg, &plugin_reload_funcs);
 }
+#endif
 
 void AddFuncToCleanExitList(PluginSignalFunc pl_sig_func, void *arg)
 {

@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
- ** Copyright (C) 2011-2011 Sourcefire, Inc.
+ ** Copyright (C) 2011-2012 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -88,13 +88,7 @@ static void ReputationPrintStats(int);
 static void ReputationCleanExit(int, void *);
 
 #ifdef SHARED_REP
-typedef enum
-{
-    NO_SWITCH,
-    SWITCHING,
-    SWITCHED
-}Swith_State;
-static int switch_state = NO_SWITCH;
+Swith_State switch_state = NO_SWITCH;
 int available_segment = NO_DATASEG;
 static void ReputationMaintenanceCheck(int, void *);
 #endif
@@ -138,10 +132,11 @@ void SetupReputation(void)
 #ifdef SHARED_REP
 static int Reputation_PreControl(uint16_t type, const uint8_t *data, uint32_t length, void **new_config)
 {
-    int segment_version = NO_DATASEG;
-
     ReputationConfig *pDefaultPolicyConfig = NULL;
     ReputationConfig *nextConfig = NULL;
+
+    if (SWITCHING == switch_state )
+        return -1;
 
     pDefaultPolicyConfig = (ReputationConfig *)sfPolicyUserDataGetDefault(reputation_config);
 
@@ -158,21 +153,25 @@ static int Reputation_PreControl(uint16_t type, const uint8_t *data, uint32_t le
         *new_config = NULL;
         return -1;
     }
-    nextConfig->segment_version = segment_version;
+
+    switch_state = SWITCHING;
+
+    nextConfig->segment_version = NO_DATASEG;
     nextConfig->memcap = pDefaultPolicyConfig->memcap;
     reputation_shmem_config = nextConfig;
 
-    if ((segment_version = LoadSharedMemDataSegmentForWriter(RELOAD)) >= 0)
+    if ((available_segment = LoadSharedMemDataSegmentForWriter(RELOAD)) >= 0)
     {
         *new_config = nextConfig;
-        nextConfig->segment_version = segment_version;
-        _dpd.logMsg("***Received segment %d\n",
-                segment_version);
+        nextConfig->segment_version = available_segment;
+       _dpd.logMsg("    Repuation Preprocessor: Received segment %d\n",
+                available_segment);
     }
     else
     {
         *new_config = NULL;
         free(nextConfig);
+        switch_state = NO_SWITCH;
         return -1;
     }
     return 0;
@@ -213,17 +212,11 @@ static void Reputation_PostControl(uint16_t type, void *old_config)
     pDefaultPolicyConfig->numEntries = config->numEntries;
     pDefaultPolicyConfig->iplist = config->iplist;
     reputation_shmem_config = pDefaultPolicyConfig;
+    switch_state = SWITCHED;
     free(config);
 
 }
-static void ReputationShmemReaderUpdate(void)
-{
-    if (SWITCHING == switch_state)
-    {
-        SwitchToActiveSegment(available_segment, &IPtables);
-        switch_state = SWITCHED;
-    }
-}
+
 static void ReputationMaintenanceCheck(int signal, void *data)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Reputation Preprocessor Maintenance!\n"););
@@ -231,9 +224,11 @@ static void ReputationMaintenanceCheck(int signal, void *data)
     if (SHMEM_SERVER_ID_1 == _dpd.getSnortInstance())
     {
         ManageUnusedSegments();
-        if (SWITCHED == switch_state)
+        /*check whether new shared memory has been applied. If yes, release the old one*/
+        if ((SWITCHED == switch_state) && reputation_eval_config &&
+                (reputation_eval_config->iplist == (table_flat_t *)*IPtables))
         {
-            _dpd.logMsg("***Instance %d switched to segment_version %d\n",
+            _dpd.logMsg("    Repuation Preprocessor: Instance %d switched to segment_version %d\n",
                     _dpd.getSnortInstance(), available_segment);
             UnmapInactiveSegments();
             switch_state = NO_SWITCH;
@@ -244,12 +239,15 @@ static void ReputationMaintenanceCheck(int signal, void *data)
         if ((NO_SWITCH == switch_state)&&((available_segment = CheckForSharedMemSegment()) >= 0))
         {
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,"***Switched to segment_version %d ",available_segment););
-            switch_state = SWITCHING;
+            SwitchToActiveSegment(available_segment, &IPtables);
+            switch_state = SWITCHED;
 
         }
-        if (SWITCHED == switch_state)
+        /*check whether new shared memory has been applied. If yes, release the old one*/
+        else if ((SWITCHED == switch_state) && reputation_eval_config &&
+                (reputation_eval_config->iplist == (table_flat_t *)*IPtables))
         {
-            _dpd.logMsg("***Instance %d switched to segment_version %d\n",
+            _dpd.logMsg("    Repuation Preprocessor: Instance %d switched to segment_version %d\n",
                     _dpd.getSnortInstance(), available_segment);
             UnmapInactiveSegments();
             switch_state = NO_SWITCH;
@@ -325,7 +323,6 @@ static void ReputationInit(char *argp)
             _dpd.controlSocketRegisterHandler(CS_TYPE_REPUTATION_SHAREMEM,
                     &Reputation_PreControl, &Reputation_Control, &Reputation_PostControl);
         }
-        _dpd.registerIdleHandler(&ReputationShmemReaderUpdate);
 
     }
 #endif
@@ -576,6 +573,11 @@ static void ReputationCleanExit(int signal, void *data)
         reputation_config = NULL;
 #ifdef SHARED_REP
         ShutdownSharedMemory();
+        if (emptyIPtables != NULL)
+        {
+            free(emptyIPtables);
+            emptyIPtables = NULL;
+        }
 #endif
     }
 }
@@ -719,16 +721,24 @@ static int ReputationReloadVerify(void)
             reputation_swap_config = NULL;
             return -1;
         }
-        else /*no change, do a reload of list*/
+        else if (SHMEM_SERVER_ID_1 == _dpd.getSnortInstance())/*no change, do a reload of list*/
         {
+            /*Switch in progress, no change*/
+            if(SWITCHING ==switch_state)
+                return 0;
+
+            switch_state = SWITCHING;
             reputation_shmem_config = pPolicyConfig;
             if ((available_segment = LoadSharedMemDataSegmentForWriter(RELOAD)) >= 0)
             {
                 pPolicyConfig->segment_version = available_segment;
-                _dpd.logMsg("***New segment %d\n",
+                _dpd.logMsg("    Repuation Preprocessor: New segment %d\n",
                         available_segment);
-                switch_state = SWITCHING;
+                SwitchToActiveSegment(available_segment, &IPtables);
+                switch_state = SWITCHED;
             }
+            else
+                switch_state = NO_SWITCH;
 
         }
     }

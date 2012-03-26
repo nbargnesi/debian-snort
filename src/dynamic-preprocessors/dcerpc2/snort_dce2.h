@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -74,6 +74,7 @@ void DCE2_PopPkt(void);
 void DCE2_Detect(DCE2_SsnData *);
 uint16_t DCE2_GetRpktMaxData(DCE2_SsnData *, DCE2_RpktType);
 void DCE2_FreeGlobals(void);
+void DCE2_SetNoInspect(DCE2_SsnData *);
 
 /********************************************************************
  * Inline function prototypes

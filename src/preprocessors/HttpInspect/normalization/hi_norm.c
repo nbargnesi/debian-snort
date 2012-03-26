@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -80,8 +80,8 @@ typedef struct s_URI_NORM_STATE
     /*
     **  Directory tracking
     */
-    u_char *dir_track[MAX_DIRS];
     u_int   dir_count;
+    u_char *dir_track[MAX_DIRS];
 
 }  URI_NORM_STATE;
 
@@ -977,9 +977,8 @@ static int DirSet(URI_NORM_STATE *norm_state, u_char **ub_ptr)
 
     if(!norm_state->param)
     {
-        norm_state->dir_track[norm_state->dir_count] = *ub_ptr;
-        if(norm_state->dir_count < MAX_DIRS)
-            norm_state->dir_count++;
+        if(norm_state->dir_count < (MAX_DIRS - 1))
+            norm_state->dir_track[norm_state->dir_count++] = *ub_ptr;
     }
 
     (*ub_ptr)++;

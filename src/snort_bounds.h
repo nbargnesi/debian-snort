@@ -1,7 +1,7 @@
 #ifndef _BOUNDS_H
 #define _BOUNDS_H
 /*
-** Copyright (C) 2003-2011 Sourcefire, Inc.
+** Copyright (C) 2003-2012 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -124,6 +124,48 @@ static inline int SafeMemmove(void *dst, const void *src, size_t n, const void *
     return SAFEMEM_SUCCESS;
 }
 
+/**
+ * A Safer Memmove
+ * dst and src can be in the same buffer
+ *
+ * @param dst where to copy to
+ * @param src where to copy from
+ * @param n number of bytes to copy
+ * @param start start of the dest buffer
+ * @param end end of the dst buffer
+ *
+ * @return SAFEMEM_ERROR on failure, SAFEMEM_SUCCESS on success
+ */
+static inline int SafeBoundsMemmove(void *dst, const void *src, size_t n, const void *start, const void *end)
+{
+    size_t overlap = 0;
+    if (SafeMemCheck(dst, n, start, end) != SAFEMEM_SUCCESS)
+        ERRORRET;
+    if (src == NULL)
+        ERRORRET;
+
+    if( src == dst )
+    {
+        return SAFEMEM_SUCCESS;
+    }
+    else if(inBounds(dst, ((uint8_t *)dst + n), src))
+    {
+        overlap = (uint8_t *)src - (uint8_t *)dst;
+        memcpy(dst, src , overlap);
+        memmove(((uint8_t *)dst + overlap), ((uint8_t *)src + overlap), (n - overlap));
+    }
+    else if(inBounds(src, ((uint8_t *)src + n), dst))
+    {
+        overlap = (uint8_t *)dst - (uint8_t *)src;
+        memcpy(((uint8_t *)dst + overlap), ((uint8_t *)src + overlap), (n - overlap));
+        memmove(dst, src, overlap);
+    }
+    else
+    {
+        memcpy(dst, src, n);
+    }
+    return SAFEMEM_SUCCESS;
+}
 /**
  * A Safer Memset
  * dst and src can be in the same buffer

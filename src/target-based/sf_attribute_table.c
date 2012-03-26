@@ -1,10 +1,9 @@
-
-/* A Bison parser, made by GNU Bison 2.4.1.  */
+/* A Bison parser, made by GNU Bison 2.4.3.  */
 
 /* Skeleton implementation for Bison's Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
-   Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2009, 2010 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,7 +45,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "2.4.1"
+#define YYBISON_VERSION "2.4.3"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -107,7 +106,7 @@ extern void sfat_error(char*);
 
 
 /* Line 189 of yacc.c  */
-#line 111 "sf_attribute_table.c"
+#line 110 "sf_attribute_table.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -268,7 +267,7 @@ typedef union YYSTYPE
 
 
 /* Line 214 of yacc.c  */
-#line 272 "sf_attribute_table.c"
+#line 271 "sf_attribute_table.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -280,7 +279,7 @@ typedef union YYSTYPE
 
 
 /* Line 264 of yacc.c  */
-#line 284 "sf_attribute_table.c"
+#line 283 "sf_attribute_table.c"
 
 #ifdef short
 # undef short
@@ -330,7 +329,7 @@ typedef short int yytype_int16;
 #define YYSIZE_MAXIMUM ((YYSIZE_T) -1)
 
 #ifndef YY_
-# if YYENABLE_NLS
+# if defined YYENABLE_NLS && YYENABLE_NLS
 #  if ENABLE_NLS
 #   include <libintl.h> /* INFRINGES ON USER NAME SPACE */
 #   define YY_(msgid) dgettext ("bison-runtime", msgid)
@@ -839,9 +838,18 @@ static const yytype_uint8 yystos[] =
 
 /* Like YYERROR except do call yyerror.  This remains here temporarily
    to ease the transition to the new meaning of YYERROR, for GCC.
-   Once GCC version 2 has supplanted version 1, this can go.  */
+   Once GCC version 2 has supplanted version 1, this can go.  However,
+   YYFAIL appears to be in use.  Nevertheless, it is formally deprecated
+   in Bison 2.4.2's NEWS entry, where a plan to phase it out is
+   discussed.  */
 
 #define YYFAIL		goto yyerrlab
+#if defined YYFAIL
+  /* This is here to suppress warnings from the GCC cpp's
+     -Wunused-macros.  Normally we don't worry about that warning, but
+     some users do, and we want to make it easy for users to remove
+     YYFAIL uses, which will produce warnings from Bison 2.5.  */
+#endif
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
@@ -898,7 +906,7 @@ while (YYID (0))
    we won't break user code: when these are the locations we know.  */
 
 #ifndef YY_LOCATION_PRINT
-# if YYLTYPE_IS_TRIVIAL
+# if defined YYLTYPE_IS_TRIVIAL && YYLTYPE_IS_TRIVIAL
 #  define YY_LOCATION_PRINT(File, Loc)			\
      fprintf (File, "%d.%d-%d.%d",			\
 	      (Loc).first_line, (Loc).first_column,	\
@@ -1637,7 +1645,7 @@ yyreduce:
     {
         case 2:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 148 "sf_attribute_table.y"
     {
     YYACCEPT;
@@ -1646,7 +1654,7 @@ yyreduce:
 
   case 3:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 154 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "SnortAttributes: Got Attribute Map & Table\n"););
@@ -1655,7 +1663,7 @@ yyreduce:
 
   case 4:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 159 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "SnortAttributes: Got Attribute Table\n"););
@@ -1664,7 +1672,7 @@ yyreduce:
 
   case 5:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 166 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Got Attribute Map\n"););
@@ -1673,7 +1681,7 @@ yyreduce:
 
   case 6:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 171 "sf_attribute_table.y"
     {
      DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Empty Mapping Table\n"););
@@ -1682,7 +1690,7 @@ yyreduce:
 
   case 8:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 178 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "MapEntry: Name: %s, Id %d\n",
@@ -1693,7 +1701,7 @@ yyreduce:
 
   case 11:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 192 "sf_attribute_table.y"
     {
     (yyval.mapEntry).l_mapid = (yyvsp[(1) - (2)].numericValue);
@@ -1703,7 +1711,7 @@ yyreduce:
 
   case 12:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 199 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "MapValue: %s\n", (yyvsp[(2) - (3)].stringValue));)
@@ -1713,7 +1721,7 @@ yyreduce:
 
   case 13:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 206 "sf_attribute_table.y"
     {
     (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
@@ -1723,7 +1731,7 @@ yyreduce:
 
   case 14:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 214 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Got Attribute Table\n"););
@@ -1732,7 +1740,7 @@ yyreduce:
 
   case 15:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 219 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyHostEntry\n"););
@@ -1741,7 +1749,7 @@ yyreduce:
 
   case 17:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 226 "sf_attribute_table.y"
     {
     if (SFAT_AddHostEntryToMap() != SFAT_OK)
@@ -1754,7 +1762,7 @@ yyreduce:
 
   case 18:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 236 "sf_attribute_table.y"
     {
     /* Callback to create a host entry object */
@@ -1764,7 +1772,7 @@ yyreduce:
 
   case 20:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 246 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData\n"););
@@ -1773,7 +1781,7 @@ yyreduce:
 
   case 21:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 251 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Services\n"););
@@ -1782,7 +1790,7 @@ yyreduce:
 
   case 22:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 256 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Clients\n"););
@@ -1791,7 +1799,7 @@ yyreduce:
 
   case 23:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 261 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "HostEntryData: No Services or Clients\n"););
@@ -1800,7 +1808,7 @@ yyreduce:
 
   case 24:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 268 "sf_attribute_table.y"
     {
     /* Convert IP/CIDR to Snort IPCidr Object */
@@ -1818,7 +1826,7 @@ yyreduce:
 
   case 33:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 290 "sf_attribute_table.y"
     {
     /* Copy OSName */
@@ -1829,7 +1837,7 @@ yyreduce:
 
   case 34:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 298 "sf_attribute_table.y"
     {
     /* Copy OSVendor */
@@ -1840,7 +1848,7 @@ yyreduce:
 
   case 35:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 306 "sf_attribute_table.y"
     {
     /* Copy OSVersion */
@@ -1851,7 +1859,7 @@ yyreduce:
 
   case 36:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 314 "sf_attribute_table.y"
     {
     /* Copy OSFragPolicy */
@@ -1862,7 +1870,7 @@ yyreduce:
 
   case 37:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 322 "sf_attribute_table.y"
     {
     /* Copy OSStreamPolicy */
@@ -1873,7 +1881,7 @@ yyreduce:
 
   case 38:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 330 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
@@ -1884,7 +1892,7 @@ yyreduce:
 
   case 39:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 336 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
@@ -1895,7 +1903,7 @@ yyreduce:
 
   case 40:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 342 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
@@ -1906,7 +1914,7 @@ yyreduce:
 
   case 41:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 348 "sf_attribute_table.y"
     {
         (yyval.data).type = ATTRIBUTE_NAME; 
@@ -1917,7 +1925,7 @@ yyreduce:
 
   case 42:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 354 "sf_attribute_table.y"
     {
         char *mapped_name;
@@ -1942,7 +1950,7 @@ yyreduce:
 
   case 43:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 374 "sf_attribute_table.y"
     {
         char *mapped_name;
@@ -1967,7 +1975,7 @@ yyreduce:
 
   case 44:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 396 "sf_attribute_table.y"
     {
         SnortStrncpy((yyval.stringValue), (yyvsp[(2) - (3)].stringValue), STD_BUF);
@@ -1976,7 +1984,7 @@ yyreduce:
 
   case 45:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 402 "sf_attribute_table.y"
     {
         (yyval.numericValue) = 0;
@@ -1985,7 +1993,7 @@ yyreduce:
 
   case 46:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 406 "sf_attribute_table.y"
     {
         (yyval.numericValue) = (yyvsp[(2) - (3)].numericValue);
@@ -1994,7 +2002,7 @@ yyreduce:
 
   case 47:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 412 "sf_attribute_table.y"
     {
         /* Copy numeric */
@@ -2004,7 +2012,7 @@ yyreduce:
 
   case 48:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 419 "sf_attribute_table.y"
     {
     /* Copy numeric */
@@ -2014,7 +2022,7 @@ yyreduce:
 
   case 49:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 426 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ServiceList (complete)\n"););
@@ -2023,7 +2031,7 @@ yyreduce:
 
   case 50:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 432 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ServiceList\n"););
@@ -2033,7 +2041,7 @@ yyreduce:
 
   case 51:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 439 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ServiceList\n"););
@@ -2042,7 +2050,7 @@ yyreduce:
 
   case 52:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 444 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyService\n"););
@@ -2051,7 +2059,7 @@ yyreduce:
 
   case 53:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 448 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service ServiceListData\n"););
@@ -2060,7 +2068,7 @@ yyreduce:
 
   case 54:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 454 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Adding Complete\n"););
@@ -2071,7 +2079,7 @@ yyreduce:
 
   case 55:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 462 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Start\n"););
@@ -2081,7 +2089,7 @@ yyreduce:
 
   case 56:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 469 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service End\n"););
@@ -2090,7 +2098,7 @@ yyreduce:
 
   case 57:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 475 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (no application)\n"););
@@ -2099,7 +2107,7 @@ yyreduce:
 
   case 58:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 479 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Service Data (application)\n"););
@@ -2108,7 +2116,7 @@ yyreduce:
 
   case 59:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 485 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2118,7 +2126,7 @@ yyreduce:
 
   case 60:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 490 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2128,7 +2136,7 @@ yyreduce:
 
   case 61:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 495 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2138,7 +2146,7 @@ yyreduce:
 
   case 62:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 500 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2148,7 +2156,7 @@ yyreduce:
 
   case 63:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 505 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2158,7 +2166,7 @@ yyreduce:
 
   case 64:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 510 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2168,7 +2176,7 @@ yyreduce:
 
   case 65:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 517 "sf_attribute_table.y"
     {
     /* Store IPProto Info */
@@ -2179,7 +2187,7 @@ yyreduce:
 
   case 66:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 525 "sf_attribute_table.y"
     {
     /* Store Protocol Info */
@@ -2190,7 +2198,7 @@ yyreduce:
 
   case 67:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 533 "sf_attribute_table.y"
     {
     /* Store Port Info */
@@ -2201,7 +2209,7 @@ yyreduce:
 
   case 68:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 541 "sf_attribute_table.y"
     {
     /* Store Application Info */
@@ -2213,7 +2221,7 @@ yyreduce:
 
   case 69:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 548 "sf_attribute_table.y"
     {
     /* Store Application Info */
@@ -2225,7 +2233,7 @@ yyreduce:
 
   case 70:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 557 "sf_attribute_table.y"
     {
     /* Store Version Info */
@@ -2236,7 +2244,7 @@ yyreduce:
 
   case 71:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 565 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "ClientList (complete)\n"););
@@ -2245,7 +2253,7 @@ yyreduce:
 
   case 72:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 571 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Start ClientList\n"););
@@ -2255,7 +2263,7 @@ yyreduce:
 
   case 73:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 578 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "End ClientList\n"););
@@ -2264,7 +2272,7 @@ yyreduce:
 
   case 74:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 583 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "EmptyClient\n"););
@@ -2273,7 +2281,7 @@ yyreduce:
 
   case 75:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 587 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client ClientListData\n"););
@@ -2282,7 +2290,7 @@ yyreduce:
 
   case 76:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 593 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Adding Complete\n"););
@@ -2293,7 +2301,7 @@ yyreduce:
 
   case 77:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 601 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Start\n"););
@@ -2303,7 +2311,7 @@ yyreduce:
 
   case 78:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 608 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client End\n"););
@@ -2312,7 +2320,7 @@ yyreduce:
 
   case 79:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 614 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (no application)\n"););
@@ -2321,7 +2329,7 @@ yyreduce:
 
   case 80:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 618 "sf_attribute_table.y"
     {
     DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "Client Data (application)\n"););
@@ -2330,7 +2338,7 @@ yyreduce:
 
   case 81:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 624 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2340,7 +2348,7 @@ yyreduce:
 
   case 82:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 629 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2350,7 +2358,7 @@ yyreduce:
 
   case 83:
 
-/* Line 1455 of yacc.c  */
+/* Line 1464 of yacc.c  */
 #line 634 "sf_attribute_table.y"
     {
     /* Order independent */
@@ -2360,8 +2368,8 @@ yyreduce:
 
 
 
-/* Line 1455 of yacc.c  */
-#line 2365 "sf_attribute_table.c"
+/* Line 1464 of yacc.c  */
+#line 2373 "sf_attribute_table.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2572,7 +2580,7 @@ yyreturn:
 
 
 
-/* Line 1675 of yacc.c  */
+/* Line 1684 of yacc.c  */
 #line 639 "sf_attribute_table.y"
 
 /*

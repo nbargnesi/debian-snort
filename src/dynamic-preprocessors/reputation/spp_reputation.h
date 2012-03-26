@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
- ** Copyright (C) 2011-2011 Sourcefire, Inc.
+ ** Copyright (C) 2011-2012 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -72,6 +72,16 @@ extern ReputationConfig *reputation_eval_config;
 extern tSfPolicyUserContextId reputation_config;
 extern void **IPtables;
 #ifdef SHARED_REP
+typedef enum
+{
+    NO_SWITCH,
+    SWITCHING,
+    SWITCHED
+}Swith_State;
+
+extern Swith_State switch_state;
+extern int available_segment;
+extern table_flat_t *emptyIPtables;
 extern ReputationConfig *reputation_shmem_config;
 #endif
 /* Prototypes for public interface */

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -40,6 +40,7 @@
 #include "snort_stream5_tcp.h"
 #include "snort_stream5_udp.h"
 #include "snort_stream5_icmp.h"
+#include "snort_stream5_ip.h"
 #include "parser.h"
 #include "active.h"
 
@@ -606,6 +607,12 @@ void Stream5FreeConfig(Stream5Config *config)
     {
         Stream5IcmpConfigFree(config->icmp_config);
         config->icmp_config = NULL;
+    }
+
+    if (config->ip_config != NULL)
+    {
+        Stream5IpConfigFree(config->ip_config);
+        config->ip_config = NULL;
     }
 
     free(config);

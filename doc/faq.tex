@@ -1420,22 +1420,6 @@ There is also this script that might be useful:
     #EOF
 \end{verbatim}
 
-\subsection{How do you get the latest Snort via cvs?} \label{cvs}
-
-Snort can be checked out through anonymous (pserver) CVS with the
-following instruction set. The module you wish to check out must be
-specified as the modulename. When prompted for a password for anonymous,
-simply press the Enter key.
-\begin{verbatim}
-    cvs -d:pserver:anonymous@cvs.snort.org:/cvsroot login
-
-    cvs -z3 -d:pserver:anonymous@cvs.snort.org:/cvsroot co snort
-\end{verbatim}
-Updates from within the module's directory do not need the -d parameter. 
-
-You will need to issue the command ``sh ./autojunk.sh'' before starting
-./configure.
-
 \subsection{How do I use a remote syslog machine?}
 
 Add the syslog switch, -s, and put this statement syslog.conf:

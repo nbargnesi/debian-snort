@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2011 Sourcefire, Inc.
+ * Copyright (C) 2003-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -749,7 +749,7 @@ static inline int hi_server_extract_body(
     const u_char *start = ptr;
     int iRet = HI_SUCCESS;
     const u_char *post_end = end;
-    uint32_t chunk_size = 0;
+    uint32_t updated_chunk_remainder = 0;
     uint32_t chunk_read = 0;
     int bytes_to_read = 0;
     ServerConf = Session->server_conf;
@@ -790,10 +790,10 @@ static inline int hi_server_extract_body(
             if (sd->resp_state.last_pkt_chunked
                 && CheckChunkEncoding(Session, start, end, &post_end,
                                       (u_char *)HttpDecodeBuf.data, sizeof(HttpDecodeBuf.data),
-                                      sd->resp_state.last_chunk_size, &chunk_size, &chunk_read,
+                                      sd->resp_state.chunk_remainder, &updated_chunk_remainder, &chunk_read,
                                       sd, HI_SI_SERVER_MODE) == 1)
             {
-                sd->resp_state.last_chunk_size = chunk_size;
+                sd->resp_state.chunk_remainder = updated_chunk_remainder;
                 sd->resp_state.last_pkt_chunked = 1;
                 result->uri = (u_char *)HttpDecodeBuf.data;
                 result->uri_end = result->uri + chunk_read;
@@ -959,8 +959,9 @@ static inline int hi_server_decompress(HI_SESSION *Session, HttpSessionData *sd,
     int compr_bytes_read, decompr_bytes_read;
     int compr_avail, decompr_avail;
     int total_bytes_read = 0;
-    uint32_t chunk_size = 0;
+    uint32_t updated_chunk_remainder = 0;
     uint32_t chunk_read = 0;
+    uint32_t saved_chunk_size = 0;
 
     u_char *compr_buffer;
     u_char *decompr_buffer;
@@ -970,6 +971,7 @@ static inline int hi_server_decompress(HI_SESSION *Session, HttpSessionData *sd,
     decompr_bytes_read = sd->decomp_state->decompr_bytes_read;
     compr_buffer = sd->decomp_state->compr_buffer;
     decompr_buffer = sd->decomp_state->decompr_buffer;
+    saved_chunk_size = sd->resp_state.chunk_remainder;
 
     if(Session->server_conf->unlimited_decompress)
     {
@@ -1024,10 +1026,10 @@ static inline int hi_server_decompress(HI_SESSION *Session, HttpSessionData *sd,
     {
         if(sd->resp_state.last_pkt_chunked
            && CheckChunkEncoding(Session, start, end, NULL, compr_buffer, compr_avail,
-                                 sd->resp_state.last_chunk_size, &chunk_size, &chunk_read,
+                                 sd->resp_state.chunk_remainder, &updated_chunk_remainder, &chunk_read,
                                  sd, HI_SI_SERVER_MODE ) == 1)
         {
-            sd->resp_state.last_chunk_size = chunk_size;
+            sd->resp_state.chunk_remainder = updated_chunk_remainder;
             compr_avail = chunk_read;
             zRet = uncompress_gzip(decompr_buffer,decompr_avail,compr_buffer, compr_avail, sd, &total_bytes_read,
                                     sd->decomp_state->compress_fmt);
@@ -1052,11 +1054,11 @@ static inline int hi_server_decompress(HI_SESSION *Session, HttpSessionData *sd,
                 &total_bytes_read, sd->decomp_state->compress_fmt);
     }
 
-    sd->decomp_state->compr_bytes_read += compr_avail;
-    hi_stats.compr_bytes_read += compr_avail;
 
     if((zRet == HI_SUCCESS) || (zRet == HI_NONFATAL_ERR))
     {
+        sd->decomp_state->compr_bytes_read += compr_avail;
+        hi_stats.compr_bytes_read += compr_avail;
         if(decompr_buffer)
         {
             result->uri = decompr_buffer;
@@ -1078,15 +1080,24 @@ static inline int hi_server_decompress(HI_SESSION *Session, HttpSessionData *sd,
     }
     else
     {
+        if(!sd->decomp_state->decompr_bytes_read)
+        {
+            sd->resp_state.chunk_remainder = saved_chunk_size;
+            iRet = HI_NONFATAL_ERR;
+        }
+        else
+            ResetRespState(&(sd->resp_state));
         ResetGzipState(sd->decomp_state);
-        ResetRespState(&(sd->resp_state));
     }
 
     if(zRet!=HI_SUCCESS)
     {
-        if(hi_eo_generate_event(Session, HI_EO_SERVER_DECOMPR_FAILED))
+        if(sd->decomp_state->decompr_bytes_read)
         {
-            hi_eo_server_event_log(Session, HI_EO_SERVER_DECOMPR_FAILED, NULL, NULL);
+            if(hi_eo_generate_event(Session, HI_EO_SERVER_DECOMPR_FAILED))
+            {
+                hi_eo_server_event_log(Session, HI_EO_SERVER_DECOMPR_FAILED, NULL, NULL);
+            }
         }
     }
 
@@ -1119,6 +1130,13 @@ static inline int hi_server_inspect_body(HI_SESSION *Session, HttpSessionData *s
     if((sd->decomp_state != NULL) && sd->decomp_state->decompress_data)
     {
         iRet = hi_server_decompress(Session, sd, ptr, end, result);
+        if(iRet == HI_NONFATAL_ERR)
+        {
+            sd->resp_state.inspect_body = 1;
+            result->uri = ptr;
+            result->uri_end = end;
+            iRet = hi_server_extract_body(Session, sd, ptr, end, result);
+        }
     }
     else
 #endif

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -430,10 +430,15 @@ ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags)
         return RULE_NOMATCH;
 
     /* check if this rule only applies to reassembled */
-    if ((flowFlags->flags & FLOW_ONLY_REASSEMBLED) &&
-        !(sp->flags & FLAG_REBUILT_STREAM))
-        return RULE_NOMATCH;
-
+    if (flowFlags->flags & FLOW_ONLY_REASSEMBLED)
+    {
+        if ( !(sp->flags & FLAG_REBUILT_STREAM)
+#ifdef ENABLE_PAF
+            && !PacketHasFullPDU(sp)
+#endif
+        )
+            return RULE_NOMATCH;
+    }
     /* check if this rule only applies to non-reassembled */
     if ((flowFlags->flags & FLOW_IGNORE_REASSEMBLED) &&
         (sp->flags & FLAG_REBUILT_STREAM))

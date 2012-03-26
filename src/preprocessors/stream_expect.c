@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005-2011 Sourcefire, Inc.
+** Copyright (C) 2005-2012 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -182,7 +182,7 @@ int StreamExpectAddChannel(snort_ip_p cliIP, uint16_t cliPort,
     if (cliPort != UNKNOWN_PORT)
         srvPort = UNKNOWN_PORT;
 
-#ifdef DEBUG_MSGS
+#if defined(DEBUG_MSGS) && defined(SUP_IP6)
     {
         char src_ip[INET6_ADDRSTRLEN];
         char dst_ip[INET6_ADDRSTRLEN];
@@ -437,7 +437,7 @@ int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node)
     srcIP = GET_SRC_IP(p);
     dstIP = GET_DST_IP(p);
 
-#ifdef DEBUG_MSGS
+#if defined(DEBUG_MSGS) && defined(SUP_IP6)
     {
         char src_ip[INET6_ADDRSTRLEN];
         char dst_ip[INET6_ADDRSTRLEN];
@@ -572,7 +572,7 @@ char SteamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expe
         lws->application_protocol = node->appId;
 #endif
 
-#ifdef DEBUG_MSGS
+#if defined(DEBUG_MSGS) && defined(SUP_IP6)
     {
         snort_ip_p srcIP, dstIP;
         char src_ip[INET6_ADDRSTRLEN];

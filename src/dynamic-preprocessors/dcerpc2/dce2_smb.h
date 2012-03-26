@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -169,9 +169,6 @@ typedef struct _DCE2_SmbSsnData
     int chained_tc;     /* Set if client and chained TreeConnect */
     int last_open_fid;  /* The last inserted fid from an OpenAndX or NtCreateAndX */
 
-    /* Boolean for whether or not packets have been currently been missed */
-    char missed_pkts;
-
 } DCE2_SmbSsnData;
 
 /********************************************************************
@@ -216,8 +213,11 @@ static inline DCE2_TransType DCE2_SmbAutodetect(const SFSnortPacket *p)
 
                     if (p->payload_size > (sizeof(NbssHdr) + sizeof(SmbNtHdr)))
                     {
-                        if (SmbId(smb_hdr) == DCE2_SMB_ID)
+                        if ((SmbId(smb_hdr) == DCE2_SMB_ID)
+                                || (SmbId(smb_hdr) == DCE2_SMB2_ID))
+                        {
                             return DCE2_TRANS_TYPE__SMB;
+                        }
                     }
                 }
 

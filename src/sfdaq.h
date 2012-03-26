@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -70,6 +70,7 @@ int DAQ_BreakLoop(int error);
 #ifdef HAVE_DAQ_ACQUIRE_WITH_META
 void DAQ_Set_MetaCallback(DAQ_Meta_Func_t meta_callback);
 #endif
+DAQ_Mode DAQ_GetInterfaceMode(const DAQ_PktHdr_t *h);
 
 int DAQ_ModifyFlow(const void* h, uint32_t id);
 

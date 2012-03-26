@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -592,7 +592,7 @@ static inline void PushLayer(PROTO_ID type, Packet* p, const uint8_t* hdr, uint3
     }
     else
     {
-        LogMessage("WARNING: decoder got too many layers;"
+        LogMessage("(snort_decoder) WARNING: decoder got too many layers;"
             " next proto is %u.\n", type);
     }
 }
@@ -753,7 +753,6 @@ void DecodeEthPkt(Packet * p, const DAQ_PktHdr_t * pkthdr, const uint8_t * pkt)
         if ( Event_Enabled(DECODE_ETH_HDR_TRUNC) )
             DecoderEvent(p, EVARGS(ETH_HDR_TRUNC), 1, 1);
 
-        p->iph = NULL;
         pc.discards++;
         pc.ethdisc++;
         PREPROC_PROFILE_END(decodePerfStats);
@@ -5049,14 +5048,23 @@ void DecodeGTP(const uint8_t *pkt, uint32_t len, Packet *p)
             /*Check extension headers*/
             while (next_hdr_type)
             {
+                uint16_t ext_hdr_len;
                 /*check length before reading data*/
                 if (len < header_len + 4)
                 {
                     DecoderEvent(p, EVARGS(GTP_BAD_LEN), 1, 1);
                     return;
                 }
+
+                ext_hdr_len = *(pkt + header_len);
+
+                if (!ext_hdr_len)
+                {
+                    DecoderEvent(p, EVARGS(GTP_BAD_LEN), 1, 1);
+                    return;
+                }
                 /*Extension header length is a unit of 4 octets*/
-                header_len += *(pkt + header_len) * 4;
+                header_len += ext_hdr_len * 4;
 
                 /*check length before reading data*/
                 if (len < header_len)

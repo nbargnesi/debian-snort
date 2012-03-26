@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -105,12 +105,12 @@ PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
             /* Check the Start bytes. If they are not \x05\x64, don't advance state.
                Could be out of sync, junk data between frames, mid-stream pickup, etc. */
             case DNP3_PAF_STATE__START_1:
-                if (((uint8_t) *(data + bytes_processed)) == 0x05)
+                if (((uint8_t) *(data + bytes_processed)) == DNP3_START_BYTE_1)
                     pafdata->state++;
                 break;
                 
             case DNP3_PAF_STATE__START_2:
-                if (((uint8_t) *(data + bytes_processed)) == 0x64)
+                if (((uint8_t) *(data + bytes_processed)) == DNP3_START_BYTE_2)
                     pafdata->state++;
                 else
                     pafdata->state = DNP3_PAF_STATE__START_1;
@@ -133,8 +133,8 @@ PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
                 }
 
                 user_data = pafdata->dnp3_length - DNP3_HEADER_REMAINDER_LEN;
-                num_crcs = 1 + (user_data/16) + (user_data % 16? 1 : 0);
-                pafdata->real_length = pafdata->dnp3_length + (2*num_crcs);
+                num_crcs = 1 + (user_data/DNP3_CHUNK_SIZE) + (user_data % DNP3_CHUNK_SIZE? 1 : 0);
+                pafdata->real_length = pafdata->dnp3_length + (DNP3_CRC_SIZE*num_crcs);
 
                 pafdata->state++;
                 break;

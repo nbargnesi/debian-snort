@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2011 Sourcefire, Inc.
+ * Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -38,7 +38,9 @@
 #define DCE2_SENTINEL -1
 
 #define DCE2_MOVE(data_ptr, data_len, amount) \
-    { data_ptr = (uint8_t *)data_ptr + (amount); data_len -= (amount); }
+    { int64_t dcexxxxxx = (amount); \
+        data_ptr = (uint8_t *)data_ptr + dcexxxxxx; \
+        data_len -= dcexxxxxx; }
 
 /********************************************************************
  * Enumerations

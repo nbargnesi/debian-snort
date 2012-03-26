@@ -39,6 +39,7 @@ preprocessor sip
 Option              Argument          Required   Default
 disabled            None                  No     OFF
 max_sessions        <max_sessions>        No     max_sessions 10000
+max_dialogs         <max_dialogs>         No     max_dialogs  4
 ports               <ports>               No     ports { 5060 5061 }
 methods             <methods>             No     methods { invite cancel ack bye 
                                                        register options } 
@@ -53,6 +54,7 @@ max_content_len     <max_content_len>     No     max_content_len 1024
 ignore_call_channel None                  No     OFF
 
 max_sessions        = 1024 - 4194303
+max_dialogs         = 1 - 4194303
 methods             = "invite" | "cancel" | "ack" | "bye" | "register" | "options"
                       | "refer" | "subscribe" | "update" | "join" | "info" | "message"                
                       | "notify" | "prack"
@@ -77,6 +79,10 @@ Option explanations
       Those sessions are stream sessions, so they are bounded by maximum number of 
       stream sessions. Default is 10000.
   
+  max_dialogs
+      This specifies the maximum number of dialogs within one stream session. If exceeded,
+      the oldest dialog will be dropped. Default is 4.
+      
   ports
       This specifies on what ports to check for SIP messages. Typically, this will 
       include 5060, 5061.
@@ -228,6 +234,7 @@ SID   Description
  24   SIP version other than 2.0, 1.0, and 1.1 is invalid
  25   Mismatch in Method of request and the CSEQ header
  26   The method is unknown
+ 27   The number of dialogs in the stream session exceeds the maximal value.
   
 Rule Options
 ================================================================================

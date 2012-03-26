@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -177,9 +177,17 @@ typedef struct _dnp3_app_response_header_t
 #ifdef WORDS_BIGENDIAN
 #define DNP3_MIN_RESERVED_ADDR 0xF0FF
 #define DNP3_MAX_RESERVED_ADDR 0xFBFF
+#define DNP3_START_BYTES       0x0564
 #else
 #define DNP3_MIN_RESERVED_ADDR 0xFFF0
 #define DNP3_MAX_RESERVED_ADDR 0xFFFB
+#define DNP3_START_BYTES       0x6405
 #endif
+
+#define DNP3_START_BYTE_1   0x05
+#define DNP3_START_BYTE_2   0x64
+
+#define DNP3_CHUNK_SIZE     16
+#define DNP3_CRC_SIZE        2
 
 #endif /* SPP_DNP3_H */

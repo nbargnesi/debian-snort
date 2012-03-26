@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * Author: Andy  Mullican
  *
@@ -216,6 +216,8 @@ int SMTP_CopyEmailID(const uint8_t *start, int length, int command_type)
 
     if(log_avail <= 0 || !alt_buf)
         return -1;
+    else if(log_avail < length)
+        length = log_avail;
 
     if ( *alt_len > 0 && ((*alt_len + 1) < alt_size))
     {
@@ -248,6 +250,7 @@ void SMTP_DecodeType(const char *start, int length)
         if( tmp != NULL )
         {   
             smtp_ssn->decode_state->decode_type = DECODE_B64;
+            smtp_stats.attachments[DECODE_B64]++;
             return;
         }
     }   
@@ -258,6 +261,7 @@ void SMTP_DecodeType(const char *start, int length)
         if( tmp != NULL )
         {   
             smtp_ssn->decode_state->decode_type = DECODE_QP;
+            smtp_stats.attachments[DECODE_QP]++;
             return;
         }
     }
@@ -268,6 +272,7 @@ void SMTP_DecodeType(const char *start, int length)
         if( tmp != NULL )
         {
             smtp_ssn->decode_state->decode_type = DECODE_UU;
+            smtp_stats.attachments[DECODE_UU]++;
             return;
         }
     }
@@ -275,6 +280,7 @@ void SMTP_DecodeType(const char *start, int length)
     if(smtp_ssn->decode_state->bitenc_state.depth > -1)
     {
         smtp_ssn->decode_state->decode_type = DECODE_BITENC;
+        smtp_stats.attachments[DECODE_BITENC]++;
         return;
     }
 

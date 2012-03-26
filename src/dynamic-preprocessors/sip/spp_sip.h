@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
-** Copyright (C) 2011-2011 Sourcefire, Inc.
+** Copyright (C) 2011-2012 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,11 @@ typedef struct _SIP_DialogData
 	struct _SIP_DialogData *prevD;
 } SIP_DialogData;
 
-typedef SIP_DialogData* SIP_DialogList;
+typedef struct _SIP_DialogList
+{
+    SIP_DialogData* head;
+    uint32_t num_dialogs;
+}SIP_DialogList;
 
 /*
  * Per-session data block containing current state
@@ -218,6 +222,7 @@ typedef struct _SIPMsg
 #define SIP_EVENT_INVALID_VERSION               24
 #define SIP_EVENT_MISMATCH_METHOD               25
 #define SIP_EVENT_UNKOWN_METHOD                 26
+#define SIP_EVENT_MAX_DIALOGS_IN_A_SESSION      27
 
 /*
  * SIP preprocessor alert strings.
@@ -248,6 +253,7 @@ typedef struct _SIPMsg
 #define SIP_EVENT_INVALID_VERSION_STR     "(spp_sip) SIP version is invalid"
 #define SIP_EVENT_MISMATCH_METHOD_STR     "(spp_sip) Mismatch in METHOD of request and the CSEQ header"
 #define SIP_EVENT_UNKOWN_METHOD_STR       "(spp_sip) Method is unknown"
+#define SIP_EVENT_MAX_DIALOGS_IN_A_SESSION_STR "(spp_sip) Maximum dialogs within a session reached"
 
 #define MAX_STAT_CODE      999
 #define MIN_STAT_CODE      100

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -45,6 +45,7 @@
  * Default values for configurable parameters.
  */
 #define SIP_DEFAULT_MAX_SESSIONS  	        10000
+#define SIP_DEFAULT_MAX_DIALOGS_IN_SESSION  4
 #define SIP_DEFAULT_MAX_URI_LEN  	        256
 #define SIP_DEFAULT_MAX_CALL_ID_LEN	        256
 #define SIP_DEFAULT_MAX_REQUEST_NAME_LEN	20
@@ -59,6 +60,8 @@
  */
 #define MIN_MAX_NUM_SESSION 1024
 #define MAX_MAX_NUM_SESSION 4194303
+#define MIN_MAX_NUM_DIALOG  1
+#define MAX_MAX_NUM_DIALOG  4194303
 #define MIN_MAX_URI_LEN 0
 #define MAX_MAX_URI_LEN 65535
 #define MIN_MAX_CALL_ID_LEN 0
@@ -81,6 +84,7 @@
 #define SIP_DISABLED_KEYWORD			 "disabled"
 #define SIP_PORTS_KEYWORD			     "ports"
 #define SIP_MAX_SESSION_KEYWORD		     "max_sessions"
+#define SIP_MAX_DIALOG_KEYWORD           "max_dialogs"
 #define SIP_METHODS_KEYWORD			     "methods"
 #define SIP_MAX_URI_LEN_KEYWORD		     "max_uri_len"
 #define SIP_MAX_CALL_ID_LEN_KEYWORD		 "max_call_id_len"
@@ -177,6 +181,11 @@ static void DisplaySIPConfig(SIPConfig *config)
             config->maxNumSessions,
             config->maxNumSessions
             == SIP_DEFAULT_MAX_SESSIONS ?
+                    "(Default)" : "" );
+    _dpd.logMsg("    Max number of dialogs in a session: %d %s \n",
+            config->maxNumDialogsInSession,
+            config->maxNumDialogsInSession
+            == SIP_DEFAULT_MAX_DIALOGS_IN_SESSION ?
                     "(Default)" : "" );
     _dpd.logMsg("    Status: %s\n",
             config->disabled ?
@@ -544,6 +553,7 @@ void ParseSIPArgs(SIPConfig *config, u_char* argp)
     if (config == NULL)
         return;
     config->maxNumSessions = SIP_DEFAULT_MAX_SESSIONS;
+    config->maxNumDialogsInSession = SIP_DEFAULT_MAX_DIALOGS_IN_SESSION;
     config->maxUriLen = SIP_DEFAULT_MAX_URI_LEN;
     config->maxCallIdLen = SIP_DEFAULT_MAX_CALL_ID_LEN;
     config->maxRequestNameLen = SIP_DEFAULT_MAX_REQUEST_NAME_LEN;
@@ -619,6 +629,14 @@ void ParseSIPArgs(SIPConfig *config, u_char* argp)
                     SIP_MAX_SESSION_KEYWORD,
                     MIN_MAX_NUM_SESSION,
                     MAX_MAX_NUM_SESSION);
+        }
+        else if ( !strcmp( cur_tokenp, SIP_MAX_DIALOG_KEYWORD ))
+        {
+            cur_tokenp = strtok( NULL, SIP_CONFIG_VALUE_SEPERATORS);
+            config->maxNumDialogsInSession = (uint32_t)ParseNumInRange(cur_tokenp,
+                    SIP_MAX_DIALOG_KEYWORD,
+                    MIN_MAX_NUM_DIALOG,
+                    MAX_MAX_NUM_DIALOG);
         }
         else if ( !strcmp( cur_tokenp, SIP_MAX_URI_LEN_KEYWORD ))
         {

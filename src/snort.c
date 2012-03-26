@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -282,7 +282,9 @@ PreprocStatsFuncNode *preproc_stats_funcs = NULL;
 
 PluginSignalFuncNode *plugin_shutdown_funcs = NULL;
 PluginSignalFuncNode *plugin_clean_exit_funcs = NULL;
-PluginSignalFuncNode *plugin_restart_funcs = NULL;
+#ifdef SNORT_RELOAD
+PluginSignalFuncNode *plugin_reload_funcs = NULL;
+#endif
 
 OutputFuncNode *AlertList = NULL;   /* Alert function list */
 OutputFuncNode *LogList = NULL;     /* Log function list */
@@ -462,7 +464,7 @@ static log_func_t log_func = IgnorePacket;
 /* Private function prototypes ************************************************/
 static void InitNetmasks(void);
 static void InitProtoNames(void);
-static const char* GetPacketSource(void);
+static const char* GetPacketSource(char**);
 
 static void CleanExit(int);
 static void SnortInit(int, char **);
@@ -548,11 +550,11 @@ int InMainThread ()
 /* inline FUNCTION ************************************************************/
 static inline void CheckForReload(void)
 {
-
 #if defined(SNORT_RELOAD) && !defined(WIN32)
     /* Check for a new configuration */
     if (snort_reload)
     {
+        PluginSignalFuncNode *idxPlugin = NULL;
         snort_reload = 0;
 
         /* There was an error reloading.  A non-reloadable configuration
@@ -583,6 +585,14 @@ static inline void CheckForReload(void)
 #endif
 
         snort_swapped = 1;
+
+        /* Do any reload for plugin data */
+        idxPlugin = plugin_reload_funcs;
+        while(idxPlugin)
+        {
+            idxPlugin->func(SIGHUP, idxPlugin->arg);
+            idxPlugin = idxPlugin->next;
+        }
     }
 #endif
 }
@@ -701,6 +711,7 @@ int main(int argc, char *argv[])
  */
 int SnortMain(int argc, char *argv[])
 {
+    char* tmp_ptr = NULL;
     const char* intf;
     int daqInit;
 
@@ -712,7 +723,7 @@ int SnortMain(int argc, char *argv[])
 
     SnortInit(argc, argv);
 
-    intf = GetPacketSource();
+    intf = GetPacketSource(&tmp_ptr);
     daqInit = intf || snort_conf->daq_type;
 
     if ( daqInit )
@@ -720,6 +731,9 @@ int SnortMain(int argc, char *argv[])
         DAQ_Init(snort_conf);
         DAQ_New(snort_conf, intf);
     }
+    if ( tmp_ptr )
+        free(tmp_ptr);
+
     if ( ScDaemonMode() )
     {
         GoDaemon();
@@ -1139,7 +1153,7 @@ static char* GetFirstInterface (void)
     return iface;
 }
 
-static const char* GetPacketSource (void)
+static const char* GetPacketSource (char** sptr)
 {
     const char* intf = "other";
 
@@ -1165,8 +1179,10 @@ static const char* GetPacketSource (void)
             !strcasecmp(snort_conf->daq_type, "afpacket") ||
             !strcasecmp(snort_conf->daq_type, "pcap") ||
             !strcasecmp(snort_conf->daq_type, "dump")) )
-
+        {
             intf = GetFirstInterface();
+            *sptr = (char*)intf;
+        }
     }
     return intf;
 }
@@ -1426,6 +1442,8 @@ void SetupMetadataCallback(void)
 static DAQ_Verdict PacketCallback(
     void* user, const DAQ_PktHdr_t* pkthdr, const uint8_t* pkt)
 {
+    Packet p;
+    int inject = 0;
     DAQ_Verdict verdict = DAQ_VERDICT_PASS;
     PROFILE_VARS;
 
@@ -1483,116 +1501,7 @@ static DAQ_Verdict PacketCallback(
     BsdPseudoPacket = NULL;
 #endif
 
-    verdict = ProcessPacket(user, pkthdr, pkt, NULL);
-
-    checkLWSessionTimeout(4, pkthdr->ts.tv_sec);
-
-    ControlSocketDoWork(0);
-
-    PREPROC_PROFILE_END(totalPerfStats);
-    return verdict;
-}
-
-static void PrintPacket(Packet *p)
-{
-    if (p->iph != NULL)
-    {
-        PrintIPPkt(stdout, GET_IPH_PROTO((p)), p);
-    }
-#ifndef NO_NON_ETHER_DECODER
-    else if (p->ah != NULL)
-    {
-        PrintArpHeader(stdout, p);
-    }
-    else if (p->eplh != NULL)
-    {
-        PrintEapolPkt(stdout, p);
-    }
-    else if (p->wifih && ScOutputWifiMgmt())
-    {
-        PrintWifiPkt(stdout, p);
-    }
-#endif  // NO_NON_ETHER_DECODER
-}
-
-DAQ_Verdict ProcessPacket(
-    void* user, const DAQ_PktHdr_t* pkthdr, const uint8_t* pkt, void* ft)
-{
-    Packet p;
-    DAQ_Verdict verdict = DAQ_VERDICT_PASS;
-    int inject = 0;
-
-    setRuntimePolicy(getDefaultPolicy());
-
-    /* call the packet decoder */
-    (*grinder) (&p, pkthdr, pkt);
-
-    if(!p.pkth || !p.pkt)
-    {
-        return verdict;
-    }
-
-    /* Make sure this packet skips the rest of the preprocessors */
-    /* Remove once the IPv6 frag code is moved into frag 3 */
-    if(p.packet_flags & PKT_NO_DETECT)
-    {
-        DisableAllDetect(&p);
-    }
-
-    if (ft)
-    {
-        p.packet_flags |= (PKT_PSEUDO | PKT_REBUILT_FRAG);
-        p.pseudo_type = PSEUDO_PKT_IP;
-        p.fragtracker = ft;
-    }
-
-    {
-        int vlanId = (p.vh) ? VTH_VLAN(p.vh) : -1;
-        snort_ip_p srcIp = (p.iph) ? GET_SRC_IP((&p)) : (snort_ip_p)0;
-        snort_ip_p dstIp = (p.iph) ? GET_DST_IP((&p)) : (snort_ip_p)0;
-
-        //set policy id for this packet
-        setRuntimePolicy(sfGetApplicablePolicyId(
-            snort_conf->policy_config, vlanId, srcIp, dstIp));
-    }
-
-    /***** Policy specific decoding should into this function *****/
-    p.configPolicyId =
-        snort_conf->targeted_policies[getRuntimePolicy()]->configPolicyId;
-
-    // FIXTHIS ideally this would be done ...
-    DecodePolicySpecific(&p);
-
-    //actions are queued only for IDS case
-    sfActionQueueExecAll(decoderActionQ);
-
-    // FIXTHIS ... here, bypassing the intermediate decoderActionQ
-    // the purpose of which is just to wait until we know the policy
-
-    /* just throw away the packet if we are configured to ignore this port */
-    if ( !(p.packet_flags & PKT_IGNORE_PORT) )
-    {
-        /* start calling the detection processes */
-        Preprocess(&p);
-        log_func(&p);
-    }
-
-    if ( Active_SessionWasDropped() )
-    {
-        Active_DropAction(&p);
-
-        if ( ScInlineMode() || Active_PacketForceDropped() )
-            verdict = DAQ_VERDICT_BLACKLIST;
-        else
-            verdict = DAQ_VERDICT_IGNORE;
-    }
-    if ( ft )
-    {
-        // we don't block, modify, pass, or count defrags
-        // if the defrag trigged a block, this verdict will
-        // be applied to the raw packet.
-        return verdict;
-    }
+    verdict = ProcessPacket(&p, pkthdr, pkt, NULL);
 
 #ifdef ACTIVE_RESPONSE
     if ( Active_ResponseQueued() )
@@ -1644,6 +1553,108 @@ DAQ_Verdict ProcessPacket(
     /* Collect some "on the wire" stats about packet size, etc */
     UpdateWireStats(&sfBase, pkthdr->caplen, Active_PacketWasDropped(), inject);
     Active_Reset();
+    Encode_Reset();
+
+    checkLWSessionTimeout(4, pkthdr->ts.tv_sec);
+    ControlSocketDoWork(0);
+
+    PREPROC_PROFILE_END(totalPerfStats);
+    return verdict;
+}
+
+static void PrintPacket(Packet *p)
+{
+    if (p->iph != NULL)
+    {
+        PrintIPPkt(stdout, GET_IPH_PROTO((p)), p);
+    }
+#ifndef NO_NON_ETHER_DECODER
+    else if (p->ah != NULL)
+    {
+        PrintArpHeader(stdout, p);
+    }
+    else if (p->eplh != NULL)
+    {
+        PrintEapolPkt(stdout, p);
+    }
+    else if (p->wifih && ScOutputWifiMgmt())
+    {
+        PrintWifiPkt(stdout, p);
+    }
+#endif  // NO_NON_ETHER_DECODER
+}
+
+DAQ_Verdict ProcessPacket(
+    Packet* p, const DAQ_PktHdr_t* pkthdr, const uint8_t* pkt, void* ft)
+{
+    DAQ_Verdict verdict = DAQ_VERDICT_PASS;
+
+    setRuntimePolicy(getDefaultPolicy());
+
+    /* call the packet decoder */
+    (*grinder) (p, pkthdr, pkt);
+
+    if(!p->pkth || !p->pkt)
+    {
+        return verdict;
+    }
+
+    /* Make sure this packet skips the rest of the preprocessors */
+    /* Remove once the IPv6 frag code is moved into frag 3 */
+    if(p->packet_flags & PKT_NO_DETECT)
+    {
+        DisableAllDetect(p);
+    }
+
+    if (ft)
+    {
+        p->packet_flags |= (PKT_PSEUDO | PKT_REBUILT_FRAG);
+        p->pseudo_type = PSEUDO_PKT_IP;
+        p->fragtracker = ft;
+        Encode_SetPkt(p);
+    }
+
+    {
+        int vlanId = (p->vh) ? VTH_VLAN(p->vh) : -1;
+        snort_ip_p srcIp = (p->iph) ? GET_SRC_IP((p)) : (snort_ip_p)0;
+        snort_ip_p dstIp = (p->iph) ? GET_DST_IP((p)) : (snort_ip_p)0;
+
+        //set policy id for this packet
+        setRuntimePolicy(sfGetApplicablePolicyId(
+            snort_conf->policy_config, vlanId, srcIp, dstIp));
+    }
+
+    /***** Policy specific decoding should into this function *****/
+    p->configPolicyId =
+        snort_conf->targeted_policies[getRuntimePolicy()]->configPolicyId;
+
+    // FIXTHIS ideally this would be done ...
+    DecodePolicySpecific(p);
+
+    //actions are queued only for IDS case
+    sfActionQueueExecAll(decoderActionQ);
+
+    // FIXTHIS ... here, bypassing the intermediate decoderActionQ
+    // the purpose of which is just to wait until we know the policy
+
+    /* just throw away the packet if we are configured to ignore this port */
+    if ( !(p->packet_flags & PKT_IGNORE_PORT) )
+    {
+        /* start calling the detection processes */
+        Preprocess(p);
+        log_func(p);
+    }
+
+    if ( Active_SessionWasDropped() )
+    {
+        Active_DropAction(p);
+
+        if ( ScInlineMode() || Active_PacketForceDropped() )
+            verdict = DAQ_VERDICT_BLACKLIST;
+        else
+            verdict = DAQ_VERDICT_IGNORE;
+    }
+
     return verdict;
 }
 
@@ -3105,6 +3116,34 @@ static void SigNoAttributeTableHandler(int signal)
 }
 #endif
 
+static void PrintStatistics (void)
+{
+    if ( ScTestMode() || ScVersionMode()
+#ifdef DYNAMIC_PLUGIN
+        || ScRuleDumpMode()
+#endif
+    )
+        return;
+
+    fpShowEventStats(snort_conf);
+
+#ifdef PERF_PROFILING
+    {
+        int save_quiet_flag = snort_conf->logging_flags & LOGGING_FLAG__QUIET;
+
+        snort_conf->logging_flags &= ~LOGGING_FLAG__QUIET;
+
+        ShowPreprocProfiles();
+        ShowRuleProfiles();
+
+        snort_conf->logging_flags |= save_quiet_flag;
+    }
+#endif
+
+    DropStats(2);
+    print_thresholding(snort_conf->threshold_config, 1);
+}
+
 /****************************************************************************
  *
  * Function: CleanExit()
@@ -3191,7 +3230,7 @@ static void SnortCleanup(int exit_val)
     {
         DAQ_Delete();
         DAQ_Term();
-        DropStats(2);
+        PrintStatistics();
         return;
     }
 #if defined(SNORT_RELOAD) && !defined(WIN32)
@@ -3277,32 +3316,7 @@ static void SnortCleanup(int exit_val)
 
     DAQ_Delete();
     DAQ_Term();
-
-    /* Print Statistics */
-    if (!ScTestMode() && !ScVersionMode()
-#ifdef DYNAMIC_PLUGIN
-        && !ScRuleDumpMode()
-#endif
-       )
-    {
-        fpShowEventStats(snort_conf);
-
-#ifdef PERF_PROFILING
-        {
-            int save_quiet_flag = snort_conf->logging_flags & LOGGING_FLAG__QUIET;
-
-            snort_conf->logging_flags &= ~LOGGING_FLAG__QUIET;
-
-            ShowPreprocProfiles();
-            ShowRuleProfiles();
-
-            snort_conf->logging_flags |= save_quiet_flag;
-        }
-#endif
-
-        DropStats(2);
-        print_thresholding(snort_conf->threshold_config, 1);
-    }
+    PrintStatistics();
 
 #ifdef ACTIVE_RESPONSE
     Active_Term();
@@ -3421,8 +3435,10 @@ static void SnortCleanup(int exit_val)
     FreePluginSigFuncs(plugin_clean_exit_funcs);
     plugin_clean_exit_funcs = NULL;
 
-    FreePluginSigFuncs(plugin_restart_funcs);
-    plugin_restart_funcs = NULL;
+#ifdef SNORT_RELOAD
+    FreePluginSigFuncs(plugin_reload_funcs);
+    plugin_reload_funcs = NULL;
+#endif
 
     FreePeriodicFuncs(periodic_check_funcs);
     periodic_check_funcs = NULL;
@@ -4913,19 +4929,23 @@ static void InitSignals(void)
     signal_error_msg[0] = '\0';
     SnortAddSignal(SIGTERM, SigExitHandler, 1);
     SnortAddSignal(SIGINT, SigExitHandler, 1);
+#ifndef WIN32
     SnortAddSignal(SIGQUIT, SigExitHandler, 1);
     SnortAddSignal(SIGNAL_SNORT_DUMP_STATS, SigDumpStatsHandler, 1);
     SnortAddSignal(SIGNAL_SNORT_RELOAD, SigReloadHandler, 1);
     SnortAddSignal(SIGNAL_SNORT_ROTATE_STATS, SigRotateStatsHandler, 1);
+#endif
 
 #ifdef CONTROL_SOCKET
     SnortAddSignal(SIGPIPE, SigPipeHandler, 1);
 #endif
 
 #ifdef TARGET_BASED
+#ifndef WIN32
     /* Used to print warning if attribute table is not configured
      * When it is, it will set new signal handler */
     SnortAddSignal(SIGNAL_SNORT_READ_ATTR_TBL, SigNoAttributeTableHandler, 1);
+#endif
 #endif
 
     errno = 0;

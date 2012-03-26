@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -407,39 +407,27 @@ static int DNP3ProcessUDP(dnp3_config_t *dnp3_eval_config,
 
     while (bytes_processed < packetp->payload_size)
     {
-        uint8_t dnp3_length;
         uint8_t *pdu_start;
         uint16_t user_data, num_crcs, pdu_length;
+        dnp3_link_header_t *link;
 
         pdu_start = (uint8_t *)(packetp->payload + bytes_processed);
+        link = (dnp3_link_header_t *)pdu_start;
 
         /* Alert and stop if (a) there's not enough data to read a length, or
            (b) the start bytes are not 0x0564 */
-        /* XXX: DEFINE MAGIC NUMBERS */
-        if ((packetp->payload_size - bytes_processed < 3) ||
-           ((*pdu_start != 0x05) || (*(pdu_start+1) != 0x64)))
-        {
-            truncated_pdu = 1;
-            break;
-        }
-
-        /* Read the length. DNP3 length only counts non-CRC octets
-           that follow the length field itself. Each CRC is two octets.
-           One follows the header, then one CRC follows every 16 bytes
-           of user data. */
-
-        dnp3_length = (uint8_t) *(packetp->payload + bytes_processed + 2);
-
-        if (dnp3_length < DNP3_HEADER_REMAINDER_LEN)
+        if ((packetp->payload_size - bytes_processed < (int)sizeof(dnp3_link_header_t)) ||
+            (link->start != DNP3_START_BYTES) ||
+            (link->len < DNP3_HEADER_REMAINDER_LEN))
         {
             truncated_pdu = 1;
             break;
         }
 
         /* Calculate the actual length of data to inspect */
-        user_data = dnp3_length - DNP3_HEADER_REMAINDER_LEN;
-        num_crcs = 1 + (user_data/16) + (user_data % 16? 1 : 0);
-        pdu_length = 3 + dnp3_length + (2*num_crcs);
+        user_data = link->len - DNP3_HEADER_REMAINDER_LEN;
+        num_crcs = 1 + (user_data/DNP3_CHUNK_SIZE) + (user_data % DNP3_CHUNK_SIZE? 1 : 0);
+        pdu_length = DNP3_MIN_LEN + link->len + (DNP3_CRC_SIZE*num_crcs);
 
         if (bytes_processed + pdu_length > packetp->payload_size)
         {

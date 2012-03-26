@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -372,14 +372,25 @@ static int gtp_parse_v1(GTPMsg *msg, const char *buff, uint16_t gtp_len)
         /*Check extension headers*/
         while (next_hdr_type)
         {
+            uint16_t ext_header_len;
+
             /*check length before reading data, at lease 4 bytes per extension header*/
             if (gtp_len < msg->header_len + 4)
             {
                 ALERT(GTP_EVENT_BAD_MSG_LEN,GTP_EVENT_BAD_MSG_LEN_STR);
                 return GTP_FAILURE;
             }
+
+            ext_header_len = *(buff + msg->header_len);
+
+            if (!ext_header_len)
+            {
+                ALERT(GTP_EVENT_BAD_MSG_LEN,GTP_EVENT_BAD_MSG_LEN_STR);
+                return GTP_FAILURE;
+            }
+
             /*Extension header length is a unit of 4 octets*/
-            msg->header_len += *(buff + msg->header_len) * 4;
+            msg->header_len += ext_header_len*4;
 
             /*check length before reading data*/
             if (gtp_len < msg->header_len)

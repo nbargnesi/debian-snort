@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **           (C) 2002 Sourcefire, Inc.
 **
@@ -78,7 +78,6 @@ extern OptTreeNode *otn_tmp;
 static void LogAsciiInit(char *args);
 static void LogAscii(Packet *p, char *msg, void *arg, Event *event);
 static void LogAsciiCleanExit(int signal, void *arg);
-static void LogAsciiRestart(int signal, void *arg);
 static char *IcmpFileName(Packet * p);
 static FILE *OpenLogFile(int mode, Packet * p);
 
@@ -105,7 +104,6 @@ static void LogAsciiInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(LogAscii, OUTPUT_TYPE__LOG, NULL);
     AddFuncToCleanExitList(LogAsciiCleanExit, NULL);
-    AddFuncToRestartList(LogAsciiRestart, NULL);
 }
 
 static void LogAscii(Packet *p, char *msg, void *arg, Event *event)
@@ -158,11 +156,6 @@ static void LogAscii(Packet *p, char *msg, void *arg, Event *event)
 
 
 static void LogAsciiCleanExit(int signal, void *arg)
-{
-    return;
-}
-
-static void LogAsciiRestart(int signal, void *arg)
 {
     return;
 }

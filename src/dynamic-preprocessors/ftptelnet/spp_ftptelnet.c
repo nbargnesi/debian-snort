@@ -1,7 +1,7 @@
 /*
  * spp_ftptelnet.c
  *
- * Copyright (C) 2004-2011 Sourcefire, Inc.
+ * Copyright (C) 2004-2012 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -208,6 +208,8 @@ void FTPTelnetCleanExit(int sig, void *args)
  *
  */
 
+extern char* mystrtok (char* s, const char* delim);
+
 static void FTPTelnetInit(char *args)
 {
     char  *pcToken;
@@ -227,10 +229,10 @@ static void FTPTelnetInit(char *args)
 
     /* Find out what is getting configured */
     maxToken = args + strlen(args);
-    pcToken = strtok(args, CONF_SEPARATORS);
+    pcToken = mystrtok(args, CONF_SEPARATORS);
     if (pcToken == NULL)
     {
-        DynamicPreprocessorFatalMessage("%s(%d)strtok returned NULL when it "
+        DynamicPreprocessorFatalMessage("%s(%d)mystrtok returned NULL when it "
                                         "should not.", __FILE__, __LINE__);
     }
 
@@ -464,10 +466,10 @@ static void FtpTelnetReload(char *args)
 
     /* Find out what is getting configured */
     maxToken = args + strlen(args);
-    pcToken = strtok(args, CONF_SEPARATORS);
+    pcToken = mystrtok(args, CONF_SEPARATORS);
     if (pcToken == NULL)
     {
-        DynamicPreprocessorFatalMessage("%s(%d)strtok returned NULL when it "
+        DynamicPreprocessorFatalMessage("%s(%d)mystrtok returned NULL when it "
                                         "should not.", __FILE__, __LINE__);
     }
 

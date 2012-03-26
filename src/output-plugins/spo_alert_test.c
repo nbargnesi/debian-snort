@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2011 Sourcefire, Inc.
+** Copyright (C) 2007-2012 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -104,7 +104,6 @@ typedef struct _SpoAlertTestData
 void AlertTestInit(char *);
 SpoAlertTestData *ParseAlertTestArgs(char *);
 void AlertTestCleanExitFunc(int, void *);
-void AlertTestRestartFunc(int, void *);
 void AlertTest(Packet *, char *, void *, Event *);
 
 extern PacketCount pc;
@@ -156,7 +155,6 @@ void AlertTestInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(AlertTest, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertTestCleanExitFunc, data);
-    AddFuncToRestartList(AlertTestRestartFunc, data);
 }
 
 void AlertTest(Packet *p, char *msg, void *arg, Event *event)
@@ -310,18 +308,6 @@ void AlertTestCleanExitFunc(int signal, void *arg)
 
     /* close alert file */
     DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertTestCleanExitFunc\n"););
-    fclose(data->file);
-
-    /*free memory from SpoAlertTestData */
-    free(data);
-}
-
-void AlertTestRestartFunc(int signal, void *arg)
-{
-    SpoAlertTestData *data = (SpoAlertTestData *)arg;
-
-    /* close alert file */
-    DEBUG_WRAP(DebugMessage(DEBUG_LOG,"AlertTestRestartFunc\n"););
     fclose(data->file);
 
     /*free memory from SpoAlertTestData */

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -27,7 +27,7 @@
 // @author  Russ Combs <rcombs@sourcefire.com>
 
 // the goal is to perform the minimal http paf parsing required for
-// correctness while maintaining loose coupling wiht hi proper:
+// correctness while maintaining loose coupling with hi proper:
 
 // * distinguish request from response by presence of http version
 //   as first token in first header of response
@@ -93,10 +93,12 @@ static uint32_t hi_paf_bytes = 0;
 #define HIF_CHK 0x0008  // transfer-encoding: chunked
 #define HIF_NOB 0x0010  // head (no body in response)
 #define HIF_NOF 0x0020  // no flush (chunked body follows)
-#define HIF_V0  0x0040  // server response version 0
-#define HIF_V1  0x0080  // server response version 1
-#define HIF_ERR 0x0100  // flag error for deferred abort (at eoh)
-#define HIF_PST 0x0200  // post (requires content-length or chunks)
+#define HIF_V09 0x0040  // simple request version 0.9
+#define HIF_V10 0x0080  // server response version 1.0
+#define HIF_V11 0x0100  // server response version 1.1
+#define HIF_ERR 0x0200  // flag error for deferred abort (at eoh)
+#define HIF_PST 0x0400  // post (requires content-length or chunks)
+#define HIF_EOL 0x0800  // already saw at least one eol (for v09)
 
 typedef struct {
     uint32_t len;
@@ -111,7 +113,7 @@ typedef struct {
 
 typedef enum {
     ACT_NOP, ACT_NOB, ACT_PST,
-    ACT_V0,  ACT_V1,
+    ACT_V09, ACT_V10,  ACT_V11,
     ACT_REQ, ACT_RSP,
     ACT_SHI, ACT_SHX, 
     ACT_LNB, ACT_LNC, ACT_LN0,
@@ -134,7 +136,7 @@ typedef struct {
 // of blocks; the states MUST match array index
 #define Z0 (0)
 #define Z1 (Z0+18)
-#define Z2 (Z1+10)
+#define Z2 (Z1+18)
 #define Z3 (Z2+17)
 #define Z4 (Z3+20)
 #define Z5 (Z4+7)
@@ -157,8 +159,8 @@ static HiFsm hi_fsm[] =
     { Z0+ 4, '/', Z0+ 5, Z9   , ACT_NOP },
     { Z0+ 5, '1', Z0+ 6, Z9   , ACT_NOP },
     { Z0+ 6, '.', Z0+ 7, Z9   , ACT_NOP },
-    { Z0+ 7, '0', Z0+ 9, Z0+ 8, ACT_V0  },
-    { Z0+ 8, '1', Z0+ 9, Z9   , ACT_V1  },
+    { Z0+ 7, '0', Z0+ 9, Z0+ 8, ACT_V10  },
+    { Z0+ 8, '1', Z0+ 9, Z9   , ACT_V11  },
     { Z0+ 9, LWS, Z0+10, Z9   , ACT_NOP },
     { Z0+10, LWS, Z0+10, Z0+11, ACT_NOP },
     { Z0+11, '1', Z0+16, Z0+12, ACT_NOB },
@@ -172,15 +174,26 @@ static HiFsm hi_fsm[] =
     // head method signals no body in response
     // post method must have content-length or chunks
     { Z1+ 0, 'H', Z1+ 1, Z1+ 5, ACT_NOP },
-    { Z1+ 1, 'E', Z1+ 2, Z9   , ACT_NOP },
-    { Z1+ 2, 'A', Z1+ 3, Z9   , ACT_NOP },
-    { Z1+ 3, 'D', Z1+ 4, Z9   , ACT_NOP },
-    { Z1+ 4, LWS, Z9+ 0, Z9   , ACT_NOB },
-    { Z1+ 5, 'P', Z1+ 6, Z2   , ACT_NOP },
-    { Z1+ 6, 'O', Z1+ 7, Z9   , ACT_NOP },
-    { Z1+ 7, 'S', Z1+ 8, Z9   , ACT_NOP },
-    { Z1+ 8, 'T', Z1+ 9, Z9   , ACT_NOP },
-    { Z1+ 9, LWS, Z9+ 0, Z9   , ACT_PST },
+    { Z1+ 1, 'E', Z1+ 2, Z1+10, ACT_NOP },
+    { Z1+ 2, 'A', Z1+ 3, Z1+10, ACT_NOP },
+    { Z1+ 3, 'D', Z1+ 4, Z1+10, ACT_NOP },
+    { Z1+ 4, LWS, Z1+12, Z1+10, ACT_NOB },
+    { Z1+ 5, 'P', Z1+ 6, Z1+10, ACT_NOP },
+    { Z1+ 6, 'O', Z1+ 7, Z1+10, ACT_NOP },
+    { Z1+ 7, 'S', Z1+ 8, Z1+10, ACT_NOP },
+    { Z1+ 8, 'T', Z1+ 9, Z1+10, ACT_NOP },
+    { Z1+ 9, LWS, Z1+12, Z1+10, ACT_PST },
+    // now tokens before eol to determine version
+    // 2 tokens is a 0.9 SimpleRequest (1 line header)
+    // 3 tokens is >= 1.0 (1 or more header lines)
+    { Z1+10, LWS, Z1+12, Z1+11, ACT_NOP },
+    { Z1+11, ANY, Z1+10, Z1+10, ACT_NOP },
+    { Z1+12, LWS, Z1+12, Z1+13, ACT_NOP },
+    { Z1+13, EOL, Z9+ 0, Z1+14, ACT_V09 },
+    { Z1+14, LWS, Z1+16, Z1+15, ACT_NOP },
+    { Z1+15, ANY, Z1+13, Z1+13, ACT_NOP },
+    { Z1+16, LWS, Z1+16, Z1+17, ACT_NOP },
+    { Z1+17, EOL, Z9+ 0, Z9+ 0, ACT_V09 },
 
     // content-length can be anywhere after 1st header
     { Z2+ 0, 'C', Z2+ 1, Z3   , ACT_NOP },
@@ -281,6 +294,14 @@ static inline void hi_paf_event_post ()
         HI_EO_CLIENT_UNBOUNDED_POST_STR, NULL);
 }
 
+static inline void hi_paf_event_simple ()
+{
+    SnortEventqAdd(
+        GENERATOR_SPP_HTTP_INSPECT_CLIENT,
+        HI_EO_CLIENT_SIMPLE_REQUEST+1, 1, 0, 3,
+        HI_EO_CLIENT_SIMPLE_REQUEST_STR, NULL);
+}
+
 static inline void hi_paf_event_msg_size ()
 {
     SnortEventqAdd(
@@ -295,11 +316,14 @@ static inline PAF_Status hi_exec (HiState* s, Action a, int c)
     {
     case ACT_NOP:
         break;
-    case ACT_V0:
-        s->flags |= HIF_V0;
+    case ACT_V09:
+        s->flags |= HIF_V09|HIF_ERR;
         break;
-    case ACT_V1:
-        s->flags |= HIF_V1;
+    case ACT_V10:
+        s->flags |= HIF_V10;
+        break;
+    case ACT_V11:
+        s->flags |= HIF_V11;
         break;
     case ACT_NOB:
         s->flags |= HIF_NOB;
@@ -421,6 +445,9 @@ static PAF_Status hi_eoh (HiState* s)
     if ( (s->flags & HIF_ERR) ||
         ((s->flags & HIF_NOB) && (s->flags & HIF_RSP))
     ) {
+        if ( s->flags & HIF_V09 )
+            hi_paf_event_simple();
+
         hi_exec(s, ACT_LN0, 0);
         return PAF_FLUSH;
     }
@@ -432,7 +459,7 @@ static PAF_Status hi_eoh (HiState* s)
     if ( (s->flags & (HIF_REQ|HIF_LEN)) )
         return PAF_FLUSH;
 
-    if ( (s->flags & HIF_V1) && (s->flags & HIF_RSP) )
+    if ( (s->flags & HIF_V11) && (s->flags & HIF_RSP) )
     {
         hi_exec(s, ACT_LN0, 0);
         hi_paf_event_msg_size();
@@ -462,7 +489,17 @@ static inline PAF_Status hi_scan_msg (HiState* s, int c, uint32_t* fp)
     case 0:
         if ( c == '\n' )
         {
-            if ( s->flags & HIF_NOF )
+            if ( !(s->flags & HIF_EOL) )
+            {
+                s->flags |= HIF_EOL;
+                paf = hi_scan_fsm(s, EOL);
+
+                if ( s->flags & HIF_V09 )
+                    paf = hi_eoh(s);
+                else
+                    s->msg = 1;
+            }
+            else if ( s->flags & HIF_NOF )
                 paf = hi_scan_fsm(s, EOL);
             else
                 s->msg = 1;

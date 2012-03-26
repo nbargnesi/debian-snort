@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2011 Sourcefire, Inc.
+** Copyright (C) 2005-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -1020,7 +1020,7 @@ extern grinder_t grinder;
 
 /*  P R O T O T Y P E S  ******************************************************/
 int SnortMain(int argc, char *argv[]);
-DAQ_Verdict ProcessPacket(void*, const DAQ_PktHdr_t*, const uint8_t*, void*);
+DAQ_Verdict ProcessPacket(Packet*, const DAQ_PktHdr_t*, const uint8_t*, void*);
 void SetupMetadataCallback(void);
 int InMainThread(void);
 

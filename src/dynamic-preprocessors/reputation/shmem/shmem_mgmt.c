@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2011 Sourcefire, Inc.
+ * Copyright (C) 2005-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -37,20 +37,25 @@ static const char* const MODULE_NAME = "SharedMemMgmt";
 static void SetShmemMgmtVariables(int value, uint32_t instance_num)
 {
     int i;
+    void* temp_zerosegptr;
 
-    mgmt_ptr->instance[instance_num].active        = value;
-    mgmt_ptr->instance[instance_num].version       =  0;
-    mgmt_ptr->instance[instance_num].activeSegment = NO_DATASEG;
-    mgmt_ptr->instance[instance_num].prevSegment   = NO_DATASEG;
-    mgmt_ptr->instance[instance_num].updateTime    = time(NULL);
-    mgmt_ptr->instance[instance_num].shmemCurrPtr  = zeroseg_ptr;
-    mgmt_ptr->instance[instance_num].shmemZeroPtr  = zeroseg_ptr;
+    if (shmusr_ptr->instance_num == instance_num)
+        temp_zerosegptr = zeroseg_ptr;
+    else
+        temp_zerosegptr = mgmt_ptr->instance[instance_num].shmemZeroPtr;
 
+    mgmt_ptr->instance[instance_num].active                    = value;
+    mgmt_ptr->instance[instance_num].version                   =  0;
+    mgmt_ptr->instance[instance_num].activeSegment             = NO_DATASEG;
+    mgmt_ptr->instance[instance_num].prevSegment               = NO_DATASEG;
+    mgmt_ptr->instance[instance_num].updateTime                = time(NULL);
+
+    mgmt_ptr->instance[instance_num].shmemCurrPtr              = temp_zerosegptr;
+    mgmt_ptr->instance[instance_num].shmemZeroPtr              = temp_zerosegptr;
     for (i=0; i<MAX_SEGMENTS; i++)
         mgmt_ptr->instance[instance_num].shmemSegActiveFlag[i] = 0;
-
     for (i=0; i<MAX_SEGMENTS; i++)
-        mgmt_ptr->instance[instance_num].shmemSegmentPtr[i] = zeroseg_ptr;
+        mgmt_ptr->instance[instance_num].shmemSegmentPtr[i]    = temp_zerosegptr;
 }
 
 static void InitShmemDataSegmentMgmtVariables()
@@ -183,7 +188,7 @@ exit:
 int InitShmemReader (
     uint32_t instance_num, int dataset, int group_id,
     int numa_node, const char* path, void*** data_ptr,
-    uint16_t instance_polltime)
+    uint32_t instance_polltime)
 {
     int segment_number = NO_ZEROSEG;
     if (InitShmemUser(instance_num,READ,dataset,group_id,numa_node,path,instance_polltime))
@@ -199,7 +204,7 @@ int InitShmemReader (
         return segment_number;
     }
     
-    zeroseg_ptr = *data_ptr;
+    zeroseg_ptr = **data_ptr;
 
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
         "Address of zero segment is %p\n",zeroseg_ptr););
@@ -394,7 +399,7 @@ exit:
 int InitShmemWriter(
     uint32_t instance_num, int dataset, int group_id,
     int numa_node, const char* path, void*** data_ptr,
-    uint16_t instance_polltime)
+    uint32_t instance_polltime)
 {
     int segment_number = NO_ZEROSEG;
 
@@ -412,7 +417,7 @@ int InitShmemWriter(
         goto cleanup_exit;
     }
 
-    zeroseg_ptr = *data_ptr;
+    zeroseg_ptr = **data_ptr;
 
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
         "Address of zero segment is %p\n",zeroseg_ptr););
@@ -499,14 +504,19 @@ void UnmapInactiveSegments()
 static void ExpireTimedoutInstances()
 {
     int i;
+    int64_t max_timeout;
     time_t current_time = time(NULL);
+
+    /*timeout will be at least 60 seconds*/
+    max_timeout =  UNUSED_TIMEOUT * shmusr_ptr->instance_polltime + 60;
+    if (max_timeout > UINT32_MAX)
+        max_timeout = UINT32_MAX;
 
     for(i=0; i<MAX_INSTANCES; i++)
     {
         if (mgmt_ptr && mgmt_ptr->instance[i].active)
         {
-            if ((current_time - mgmt_ptr->instance[i].updateTime) >
-                (UNUSED_TIMEOUT * shmusr_ptr->instance_polltime))
+            if ((int64_t)current_time >  mgmt_ptr->instance[i].updateTime + max_timeout)
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                     "Instance %d has expired, last update %jd and current time is %jd\n",

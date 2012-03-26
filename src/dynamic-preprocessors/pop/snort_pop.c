@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -398,6 +398,7 @@ static void POP_ResetState(void)
 
     pop_ssn->state = STATE_UNKNOWN;
     pop_ssn->data_state = STATE_DATA_INIT;
+    pop_ssn->prev_response = 0;
     pop_ssn->state_flags = 0;
     ClearEmailDecodeState(pop_ssn->decode_state);
     memset(&pop_ssn->mime_boundary, 0, sizeof(POPMimeBoundary));
@@ -439,6 +440,7 @@ static POP * POP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
 
     pop_ssn = ssn;
     SetPopBuffers(ssn);
+    ssn->prev_response = 0;
 
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_POP,
                                          ssn, &POP_SessionFree);
@@ -855,6 +857,7 @@ static const uint8_t * POP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, c
 
     /* calculate length of command line */
     cmd_line_len = eol - ptr;
+
 
     /* TODO If the end of line marker coincides with the end of payload we can't be
      * sure that we got a command and not a substring which we could tell through
@@ -1440,7 +1443,10 @@ static void POP_ProcessServerPacket(SFSnortPacket *p)
                     if(tmp != NULL)
                         pop_ssn->state = STATE_DATA;
                     else
+                    {
+                        pop_ssn->prev_response = RESP_OK;
                         pop_ssn->state = STATE_UNKNOWN;
+                    }
                     break;
 
                 default:
@@ -1450,16 +1456,19 @@ static void POP_ProcessServerPacket(SFSnortPacket *p)
         }
         else
         {
-            if(*ptr == '+' )
+            if(pop_ssn->prev_response == RESP_OK)
+            {
+                {
+                    pop_ssn->state = STATE_DATA;
+                    pop_ssn->prev_response = 0;
+                    continue;
+                }
+            }
+            else if(*ptr == '+')
             {
                 POP_GenerateAlert(POP_UNKNOWN_RESP, "%s", POP_UNKNOWN_RESP_STR);
                 DEBUG_WRAP(DebugMessage(DEBUG_POP, "Server response not found\n"););
             }
-            else
-            {
-                DEBUG_WRAP(DebugMessage(DEBUG_POP, "Server response description\n"););
-            }
-
         }
 
         ptr = eol;

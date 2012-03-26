@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2011 Sourcefire, Inc.
+** Copyright (C) 2002-2012 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -59,7 +59,6 @@
 static void LogNullInit(char *);
 static void LogNull(Packet *, char *, void *, Event *);
 static void LogNullCleanExitFunc(int, void *);
-static void LogNullRestartFunc(int, void *);
 
 void LogNullSetup(void)
 {
@@ -78,7 +77,6 @@ static void LogNullInit(char *args)
     /* Set the preprocessor function into the function list */
     AddFuncToOutputList(LogNull, OUTPUT_TYPE__LOG, NULL);
     AddFuncToCleanExitList(LogNullCleanExitFunc, NULL);
-    AddFuncToRestartList(LogNullRestartFunc, NULL);
 }
 
 
@@ -94,7 +92,3 @@ static void LogNullCleanExitFunc(int signal, void *arg)
     return;
 }
 
-static void LogNullRestartFunc(int signal, void *arg)
-{
-    return;
-}

@@ -14,7 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * Copyright (C) 2011 Sourcefire, Inc.
+ * Copyright (C) 2011-2012 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -83,8 +83,15 @@ int DNP3FuncInit(char *name, char *params, void **data)
     dnp3_option_data_t *dnp3_data;
     long func_code;
 
-    if (name == NULL || params == NULL || data == NULL)
+    if (name == NULL || data == NULL)
         return 0;
+
+    if (params == NULL)
+    {
+        DynamicPreprocessorFatalMessage("%s(%d): dnp3_func requires a "
+            "number beween 0 and 255, or a valid function name.\n",
+            *_dpd.config_file, *_dpd.config_line);
+    }
 
     if (strcmp(name, DNP3_FUNC_NAME) != 0)
         return 0;
@@ -194,8 +201,15 @@ int DNP3IndInit(char *name, char *params, void **data)
     char *token, *saveptr;
     uint16_t flags = 0;
 
-    if (name == NULL || params == NULL || data == NULL)
+    if (name == NULL || data == NULL)
         return 0;
+
+    if (params == NULL)
+    {
+        DynamicPreprocessorFatalMessage("%s(%d): dnp3_ind requires a "
+            "number beween 0 and 255, or a valid function name.\n",
+            *_dpd.config_file, *_dpd.config_line);
+    }
 
     dnp3_data = (dnp3_option_data_t *)calloc(1, sizeof(dnp3_option_data_t));
     if (dnp3_data == NULL)
