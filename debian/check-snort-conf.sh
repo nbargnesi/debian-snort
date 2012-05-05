@@ -17,11 +17,20 @@ if [ ! -d "rules" ] ; then
     exit 1
 fi
 
-cat $CONFIG  | grep -v ^# | egrep "\.rules$" | awk -F "/" '{print $2}' |
+# Review the rules which are enabled but do not exist
+cat $CONFIG  | grep -v ^# | egrep 'include \$RULE_PATH.*\.rules$' | awk -F "/" '{print $2}' |
 while read rules_file; do
     if [ ! -e "rules/$rules_file" ] ; then
         echo "ERROR: Rules file $rules_file in configuration file does not exist under rules/"  >&2
         errval=1
+    fi
+done
+
+# Review the rules which are disabled but *do* exist
+cat $CONFIG  | grep ^# | egrep 'include \$RULE_PATH.*\.rules$' | awk -F "/" '{print $2}' |
+while read rules_file; do
+    if [ -e "rules/$rules_file" ] ; then
+        echo "WARN: Rules file $rules_file disabled in configuration file but exists under rules/"  >&2
     fi
 done
 
