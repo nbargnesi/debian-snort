@@ -397,7 +397,8 @@ snort (2.7.0-25) unstable; urgency=low
     (Closes: 510704)
   * Move the code that detects if interfaces are down over to snort-pgsql and
     snort-mysql.  This way, if the interface defined is not available it will
-    prompt again, raising the debconf priority (Closes: #502084) (LP: #477590)
+    prompt again, raising the debconf priority (Closes: #502084) 
+    (LP: #477590, #655116)
   * Change all the config_parameters debconf input from 'medium' to 'error'
   * Change all the needs_db_config debconf questions from 'medium' to 'high'
     since users that do not see this note will end up with a non-functioning
