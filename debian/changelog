@@ -1,8 +1,16 @@
 snort (2.9.2.2-1) unstable; urgency=low
 
   * New upstream version (bug fix release)
+  * Acknowledge NMU (Closes: #669524)
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 27 Mar 2012 00:15:31 +0200
+
+snort (2.9.2-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Correct tex .sty path (Closes: #669524)
+
+ -- Emfox Zhou <emfox@debian.org>  Mon, 30 Apr 2012 15:57:48 +0800
 
 snort (2.9.2-4) unstable; urgency=low
 
