@@ -5,9 +5,9 @@ Author: Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
 Origin: vendor
 Last-Update: 2011-11-28
 
---- snort-2.9.2.orig/etc/snort.conf
-+++ snort-2.9.2/etc/snort.conf
-@@ -46,6 +46,7 @@ ipvar HOME_NET any
+--- a/etc/snort.conf
++++ b/etc/snort.conf
+@@ -46,6 +46,7 @@
  
  # Set up the external network addresses. Leave as "any" in most situations
  ipvar EXTERNAL_NET any
@@ -15,7 +15,7 @@ Last-Update: 2011-11-28
  
  # List of DNS servers on your network 
  ipvar DNS_SERVERS $HOME_NET
-@@ -95,9 +96,9 @@ ipvar AIM_SERVERS [64.12.24.0/23,64.12.2
+@@ -101,9 +102,9 @@
  # Path to your rules files (this can be a relative path)
  # Note for Windows users:  You are advised to make this an absolute path,
  # such as:  c:\snort\rules
@@ -26,9 +26,9 @@ Last-Update: 2011-11-28
 +var SO_RULE_PATH /etc/snort/so_rules
 +var PREPROC_RULE_PATH /etc/snort/preproc_rules
  
- ###################################################
- # Step #2: Configure the decoder.  For more information, see README.decode
-@@ -217,13 +218,13 @@ config event_queue: max_queue 8 log 3 or
+ # If you are using reputation preprocessor set these
+ # Currently there is a bug with relative paths, they are relative to where snort is
+@@ -244,13 +245,13 @@
  ###################################################
  
  # path to dynamic preprocessor libraries
@@ -45,7 +45,7 @@ Last-Update: 2011-11-28
  
  ###################################################
  # Step #5: Configure preprocessors
-@@ -477,11 +478,19 @@ preprocessor pop: \
+@@ -527,11 +528,19 @@
  # output alert_syslog: LOG_AUTH LOG_ALERT
  
  # pcap
@@ -66,80 +66,7 @@ Last-Update: 2011-11-28
  
  # prelude
  # output alert_prelude
-@@ -504,47 +513,63 @@ include $RULE_PATH/local.rules
- include $RULE_PATH/attack-responses.rules
- include $RULE_PATH/backdoor.rules
- include $RULE_PATH/bad-traffic.rules
--include $RULE_PATH/blacklist.rules
--include $RULE_PATH/botnet-cnc.rules
-+# include $RULE_PATH/blacklist.rules
-+# include $RULE_PATH/botnet-cnc.rules
- include $RULE_PATH/chat.rules
--include $RULE_PATH/content-replace.rules
-+# include $RULE_PATH/content-replace.rules
- include $RULE_PATH/ddos.rules
- include $RULE_PATH/dns.rules
- include $RULE_PATH/dos.rules
-+include $RULE_PATH/community-dos.rules
- include $RULE_PATH/exploit.rules
-+include $RULE_PATH/community-exploit.rules
- include $RULE_PATH/finger.rules
- include $RULE_PATH/ftp.rules
-+include $RULE_PATH/community-ftp.rules
- include $RULE_PATH/icmp.rules
- include $RULE_PATH/icmp-info.rules
- include $RULE_PATH/imap.rules
-+include $RULE_PATH/community-imap.rules
- include $RULE_PATH/info.rules
- include $RULE_PATH/misc.rules
- include $RULE_PATH/multimedia.rules
- include $RULE_PATH/mysql.rules
- include $RULE_PATH/netbios.rules
- include $RULE_PATH/nntp.rules
-+include $RULE_PATH/community-nntp.rules
- include $RULE_PATH/oracle.rules
-+include $RULE_PATH/community-oracle.rules
- include $RULE_PATH/other-ids.rules
- include $RULE_PATH/p2p.rules
--include $RULE_PATH/phishing-spam.rules
-+# include $RULE_PATH/phishing-spam.rules
- include $RULE_PATH/policy.rules
-+# include $RULE_PATH/community-policy.rules
-+# include $RULE_PATH/community-inappropriate.rules
-+# include $RULE_PATH/community-game.rules
-+# include $RULE_PATH/community-misc.rules
- include $RULE_PATH/pop2.rules
- include $RULE_PATH/pop3.rules
- include $RULE_PATH/rpc.rules
- include $RULE_PATH/rservices.rules
--include $RULE_PATH/scada.rules
-+# include $RULE_PATH/scada.rules
- include $RULE_PATH/scan.rules
-+# Note: this rule is extremely chatty, enable with care
- include $RULE_PATH/shellcode.rules
- include $RULE_PATH/smtp.rules
-+include $RULE_PATH/community-smtp.rules
- include $RULE_PATH/snmp.rules
--include $RULE_PATH/specific-threats.rules
--include $RULE_PATH/spyware-put.rules
-+# include $RULE_PATH/specific-threats.rules
-+# include $RULE_PATH/spyware-put.rules
- include $RULE_PATH/sql.rules
- include $RULE_PATH/telnet.rules
- include $RULE_PATH/tftp.rules
- include $RULE_PATH/virus.rules
--include $RULE_PATH/voip.rules
--include $RULE_PATH/web-activex.rules
-+include $RULE_PATH/community-virus.rules
-+include $RULE_PATH/community-bot.rules
-+# include $RULE_PATH/voip.rules
-+include $RULE_PATH/community-sip.rules
-+# Specific web server rules:
-+# include $RULE_PATH/web-activex.rules
- include $RULE_PATH/web-attacks.rules
- include $RULE_PATH/web-cgi.rules
- include $RULE_PATH/web-client.rules
-@@ -553,6 +578,20 @@ include $RULE_PATH/web-frontpage.rules
+@@ -604,6 +613,20 @@
  include $RULE_PATH/web-iis.rules
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
