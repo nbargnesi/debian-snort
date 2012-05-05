@@ -134,8 +134,8 @@ build-indep-stamp:
 # Note: I hate hardcoding paths here, but the buildds are stupid
 	@if [ -x /usr/bin/ps2pdf -a -x /usr/bin/pslatex -a \
 	     -x /usr/bin/dvips -a \
-	     -e /usr/share/texmf-texlive/tex/latex/pslatex/pslatex.sty -a \
-	     -e /usr/share/texmf-texlive/tex/latex/oberdiek/kvoptions.sty ] ; \
+	     -e /usr/share/texlive/texmf-dist/tex/latex/pslatex/pslatex.sty -a \
+	     -e /usr/share/texlive/texmf-dist/tex/latex/oberdiek/kvoptions.sty ] ; \
 	then \
 	    $(MAKE) -C doc snort_manual.pdf faq.pdf ; \
 	else \
