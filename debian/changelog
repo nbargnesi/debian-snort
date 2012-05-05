@@ -2,6 +2,11 @@ snort (2.9.2.2-1) unstable; urgency=low
 
   * New upstream version (bug fix release)
   * Acknowledge NMU (Closes: #669524)
+  * debian/check-snort-conf.sh: New script to check the validity
+     of the etc/snort.conf file provided
+  * debian/patches/series, debian/patches/config_disabled_rules,
+    debian/patches/config: Create independent patch to comment
+    the rules files which are not provided in the Debian package.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 27 Mar 2012 00:15:31 +0200
 
