@@ -9,7 +9,7 @@ snort (2.9.2.2-1) unstable; urgency=low
     debian/patches/config: Create independent patch to comment
     the rules files which are not provided in the Debian package.
 
- -- Javier Fernandez-Sanguino Peña <jfs@debian.org>  Sun, 06 May 2012 01:01:30 +0200
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Sun, 06 May 2012 01:01:30 +0200
 
 snort (2.9.2-3.1) unstable; urgency=low
 
