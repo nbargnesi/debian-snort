@@ -99,9 +99,8 @@ build-mysql-stamp: $(QUILT_STAMPFN)
 	./configure $(CONFFLAGS) \
 		--with-mysql \
 		--without-postgresql \
-		--enable-zlib
-# Use this for mysql version in experimental
-#		--with-mysql-libraries=`mysql_config --variable=pkglibdir` 
+		--enable-zlib \
+		--with-mysql-libraries=`mysql_config --variable=pkglibdir` 
 	$(MAKE) 
 	cp src/snort src/snort-mysql
 	touch $@
