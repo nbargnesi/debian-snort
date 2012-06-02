@@ -1,7 +1,7 @@
-snort (2.9.2.2-1.1) unstable; urgency=low
+snort (2.9.2.2-2) unstable; urgency=low
 
-  * Non-maintainer upload.
-  * Fix "FTBFS with multiarch libmysqlclient-dev":
+  * Fix "FTBFS with multiarch libmysqlclient-dev" using the
+    patch supplied by Gregor Herrmann :
     + apply patch from Ubuntu / Jean-Louis Dupond:
       - debian/rules: use mysql_config to find libraries to fix FTBFS 
         with multiarch libmysqlclient.
@@ -10,7 +10,7 @@ snort (2.9.2.2-1.1) unstable; urgency=low
       switch.
     (Closes: #650060)
 
- -- gregor herrmann <gregoa@debian.org>  Sat, 02 Jun 2012 14:53:52 +0200
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Sun, 02 Jun 2012 17:56:00 +0200
 
 snort (2.9.2.2-1) unstable; urgency=low
 
