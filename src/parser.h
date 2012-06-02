@@ -428,6 +428,11 @@ static inline RuleTreeNode *getRuntimeRtnFromOtn(OptTreeNode *otn)
     return getRtnFromOtn(otn, getRuntimePolicy());
 }
 
+static inline SnortConfig *getWorkingConf(void)
+{
+    return snort_conf_for_parsing ? snort_conf_for_parsing : snort_conf;
+}
+
 SnortPolicy * SnortPolicyNew(void);
 void SnortPolicyFree(SnortPolicy *pPolicy);
 

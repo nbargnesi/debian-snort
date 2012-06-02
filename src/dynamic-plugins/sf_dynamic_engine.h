@@ -128,11 +128,13 @@ typedef void (*FreeRuleData)(void *);
  */
 #include "sf_dynamic_common.h"
 
-#define ENGINE_DATA_VERSION 6
+#define ENGINE_DATA_VERSION 7
 
 typedef void *(*PCRECompileFunc)(const char *, int, const char **, int *, const unsigned char *);
 typedef void *(*PCREStudyFunc)(const void *, int, const char **);
 typedef int (*PCREExecFunc)(const void *, const void *, const char *, int, int, int, int *, int);
+typedef void (*PCRECapture)(const void *, const void *);
+typedef void(*PCREOvectorInfo)(int **, int *);
 
 typedef struct _DynamicEngineData
 {
@@ -180,6 +182,8 @@ typedef struct _DynamicEngineData
 
     UnregisterBit flowbitUnregister;
 
+    PCRECapture pcreCapture;
+    PCREOvectorInfo pcreOvectorInfo;
 } DynamicEngineData;
 
 extern DynamicEngineData _ded;

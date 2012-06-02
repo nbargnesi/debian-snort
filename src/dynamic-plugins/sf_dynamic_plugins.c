@@ -72,6 +72,7 @@ typedef HANDLE PluginHandle;
 #include "sf_dynamic_preprocessor.h"
 #include "sp_dynamic.h"
 #include "sp_preprocopt.h"
+#include "sp_pcre.h"
 #include "util.h"
 #include "event_queue.h"
 #include "plugbase.h"
@@ -1268,6 +1269,16 @@ void *pcreStudy(const void *code, int options, const char **errptr)
     return extra_extra;
 }
 
+/* pcreOvectorInfo 
+ *
+ * Get the Ovector configuration for PCRE from the snort.conf
+ */
+void pcreOvectorInfo(int **ovector, int *ovector_size)
+{
+    *ovector = snort_conf->pcre_ovector;
+    *ovector_size = snort_conf->pcre_ovector_size;
+}
+
 int pcreExec(const void *code, const void *extra, const char *subj,
              int len, int start, int options, int *ovec, int ovecsize)
 {
@@ -1338,6 +1349,9 @@ int InitDynamicEngines(char *dynamic_rules_path)
     engineData.freeRuleData = &DynamicRuleDataFree;
 
     engineData.flowbitUnregister = &DynamicFlowbitUnregister;
+
+    engineData.pcreCapture = &PcreCapture;
+    engineData.pcreOvectorInfo = &pcreOvectorInfo;
 
     return InitDynamicEnginePlugins(&engineData);
 }

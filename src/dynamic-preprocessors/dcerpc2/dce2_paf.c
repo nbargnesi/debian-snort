@@ -346,7 +346,7 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
         // if autodetect port and not autodetected
         //     return PAF_ABORT
 
-        bool cont = false;
+        bool autodetected = false;
 
 #ifdef TARGET_BASED
         if (_dpd.isAdaptiveConfigured(_dpd.getRuntimePolicy(), 0))
@@ -357,9 +357,20 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
                                      "to see if it's DCE/RPC.\n"));
 
             if (proto_id == dce2_proto_ids.dcerpc)
-                cont = true;
+            {
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Adaptive says it's "
+                            "DCE/RPC - no need to autodetect\n"));
+                autodetected = true;
+            }
+            else if (proto_id != 0)
+            {
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Adaptive says it's "
+                            "not DCE/RPC - aborting\n"));
+                return PAF_ABORT;
+            }
         }
-        else
+
+        if (!autodetected)
         {
 #endif
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "No session data - autodetecting\n"));
@@ -374,24 +385,24 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
                      (DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND_ACK)) &&
                     (DceRpcCoFragLen(co_hdr) >= sizeof(DceRpcCoHdr)))
                 {
-                    cont = true;
+                    autodetected = true;
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Autodetected!\n"));
                 }
             }
             else if ((*data == DCERPC_PROTO_MAJOR_VERS__5) && (flags & FLAG_FROM_CLIENT))
             {
-                cont = true;
+                autodetected = true;
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Autodetected!\n"));
             }
 #ifdef TARGET_BASED
         }
 #endif
 
-        if (!cont)
+        if (!autodetected)
         {
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Couldn't autodetect - aborting\n"));
             return PAF_ABORT;
         }
-
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Autodetected!\n"));
     }
 
     if (ds == NULL)

@@ -38,6 +38,9 @@
 /* Minimum length of DNP3 "len" field in order to get a transport header. */
 #define DNP3_MIN_TRANSPORT_LEN 6
 
+#define DNP3_TPDU_MAX  250
+#define DNP3_LPDU_MAX  292
+
 /* CRC look-up table, for computeCRC() below */
 static uint16_t crcLookUpTable[256] =
 {
@@ -315,6 +318,7 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
 {
     char *cursor;
     uint16_t bytes_left;
+    uint16_t curlen = 0;
 
     /* Check Header CRC */
     if ((config->check_crc) &&
@@ -327,10 +331,10 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
 
     cursor = (char *)pdu_start + sizeof(dnp3_link_header_t) + 2;
     bytes_left = pdu_length - sizeof(dnp3_link_header_t) - 2;
-    *buflen = 0;
 
     /* Process whole 16-byte chunks (plus 2-byte CRC) */
-    while (bytes_left > (DNP3_CHUNK_SIZE + DNP3_CRC_SIZE))
+    while ( (bytes_left > (DNP3_CHUNK_SIZE + DNP3_CRC_SIZE)) &&
+        (curlen + DNP3_CHUNK_SIZE < *buflen) )
     {
         if ((config->check_crc) &&
             (DNP3CheckCRC((unsigned char*)cursor, (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE)) == DNP3_FAIL))
@@ -340,13 +344,14 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
             return DNP3_FAIL;
         }
 
-        memcpy((buf + *buflen), cursor, DNP3_CHUNK_SIZE);
-        *buflen += DNP3_CHUNK_SIZE;
+        memcpy((buf + curlen), cursor, DNP3_CHUNK_SIZE);
+        curlen += DNP3_CHUNK_SIZE;
         cursor += (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE);
         bytes_left -= (DNP3_CHUNK_SIZE+DNP3_CRC_SIZE);
     }
     /* Process leftover chunk, under 16 bytes */
-    if (bytes_left > DNP3_CRC_SIZE)
+    if ( (bytes_left > DNP3_CRC_SIZE) &&
+        (curlen + bytes_left < *buflen) )
     {
         if ((config->check_crc) && (DNP3CheckCRC((unsigned char*)cursor, bytes_left) == DNP3_FAIL))
         {
@@ -355,12 +360,13 @@ static int DNP3CheckRemoveCRC(dnp3_config_t *config, uint8_t *pdu_start,
             return DNP3_FAIL;
         }
 
-        memcpy((buf + *buflen), cursor, (bytes_left - DNP3_CRC_SIZE));
-        *buflen += (bytes_left - DNP3_CRC_SIZE);
+        memcpy((buf + curlen), cursor, (bytes_left - DNP3_CRC_SIZE));
+        curlen += (bytes_left - DNP3_CRC_SIZE);
         cursor += bytes_left;
         bytes_left = 0;
     }
 
+    *buflen = curlen;
     return DNP3_OK;
 }
 
@@ -388,18 +394,17 @@ static int DNP3CheckReservedAddrs(dnp3_link_header_t *link)
    spp_dnp3 and dnp3_reassembly. */
 int DNP3FullReassembly(dnp3_config_t *config, dnp3_session_data_t *session, SFSnortPacket *packet, uint8_t *pdu_start, uint16_t pdu_length)
 {
-    char buf[256];
-    uint16_t buflen;
+    char buf[DNP3_TPDU_MAX];
+    uint16_t buflen = sizeof(buf);
     dnp3_link_header_t *link;
     dnp3_reassembly_data_t *rdata;
 
     if (pdu_length < (sizeof(dnp3_link_header_t) + sizeof(dnp3_transport_header_t) + 2))
         return DNP3_FAIL;
 
-    if (session->direction == DNP3_CLIENT)
-        rdata = &(session->client_rdata);
-    else
-        rdata = &(session->server_rdata);
+    if ( pdu_length > DNP3_LPDU_MAX )
+        // this means PAF aborted - not DNP3
+        return DNP3_FAIL;
 
     /* Step 1: Decode header and skip to data */
     link = (dnp3_link_header_t *) pdu_start;
@@ -422,6 +427,11 @@ int DNP3FullReassembly(dnp3_config_t *config, dnp3_session_data_t *session, SFSn
         return DNP3_FAIL;
 
     /* Step 3: Queue user data in frame for Transport-Layer reassembly */
+    if (session->direction == DNP3_CLIENT)
+        rdata = &(session->client_rdata);
+    else
+        rdata = &(session->server_rdata);
+
     if (DNP3ReassembleTransport(rdata, buf, buflen) == DNP3_FAIL)
         return DNP3_FAIL;
 

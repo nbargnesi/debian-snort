@@ -27,8 +27,7 @@
 #include "sf_dynamic_preprocessor.h"
 
 /* Forward declarations */
-int DNP3PafRegister(uint16_t port, tSfPolicyId policy_id);
-PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
+static PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
                    uint32_t len, uint32_t flags, uint32_t *fp);
 
 /* State-tracking structs */
@@ -47,7 +46,7 @@ typedef struct _dnp3_paf_data
     uint16_t real_length;
 } dnp3_paf_data_t;
 
-int DNP3PafRegister(uint16_t port, tSfPolicyId policy_id)
+static int DNP3PafRegister(uint16_t port, tSfPolicyId policy_id)
 {
     if (!_dpd.isPafEnabled())
         return 0;
@@ -78,7 +77,7 @@ int DNP3PafRegister(uint16_t port, tSfPolicyId policy_id)
     PAF_Status - PAF_FLUSH if flush point found, PAF_SEARCH otherwise
 */
 
-PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
+static PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
                      uint32_t len, uint32_t flags, uint32_t *fp)
 {
     dnp3_paf_data_t *pafdata = *(dnp3_paf_data_t **)user;
@@ -107,13 +106,15 @@ PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
             case DNP3_PAF_STATE__START_1:
                 if (((uint8_t) *(data + bytes_processed)) == DNP3_START_BYTE_1)
                     pafdata->state++;
+                else
+                    return PAF_ABORT;
                 break;
                 
             case DNP3_PAF_STATE__START_2:
                 if (((uint8_t) *(data + bytes_processed)) == DNP3_START_BYTE_2)
                     pafdata->state++;
                 else
-                    pafdata->state = DNP3_PAF_STATE__START_1;
+                    return PAF_ABORT;
                 break;
 
             /* Read the length. */

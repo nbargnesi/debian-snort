@@ -3820,6 +3820,9 @@ void SnortConfFree(SnortConfig *sc)
 
     OtnxMatchDataFree(sc->omd);
 
+    if (sc->pcre_ovector != NULL)
+        free(sc->pcre_ovector);
+
     if ( sc->event_queue_config )
         EventQueueConfigFree(sc->event_queue_config);
 

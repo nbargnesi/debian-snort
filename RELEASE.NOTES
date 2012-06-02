@@ -1,3 +1,17 @@
+2012-05-08 - Snort 2.9.2.3
+[*] Improvements
+ * Update to GTP preprocessor to better handle GTPv1 data.
+
+ * Update to DNP3 preprocessor to add stricter checking on
+   packets before processing by dnp3.  Improved checking
+   on reassembly buffer
+
+ * Update to PCRE rule option processing to prevent issues
+   seen w/ libpcre-8.30 and certain rules.
+
+ * Update to dcerpc2 to not abort reassembly if target-based
+   protocol is undefined.
+
 2012-03-26 - Snort 2.9.2.2
 [*] Improvements
  * Updates to HTTP Inspect to handle normalization with large

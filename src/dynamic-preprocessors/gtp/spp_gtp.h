@@ -77,7 +77,7 @@ typedef struct _GTPMsg
     uint8_t msg_type;
     uint16_t msg_length;
     uint16_t header_len;
-    char *gtp_header;
+    uint8_t *gtp_header;
     GTP_IEData *info_elements;
     /* nothing after this point is zeroed ...*/
     uint32_t msg_id; /*internal state, new msg will have a new id*/

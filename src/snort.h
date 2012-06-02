@@ -731,6 +731,8 @@ typedef struct _SnortConfig
     long int tagged_packet_limit;            /* config tagged_packet_limit */
     long int pcre_match_limit;               /* config pcre_match_limit */
     long int pcre_match_limit_recursion;     /* config pcre_match_limit_recursion */
+    int *pcre_ovector;
+    int pcre_ovector_size;
 
 #ifdef PERF_PROFILING
     ProfileConfig profile_rules;     /* config profile_rules */

@@ -234,7 +234,7 @@ static void GTPInit(char *argp)
 static inline int GTP_Process(SFSnortPacket *p, GTPData* sessp)
 {
     int status;
-    char* gtp_buff = (char*) p->payload;
+    const uint8_t* gtp_buff =  p->payload;
     static uint32_t msgId = 0;
 
     GTP_Roptions *pRopts;

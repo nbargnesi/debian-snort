@@ -96,17 +96,17 @@ GTP_IEData gtp_ies[MAX_GTP_IE_CODE + 1];
 
 #define GTP_MIN_HEADER_LEN      (8)
 
-static int gtp_processInfoElements(GTPMsg *msg, const char *, uint16_t );
+static int gtp_processInfoElements(GTPMsg *msg, const uint8_t *, uint16_t );
 
 /*Because different GTP versions have different format,
  * they are processed separately*/
-static int gtp_parse_v0(GTPMsg *msg, const char *,uint16_t );
-static int gtp_parse_v1(GTPMsg *msg, const char *, uint16_t );
-static int gtp_parse_v2(GTPMsg *msg, const char *, uint16_t );
+static int gtp_parse_v0(GTPMsg *msg, const uint8_t *,uint16_t );
+static int gtp_parse_v1(GTPMsg *msg, const uint8_t *, uint16_t );
+static int gtp_parse_v2(GTPMsg *msg, const uint8_t *, uint16_t );
 
 #ifdef DEBUG_MSGS
 /*Display the content*/
-static void convertToHex( char *output, int outputSize, const char *input, int inputSize)
+static void convertToHex( char *output, int outputSize, const uint8_t *input, int inputSize)
 {
     int i = 0;
     int length;
@@ -174,9 +174,9 @@ static void printInfoElements(GTP_IEData *info_elements, GTPMsg *msg)
  *      GTP_FAILURE if an error occured in parsing the port list.
  *
  ********************************************************************/
-static int gtp_processInfoElements(GTPMsg *msg, const char *buff, uint16_t len )
+static int gtp_processInfoElements(GTPMsg *msg, const uint8_t *buff, uint16_t len )
 {
-    char *start;
+    uint8_t *start;
     uint8_t type;
     int32_t unprocessed_len;
     uint8_t previous_type;
@@ -184,7 +184,7 @@ static int gtp_processInfoElements(GTPMsg *msg, const char *buff, uint16_t len )
     DEBUG_WRAP(DebugMessage(DEBUG_GTP, "Information elements: length: %d\n",
            len););
 
-    start = (char *)buff;
+    start = (uint8_t *)buff;
     previous_type = (uint8_t) *start;
     unprocessed_len = len;
 
@@ -296,7 +296,7 @@ static int gtp_processInfoElements(GTPMsg *msg, const char *buff, uint16_t len )
  *
  ********************************************************************/
 
-static int gtp_parse_v0(GTPMsg *msg, const char *buff, uint16_t gtp_len)
+static int gtp_parse_v0(GTPMsg *msg, const uint8_t *buff, uint16_t gtp_len)
 {
     GTP_C_Hdr *hdr;
 
@@ -346,7 +346,7 @@ static int gtp_parse_v0(GTPMsg *msg, const char *buff, uint16_t gtp_len)
  * 11      N-PDU Number
  * 12      Next Extension Header Type
  ********************************************************************/
-static int gtp_parse_v1(GTPMsg *msg, const char *buff, uint16_t gtp_len)
+static int gtp_parse_v1(GTPMsg *msg, const uint8_t *buff, uint16_t gtp_len)
 {
     uint8_t  next_hdr_type;
     GTP_C_Hdr *hdr;
@@ -440,7 +440,7 @@ static int gtp_parse_v1(GTPMsg *msg, const char *buff, uint16_t gtp_len)
  *n to (n+2)  Sequence Number
  *(n+3)       Spare
  ********************************************************************/
-static int gtp_parse_v2(GTPMsg *msg, const char *buff, uint16_t gtp_len)
+static int gtp_parse_v2(GTPMsg *msg, const uint8_t *buff, uint16_t gtp_len)
 {
 
     GTP_C_Hdr *hdr;
@@ -480,7 +480,7 @@ static int gtp_parse_v2(GTPMsg *msg, const char *buff, uint16_t gtp_len)
  *  GTP_FAILURE
  *  GTP_SUCCESS
  ********************************************************************/
-int gtp_parse(GTPMsg *msg, const char *buff, uint16_t gtp_len)
+int gtp_parse(GTPMsg *msg, const uint8_t *buff, uint16_t gtp_len)
 {
 
     int status;
@@ -503,7 +503,7 @@ int gtp_parse(GTPMsg *msg, const char *buff, uint16_t gtp_len)
     /*The first 3 bits are version number*/
     msg->version = (hdr->flag & 0xE0) >> 5;
     msg->msg_type = hdr->type;
-    msg->gtp_header = (char *)buff;
+    msg->gtp_header = (uint8_t *)buff;
 
     if (msg->version > MAX_GTP_VERSION_CODE)
     {
