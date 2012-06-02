@@ -1,3 +1,25 @@
+2012-04-30 Steven Sturges <ssturges@sourcefire.com>
+Snort 2.9.2.3
+	* parser.h, snort.c, snort.h, detection-plugins/sp_pcre.c,
+	  detection-plugins/sp_pcre.h, dynamic-plugins/sf_dynamic_engine.h,
+	  dynamic-plugins/sf_dynamic_plugins.c,
+	  dynamic-plugins/sf_engine/sf_snort_detection_engine.c,
+	  dynamic-plugins/sf_engine/sf_snort_plugin_pcre.c:
+	  Pcre Ovector size needs to be dynamic to compensate for pcre-8.30
+	  segfault. Thanks to Ryan Steinmetz for helping debug this problem.
+
+	* dynamic-preprocessors/: dnp3/dnp3_paf.c, dnp3/dnp3_reassembly.c,
+	  add stricter checking on packets before processing by dnp3 and check
+	  reassembly buffer size to avoid overrun
+
+	* dynamic-preprocessors/gtp/: gtp_parser.c, gtp_parser.h,
+	  gtp_roptions.h, spp_gtp.c, spp_gtp.h:
+	  change GTP packet data buffer to be uint8_t.
+
+	* dynamic-preprocessors/dcerpc2/dce2_paf.c:
+	  Fix dcerpc2 PAF when target based is enabled to not abort if
+	  protocol undefined. 
+
 2012-3-17 Steven Sturges <ssturges@sourcefire.com>
 Snort 2.9.2.2
     * src/build.h:

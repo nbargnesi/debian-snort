@@ -48,7 +48,7 @@ typedef struct _GTP_Roptions
 	uint8_t gtp_type;
     /* gtp_version data*/
     uint8_t gtp_version;
-    char *gtp_header;
+    uint8_t *gtp_header;
     uint32_t msg_id;  /* used to associate to current msg */
 	/* gtp ie data */
     GTP_IEData *gtp_infoElements;

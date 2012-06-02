@@ -73,6 +73,9 @@ int PCRESetup(Rule *rule, PCREInfo *pcreInfo)
         return -1;
     }
 
+    _ded.pcreCapture(pcreInfo->compiled_expr, pcreInfo->compiled_extra);
+
+
     return 0;
 }
 
@@ -148,9 +151,13 @@ static int pcre_test(const PCREInfo *pcre_info,
                        int start_offset,
                        int *found_offset)
 {
-    int ovector[SNORT_PCRE_OVECTOR_SIZE];
     int matched;
     int result;
+
+    int *ovector;
+    int ovector_size;
+
+    _ded.pcreOvectorInfo(&ovector, &ovector_size);
 
     if(pcre_info == NULL
        || buf == NULL
@@ -166,14 +173,14 @@ static int pcre_test(const PCREInfo *pcre_info,
 
     *found_offset = -1;
 
-    result = _ded.pcreExec(pcre_info->compiled_expr,    /* result of pcre_compile() */
+    result = _ded.pcreExec(pcre_info->compiled_expr,/* result of pcre_compile() */
                        pcre_info->compiled_extra,   /* result of pcre_study()   */
                        buf,                         /* the subject string */
                        len,                         /* the length of the subject string */
                        start_offset,                /* start at offset 0 in the subject */
                        0,                           /* options(handled at compile time */
                        ovector,                     /* vector for substring information */
-                       SNORT_PCRE_OVECTOR_SIZE);    /* number of elements in the vector */
+                       ovector_size);               /* number of elements in the vector */
 
     if(result >= 0)
     {

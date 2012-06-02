@@ -91,7 +91,7 @@
 
 Name: %{realname}%{inlinetext}
 %{?_with_inline:%define Name: %{realname}-inline }
-Version: 2.9.2.2
+Version: 2.9.2.3
 Epoch: 1
 Release: %{release}
 Summary: An open source Network Intrusion Detection System (NIDS)

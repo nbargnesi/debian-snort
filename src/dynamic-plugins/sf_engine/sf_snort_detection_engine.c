@@ -120,6 +120,8 @@ ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
     _ded.pcreStudy = ded->pcreStudy;
     _ded.pcreCompile = ded->pcreCompile;
     _ded.pcreExec = ded->pcreExec;
+    _ded.pcreCapture = ded->pcreCapture;
+    _ded.pcreOvectorInfo = ded->pcreOvectorInfo;
     _ded.sfUnfold = ded->sfUnfold;
     _ded.sfbase64decode = ded->sfbase64decode;
     _ded.GetAltDetect = ded->GetAltDetect;

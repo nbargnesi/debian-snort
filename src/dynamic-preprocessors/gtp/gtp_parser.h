@@ -31,6 +31,6 @@
 #include "gtp_debug.h"
 #include "spp_gtp.h"
 
-int gtp_parse(GTPMsg *, const char *, uint16_t);
+int gtp_parse(GTPMsg *, const uint8_t *, uint16_t);
 void gtp_cleanInfoElements(void);
 #endif

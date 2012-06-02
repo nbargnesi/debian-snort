@@ -64,7 +64,7 @@ extern PreprocStats ruleOTNEvalPerfStats;
  * offset to the end of the full pattern match.  If we decide to store other
  * matches, make *SURE* that this is a multiple of 3 as pcre requires it.
  */
-#define SNORT_PCRE_OVECTOR_SIZE 3
+static int s_pcre_init = 1;
 
 void SnortPcreInit(char *, OptTreeNode *, int);
 void SnortPcreParse(char *, PcreData *, OptTreeNode *);
@@ -188,6 +188,56 @@ void SetupPcre(void)
 #ifdef PERF_PROFILING
     RegisterPreprocessorProfile("pcre", &pcrePerfStats, 3, &ruleOTNEvalPerfStats);
 #endif
+}
+
+static void Ovector_Init(int unused, void *data)
+{
+    /* Since SO rules are loaded 1 time at startup, regardless of
+     * configuraton, we won't pcre capture count again, so save the max.  */
+    static int s_ovector_max = 0;
+    SnortConfig *sc = getWorkingConf(); 
+
+    /* The pcre_fullinfo() function can be used to find out how many
+     * capturing subpatterns there are in a compiled pattern. The
+     * smallest size for ovector that will allow for n captured
+     * substrings, in addition to the offsets of the substring matched
+     * by the whole pattern, is (n+1)*3.  */
+    sc->pcre_ovector_size += 1;
+    sc->pcre_ovector_size *= 3;
+
+    if (sc->pcre_ovector_size > s_ovector_max)
+        s_ovector_max = sc->pcre_ovector_size;
+
+    sc->pcre_ovector = (int *) SnortAlloc(s_ovector_max*sizeof(int));
+}
+
+#if SNORT_RELOAD
+static void Ovector_Reload(int unused, void *data)
+{
+    Ovector_Init(unused, data);
+}
+#endif
+
+void PcreCapture(const void *code, const void *extra)
+{
+    SnortConfig *sc = getWorkingConf();
+    int tmp_ovector_size = 0;
+
+    pcre_fullinfo((const pcre *)code, (const pcre_extra *)extra,
+        PCRE_INFO_CAPTURECOUNT, &tmp_ovector_size);
+
+    if (tmp_ovector_size > sc->pcre_ovector_size)
+        sc->pcre_ovector_size = tmp_ovector_size;
+
+    if (s_pcre_init)
+    {
+        AddFuncToPostConfigList(Ovector_Init, NULL);
+#if SNORT_RELOAD
+        AddFuncToReloadList(Ovector_Reload, NULL);
+#endif
+        s_pcre_init = 0;
+    }
+
 }
 
 void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
@@ -454,6 +504,8 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
                    file_line, error);
     }
 
+    PcreCapture(pcre_data->re, pcre_data->pe);
+
     PcreCheckAnchored(pcre_data);
 
     free(free_me);
@@ -537,7 +589,6 @@ static int pcre_search(const PcreData *pcre_data,
                        int start_offset,
                        int *found_offset)
 {
-    int ovector[SNORT_PCRE_OVECTOR_SIZE];
     int matched;
     int result;
 
@@ -555,14 +606,14 @@ static int pcre_search(const PcreData *pcre_data,
 
     *found_offset = -1;
 
-    result = pcre_exec(pcre_data->re,            /* result of pcre_compile() */
-                       pcre_data->pe,            /* result of pcre_study()   */
-                       buf,                      /* the subject string */
-                       len,                      /* the length of the subject string */
-                       start_offset,             /* start at offset 0 in the subject */
-                       0,                        /* options(handled at compile time */
-                       ovector,                  /* vector for substring information */
-                       SNORT_PCRE_OVECTOR_SIZE); /* number of elements in the vector */
+    result = pcre_exec(pcre_data->re,  /* result of pcre_compile() */
+                       pcre_data->pe,  /* result of pcre_study()   */
+                       buf,            /* the subject string */
+                       len,            /* the length of the subject string */
+                       start_offset,   /* start at offset 0 in the subject */
+                       0,              /* options(handled at compile time */
+                       snort_conf->pcre_ovector,      /* vector for substring information */
+                       snort_conf->pcre_ovector_size);/* number of elements in the vector */
 
     if(result >= 0)
     {
@@ -579,7 +630,7 @@ static int pcre_search(const PcreData *pcre_data,
          *
          * In Snort's case, the ovector size only allows for the first pair and a single int for scratch space.
          */
-        *found_offset = ovector[1];
+        *found_offset = snort_conf->pcre_ovector[1];
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "Setting Doe_ptr and found_offset: %p %d\n",
                                 doe_ptr, found_offset););
