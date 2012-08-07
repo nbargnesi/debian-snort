@@ -102,7 +102,18 @@ Last-Update: 2012-08-07
  
  # prelude
  # output alert_prelude
-@@ -585,7 +599,10 @@
+@@ -548,6 +562,10 @@
+ # NOTE: All categories are enabled in this conf file
+ ###################################################
+ 
++# Note for Debian users: The rules preinstalled in the system
++# can be *very* out of date. For more information please read
++# the /usr/share/doc/snort-rules-default/README.Debian file
++
+ # site specific rules
+ include $RULE_PATH/local.rules
+ 
+@@ -585,7 +603,10 @@
  include $RULE_PATH/rservices.rules
  include $RULE_PATH/scada.rules
  include $RULE_PATH/scan.rules
@@ -114,7 +125,7 @@ Last-Update: 2012-08-07
  include $RULE_PATH/smtp.rules
  include $RULE_PATH/snmp.rules
  include $RULE_PATH/specific-threats.rules
-@@ -604,6 +621,20 @@
+@@ -604,6 +625,20 @@
  include $RULE_PATH/web-iis.rules
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
