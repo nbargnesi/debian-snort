@@ -1,3 +1,19 @@
+snort (2.9.2.2-3) unstable; urgency=medium
+
+  * Acknowledge previous NMU
+  * debian/patches/config: Update the patch to: 
+     - use absolute paths instead of relative paths to point to
+       the white list and black list used by the reputation
+       pre-processor.
+     - disable the reputation as we do not ship any white/black lists
+       by default (which causes it to fail at startup) and also
+       because this preprocessor is experimental.
+    Both changes fix the bug that prevented the package from being
+    configured due to errors when starting up Snort with the 
+    default configuration (Closes: #677810)
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 07 Aug 2012 23:53:24 +0200
+
 snort (2.9.2.2-2.1) unstable; urgency=low
 
   [ gregor herrmann ]
