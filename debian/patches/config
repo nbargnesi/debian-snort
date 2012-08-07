@@ -102,7 +102,19 @@ Last-Update: 2012-08-07
  
  # prelude
  # output alert_prelude
-@@ -604,6 +618,20 @@
+@@ -585,7 +599,10 @@
+ include $RULE_PATH/rservices.rules
+ include $RULE_PATH/scada.rules
+ include $RULE_PATH/scan.rules
+-include $RULE_PATH/shellcode.rules
++# Note: These rules are disable by default as they are
++# too coarse grained. Enabling them causes a large
++# performance impact
++#include $RULE_PATH/shellcode.rules
+ include $RULE_PATH/smtp.rules
+ include $RULE_PATH/snmp.rules
+ include $RULE_PATH/specific-threats.rules
+@@ -604,6 +621,20 @@
  include $RULE_PATH/web-iis.rules
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
