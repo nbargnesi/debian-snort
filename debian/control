@@ -175,10 +175,13 @@ Suggests: snort (>= 2.2.0) | snort-pgsql (>= 2.2.0) | snort-mysql (>= 2.2.0)
 Recommends: oinkmaster
 Homepage: http://www.snort.org/snort-rules/
 Description: flexible Network Intrusion Detection System ruleset
- Snort default ruleset which provides a common set of accepted and test
- network intrusion detection rules developed by the Snort community.
+ Snort default ruleset which provides a basic set network intrusion detection
+ rules developed by the Snort community.
  .
- These rules can be used as a basis for development of additional rules.
+ These rules can be used as a basis for development of additional rules. Users
+ using Snort to defend networks in production environments are encouraged
+ to update their local rulesets as described in the included documentation
+ or using the oinkmaster package.
 
 Package: snort-common-libraries
 Architecture: any
