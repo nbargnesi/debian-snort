@@ -8,11 +8,17 @@ snort (2.9.2.2-3) unstable; urgency=medium
      - disable the reputation as we do not ship any white/black lists
        by default (which causes it to fail at startup) and also
        because this preprocessor is experimental.
-    Both changes fix the bug that prevented the package from being
-    configured due to errors when starting up Snort with the 
-    default configuration (Closes: #677810)
+
+       Both changes fix the bug that prevented the package from being
+       configured due to errors when starting up Snort with the 
+       default configuration (Closes: #677810)
+
       - Comment out shellcode rules as these have a huge impact in performance
         unless properly tuned.
+
+      - Add a comment to /etc/snort/snort.conf documenting for users
+        reading the file that preinstalled rules are surely out of date.
+
   * debian/patches/rules: Fix the definition of many SIP rules (defined
     as 'alert ip any any'. These were generating a lot of false positives
     in environment were enabled. Regardless of the change comment out SIP
