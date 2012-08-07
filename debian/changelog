@@ -1,3 +1,15 @@
+snort (2.9.2.2-2.1) unstable; urgency=low
+
+  [ gregor herrmann ]
+  * Non-maintainer upload.
+  * Drop quilt framework, the package uses source format "3.0 (quilt)".
+  * Fix FBTFS when called with build-arch:
+    - don't remove configure-stamp in debian/clean_sources.sh; otherwise
+      build-basic gets called again
+    - update target dependencies in debian/rules
+
+ -- Nicholas Bamber <nicholas@periapt.co.uk>  Fri, 22 Jun 2012 10:49:16 +0100
+
 snort (2.9.2.2-2) unstable; urgency=low
 
   * Fix "FTBFS with multiarch libmysqlclient-dev" using the

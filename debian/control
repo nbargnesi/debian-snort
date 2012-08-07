@@ -16,8 +16,7 @@ Build-Depends:
     libdumbnet-dev, 
     libdaq-dev, 
     flex, 
-    bison, 
-    quilt
+    bison
 Build-Depends-Indep: 
     texlive, 
     texlive-latex-base, 
