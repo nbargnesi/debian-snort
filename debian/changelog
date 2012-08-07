@@ -26,7 +26,7 @@ snort (2.9.2.2-2) unstable; urgency=low
 
 snort (2.9.2.2-1) unstable; urgency=low
 
-  * New upstream version (bug fix release)
+  * New upstream version (bug fix release) (Closes: #666125)
      - Provides portvar $FILE_DATA_PORTS in etc/snort.conf (Closes: #661944)
   * Acknowledge NMU (Closes: #669524)
   * debian/check-snort-conf.sh: New script to check the validity
