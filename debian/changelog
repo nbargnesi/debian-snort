@@ -11,11 +11,21 @@ snort (2.9.2.2-3) unstable; urgency=medium
     Both changes fix the bug that prevented the package from being
     configured due to errors when starting up Snort with the 
     default configuration (Closes: #677810)
+      - Comment out shellcode rules as these have a huge impact in performance
+        unless properly tuned.
   * debian/patches/rules: Fix the definition of many SIP rules (defined
     as 'alert ip any any'. These were generating a lot of false positives
     in environment were enabled. Regardless of the change comment out SIP
     rules since they are outdate can generate many false alarms unless
     properly defined.  (Closes: #626596, #680303).
+  * debian/control: Adjust description of snort-rules-default to indicate
+    users that the ruleset provided should not be considered up-to-date.
+    Encourage users to obtain additional/upgraded rules elsewhere.
+  * debian/snort-rules-default.README.Debian: Include more information to
+    potential users on the issues related to the default ruleset provided
+    (and why it is out of date) as well as pointers as to where obtain
+    additional rulesets. Some of this information is also in the NEWS file
+    but is easy to miss to new users.
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 07 Aug 2012 23:53:24 +0200
 
