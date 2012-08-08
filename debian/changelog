@@ -12,6 +12,14 @@ snort (2.9.3.1-1) experimental; urgency=low
   * debian/po/*: Refresh all templates since the previous templates for
     database configuration have gone along with the snort database 'flavor'
     packages.
+  * debian/snort-common.preinst: Remove the /etc/snort/database.conf on
+    upgrades
+  * debian/snort.preinst: Control output of usermod
+  * debian/snort-common.{config,templates}: 
+      - Add code to detect old configuration files with content (which might
+        happen on upgrades to 2.9.3 coming from the snort-mysql or snort-pgsql
+        packages) and warn the user if they exist.
+      - Update the list of valid preprocessors for this release
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Wed, 08 Aug 2012 22:12:35 +0200
 
