@@ -19,7 +19,10 @@ set -e
 
 case "$1" in
        purge)
-                # nothing
+        # Remove the database configuration file it is exists and is empty
+        if  [ -e /etc/snort/database.conf ] ; then
+            rm -f /etc/snort/database.conf
+        fi
        ;;
        remove|upgrade|failed-upgrade|abort-install|abort-upgrade)
                 # nothing

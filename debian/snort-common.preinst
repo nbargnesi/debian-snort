@@ -18,13 +18,18 @@ case "$1" in
     upgrade)
          # versions previous to 2.9.3 created the /etc/snort/database.conf
          # file for configuration
-         # TODO: should be removed if empty using code such as this:
          #if dpkg --compare-versions "$2" le "2.9.3" &&  [ -e "$DBCONF" ] && ! [ -s "$DBCONF" ] 
          #then
-         #       rm -f $DBCONF
+         #
+         # should show a warning to the user if not empty?
+         # (it will be deprecated anyway and will not be included in snort.conf)
+         #
          #fi
-         # should a warning be shown to the user if not empty?
-         # (it will be deprecated anyway)
+         # Remove the database configuration file it is exists and is empty
+         if  [ -e "$DBCONF" ] && ! [ -s "$DBCONF" ] 
+         then
+                rm -f $DBCONF
+         fi
     ;;
     configure)
         # Do nothing
