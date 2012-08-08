@@ -10,9 +10,9 @@ snort (2.9.2.2-3) experimental; urgency=medium
 
   For more information see
   http://blog.snort.org/2012/07/database-output-is-dead-rip.html
-  and
   http://blog.snort.org/2012/05/two-things-you-should-know-about-snort.html
-
+  and
+  http://blog.snort.org/2011/06/snorts-output-methods.html
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Wed, 08 Aug 2012 21:13:42 +0200
 
