@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-14 00:33+0100\n"
+"POT-Creation-Date: 2012-08-08 22:10+0200\n"
 "PO-Revision-Date: 2007-03-07 17:31+0530\n"
 "Last-Translator: Dr.T.Vasudevan <agnihot3@gmail.com>\n"
 "Language-Team: TAMIL <ubuntu-l10n-tam@lists.ubuntu.com>\n"
@@ -19,36 +19,31 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "boot"
 msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "dialup"
 msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "manual"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 msgid "Snort start method:"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 #, fuzzy
 #| msgid ""
 #| "Snort can be started during boot, when connecting to the net with pppd or "
@@ -62,8 +57,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 #, fuzzy
 #| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
@@ -71,8 +65,7 @@ msgstr "எந்த இடை முகத்தில் ஸ்னோர்ட
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "This value is usually 'eth0', but this may be inappropriate in some network "
 "environments; for a dialup connection 'ppp0' might be more appropriate (see "
@@ -81,8 +74,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 #, fuzzy
 #| msgid ""
 #| "Notice that Snort is usually configured to inspect all traffic coming "
@@ -102,8 +94,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 #, fuzzy
 #| msgid ""
 #| "It is also not uncommon to run Snort on an interface with no IP and "
@@ -128,8 +119,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 #, fuzzy
 #| msgid ""
 #| "You can configure multiple interfaces here, just by adding more than one "
@@ -145,8 +135,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range for the local network:"
@@ -154,8 +143,7 @@ msgstr "ஸ்னோர்ட் செவி சாய்க்க வேண்
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid ""
 #| "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
@@ -172,8 +160,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid ""
 #| "Notice that if you are using multiple interfaces this definition will be "
@@ -187,15 +174,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "ஸ்னோர்ட் இடைமுகத்தில் பாங்கை செயலிழக்கச் செய்ய வேண்டுமா?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 #, fuzzy
 #| msgid ""
 #| "Disabling promiscuous mode means that Snort will only see packets "
@@ -214,15 +199,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid "Invalid interface"
 msgstr "செல்லுபடியாகாத இடைமுகம்"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
 "it is defaulting inappropriately to 'eth0', or you specified one which is "
@@ -231,15 +214,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr "தினசரி சுருக்கத்தை மின்னஞ்சலில் அனுப்ப வேண்டுமா?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
@@ -247,15 +228,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Please choose whether you want to activate this feature."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 #, fuzzy
 #| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
@@ -263,8 +242,7 @@ msgstr "தினசரி புள்ளிவிவர அஞ்சலை ய
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
@@ -272,29 +250,25 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Additional custom options:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Please specify any additional options Snort should use."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 msgid "Minimum occurrences before alerts are reported:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 #, fuzzy
 #| msgid ""
 #| "An alert needs to appear more times than this number to be included in "
@@ -308,15 +282,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid "Snort restart required"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid ""
 "As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
 "changes to take place."
@@ -324,8 +296,7 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 #, fuzzy
 #| msgid "This system uses an obsolete configuration file"
 msgid "Obsolete configuration file"
@@ -333,8 +304,7 @@ msgstr "இந்த கணினி வழக்கொழிந்த வடி
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 #, fuzzy
 #| msgid ""
 #| "Your system has an obsolete configuration file (/etc/snort/snort.common."
@@ -356,8 +326,7 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 #, fuzzy
 #| msgid ""
 #| "Your system has an obsolete configuration file (/etc/snort/snort.common."
@@ -376,207 +345,6 @@ msgstr ""
 "(/etc/default/snort இல்) தயை செய்து புதிய கோப்பை மறு ஆய்வு செய்து  வழக்கொழிந்த "
 "கோப்பை நீக்கவும்.இதை நீங்கள் செய்யும் வரை init.d சிறுநிரல் புதிய வடிவமைப்பை "
 "பயன்படுத்தாது; நீங்களும் புதிய பதிப்பு தரும் வசதிகளை பயன் படுத்த இயலாது."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-#, fuzzy
-#| msgid "Do you want to set up a database for snort-mysql to log to?"
-msgid "Set up a database for snort-mysql to log to?"
-msgstr "ஸ்னோர்ட்-மைஎஸ்க்யூஎல் உள்நுழைய ஒரு தரவுத்தளம் அமைக்க விரும்புகிறீர்களா?"
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"No database has been set up for Snort to log to. Before continuing, you "
-"should make sure you have:"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-" - the server host name (that server must allow TCP connections\n"
-"   from this machine);\n"
-" - a database on that server;\n"
-" - a username and password to access the database."
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"If some of these requirements are missing, reject this option and run with "
-"regular file logging support."
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-mysql'."
-msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-msgid "Database server hostname:"
-msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-#, fuzzy
-#| msgid ""
-#| "Make sure it has been set up correctly to allow incoming connections from "
-#| "this host!"
-msgid ""
-"Please specify the host name of a database server that allows incoming "
-"connections from this host."
-msgstr ""
-"அது உள் வரும் இணப்புகளை அனுமதிக்க சரியாக அமைக்கப்பட்டுள்ளதா என உறுதி செய்து கொள்ளவும்!"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid "Database name:"
-msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid ""
-"Please specify the name of an existing database to which the database user "
-"has write access."
-msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-msgid "Username for database access:"
-msgstr ""
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-#, fuzzy
-#| msgid ""
-#| "Make sure this database has been created and your database user has write "
-#| "access to this database."
-msgid ""
-"Please specify a database server username with write access to the database."
-msgstr ""
-"இந்த தரவுத்தளம் உருவாக்கப் பட்டுவிட்டது என்பதையும் பயனருக்கு இந்த தரவுத்தளத்தில் அணுக எழுத "
-"அனுமதி உள்ளது என்பதையும் உறுதி செய்து கொள்ளவும்."
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-#, fuzzy
-#| msgid "Please enter the password for the database connection."
-msgid "Password for the database connection:"
-msgstr "தரவுத் தள இணப்புக்கு கடவுச்சொல் உள்ளிடுக."
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-#, fuzzy
-#| msgid "Please enter a password to connect to the Snort Alert database."
-msgid ""
-"Please enter the password to use to connect to the Snort Alert database."
-msgstr "ஸ்னோர்ட் அலர்ட் தரவுத் தள இணப்புக்கு கடவுச்சொல் உள்ளிடுக."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid "Configured database mandatory for Snort"
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-#, fuzzy
-#| msgid ""
-#| "Snort needs a configured database before it can successfully start up. In "
-#| "order to create the structure you need to run the following commands "
-#| "AFTER the package is installed:\n"
-#| " cd /usr/share/doc/snort-mysql/\n"
-#| " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>\n"
-#| "Fill in the correct values for the user, host, and database names. MySQL "
-#| "will prompt you for the password."
-msgid ""
-"Snort needs a configured database before it can successfully start up. In "
-"order to create the structure you need to run the following commands AFTER "
-"the package is installed:"
-msgstr ""
-"ஸ்னோர்ட் வெற்றிகரமாக துவக்கப் பட வடிவமைக்கப் பட்ட தரவுத்தளம் தேவை. பொதி நிறுவப் பட்ட "
-"*பின்* பின் வரும் கட்டளைகளை இயக்கி உங்களுக்கு தேவையான அமைப்பை உருவாக்கவும்:\n"
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_postgresql.gz | myql -U <user> -h <host> -W <databasename>\n"
-"பயனர், புரவலன் மற்றும் தரவுத்தள பெயர்கள் ஆகியவற்றுக்கு சரியான மதிப்புகளை நிரப்புக. "
-"MySQL கடவுச்சொல்லுக்காக உங்களை தூண்டும்."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. MySQL "
-"will prompt you for the password."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-#, fuzzy
-#| msgid ""
-#| "After you created the database structure, you will need to start Snort "
-#| "manually."
-msgid ""
-"After you have created the database structure, you will need to start Snort "
-"manually."
-msgstr "நீங்கள் தரவுத்தள அமைப்பை உருவாக்கிய பின் ஸ்னோர்ட்டை கைமுறையாக துவக்க வேண்டும்."
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-#, fuzzy
-#| msgid "Do you want to set up a database for snort-pgsql to log to?"
-msgid "Set up a database for snort-pgsql to log to?"
-msgstr "ஸ்னோர்ட்-பிஜிஎஸ்க்யூஎல் உள்நுழைய தரவுத்தளம் ஒன்றை உருவாக்க வேண்டுமா?"
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-pgsql'."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. "
-"PostgreSQL will prompt you for the password."
-msgstr ""
 
 #. Type: note
 #. Description
@@ -642,6 +410,79 @@ msgid ""
 "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -T -"
 "c <file>'."
 msgstr ""
+
+#, fuzzy
+#~| msgid "Do you want to set up a database for snort-mysql to log to?"
+#~ msgid "Set up a database for snort-mysql to log to?"
+#~ msgstr "ஸ்னோர்ட்-மைஎஸ்க்யூஎல் உள்நுழைய ஒரு தரவுத்தளம் அமைக்க விரும்புகிறீர்களா?"
+
+#, fuzzy
+#~| msgid ""
+#~| "Make sure it has been set up correctly to allow incoming connections "
+#~| "from this host!"
+#~ msgid ""
+#~ "Please specify the host name of a database server that allows incoming "
+#~ "connections from this host."
+#~ msgstr ""
+#~ "அது உள் வரும் இணப்புகளை அனுமதிக்க சரியாக அமைக்கப்பட்டுள்ளதா என உறுதி செய்து "
+#~ "கொள்ளவும்!"
+
+#, fuzzy
+#~| msgid ""
+#~| "Make sure this database has been created and your database user has "
+#~| "write access to this database."
+#~ msgid ""
+#~ "Please specify a database server username with write access to the "
+#~ "database."
+#~ msgstr ""
+#~ "இந்த தரவுத்தளம் உருவாக்கப் பட்டுவிட்டது என்பதையும் பயனருக்கு இந்த தரவுத்தளத்தில் அணுக "
+#~ "எழுத அனுமதி உள்ளது என்பதையும் உறுதி செய்து கொள்ளவும்."
+
+#, fuzzy
+#~| msgid "Please enter the password for the database connection."
+#~ msgid "Password for the database connection:"
+#~ msgstr "தரவுத் தள இணப்புக்கு கடவுச்சொல் உள்ளிடுக."
+
+#, fuzzy
+#~| msgid "Please enter a password to connect to the Snort Alert database."
+#~ msgid ""
+#~ "Please enter the password to use to connect to the Snort Alert database."
+#~ msgstr "ஸ்னோர்ட் அலர்ட் தரவுத் தள இணப்புக்கு கடவுச்சொல் உள்ளிடுக."
+
+#, fuzzy
+#~| msgid ""
+#~| "Snort needs a configured database before it can successfully start up. "
+#~| "In order to create the structure you need to run the following commands "
+#~| "AFTER the package is installed:\n"
+#~| " cd /usr/share/doc/snort-mysql/\n"
+#~| " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>\n"
+#~| "Fill in the correct values for the user, host, and database names. MySQL "
+#~| "will prompt you for the password."
+#~ msgid ""
+#~ "Snort needs a configured database before it can successfully start up. In "
+#~ "order to create the structure you need to run the following commands "
+#~ "AFTER the package is installed:"
+#~ msgstr ""
+#~ "ஸ்னோர்ட் வெற்றிகரமாக துவக்கப் பட வடிவமைக்கப் பட்ட தரவுத்தளம் தேவை. பொதி நிறுவப் பட்ட "
+#~ "*பின்* பின் வரும் கட்டளைகளை இயக்கி உங்களுக்கு தேவையான அமைப்பை உருவாக்கவும்:\n"
+#~ " cd /usr/share/doc/snort-mysql/\n"
+#~ " zcat create_postgresql.gz | myql -U <user> -h <host> -W <databasename>\n"
+#~ "பயனர், புரவலன் மற்றும் தரவுத்தள பெயர்கள் ஆகியவற்றுக்கு சரியான மதிப்புகளை நிரப்புக. "
+#~ "MySQL கடவுச்சொல்லுக்காக உங்களை தூண்டும்."
+
+#, fuzzy
+#~| msgid ""
+#~| "After you created the database structure, you will need to start Snort "
+#~| "manually."
+#~ msgid ""
+#~ "After you have created the database structure, you will need to start "
+#~ "Snort manually."
+#~ msgstr "நீங்கள் தரவுத்தள அமைப்பை உருவாக்கிய பின் ஸ்னோர்ட்டை கைமுறையாக துவக்க வேண்டும்."
+
+#, fuzzy
+#~| msgid "Do you want to set up a database for snort-pgsql to log to?"
+#~ msgid "Set up a database for snort-pgsql to log to?"
+#~ msgstr "ஸ்னோர்ட்-பிஜிஎஸ்க்யூஎல் உள்நுழைய தரவுத்தளம் ஒன்றை உருவாக்க வேண்டுமா?"
 
 #, fuzzy
 #~| msgid "Should Snort's rules testing order be changed to Pass|Alert|Log?"

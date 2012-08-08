@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.7.0-10\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-14 00:33+0100\n"
+"POT-Creation-Date: 2012-08-08 22:10+0200\n"
 "PO-Revision-Date: 2008-04-08 22:04+0100\n"
 "Last-Translator: Miguel Figueiredo <elmig@debianpt.org>\n"
 "Language-Team: Portuguese <traduz@debianpt.org>\n"
@@ -18,36 +18,31 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "boot"
 msgstr "arranque"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "dialup"
 msgstr "dialup"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "manual"
 msgstr "manual"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 msgid "Snort start method:"
 msgstr "Método de arraque do Snort:"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only manually with the /usr/sbin/snort command."
@@ -57,15 +52,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid "Interface(s) which Snort should listen on:"
 msgstr "Interface(s) que o Snort deve escutar:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "This value is usually 'eth0', but this may be inappropriate in some network "
 "environments; for a dialup connection 'ppp0' might be more appropriate (see "
@@ -77,8 +70,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "Typically, this is the same interface as the 'default route' is on. You can "
 "determine which interface is used for this by running '/sbin/route -n' (look "
@@ -90,8 +82,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "It is also not uncommon to use an interface with no IP address configured in "
 "promiscuous mode. For such cases, select the interface in this system that "
@@ -109,8 +100,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "You can configure multiple interfaces, just by adding more than one "
 "interface name separated by spaces. Each interface can have its own specific "
@@ -122,15 +112,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid "Address range for the local network:"
 msgstr "Gama de endereços para a rede local:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid ""
 "Please use the CIDR form - for example, 192.168.1.0/24 for a block of 256 "
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
@@ -142,8 +130,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid ""
 "Please note that if Snort is configured to use multiple interfaces, it will "
 "use this value as the HOME_NET definition for all of them."
@@ -153,15 +140,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "Deve o Snort desabilitar o modo promíscuo no interface?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to the interface it is monitoring. Enabling it allows Snort to check every "
@@ -175,15 +160,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid "Invalid interface"
 msgstr "Interface inválido"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
 "it is defaulting inappropriately to 'eth0', or you specified one which is "
@@ -195,15 +178,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr "Devem ser enviados por e-mail sumários diários?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
@@ -213,22 +194,19 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Please choose whether you want to activate this feature."
 msgstr "Por favor escolha se quer activar esta funcionalidade."
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 msgid "Recipient of daily statistics mails:"
 msgstr "Destinatário que deve receber mails diários das estatísticas:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
@@ -238,29 +216,25 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Additional custom options:"
 msgstr "Opções adicionais de personalização:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Please specify any additional options Snort should use."
 msgstr "Por favor especifique que opções adicionais deve o Snort utilizar."
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 msgid "Minimum occurrences before alerts are reported:"
 msgstr "Número minimo de ocorrências antes de serem reportados alertas:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 msgid ""
 "Please enter the minimum number of alert occurrences before a given alert is "
 "included in the daily statistics."
@@ -270,15 +244,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid "Snort restart required"
 msgstr "É necessário que o Snort seja reiniciado"
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid ""
 "As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
 "changes to take place."
@@ -288,15 +260,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid "Obsolete configuration file"
 msgstr "Ficheiro de configuração obsoleto"
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid ""
 "This system uses an obsolete configuration file (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -308,8 +278,7 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid ""
 "Please review the new configuration and remove the obsolete one. Until you "
 "do this, the initialization script will not use the new configuration and "
@@ -318,205 +287,6 @@ msgstr ""
 "Por favor reveja a nova configuração e remova a obsoleta. Até fazer isto, o "
 "script de arranque não irá utilizar a nova configuração e você não irá tirar "
 "vantagem dos benefícios introduzidos nos lançamentos mais recentes."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-msgid "Set up a database for snort-mysql to log to?"
-msgstr "Deseja configurar uma base de dados para o snort-mysql fazer registos?"
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"No database has been set up for Snort to log to. Before continuing, you "
-"should make sure you have:"
-msgstr ""
-"Não foi configurada uma base de dados para o Snort guardar os registos. "
-"Antes de continuar, você deve assegurar-se que tem:"
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-" - the server host name (that server must allow TCP connections\n"
-"   from this machine);\n"
-" - a database on that server;\n"
-" - a username and password to access the database."
-msgstr ""
-" - o nome da máquina do servidor (esse servidor tem de permitir ligações "
-"TCP\n"
-"   a partir desta máquina);\n"
-" - uma base de dados nesse servidor;\n"
-" - um nome de utilizador e palavra-passe para aceder à base de dados."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"If some of these requirements are missing, reject this option and run with "
-"regular file logging support."
-msgstr ""
-"Se faltar algum destes requisitos, rejeite esta opção e corra com o suporte "
-"de registos em ficheiro normal."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-mysql'."
-msgstr ""
-"O registo em base de dados pode ser reconfigurado posteriormente ao correr "
-"'dpkg-reconfigure -plow snort-mysql'."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-msgid "Database server hostname:"
-msgstr "Nome da máquina do servidor da base de dados:"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-msgid ""
-"Please specify the host name of a database server that allows incoming "
-"connections from this host."
-msgstr ""
-"Por favor especifique o nome da máquina de um servidor de bases de dados que "
-"permita receber ligações feitas a partir desta máquina."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid "Database name:"
-msgstr "Nome da base de dados:"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid ""
-"Please specify the name of an existing database to which the database user "
-"has write access."
-msgstr ""
-"Por favor especifique o nome da base de dados existente na qual o utilizador "
-"da base de dados tem acesso de escrita."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-msgid "Username for database access:"
-msgstr "Nome de utilizador para acesso à base de dados:"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-msgid ""
-"Please specify a database server username with write access to the database."
-msgstr ""
-"Por favor especifique um nome de utilizador de base de dados com acesso de "
-"escrita à base de dados."
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-msgid "Password for the database connection:"
-msgstr "Palavra-passe para a ligação à base de dados:"
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-msgid ""
-"Please enter the password to use to connect to the Snort Alert database."
-msgstr ""
-"Por favor introduza a palavra-passe a utilizar para ligar à base de dados "
-"Snort Alert."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid "Configured database mandatory for Snort"
-msgstr "É obrigatório configurar uma base de dados para o Snort"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid ""
-"Snort needs a configured database before it can successfully start up. In "
-"order to create the structure you need to run the following commands AFTER "
-"the package is installed:"
-msgstr ""
-"O Snort necessita de uma base de dados configurada antes de poder iniciar "
-"com sucesso. De modo a criar a estrutura você necessita e correr os "
-"seguintes comandos DEPOIS do pacote estar instalado:"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-msgstr ""
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <utilizador> -h <máquina> -p "
-"<nome_base_dados>"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. MySQL "
-"will prompt you for the password."
-msgstr ""
-"Preencha os valores correctos para nome de utilizador, de máquina e de base "
-"de dados. O MySQL irá perguntar-lhe a palavra-passe."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid ""
-"After you have created the database structure, you will need to start Snort "
-"manually."
-msgstr ""
-"Depois de ter criado a estrutura da base de dados, necessita iniciar "
-"manualmente o Snort."
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-msgid "Set up a database for snort-pgsql to log to?"
-msgstr "Configurar uma base de dados para o snort-pgsql fazer registos?"
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-pgsql'."
-msgstr ""
-"O registo em base de dados pode ser reconfigurado posteriormente ao correr "
-"'dpkg-reconfigure -plow snort-pgsql'."
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-msgstr ""
-" cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_postgresql.gz | psql -U <utilizador> -h <máquina> -W "
-"<nome_base_dados>"
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. "
-"PostgreSQL will prompt you for the password."
-msgstr ""
-"Preencha os valores correctos para os nomes de utilizador, máquina e base de "
-"dados. O PostgreSQL irá pedir-lhe a palavra-passe."
 
 #. Type: note
 #. Description
@@ -576,6 +346,141 @@ msgid ""
 msgstr ""
 "Para diagnosticar um erro num ficheiro de configuração do Snort, utilize '/"
 "usr/sbin/snort -T -c <ficheiro>'."
+
+#~ msgid "Set up a database for snort-mysql to log to?"
+#~ msgstr ""
+#~ "Deseja configurar uma base de dados para o snort-mysql fazer registos?"
+
+#~ msgid ""
+#~ "No database has been set up for Snort to log to. Before continuing, you "
+#~ "should make sure you have:"
+#~ msgstr ""
+#~ "Não foi configurada uma base de dados para o Snort guardar os registos. "
+#~ "Antes de continuar, você deve assegurar-se que tem:"
+
+#~ msgid ""
+#~ " - the server host name (that server must allow TCP connections\n"
+#~ "   from this machine);\n"
+#~ " - a database on that server;\n"
+#~ " - a username and password to access the database."
+#~ msgstr ""
+#~ " - o nome da máquina do servidor (esse servidor tem de permitir ligações "
+#~ "TCP\n"
+#~ "   a partir desta máquina);\n"
+#~ " - uma base de dados nesse servidor;\n"
+#~ " - um nome de utilizador e palavra-passe para aceder à base de dados."
+
+#~ msgid ""
+#~ "If some of these requirements are missing, reject this option and run "
+#~ "with regular file logging support."
+#~ msgstr ""
+#~ "Se faltar algum destes requisitos, rejeite esta opção e corra com o "
+#~ "suporte de registos em ficheiro normal."
+
+#~ msgid ""
+#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
+#~ "plow snort-mysql'."
+#~ msgstr ""
+#~ "O registo em base de dados pode ser reconfigurado posteriormente ao "
+#~ "correr 'dpkg-reconfigure -plow snort-mysql'."
+
+#~ msgid "Database server hostname:"
+#~ msgstr "Nome da máquina do servidor da base de dados:"
+
+#~ msgid ""
+#~ "Please specify the host name of a database server that allows incoming "
+#~ "connections from this host."
+#~ msgstr ""
+#~ "Por favor especifique o nome da máquina de um servidor de bases de dados "
+#~ "que permita receber ligações feitas a partir desta máquina."
+
+#~ msgid "Database name:"
+#~ msgstr "Nome da base de dados:"
+
+#~ msgid ""
+#~ "Please specify the name of an existing database to which the database "
+#~ "user has write access."
+#~ msgstr ""
+#~ "Por favor especifique o nome da base de dados existente na qual o "
+#~ "utilizador da base de dados tem acesso de escrita."
+
+#~ msgid "Username for database access:"
+#~ msgstr "Nome de utilizador para acesso à base de dados:"
+
+#~ msgid ""
+#~ "Please specify a database server username with write access to the "
+#~ "database."
+#~ msgstr ""
+#~ "Por favor especifique um nome de utilizador de base de dados com acesso "
+#~ "de escrita à base de dados."
+
+#~ msgid "Password for the database connection:"
+#~ msgstr "Palavra-passe para a ligação à base de dados:"
+
+#~ msgid ""
+#~ "Please enter the password to use to connect to the Snort Alert database."
+#~ msgstr ""
+#~ "Por favor introduza a palavra-passe a utilizar para ligar à base de dados "
+#~ "Snort Alert."
+
+#~ msgid "Configured database mandatory for Snort"
+#~ msgstr "É obrigatório configurar uma base de dados para o Snort"
+
+#~ msgid ""
+#~ "Snort needs a configured database before it can successfully start up. In "
+#~ "order to create the structure you need to run the following commands "
+#~ "AFTER the package is installed:"
+#~ msgstr ""
+#~ "O Snort necessita de uma base de dados configurada antes de poder iniciar "
+#~ "com sucesso. De modo a criar a estrutura você necessita e correr os "
+#~ "seguintes comandos DEPOIS do pacote estar instalado:"
+
+#~ msgid ""
+#~ " cd /usr/share/doc/snort-mysql/\n"
+#~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
+#~ msgstr ""
+#~ " cd /usr/share/doc/snort-mysql/\n"
+#~ " zcat create_mysql.gz | mysql -u <utilizador> -h <máquina> -p "
+#~ "<nome_base_dados>"
+
+#~ msgid ""
+#~ "Fill in the correct values for the user, host, and database names. MySQL "
+#~ "will prompt you for the password."
+#~ msgstr ""
+#~ "Preencha os valores correctos para nome de utilizador, de máquina e de "
+#~ "base de dados. O MySQL irá perguntar-lhe a palavra-passe."
+
+#~ msgid ""
+#~ "After you have created the database structure, you will need to start "
+#~ "Snort manually."
+#~ msgstr ""
+#~ "Depois de ter criado a estrutura da base de dados, necessita iniciar "
+#~ "manualmente o Snort."
+
+#~ msgid "Set up a database for snort-pgsql to log to?"
+#~ msgstr "Configurar uma base de dados para o snort-pgsql fazer registos?"
+
+#~ msgid ""
+#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
+#~ "plow snort-pgsql'."
+#~ msgstr ""
+#~ "O registo em base de dados pode ser reconfigurado posteriormente ao "
+#~ "correr 'dpkg-reconfigure -plow snort-pgsql'."
+
+#~ msgid ""
+#~ " cd /usr/share/doc/snort-pgsql/\n"
+#~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
+#~ msgstr ""
+#~ " cd /usr/share/doc/snort-pgsql/\n"
+#~ " zcat create_postgresql.gz | psql -U <utilizador> -h <máquina> -W "
+#~ "<nome_base_dados>"
+
+#~ msgid ""
+#~ "Fill in the correct values for the user, host, and database names. "
+#~ "PostgreSQL will prompt you for the password."
+#~ msgstr ""
+#~ "Preencha os valores correctos para os nomes de utilizador, máquina e base "
+#~ "de dados. O PostgreSQL irá pedir-lhe a palavra-passe."
 
 #~ msgid "Should Snort's testing order be changed to Pass|Alert|Log?"
 #~ msgstr "Deve a ordem de teste do Snort ser alterada para Pass|Alert|Log?"

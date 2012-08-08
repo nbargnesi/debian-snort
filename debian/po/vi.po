@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.7.0-15\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-14 00:33+0100\n"
+"POT-Creation-Date: 2012-08-08 22:10+0200\n"
 "PO-Revision-Date: 2008-04-28 16:20+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <vi-VN@googlegroups.com>\n"
@@ -19,36 +19,31 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "boot"
 msgstr "khởi động"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "dialup"
 msgstr "quay số"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001 ../snort-mysql.templates:1001
-#: ../snort-pgsql.templates:1001
+#: ../snort.templates:1001
 msgid "manual"
 msgstr "bằng tay"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 msgid "Snort start method:"
 msgstr "Phương pháp khởi chạy Snort:"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002 ../snort-mysql.templates:1002
-#: ../snort-pgsql.templates:1002
+#: ../snort.templates:1002
 msgid ""
 "Snort can be started during boot, when connecting to the net with pppd or "
 "only manually with the /usr/sbin/snort command."
@@ -58,15 +53,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid "Interface(s) which Snort should listen on:"
 msgstr "Các giao diện trên chúng Snort nên lắng nghe:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "This value is usually 'eth0', but this may be inappropriate in some network "
 "environments; for a dialup connection 'ppp0' might be more appropriate (see "
@@ -83,8 +76,7 @@ msgstr ""
 # 'default' or '0.0.0.0').
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "Typically, this is the same interface as the 'default route' is on. You can "
 "determine which interface is used for this by running '/sbin/route -n' (look "
@@ -102,8 +94,7 @@ msgstr ""
 # mirroring/spanning' port in a switch, to a hub or to a tap)
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "It is also not uncommon to use an interface with no IP address configured in "
 "promiscuous mode. For such cases, select the interface in this system that "
@@ -121,8 +112,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001 ../snort-mysql.templates:2001
-#: ../snort-pgsql.templates:2001
+#: ../snort.templates:2001
 msgid ""
 "You can configure multiple interfaces, just by adding more than one "
 "interface name separated by spaces. Each interface can have its own specific "
@@ -133,15 +123,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid "Address range for the local network:"
 msgstr "Phạm vi địa chỉ cho mạng cục bộ :"
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid ""
 "Please use the CIDR form - for example, 192.168.1.0/24 for a block of 256 "
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
@@ -154,8 +142,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001 ../snort-mysql.templates:3001
-#: ../snort-pgsql.templates:3001
+#: ../snort.templates:3001
 msgid ""
 "Please note that if Snort is configured to use multiple interfaces, it will "
 "use this value as the HOME_NET definition for all of them."
@@ -165,15 +152,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "Snort nên tắt chế độ không phân biệt trên giao diện này không?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001 ../snort-mysql.templates:4001
-#: ../snort-pgsql.templates:4001
+#: ../snort.templates:4001
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to the interface it is monitoring. Enabling it allows Snort to check every "
@@ -187,15 +172,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid "Invalid interface"
 msgstr "Giao diện không hợp lệ"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001 ../snort-mysql.templates:5001
-#: ../snort-pgsql.templates:5001
+#: ../snort.templates:5001
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
 "it is defaulting inappropriately to 'eth0', or you specified one which is "
@@ -207,15 +190,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr "Có nên gửi hàng ngày thư đính kèm bản tóm tắt không?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
@@ -225,22 +206,19 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001 ../snort-mysql.templates:6001
-#: ../snort-pgsql.templates:6001
+#: ../snort.templates:6001
 msgid "Please choose whether you want to activate this feature."
 msgstr "Hãy chọn có nên kích hoạt tính năng này hay không."
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 msgid "Recipient of daily statistics mails:"
 msgstr "Người nhận thư thống kê hàng ngày:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001 ../snort-mysql.templates:7001
-#: ../snort-pgsql.templates:7001
+#: ../snort.templates:7001
 msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
@@ -249,22 +227,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Additional custom options:"
 msgstr "Tùy chọn riêng thêm:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001 ../snort-mysql.templates:8001
-#: ../snort-pgsql.templates:8001
+#: ../snort.templates:8001
 msgid "Please specify any additional options Snort should use."
 msgstr "Hãy ghi rõ bất cứ tùy chọn khác nào Snort nên dùng."
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 msgid "Minimum occurrences before alerts are reported:"
 msgstr "Số lần xảy ra tối thiểu trước khi báo động:"
 
@@ -272,8 +247,7 @@ msgstr "Số lần xảy ra tối thiểu trước khi báo động:"
 # the daily statistics.
 #. Type: string
 #. Description
-#: ../snort.templates:9001 ../snort-mysql.templates:9001
-#: ../snort-pgsql.templates:9001
+#: ../snort.templates:9001
 msgid ""
 "Please enter the minimum number of alert occurrences before a given alert is "
 "included in the daily statistics."
@@ -283,15 +257,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid "Snort restart required"
 msgstr "Cần thiết khởi chạy lại Snort"
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001 ../snort-mysql.templates:10001
-#: ../snort-pgsql.templates:10001
+#: ../snort.templates:10001
 msgid ""
 "As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
 "changes to take place."
@@ -301,15 +273,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid "Obsolete configuration file"
 msgstr "Tập tin cấu hình quá cũ"
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid ""
 "This system uses an obsolete configuration file (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -323,8 +293,7 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001 ../snort-mysql.templates:11001
-#: ../snort-pgsql.templates:11001
+#: ../snort.templates:11001
 msgid ""
 "Please review the new configuration and remove the obsolete one. Until you "
 "do this, the initialization script will not use the new configuration and "
@@ -333,200 +302,6 @@ msgstr ""
 "Hãy xem lại cấu hình mới, rồi gỡ bỏ tập tin cũ. Trước khi bạn làm như thế, "
 "văn lệnh « init.d » sẽ không dùng cấu hình mới và bạn sẽ không lợi dựng các "
 "phiên bản mới."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-msgid "Set up a database for snort-mysql to log to?"
-msgstr "Thiết lập một cơ sở dữ liệu cho snort-mysql đăng nhập vào không?"
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"No database has been set up for Snort to log to. Before continuing, you "
-"should make sure you have:"
-msgstr ""
-"Chưa thiết lập cơ sở dữ liệu vào đó Snort có thể đăng nhập. Trước khi tiếp "
-"tục, bạn nên kiểm tra xem có :"
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-" - the server host name (that server must allow TCP connections\n"
-"   from this machine);\n"
-" - a database on that server;\n"
-" - a username and password to access the database."
-msgstr ""
-" • tên máy của máy phục vụ\n"
-"\tmáy phục vụ đó phải cho phép kết nối TCP từ máy này)\n"
-" • một cơ sở dữ liệu trên máy phục vụ đó\n"
-" • một tên người dùng và mật khẩu để truy cập đến cơ sở dữ liệu."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001 ../snort-pgsql.templates:12001
-msgid ""
-"If some of these requirements are missing, reject this option and run with "
-"regular file logging support."
-msgstr ""
-"Thiếu tùy chọn trên thì từ chối mục này và chạy với hỗ trợ ghi lưu vào tập "
-"tin tiêu chuẩn."
-
-#. Type: boolean
-#. Description
-#: ../snort-mysql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-mysql'."
-msgstr ""
-"Chức năng ghi lưu cơ sở dữ liệu có thể được cấu hình lại về sau bằng cách "
-"chạy câu lệnh « dpkg-reconfigure -plow snort-mysql »."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-msgid "Database server hostname:"
-msgstr "Tên máy của máy phục vụ cơ sở dữ liệu :"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:13001 ../snort-pgsql.templates:13001
-msgid ""
-"Please specify the host name of a database server that allows incoming "
-"connections from this host."
-msgstr ""
-"Hãy ghi rõ tên máy của một máy phục vụ cơ sở dữ liệu cho phép kết nối gửi "
-"đến từ máy này."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid "Database name:"
-msgstr "Tên cơ sở dữ liệu :"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:14001 ../snort-pgsql.templates:14001
-msgid ""
-"Please specify the name of an existing database to which the database user "
-"has write access."
-msgstr ""
-"Hãy ghi rõ tên của một cơ sở dữ liệu đã tồn tại vào đó người dùng cơ sở dữ "
-"liệu có quyền ghi."
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-msgid "Username for database access:"
-msgstr "Tên người dùng để truy cập đến cơ sở dữ liệu :"
-
-#. Type: string
-#. Description
-#: ../snort-mysql.templates:15001 ../snort-pgsql.templates:15001
-msgid ""
-"Please specify a database server username with write access to the database."
-msgstr ""
-"Hãy ghi rõ một tên người dùng máy phục vụ cơ sở dữ liệu có quyền ghi vào cơ "
-"sở dữ liệu."
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-msgid "Password for the database connection:"
-msgstr "Mật khẩu để kết nối đến cơ sở dữ liệu :"
-
-#. Type: password
-#. Description
-#: ../snort-mysql.templates:16001 ../snort-pgsql.templates:16001
-msgid ""
-"Please enter the password to use to connect to the Snort Alert database."
-msgstr ""
-"Hãy nhập mật khẩu cần dùng để kết nối đến cơ sở dữ liệu Báo Động Snort."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid "Configured database mandatory for Snort"
-msgstr "Cơ sở dữ liệu đã cấu hình cần thiết cho Snort"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid ""
-"Snort needs a configured database before it can successfully start up. In "
-"order to create the structure you need to run the following commands AFTER "
-"the package is installed:"
-msgstr ""
-"Trình Snort cần thiết một cơ sở dữ liệu đã cấu hình, để khởi chạy được. Để "
-"tạo cấu trúc này, hãy chạy những câu lệnh theo đây SAU KHI cài đặt gói:"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-msgstr ""
-" cd /usr/share/doc/snort-mysql/\n"
-" zcat create_mysql.gz | mysql -u <người_dùng> -h <máy> -p <tên_cơ_sở_dữ_liệu>"
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. MySQL "
-"will prompt you for the password."
-msgstr ""
-"Hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở dữ "
-"liệu. Trình MySQL sẽ nhắc bạn nhập mật khẩu."
-
-#. Type: note
-#. Description
-#: ../snort-mysql.templates:17001 ../snort-pgsql.templates:17001
-msgid ""
-"After you have created the database structure, you will need to start Snort "
-"manually."
-msgstr ""
-"Sau khi tạo cấu trúc cơ sở dữ liệu, bạn cần phải tự khởi chạy trình Snort."
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-msgid "Set up a database for snort-pgsql to log to?"
-msgstr "Thiết lập một cơ sở dữ liệu cho snort-pgsql ghi lưu vào không?"
-
-#. Type: boolean
-#. Description
-#: ../snort-pgsql.templates:12001
-msgid ""
-"Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-"plow snort-pgsql'."
-msgstr ""
-"Chức năng ghi lưu cơ sở dữ liệu có thể được cấu hình lại về sau bằng cách "
-"chạy câu lệnh « dpkg-reconfigure -plow snort-pgsql »."
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-" cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-msgstr ""
-" cd /usr/share/doc/snort-pgsql/\n"
-" zcat create_postgresql.gz | psql -U <người_dùng> -h <máy> -W "
-"<tên_cơ_sở_dữ_liệu>"
-
-#. Type: note
-#. Description
-#: ../snort-pgsql.templates:17001
-msgid ""
-"Fill in the correct values for the user, host, and database names. "
-"PostgreSQL will prompt you for the password."
-msgstr ""
-"Hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở dữ "
-"liệu. Trình PostgreSQL sẽ nhắc bạn nhập mật khẩu."
 
 #. Type: note
 #. Description
@@ -585,6 +360,136 @@ msgid ""
 msgstr ""
 "Để chẩn đoán lỗi trong tập tin cấu hình Snort, dùng « /usr/sbin/snort -T -c "
 "<tập_tin> »."
+
+#~ msgid "Set up a database for snort-mysql to log to?"
+#~ msgstr "Thiết lập một cơ sở dữ liệu cho snort-mysql đăng nhập vào không?"
+
+#~ msgid ""
+#~ "No database has been set up for Snort to log to. Before continuing, you "
+#~ "should make sure you have:"
+#~ msgstr ""
+#~ "Chưa thiết lập cơ sở dữ liệu vào đó Snort có thể đăng nhập. Trước khi "
+#~ "tiếp tục, bạn nên kiểm tra xem có :"
+
+#~ msgid ""
+#~ " - the server host name (that server must allow TCP connections\n"
+#~ "   from this machine);\n"
+#~ " - a database on that server;\n"
+#~ " - a username and password to access the database."
+#~ msgstr ""
+#~ " • tên máy của máy phục vụ\n"
+#~ "\tmáy phục vụ đó phải cho phép kết nối TCP từ máy này)\n"
+#~ " • một cơ sở dữ liệu trên máy phục vụ đó\n"
+#~ " • một tên người dùng và mật khẩu để truy cập đến cơ sở dữ liệu."
+
+#~ msgid ""
+#~ "If some of these requirements are missing, reject this option and run "
+#~ "with regular file logging support."
+#~ msgstr ""
+#~ "Thiếu tùy chọn trên thì từ chối mục này và chạy với hỗ trợ ghi lưu vào "
+#~ "tập tin tiêu chuẩn."
+
+#~ msgid ""
+#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
+#~ "plow snort-mysql'."
+#~ msgstr ""
+#~ "Chức năng ghi lưu cơ sở dữ liệu có thể được cấu hình lại về sau bằng cách "
+#~ "chạy câu lệnh « dpkg-reconfigure -plow snort-mysql »."
+
+#~ msgid "Database server hostname:"
+#~ msgstr "Tên máy của máy phục vụ cơ sở dữ liệu :"
+
+#~ msgid ""
+#~ "Please specify the host name of a database server that allows incoming "
+#~ "connections from this host."
+#~ msgstr ""
+#~ "Hãy ghi rõ tên máy của một máy phục vụ cơ sở dữ liệu cho phép kết nối gửi "
+#~ "đến từ máy này."
+
+#~ msgid "Database name:"
+#~ msgstr "Tên cơ sở dữ liệu :"
+
+#~ msgid ""
+#~ "Please specify the name of an existing database to which the database "
+#~ "user has write access."
+#~ msgstr ""
+#~ "Hãy ghi rõ tên của một cơ sở dữ liệu đã tồn tại vào đó người dùng cơ sở "
+#~ "dữ liệu có quyền ghi."
+
+#~ msgid "Username for database access:"
+#~ msgstr "Tên người dùng để truy cập đến cơ sở dữ liệu :"
+
+#~ msgid ""
+#~ "Please specify a database server username with write access to the "
+#~ "database."
+#~ msgstr ""
+#~ "Hãy ghi rõ một tên người dùng máy phục vụ cơ sở dữ liệu có quyền ghi vào "
+#~ "cơ sở dữ liệu."
+
+#~ msgid "Password for the database connection:"
+#~ msgstr "Mật khẩu để kết nối đến cơ sở dữ liệu :"
+
+#~ msgid ""
+#~ "Please enter the password to use to connect to the Snort Alert database."
+#~ msgstr ""
+#~ "Hãy nhập mật khẩu cần dùng để kết nối đến cơ sở dữ liệu Báo Động Snort."
+
+#~ msgid "Configured database mandatory for Snort"
+#~ msgstr "Cơ sở dữ liệu đã cấu hình cần thiết cho Snort"
+
+#~ msgid ""
+#~ "Snort needs a configured database before it can successfully start up. In "
+#~ "order to create the structure you need to run the following commands "
+#~ "AFTER the package is installed:"
+#~ msgstr ""
+#~ "Trình Snort cần thiết một cơ sở dữ liệu đã cấu hình, để khởi chạy được. "
+#~ "Để tạo cấu trúc này, hãy chạy những câu lệnh theo đây SAU KHI cài đặt gói:"
+
+#~ msgid ""
+#~ " cd /usr/share/doc/snort-mysql/\n"
+#~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
+#~ msgstr ""
+#~ " cd /usr/share/doc/snort-mysql/\n"
+#~ " zcat create_mysql.gz | mysql -u <người_dùng> -h <máy> -p "
+#~ "<tên_cơ_sở_dữ_liệu>"
+
+#~ msgid ""
+#~ "Fill in the correct values for the user, host, and database names. MySQL "
+#~ "will prompt you for the password."
+#~ msgstr ""
+#~ "Hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở dữ "
+#~ "liệu. Trình MySQL sẽ nhắc bạn nhập mật khẩu."
+
+#~ msgid ""
+#~ "After you have created the database structure, you will need to start "
+#~ "Snort manually."
+#~ msgstr ""
+#~ "Sau khi tạo cấu trúc cơ sở dữ liệu, bạn cần phải tự khởi chạy trình Snort."
+
+#~ msgid "Set up a database for snort-pgsql to log to?"
+#~ msgstr "Thiết lập một cơ sở dữ liệu cho snort-pgsql ghi lưu vào không?"
+
+#~ msgid ""
+#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
+#~ "plow snort-pgsql'."
+#~ msgstr ""
+#~ "Chức năng ghi lưu cơ sở dữ liệu có thể được cấu hình lại về sau bằng cách "
+#~ "chạy câu lệnh « dpkg-reconfigure -plow snort-pgsql »."
+
+#~ msgid ""
+#~ " cd /usr/share/doc/snort-pgsql/\n"
+#~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
+#~ msgstr ""
+#~ " cd /usr/share/doc/snort-pgsql/\n"
+#~ " zcat create_postgresql.gz | psql -U <người_dùng> -h <máy> -W "
+#~ "<tên_cơ_sở_dữ_liệu>"
+
+#~ msgid ""
+#~ "Fill in the correct values for the user, host, and database names. "
+#~ "PostgreSQL will prompt you for the password."
+#~ msgstr ""
+#~ "Hãy điền vào các giá trị đúng cho tên người dùng, tên máy và tên cơ sở dữ "
+#~ "liệu. Trình PostgreSQL sẽ nhắc bạn nhập mật khẩu."
 
 #~ msgid "Should Snort's testing order be changed to Pass|Alert|Log?"
 #~ msgstr ""
