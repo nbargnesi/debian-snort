@@ -1,3 +1,18 @@
+snort (2.9.2.2-3) experimental; urgency=medium
+
+  The database output plugins have been removed by the upstream maintainers in
+  Snort 2.9.3. These output plugins were already deprecated as of Snort 2.9.2.
+  These have been removed alongside the Aruba and Prelude outputs.
+  
+  After the upgrade to a Snort 2.9.3.x release, systems using the database
+  output should move to full unified2 logging and use barnyard2 to read those
+  unified2 files and input them into their database. 
+
+  Fore more information see
+  http://blog.snort.org/2012/07/database-output-is-dead-rip.html
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Wed, 08 Aug 2012 21:13:42 +0200
+
 snort (2.8.5.2-3) unstable; urgency=low
 
   The database information used by Snort to log alerts into a database 
@@ -54,3 +69,14 @@ snort (2.3.2-1) unstable; urgency=medium
     configuration file until you do so.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@computer.org>  Tue,  8 Feb 2005 23:55:57 +0100
+snort (2.9.2.2-3) unstable; urgency=medium
+
+  The database information used by Snort to log alerts into a database 
+  (and configured automatically through Debconf) has now been moved to the
+  /etc/snort/database.conf file.
+
+  Note that this file might be empty if you are not logging to a database
+
+  
+
+ -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Mon, 20 Dec 2010 15:31:24 +0100
