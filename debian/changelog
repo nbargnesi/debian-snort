@@ -4,7 +4,8 @@ snort (2.9.3.1-1) experimental; urgency=low
   * The most relevant change in this release is that support by Snort to
     output directly in a database has been dropped, which means that the
     snort-pgsql and snort-mysql packages are no longer possible. This 
-    is documented in the NEWS file.
+    is documented in the NEWS file. Also relevant is that support for
+    Prelude is no longer available.
   * debian/rules: Update the configuration options to adjust to those used
     in the snort.conf script provided upstream
   * debian/patches/fix_upstream_typos: Do typo fixes to more source files
