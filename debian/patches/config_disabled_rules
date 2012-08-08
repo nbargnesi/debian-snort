@@ -4,9 +4,9 @@ Origin: vendor
 Last-Update: 2012-05-05
 
 
---- a/etc/snort.conf	2012-05-05 23:52:11.198049506 +0200
-+++ b/etc/snort.conf	2012-05-06 00:02:54.000000000 +0200
-@@ -563,15 +563,15 @@
+--- a/etc/snort.conf
++++ b/etc/snort.conf
+@@ -572,15 +572,15 @@
  include $RULE_PATH/attack-responses.rules
  include $RULE_PATH/backdoor.rules
  include $RULE_PATH/bad-traffic.rules
@@ -26,7 +26,7 @@ Last-Update: 2012-05-05
  include $RULE_PATH/finger.rules
  include $RULE_PATH/ftp.rules
  include $RULE_PATH/icmp.rules
-@@ -586,25 +586,25 @@
+@@ -595,25 +595,28 @@
  include $RULE_PATH/oracle.rules
  include $RULE_PATH/other-ids.rules
  include $RULE_PATH/p2p.rules
@@ -40,7 +40,11 @@ Last-Update: 2012-05-05
 -include $RULE_PATH/scada.rules
 +# include $RULE_PATH/scada.rules
  include $RULE_PATH/scan.rules
- include $RULE_PATH/shellcode.rules
+-include $RULE_PATH/shellcode.rules
++# Note: These rules are disable by default as they are
++# too coarse grained. Enabling them causes a large
++# performance impact
++#include $RULE_PATH/shellcode.rules
  include $RULE_PATH/smtp.rules
  include $RULE_PATH/snmp.rules
 -include $RULE_PATH/specific-threats.rules

@@ -77,7 +77,7 @@ Last-Update: 2012-08-07
 +#   priority whitelist, \
 +#   nested_ip inner, \
 +#   whitelist $WHITE_LIST_PATH/white_list.rules, \
-+#   blacklist $BLACK_LIST_PATH/black_list.rules 
++#   blacklist $BLACK_LIST_PATH/black_list.rules
  
  ###################################################
  # Step #6: Configure output plugins
@@ -91,7 +91,7 @@ Last-Update: 2012-08-07
  # database
  # output database: alert, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
  # output database: log, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
-+# 
++#
 +# On Debian Systems, the database configuration is kept in a separate file:
 +# /etc/snort/database.conf.
 +# This file can be empty, if you are not using any database information
@@ -113,19 +113,7 @@ Last-Update: 2012-08-07
  # site specific rules
  include $RULE_PATH/local.rules
  
-@@ -585,7 +603,10 @@
- include $RULE_PATH/rservices.rules
- include $RULE_PATH/scada.rules
- include $RULE_PATH/scan.rules
--include $RULE_PATH/shellcode.rules
-+# Note: These rules are disable by default as they are
-+# too coarse grained. Enabling them causes a large
-+# performance impact
-+#include $RULE_PATH/shellcode.rules
- include $RULE_PATH/smtp.rules
- include $RULE_PATH/snmp.rules
- include $RULE_PATH/specific-threats.rules
-@@ -604,6 +625,20 @@
+@@ -604,6 +622,20 @@
  include $RULE_PATH/web-iis.rules
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
