@@ -152,7 +152,8 @@ install-arch:
 # Logrotate files
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort/etc/logrotate.d/snort
 # Move libraries to the snort-common-libraries package
-	mv $(TMP)/snort-common/usr/lib/ $(TMP)/snort-common-libraries/usr/
+	mv $(TMP)/snort-common/usr/lib/* $(TMP)/snort-common-libraries/usr/lib/
+	rmdir $(TMP)/snort-common/usr/lib/
 # Remove headers, as this is not a -dev package
 #	mv $(TMP)/snort-common/usr/src/ $(TMP)/snort-common-libraries/usr/
 	rm -rf $(TMP)/sort-common/usr/src/
