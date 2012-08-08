@@ -32,7 +32,7 @@ snort (2.7.0-1) unstable; urgency=low
 
   Certified rules download require users either to pay (if they want the latest
   rules) or register (for rules provided with a 30-delay period). Users
-  whishing to go this way can use the 'oinkmaster' package to auomatically
+  wishing to go this way can use the 'oinkmaster' package to auomatically
   update their rulesets once they have registered at snort.org's site.
 
  -- Javier Fernandez-Sanguino Pen~a <jfs@debian.org>  Tue, 31 Jul 2007 23:42:44 +0200

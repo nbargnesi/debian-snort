@@ -1,3 +1,54 @@
+snort (2.9.2.2-3) unstable; urgency=medium
+
+  [ Upload target towards Wheezy fixing some important bugs
+    and substantially improving the information provided on the
+    packages to clarify user expectations ]
+  * Acknowledge previous NMU
+  * debian/patches/config: Update the patch to: 
+     - use absolute paths instead of relative paths to point to
+       the white list and black list used by the reputation
+       pre-processor.
+     - disable the reputation as we do not ship any white/black lists
+       by default (which causes it to fail at startup) and also
+       because this preprocessor is experimental.
+
+       Both changes fix the bug that prevented the package from being
+       configured due to errors when starting up Snort with the 
+       default configuration (Closes: #677810)
+
+      - Add a comment to /etc/snort/snort.conf documenting for users
+        reading the file that preinstalled rules are surely out of date.
+
+  * debian/patches/config_disabled_rules: Comment out shellcode rules as these
+    have a huge impact in performance unless properly tuned.
+  * debian/patches/rules: Fix the definition of many SIP rules (defined
+    as 'alert ip any any'. These were generating a lot of false positives
+    in environment were enabled. Regardless of the change comment out SIP
+    rules since they are outdate can generate many false alarms unless
+    properly defined.  (Closes: #626596, #680303).
+  * debian/control: Adjust description of snort-rules-default to indicate
+    users that the ruleset provided should not be considered up-to-date.
+    Encourage users to obtain additional/upgraded rules elsewhere.
+  * debian/snort-rules-default.README.Debian: Include more information to
+    potential users on the issues related to the default ruleset provided
+    (and why it is out of date) as well as pointers as to where obtain
+    additional rulesets. Some of this information is also in the NEWS file
+    but is easy to miss to new users.
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 07 Aug 2012 23:53:24 +0200
+
+snort (2.9.2.2-2.1) unstable; urgency=low
+
+  [ gregor herrmann ]
+  * Non-maintainer upload.
+  * Drop quilt framework, the package uses source format "3.0 (quilt)".
+  * Fix FBTFS when called with build-arch:
+    - don't remove configure-stamp in debian/clean_sources.sh; otherwise
+      build-basic gets called again
+    - update target dependencies in debian/rules
+
+ -- Nicholas Bamber <nicholas@periapt.co.uk>  Fri, 22 Jun 2012 10:49:16 +0100
+
 snort (2.9.2.2-2) unstable; urgency=low
 
   * Fix "FTBFS with multiarch libmysqlclient-dev" using the
@@ -14,7 +65,7 @@ snort (2.9.2.2-2) unstable; urgency=low
 
 snort (2.9.2.2-1) unstable; urgency=low
 
-  * New upstream version (bug fix release)
+  * New upstream version (bug fix release) (Closes: #666125)
      - Provides portvar $FILE_DATA_PORTS in etc/snort.conf (Closes: #661944)
   * Acknowledge NMU (Closes: #669524)
   * debian/check-snort-conf.sh: New script to check the validity

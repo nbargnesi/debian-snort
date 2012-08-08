@@ -4,8 +4,6 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
-include /usr/share/quilt/quilt.make
-
 export DH_VERBOSE=1
 
 TMP=`pwd`/debian
@@ -38,7 +36,7 @@ clean-sources:
 # Remove the flag that indicated that the sources were configured
 	-rm -f configure-stamp
 
-clean: clean-sources unpatch
+clean: clean-sources
 	dh_testdir
 	dh_testroot
 # Clean all the stamps
@@ -58,7 +56,7 @@ clean: clean-sources unpatch
 	dh_clean
 
 configure: configure-stamp
-configure-stamp: $(QUILT_STAMPFN)
+configure-stamp:
 	dh_testdir
 # Standard package support
 	./configure $(CONFFLAGS) \
@@ -69,7 +67,7 @@ configure-stamp: $(QUILT_STAMPFN)
 	touch $@
 
 build-basic: build-basic-stamp
-build-basic-stamp: $(QUILT_STAMPFN) configure
+build-basic-stamp: configure-stamp
 # NOTE: We don't clean the sources on the first compilation
 	dh_testdir
 	# Basic package (no BBDD support):
@@ -78,7 +76,7 @@ build-basic-stamp: $(QUILT_STAMPFN) configure
 	touch $@
 
 build-pgsql: build-pgsql-stamp
-build-pgsql-stamp: $(QUILT_STAMPFN)
+build-pgsql-stamp:
 	dh_testdir
 	sh debian/clean_sources.sh
 	# PostgreSQL package:
@@ -92,7 +90,7 @@ build-pgsql-stamp: $(QUILT_STAMPFN)
 	touch $@
 
 build-mysql: build-mysql-stamp
-build-mysql-stamp: $(QUILT_STAMPFN)
+build-mysql-stamp:
 	dh_testdir
 	sh debian/clean_sources.sh
 	# MySQL package:
@@ -106,7 +104,7 @@ build-mysql-stamp: $(QUILT_STAMPFN)
 	touch $@
 
 build-inline: build-inline-stamp
-build-inline-stamp: $(QUILT_STAMPFN)
+build-inline-stamp:
 	dh_testdir
 	sh debian/clean_sources.sh
 	# Inline support
@@ -120,13 +118,13 @@ build-inline-stamp: $(QUILT_STAMPFN)
 	cp src/snort src/snort-inline
 	touch $@
 
-build-arch: build-basic build-pgsql build-mysql build-arch-stamp 
-build-arch-stamp: 
+build-arch: build-arch-stamp 
+build-arch-stamp: build-basic-stamp build-pgsql-stamp build-mysql-stamp
 	dh_testdir
 	touch $@
 
-build-indep: configure build-indep-stamp
-build-indep-stamp: 
+build-indep: build-indep-stamp
+build-indep-stamp: configure-stamp
 	dh_testdir
 	# Build the documentation
 # Only do this if we have the required binaries and files
@@ -142,7 +140,7 @@ build-indep-stamp:
 	fi
 	touch $@
 
-build: 
+build: build-arch build-indep
 	
 install: install-indep install-arch
 

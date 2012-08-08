@@ -1,9 +1,11 @@
 Description: Debianize the upstream Snort configuration file
- Make the paths FHS compliant
+ Make the paths FHS compliant and absolute
  Add in additional rules shipped with the Debian package
+ Include community rules
+ Disable experimental preprocessors
 Author: Javier Fernandez-Sanguino Pen~a <jfs@debian.org>
 Origin: vendor
-Last-Update: 2011-11-28
+Last-Update: 2012-08-07
 
 --- a/etc/snort.conf
 +++ b/etc/snort.conf
@@ -15,7 +17,7 @@ Last-Update: 2011-11-28
  
  # List of DNS servers on your network 
  ipvar DNS_SERVERS $HOME_NET
-@@ -101,9 +102,9 @@
+@@ -101,17 +102,17 @@
  # Path to your rules files (this can be a relative path)
  # Note for Windows users:  You are advised to make this an absolute path,
  # such as:  c:\snort\rules
@@ -28,6 +30,16 @@ Last-Update: 2011-11-28
  
  # If you are using reputation preprocessor set these
  # Currently there is a bug with relative paths, they are relative to where snort is
+ # not relative to snort.conf like the above variables
+ # This is completely inconsistent with how other vars work, BUG 89986
+ # Set the absolute path appropriately
+-var WHITE_LIST_PATH ../rules
+-var BLACK_LIST_PATH ../rules
++var WHITE_LIST_PATH /etc/snort/rules
++var BLACK_LIST_PATH /etc/snort/rules
+ 
+ ###################################################
+ # Step #2: Configure the decoder.  For more information, see README.decode
 @@ -244,13 +245,13 @@
  ###################################################
  
@@ -45,7 +57,31 @@ Last-Update: 2011-11-28
  
  ###################################################
  # Step #5: Configure preprocessors
-@@ -527,11 +528,19 @@
+@@ -503,12 +504,17 @@
+    check_crc
+ 
+ # Reputation preprocessor. For more information see README.reputation
+-preprocessor reputation: \
+-   memcap 500, \
+-   priority whitelist, \
+-   nested_ip inner, \
+-   whitelist $WHITE_LIST_PATH/white_list.rules, \
+-   blacklist $BLACK_LIST_PATH/black_list.rules 
++#
++# Note to Debian users: this is disabled since it is an experimental
++# preprocessor. If you want to use it you have to create the rules files
++# referenced below in the /etc/snort/rules directory
++#
++#preprocessor reputation: \
++#   memcap 500, \
++#   priority whitelist, \
++#   nested_ip inner, \
++#   whitelist $WHITE_LIST_PATH/white_list.rules, \
++#   blacklist $BLACK_LIST_PATH/black_list.rules
+ 
+ ###################################################
+ # Step #6: Configure output plugins
+@@ -527,11 +533,19 @@
  # output alert_syslog: LOG_AUTH LOG_ALERT
  
  # pcap
@@ -55,7 +91,7 @@ Last-Update: 2011-11-28
  # database
  # output database: alert, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
  # output database: log, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
-+# 
++#
 +# On Debian Systems, the database configuration is kept in a separate file:
 +# /etc/snort/database.conf.
 +# This file can be empty, if you are not using any database information
@@ -66,7 +102,18 @@ Last-Update: 2011-11-28
  
  # prelude
  # output alert_prelude
-@@ -604,6 +613,20 @@
+@@ -548,6 +562,10 @@
+ # NOTE: All categories are enabled in this conf file
+ ###################################################
+ 
++# Note for Debian users: The rules preinstalled in the system
++# can be *very* out of date. For more information please read
++# the /usr/share/doc/snort-rules-default/README.Debian file
++
+ # site specific rules
+ include $RULE_PATH/local.rules
+ 
+@@ -604,6 +622,20 @@
  include $RULE_PATH/web-iis.rules
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
