@@ -137,7 +137,6 @@ typedef char * (*PortArrayFunc)(char *, PortObject *, int *);
 
 typedef int (*AlertQueueLog)(void *);
 typedef void (*AlertQueueControl)(void);  // reset, push, and pop
-typedef tSfPolicyId (*GetPolicyFunc)(void);
 typedef void (*SetPolicyFunc)(tSfPolicyId);
 typedef tSfPolicyId (*GetPolicyFromIdFunc)(uint16_t );
 typedef void (*ChangePolicyFunc)(tSfPolicyId, void *p);
@@ -167,12 +166,16 @@ typedef int (*ControlSocketRegisterHandlerFunc)(uint16_t, OOBPreControlFunc, IBC
                                                 OOBPostControlFunc);
 
 typedef int (*RegisterIdleHandler)(IdleProcessingHandler);
+#ifdef ACTIVE_RESPONSE
 typedef void (*DynamicSendBlockResponse)(void *packet, const uint8_t* buffer, uint32_t buffer_len);
+#endif
 typedef int (*DynamicSetFlowId)(const void* p, uint32_t id);
 
 typedef int (*DynamicIsStrEmpty)(const char * );
 typedef void (*AddPeriodicCheck)(void (*pp_check_func) (int, void *), void *arg, uint16_t, uint32_t, uint32_t);
 typedef void (*AddPostConfigFuncs)(void (*pp_post_config_func) (void *), void *arg);
+typedef int (*AddOutPutModule)(const char *filename);
+typedef int (*CanWhitelist)(void);
 
 #define ENC_DYN_FWD 0x80000000
 #define ENC_DYN_NET 0x10000000
@@ -215,7 +218,9 @@ typedef struct _DynamicPreprocessorData
     GenSnortEvent genSnortEvent;
     ThresholdCheckFunc thresholdCheck;
     InlineDropFunc  inlineDropAndReset;
+#ifdef ACTIVE_RESPONSE
     ActiveEnableFunc activeSetEnabled;
+#endif
 
     DetectFunc detect;
     DisableDetectFunc disableDetect;
@@ -318,11 +323,15 @@ typedef struct _DynamicPreprocessorData
     InlineDropFunc  inlineForceDropAndReset;
     DynamicIsStrEmpty SnortIsStrEmpty;
     AddMetaEvalFunc addMetaEval;
+#ifdef ACTIVE_RESPONSE
     DynamicSendBlockResponse dynamicSendBlockResponse;
+#endif
     DynamicSetFlowId dynamicSetFlowId;
     AddPeriodicCheck addPeriodicCheck;
     AddPostConfigFuncs addPostConfigFunc;
     char **snort_conf_dir;
+    AddOutPutModule addOutputModule;
+    CanWhitelist canWhitelist;
 
 } DynamicPreprocessorData;
 

@@ -198,13 +198,19 @@ typedef struct _PCREInfo
 #define FLOWBIT_ISNOTSET  0x10
 #define FLOWBIT_RESET     0x20
 #define FLOWBIT_NOALERT   0x40
+#define FLOWBIT_SETX      0x80
+
 
 typedef struct _FlowBitsInfo
 {
-    char      *flowBitsName;
+    char     *flowBitsName;
     uint8_t   operation;
-    uint32_t  id;
-    uint32_t  flags;
+    uint16_t id;
+    uint32_t flags;
+    char     *groupName;
+    uint8_t   eval;
+    uint16_t *ids;
+    uint8_t  num_ids;
 } FlowBitsInfo;
 
 typedef struct _ByteData

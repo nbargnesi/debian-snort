@@ -189,8 +189,7 @@ static int POP_Inspect(SFSnortPacket *);
 
 static void SetPopBuffers(POP *ssn)
 {
-    if ((ssn != NULL) && (ssn->decode_state == NULL)
-            && (!POP_IsDecodingEnabled(pop_eval_config)))
+    if ((ssn != NULL) && (ssn->decode_state == NULL))
     {
         MemBucket *bkt = mempool_alloc(pop_mempool);
 
@@ -439,7 +438,6 @@ static POP * POP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
     }
 
     pop_ssn = ssn;
-    SetPopBuffers(ssn);
     ssn->prev_response = 0;
 
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_POP,
@@ -1169,14 +1167,8 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                     switch (pop_search_info.id)
                     {
                         case HDR_CONTENT_TYPE:
-                            /* for now we're just looking for the boundary in the data
-                             * header section */
-                            if (pop_ssn->data_state != STATE_MIME_HEADER)
-                            {
-                                content_type_ptr = ptr + pop_search_info.length;
-                                pop_ssn->state_flags |= POP_FLAG_IN_CONTENT_TYPE;
-                            }
-
+                            content_type_ptr = ptr + pop_search_info.length;
+                            pop_ssn->state_flags |= POP_FLAG_IN_CONTENT_TYPE;
                             break;
                         case HDR_CONT_TRANS_ENC:
                             cont_trans_enc = ptr + pop_search_info.length;
@@ -1232,20 +1224,38 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
         if ((pop_ssn->state_flags &
              (POP_FLAG_IN_CONTENT_TYPE | POP_FLAG_FOLDING)) == POP_FLAG_IN_CONTENT_TYPE)
         {
-            /* we got the full content-type header - look for boundary string */
-            ret = POP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
-            if (ret != -1)
+            if (pop_ssn->data_state != STATE_MIME_HEADER)
             {
-                ret = POP_BoundarySearchInit();
+                /* we got the full content-type header - look for boundary string */
+                ret = POP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
                 if (ret != -1)
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_POP, "Got mime boundary: %s\n",
-                                                         pop_ssn->mime_boundary.boundary););
+                    ret = POP_BoundarySearchInit();
+                    if (ret != -1)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_POP, "Got mime boundary: %s\n",
+                                                             pop_ssn->mime_boundary.boundary););
 
-                    pop_ssn->state_flags |= POP_FLAG_GOT_BOUNDARY;
+                        pop_ssn->state_flags |= POP_FLAG_GOT_BOUNDARY;
+                    }
                 }
             }
-
+            else if (!(pop_ssn->state_flags & POP_FLAG_EMAIL_ATTACH))
+            {
+                if( !POP_IsDecodingEnabled(pop_eval_config))
+                {
+                    SetPopBuffers(pop_ssn);
+                    if(pop_ssn->decode_state != NULL)
+                    {
+                        ResetBytesRead(pop_ssn->decode_state);
+                        POP_DecodeType((const char *)content_type_ptr, (eolm - content_type_ptr), false );
+                        pop_ssn->state_flags |= POP_FLAG_EMAIL_ATTACH;
+                        /* check to see if there are other attachments in this packet */
+                        if( pop_ssn->decode_state->decoded_bytes )
+                            pop_ssn->state_flags |= POP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                    }
+                }
+            }
             pop_ssn->state_flags &= ~POP_FLAG_IN_CONTENT_TYPE;
             content_type_ptr = NULL;
         }
@@ -1253,13 +1263,18 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 (POP_FLAG_IN_CONT_TRANS_ENC | POP_FLAG_FOLDING)) == POP_FLAG_IN_CONT_TRANS_ENC)
         {
             /* Check for Content-Transfer-Encoding : */
-            if( (!POP_IsDecodingEnabled(pop_eval_config)) && (pop_ssn->decode_state != NULL))
+            if( !POP_IsDecodingEnabled(pop_eval_config))
             {
-                POP_DecodeType((const char *)cont_trans_enc, eolm - cont_trans_enc );
-                pop_ssn->state_flags |= POP_FLAG_EMAIL_ATTACH;
-                /* check to see if there are other attachments in this packet */
-                if( pop_ssn->decode_state->decoded_bytes )
-                    pop_ssn->state_flags |= POP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                SetPopBuffers(pop_ssn);
+                if(pop_ssn->decode_state != NULL)
+                {
+                    ResetBytesRead(pop_ssn->decode_state);
+                    POP_DecodeType((const char *)cont_trans_enc, (eolm - cont_trans_enc), true );
+                    pop_ssn->state_flags |= POP_FLAG_EMAIL_ATTACH;
+                    /* check to see if there are other attachments in this packet */
+                    if( pop_ssn->decode_state->decoded_bytes )
+                        pop_ssn->state_flags |= POP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                }
             }
             pop_ssn->state_flags &= ~POP_FLAG_IN_CONT_TRANS_ENC;
 
@@ -1323,7 +1338,7 @@ static const uint8_t * POP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
                     pop_ssn->state_flags &= ~POP_FLAG_EMAIL_ATTACH;
                     if(attach_start < attach_end)
                     {
-                        if(EmailDecode( attach_start, attach_end, pop_ssn->decode_state) != DECODE_SUCCESS )
+                        if(EmailDecode( attach_start, attach_end, pop_ssn->decode_state) < DECODE_SUCCESS )
                         {
                             POP_DecodeAlert();
                         }
@@ -1366,7 +1381,7 @@ static const uint8_t * POP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
         attach_end = data_end_marker;
         if(attach_start < attach_end)
         {
-            if(EmailDecode( attach_start, attach_end, pop_ssn->decode_state) != DECODE_SUCCESS )
+            if(EmailDecode( attach_start, attach_end, pop_ssn->decode_state) < DECODE_SUCCESS )
             {
                 POP_DecodeAlert();
             }

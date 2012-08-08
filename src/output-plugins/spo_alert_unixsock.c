@@ -184,7 +184,8 @@ static void AlertUnixSock(Packet *p, char *msg, void *arg, Event *event)
     if(p && p->pkt)
     {
         uint32_t snaplen = DAQ_GetSnapLen();
-        bcopy((const void *)p->pkth,(void *)&alertpkt.pkth,sizeof(DAQ_PktHdr_t));
+        bcopy((const void *)p->pkth,(void *)&alertpkt.pkth,
+            sizeof(alertpkt.pkth));
         bcopy((const void *)p->pkt,alertpkt.pkt,
               alertpkt.pkth.caplen > snaplen? snaplen : alertpkt.pkth.caplen);
     }
@@ -284,8 +285,8 @@ static void OpenAlertSock(void)
 
     bzero((char *) &alertaddr, sizeof(alertaddr));
 
-    /* 108 is the size of sun_path */
-    strncpy(alertaddr.sun_path, srv, 108);
+    /* copy path over and preserve a null byte at the end */
+    strncpy(alertaddr.sun_path, srv, sizeof(alertaddr.sun_path)-1);
 
     alertaddr.sun_family = AF_UNIX;
 

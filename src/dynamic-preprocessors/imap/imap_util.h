@@ -33,7 +33,7 @@
 #include "sf_snort_packet.h"
 
 void IMAP_GetEOL(const uint8_t *, const uint8_t *, const uint8_t **, const uint8_t **);
-void IMAP_DecodeType(const char *start, int length);
+void IMAP_DecodeType(const char *start, int length, bool cnt_xf);
 
 #ifdef DEBUG_MSGS
 const char * IMAP_PrintBuffer(SFSnortPacket *);

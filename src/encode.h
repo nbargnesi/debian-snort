@@ -34,8 +34,9 @@ void Encode_Init(void);
 void Encode_Term(void);
 
 typedef enum {
-    ENC_TCP_FIN, ENC_TCP_RST,
-    ENC_UNR_NET, ENC_UNR_HOST, ENC_UNR_PORT,
+    ENC_TCP_FIN,  ENC_TCP_RST,
+    ENC_UNR_NET,  ENC_UNR_HOST,
+    ENC_UNR_PORT, ENC_UNR_FW,
     ENC_MAX
 } EncodeType;
 

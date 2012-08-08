@@ -407,7 +407,13 @@ bool s5_paf_register (
         PAF_Config* pc = config->tcp_config->paf_config;
 
         pc->map[port][dir].cb_mask |= (1<<i);
-        pc->map[port][dir].auto_on = (uint8_t)auto_on;
+
+        if ( !pc->map[port][dir].auto_on )
+            pc->map[port][dir].auto_on = (uint8_t)auto_on;
+
+        //printf("%d %s %c %c\n", port, dir?"c2s":"s2c", auto_on?'T':'F',
+        //    pc->map[port][dir].auto_on?'T':'F');
+
     }
     return true;
 }

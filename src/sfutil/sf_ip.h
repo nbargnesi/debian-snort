@@ -33,8 +33,8 @@
 #ifndef WIN32
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 #include "snort_debug.h" /* for inline definition */
@@ -406,6 +406,36 @@ static inline int sfip_fast_cont6(sfip_t *ip1, sfip_t *ip2) {
 
     return ntohl(ip1->ip32[i]) == ip;
 }
+
+/* Compares two IPs
+ * Returns 1 for equal and 0 for not equal
+ */
+static inline int sfip_fast_equals_raw(sfip_t *ip1, sfip_t *ip2)
+{
+    int f1,f2;
+
+    ARG_CHECK2(ip1, ip2, 0);
+
+    f1 = sfip_family(ip1);
+    f2 = sfip_family(ip2);
+
+    if(f1 == AF_INET)
+    {
+        if(f2 != AF_INET)
+            return 0;
+        if (sfip_fast_eq4(ip1, ip2))
+            return 1;
+    }
+    else if(f1 == AF_INET6)
+    {
+        if(f2 != AF_INET6)
+            return 0;
+        if (sfip_fast_eq6(ip1, ip2))
+            return 1;
+    }
+    return 0;
+}
+
 /********************************************************************
  * Function: sfip_is_private()
  *

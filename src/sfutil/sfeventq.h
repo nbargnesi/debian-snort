@@ -61,12 +61,6 @@ typedef struct s_SF_EVENTQ
     int event_size;
 
     /*
-    **  This function orders the events as they
-    **  arrive.
-    */
-    int (*sort)(void *event1, void *event2);
-
-    /*
     **  This element tracks the current number of
     **  nodes in the event queue.
     */
@@ -76,9 +70,7 @@ typedef struct s_SF_EVENTQ
 }  SF_EVENTQ;
 
 
-SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size, 
-                         int (*sort)(void *, void *));
-
+SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size);
 void * sfeventq_event_alloc(SF_EVENTQ *);
 void sfeventq_reset(SF_EVENTQ *);
 int sfeventq_add(SF_EVENTQ *, void *event);

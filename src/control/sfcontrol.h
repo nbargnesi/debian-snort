@@ -33,6 +33,18 @@
 #define CS_TYPE_HUP_DAQ     0x0001
 #define CS_TYPE_MAX         0x1FFF
 #define CS_HEADER_VERSION   0x0001
+#define CS_HEADER_SUCCESS   0x0000
+#define CS_HEADER_ERROR     0x0001
+#define CS_HEADER_DATA      0x0009
+
+#pragma pack(1)
+typedef struct _CS_MESSAGE_DATA_HEADER
+{
+    /* All values must be in network byte order */
+    int32_t code;
+    uint16_t length;    /* Data length. Does not include this header */
+} CSMessageDataHeader;
+#pragma pack()
 
 typedef struct _CS_MESSAGE_HEADER
 {
@@ -42,7 +54,7 @@ typedef struct _CS_MESSAGE_HEADER
     uint32_t length;    /* Does not include the header */
 } CSMessageHeader;
 
-typedef int (*OOBPreControlFunc)(uint16_t type, const uint8_t *data, uint32_t length, void **new_context);
+typedef int (*OOBPreControlFunc)(uint16_t type, const uint8_t *data, uint32_t length, void **new_context, char *statusBuf, int statusBuf_len);
 typedef int (*IBControlFunc)(uint16_t type, void *new_context, void **old_context);
 typedef void (*OOBPostControlFunc)(uint16_t type, void *old_context);
 

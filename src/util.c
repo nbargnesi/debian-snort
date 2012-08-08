@@ -476,7 +476,7 @@ void ErrorMessageThrottled(ThrottleInfo *throttleInfo, const char *format,...)
     /*Note: we only output the first error message, 
      * and the statistics after at least duration_to_log seconds 
      * when the same type of error message is printed out again */
-    if (current_time - throttleInfo->duration_to_log > throttleInfo->lastUpdate)
+    if (current_time - (time_t)throttleInfo->duration_to_log > throttleInfo->lastUpdate)
     {
         int index;
         va_start(ap, format);

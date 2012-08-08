@@ -291,7 +291,7 @@ static void PrintTagNode(TagNode *np)
         );
 
     printf("%s:%d Metric: %u "
-           "LastAccess: %u, event_id: %u mode: %u event_time.tv_sec: %ld\n"
+           "LastAccess: %u, event_id: %u mode: %u event_time.tv_sec: %"PRIu64"\n"
            "| Packets: %d, Bytes: %d, Seconds: %d\n",
 #ifdef SUP_IP6
            inet_ntoa(&np->key.dip), np->key.dp,
@@ -302,7 +302,7 @@ static void PrintTagNode(TagNode *np)
            np->last_access,
            np->event_id,
            np->mode,
-           np->event_time.tv_sec,
+           (uint64_t)np->event_time.tv_sec,
            np->packets,
            np->bytes,
            np->seconds);

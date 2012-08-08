@@ -35,7 +35,6 @@
 #include "sf_snort_plugin_api.h"
 #include "sf_dynamic_engine.h"
 #include "ipv6_port.h"
-#include "sf_snort_detection_engine.h"
 
 int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData)
 {

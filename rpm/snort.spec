@@ -5,66 +5,14 @@
 # rpmbuild Package Options
 # ========================
 #
-# See README.build_rpms for more details.
-#
-# 	--with flexresp
-# 		Add flexresp capability to whatever package(s) you are
-# 		building.
-#
-#	--with inline
-#		Add inline capability to whatever package(s) you are
-#		building. This will create its own inline package.
-# 
-# 	--with mysql
-# 		Builds a binary/package with support for MySQL.
-# 
-# 	--with postgresql
-# 		Builds a binary/package with support for PostgreSQL.
-# 
-#	--with unixODBC
-#		Build a binary/package with support for unixODBC
-# 
-# 	--with oracle
-# 		Builds a binary/package with support for Oracle.
-#
 # See pg 399 of _Red_Hat_RPM_Guide_ for rpmbuild --with and --without options.
 ################################################################
 
 # Other useful bits
-%define OracleHome /opt/oracle/OraHome1
 %define SnortRulesDir %{_sysconfdir}/snort/rules
 %define noShell /bin/false
 
 # Handle the options noted above.
-# Default of no flexresp, but --with flexresp will enable it
-%define flexresp 0
-%{?_with_flexresp:%define flexresp 1}
-
-# Default of no MySQL, but --with mysql will enable it
-%define mysql 0
-%{?_with_mysql:%define mysql 1}
-
-# Default of no PostgreSQL, but --with postgresql will enable it
-%define postgresql 0
-%{?_with_postgresql:%define postgresql 1}
-
-# Default of no unixODBC, but --with unixODBC will enable it
-%define unixODBC 0 
-%{?_with_unixODBC:%define unixODBC 1}
-
-# Default of no Oracle, but --with oracle will enable it
-%define oracle 0
-%{?_with_oracle:%define oracle 1}
-
-# If not inline then we'll conflict with it
-%define conflicts snort-inline 
-
-# Default of no Inline, but --with inline will enable it
-%define inline 0
-%define inlinetext %{nil}
-%{?_with_inline:%define inline 1}
-%{?_with_inline:%define inlinetext -inline }
-%{?_with_inline:%define conflicts snort }
 
 %define vendor Snort.org
 %define for_distro RPMs
@@ -83,85 +31,25 @@
   # info.
   %define vendor cAos Linux 
   %define for_distro RPMs for cAos Linux
-  %define mysql 1
-  %define postgresql 1
   %define release 1.caos
 %endif
 
 
-Name: %{realname}%{inlinetext}
-%{?_with_inline:%define Name: %{realname}-inline }
-Version: 2.9.2.3
+Name: %{realname}
+Version: 2.9.3.1
 Epoch: 1
 Release: %{release}
 Summary: An open source Network Intrusion Detection System (NIDS)
 Group: Applications/Internet
 License: GPL
 Url: http://www.snort.org/
-Source0: http://www.snort.org/snort-downloads/2.9.2/%{realname}-%{version}.tar.gz
+Source0: http://www.snort.org/snort-downloads/2.9.3/%{realname}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Packager: Official Snort.org %{for_distro}
 Vendor: %{vendor}
 BuildRequires: autoconf, automake, pcre-devel, libpcap-devel
-Conflicts: %{conflicts}
-
-%if %{flexresp}
-BuildRequires: libnet
-  %define EnableFlexresp --enable-flexresp
-%endif
-
-# Itables-devel removed from BuildReq as RH does not supply that package.
-# Will replace iptables-devel buildreq with a scripted solution. --jh
-%if %{inline}
-BuildRequires: libnet
-  %define EnableInline --enable-inline
-%endif
-
-%package mysql
-Summary: Snort with MySQL support
-Group: Applications/Internet
-Requires: %{name} = %{epoch}:%{version}-%{release}
-%if %{mysql}
-BuildRequires: mysql-devel
-%endif
-
-%description mysql
-Snort binary compiled with mysql support.
-
-%package postgresql
-Summary: Snort with PostgreSQL support
-Group: Applications/Internet
-Requires: %{name} = %{epoch}:%{version}-%{release}
-%if %{postgresql}
-BuildRequires: postgresql-devel
-%endif
-
-%description postgresql
-Snort binary compiled with postgresql support. 
-
-%package unixODBC
-Summary: Snort with unixODBC support
-Group: Applications/Internet
-Requires: %{name} = %{epoch}:%{version}-%{release}
-%if %{unixODBC}
-BuildRequires: unixODBC-devel
-%endif
-
-%description unixODBC
-Snort binary compiled with unixODBC support.
-
-%package oracle
-Summary: Snort with Oracle support
-Group: Applications/Internet
-Requires: %{name} = %{epoch}:%{version}-%{release}
-
-%description oracle
-Snort binary compiled with Oracle support. 
-
-EXPERIMENTAL!!  I don't have a way to test this, so let me know if it works!
-ORACLE_HOME=%{OracleHome}
-
+#Conflicts: %{conflicts}
 
 %description
 Snort is an open source network intrusion detection system, capable of
@@ -185,11 +73,6 @@ If you install a different binary package %{_sbindir}/snort should end up
 being a symlink to a binary in one of the following configurations:
 
 	plain		Snort (this package, required)
-	mysql		Snort with mysql (optional)
-	postgresql	Snort with postgresql (optional)
-	unixODBC	Snort with unixODBC (optional)
-	oracle		Snort with oracle (optional, not official)
-	inline		Snort with inline support (optional)
 
 Please see the documentation in %{_docdir}/%{realname}-%{version} for more
 information on snort features and configuration.
@@ -219,54 +102,7 @@ BuildSnort() {
    %__ln_s ../configure ./configure
 
    if [ "$1" = "plain" ] ; then
-	./configure $SNORT_BASE_CONFIG \
-	--without-mysql \
-	--without-postgresql \
-	--without-oracle \
-	--without-odbc \
-	%{?EnableFlexresp} %{?EnableFlexresp2} \
-	%{?EnableInline}
-   fi
-
-   if [ "$1" = "mysql" ]; then
-	./configure $SNORT_BASE_CONFIG \
-	--with-mysql \
-	--without-postgresql \
-	--without-oracle \
-	--without-odbc \
-	%{?EnableFlexresp} %{?EnableFlexresp2} \
-	%{?EnableInline}
-   fi
-
-   if [ "$1" = "postgresql" ]; then
-	./configure $SNORT_BASE_CONFIG \
-	--without-mysql \
-	--with-postgresql \
-	--without-odbc \
-	--without-oracle \
-	%{?EnableFlexresp} %{?EnableFlexresp2} \
-	%{?EnableInline}
-   fi
-
-  if [ "$1" = "unixODBC" ]; then
-	./configure $SNORT_BASE_CONFIG \
-	--without-mysql \
-	--without-postgresql \
-	--with-odbc \
-	--without-oracle \
-	%{?EnableFlexresp} %{?EnableFlexresp2} \
-	%{?EnableInline}
-   fi
-
-   if [ "$1" = "oracle" ]; then
-	export ORACLE_HOME=%{OracleHome}
-	./configure $SNORT_BASE_CONFIG \
-	--without-mysql \
-	--without-postgresql \
-	--without-odbc \
-	--with-oracle=$ORACLE_HOME \
-	%{?EnableFlexresp} %{?EnableFlexresp2} \
-	%{?EnableInline}
+	./configure $SNORT_BASE_CONFIG
    fi
 
    %__make
@@ -281,29 +117,10 @@ SNORT_BASE_CONFIG="--prefix=%{_prefix} \
                    --bindir=%{_sbindir} \
                    --sysconfdir=%{_sysconfdir}/snort \
                    --with-libpcap-includes=%{_includedir} \
-                   --enable-decoder-preprocessor-rules --enable-targetbased \
-		   "
+                   --enable-targetbased"
 
 # Always build snort-plain
 BuildSnort plain
-
-# Maybe build the others
-%if %{mysql}
-  BuildSnort mysql
-%endif
-
-%if %{postgresql}
-  BuildSnort postgresql
-%endif
-
-%if %{oracle}
-  BuildSnort oracle
-%endif
-
-%if %{unixODBC}
-  BuildSnort unixODBC
-%endif
-
 
 %install
 
@@ -311,22 +128,6 @@ BuildSnort plain
 find . -type 'd' -name "CVS" -print | xargs %{__rm} -rf
 
 InstallSnort() {
-   if [ "$1" = "mysql" ]; then
-	%__install -p -m 0755 %{name}-mysql $RPM_BUILD_ROOT%{_sbindir}/%{name}-mysql
-   fi
-
-   if [ "$1" = "postgresql" ]; then
-   	%__install -p -m 0755 %{name}-postgresql $RPM_BUILD_ROOT%{_sbindir}/%{name}-postgresql
-   fi
-
-   if [ "$1" = "unixODBC" ]; then
-   	%__install -p -m 0755 %{name}-unixODBC $RPM_BUILD_ROOT%{_sbindir}/%{name}-unixODBC
-   fi
-
-   if [ "$1" = "oracle" ]; then
-   	%__install -p -m 0755 %{name}-oracle $RPM_BUILD_ROOT%{_sbindir}/%{name}-oracle
-   fi
-
    if [ "$1" = "plain" ]; then
 	%__rm -rf $RPM_BUILD_ROOT
 
@@ -339,7 +140,6 @@ InstallSnort() {
 	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_initrddir}
 	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_mandir}/man8
 	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_docdir}/%{realname}-%{version}
-	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_datadir}/%{realname}-%{version}/schemas
 
 	%__install -p -m 0755 %{name}-plain $RPM_BUILD_ROOT%{_sbindir}/%{name}-plain
 	%__mkdir_p -m 0755 $RPM_BUILD_ROOT%{_libdir}/%{realname}-%{version}_dynamicengine
@@ -365,7 +165,6 @@ InstallSnort() {
 	find doc -maxdepth 1 -type f -not -name 'Makefile*' -exec %__install -p -m 0644 {} $RPM_BUILD_ROOT%{_docdir}/%{realname}-%{version} \;
 
 	%__rm -f $RPM_BUILD_ROOT%{_docdir}/%{realname}-%{version}/Makefile.*
-	%__install -p -m 0644 schemas/create_* $RPM_BUILD_ROOT%{_datadir}/%{realname}-%{version}/schemas
     fi
 }
 
@@ -389,24 +188,6 @@ InstallSnort() {
 # Always install snort-plain
 InstallSnort plain
 
-# Maybe install the others
-%if %{mysql}
-  InstallSnort mysql
-%endif
-
-%if %{postgresql}
-  InstallSnort postgresql
-%endif
-
-%if %{unixODBC}
-  InstallSnort unixODBC
-%endif
-
-%if %{oracle}
-  InstallSnort oracle
-%endif
-
-
 %clean
 %__rm -rf $RPM_BUILD_ROOT
 
@@ -416,27 +197,6 @@ InstallSnort plain
 if [ $1 = 1 ] ; then
 	/usr/sbin/groupadd snort 2> /dev/null || true
 	/usr/sbin/useradd -M -d %{_var}/log/snort -s %{noShell} -c "Snort" -g snort snort 2>/dev/null || true
-fi
-
-%post mysql
-if [ -L %{_sbindir}/snort ] || [ ! -e %{_sbindir}/snort ] ; then 
-	%__rm -f %{_sbindir}/snort; %__ln_s -f %{_sbindir}/%{name}-mysql %{_sbindir}/snort
-fi
-
-%post postgresql
-if [ -L %{_sbindir}/snort ] || [ ! -e %{_sbindir}/snort ] ; then 
-	%__rm -f %{_sbindir}/snort; %__ln_s -f %{_sbindir}/%{name}-postgresql %{_sbindir}/snort
-fi
-
-%post unixODBC
-if [ -L %{_sbindir}/snort ] || [ ! -e %{_sbindir}/snort ] ; then 
-	%__rm -f %{_sbindir}/snort; %__ln_s -f %{_sbindir}/%{name}-unixODBC %{_sbindir}/snort
-fi
-
-
-%post oracle
-if [ -L %{_sbindir}/snort ] || [ ! -e %{_sbindir}/snort ] ; then
-	%__rm -f %{_sbindir}/snort; %__ln_s %{_sbindir}/%{name}-oracle %{_sbindir}/snort
 fi
 
 %post
@@ -476,30 +236,6 @@ if [ $1 = 0 ] ; then
 	/usr/sbin/userdel snort 2>/dev/null
 fi
 
-%postun mysql
-if [ -L %{_sbindir}/snort ]; then 
-	%__rm -f %{_sbindir}/snort
-	%__ln_s -f %{_sbindir}/%{name}-plain %{_sbindir}/snort
-fi
-
-%postun postgresql
-if [ -L %{_sbindir}/snort ]; then 
-	%__rm -f %{_sbindir}/snort
-	%__ln_s -f %{_sbindir}/%{name}-plain %{_sbindir}/snort
-fi
-
-%postun unixODBC
-if [ -L %{_sbindir}/snort ]; then 
-	%__rm -f %{_sbindir}/snort
-	%__ln_s -f %{_sbindir}/%{name}-plain %{_sbindir}/snort
-fi
-
-%postun oracle
-if [ -L %{_sbindir}/snort ]; then 
-	%__rm -f %{_sbindir}/snort
-	%__ln_s -f %{_sbindir}/%{name}-plain %{_sbindir}/snort
-fi
-
 %files
 %defattr(-,root,root)
 %attr(0755,root,root) %{_sbindir}/%{name}-plain
@@ -515,9 +251,6 @@ fi
 %attr(0755,root,root) %config(noreplace) %{_initrddir}/snortd
 %attr(0755,snort,snort) %dir %{_var}/log/snort
 %attr(0755,root,root) %dir %{_sysconfdir}/snort
-%attr(0755,root,root) %dir %{_datadir}/%{realname}-%{version}
-%attr(0755,root,root) %dir %{_datadir}/%{realname}-%{version}/schemas
-%attr(0644,root,root) %{_datadir}/%{realname}-%{version}/schemas/create_*
 %attr(0644,root,root) %{_docdir}/%{realname}-%{version}/*
 %attr(0755,root,root) %dir %{_libdir}/%{realname}-%{version}_dynamicengine
 %attr(0755,root,root) %{_libdir}/%{realname}-%{version}_dynamicengine/libsf_engine.*
@@ -526,27 +259,6 @@ fi
 
 %dir %{_docdir}/%{realname}-%{version}
 %docdir %{_docdir}/%{realname}-%{version}
-
-%if %{mysql}
-%files mysql
-%attr(0755,root,root) %{_sbindir}/%{name}-mysql
-%endif
-
-%if %{postgresql}
-%files postgresql
-%attr(0755,root,root) %{_sbindir}/%{name}-postgresql
-%endif
-
-%if %{unixODBC}
-%files unixODBC
-%attr(0755,root,root) %{_sbindir}/%{name}-unixODBC
-%endif
-
-%if %{oracle}
-%files oracle
-%attr(0755,root,root) %{_sbindir}/%{name}-oracle
-%endif
-
 
 ################################################################
 # Thanks to the following for contributions to the Snort.org SPEC file:
@@ -564,6 +276,16 @@ fi
 #	Vlatko Kosturjak <kost@linux.hr>
 
 %changelog
+* Wed May 09 2012 Todd Wease <twease@sourcefire.com> 2.9.3
+- Removed --enable-decoder-preprocessor-rules since this is now the default
+-	behavior and not configurable.
+
+* Fri Apr 27 2012 Russ Combs <rcombs@sourcefire.com> 2.9.3
+- Removed schemas related foo.
+
+* Wed Mar 30 2012 Steve Sturges <ssturges@sourcefire.com> 2.9.3
+- Removed --with flexresp, --with inline, database output specific builds.
+
 * Wed Apr 02 2008 Steve Sturges <ssturges@sourcefire.com> 2.8.3
 - Added --enable-targetbased --enable-decoder-preprocessor-rules by default.
 

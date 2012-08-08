@@ -81,7 +81,8 @@ typedef enum _DCE2_Policy
     DCE2_POLICY__SAMBA,
     DCE2_POLICY__SAMBA_3_0_37,
     DCE2_POLICY__SAMBA_3_0_22,
-    DCE2_POLICY__SAMBA_3_0_20
+    DCE2_POLICY__SAMBA_3_0_20,
+    DCE2_POLICY__MAX
 
 } DCE2_Policy;
 
@@ -118,6 +119,14 @@ typedef enum _DCE2_ValidSmbVersionFlag
     DCE2_VALID_SMB_VERSION_FLAG__ALL = 0xffff
 
 } DCE2_ValidSmbVersionFlag;
+
+typedef enum _DCE2_SmbFingerprintFlag
+{
+    DCE2_SMB_FINGERPRINT__NONE = 0x0000,
+    DCE2_SMB_FINGERPRINT__CLIENT = 0x0001,
+    DCE2_SMB_FINGERPRINT__SERVER = 0x0002
+
+} DCE2_SmbFingerprintFlag;
 
 /* Whether an option is on or off: CS - configuration switch */
 typedef enum _DCE2_CS
@@ -212,6 +221,7 @@ typedef struct _DCE2_GlobalConfig
     DCE2_CS dce_defrag;
     int max_frag_len;
     uint16_t reassemble_threshold;
+    int smb_fingerprint_policy;
 
 } DCE2_GlobalConfig;
 
@@ -266,6 +276,11 @@ typedef struct _DCE2_Config
  * Extern variables
  ********************************************************************/
 extern DCE2_Config *dce2_eval_config;
+extern tSfPolicyUserContextId dce2_config;
+extern DCE2_Config *dce2_eval_config;
+#ifdef SNORT_RELOAD
+extern tSfPolicyUserContextId dce2_swap_config;
+#endif
 
 /********************************************************************
  * Inline function prototypes
@@ -277,6 +292,9 @@ static inline int DCE2_GcAlertOnEvent(DCE2_EventFlag);
 static inline int DCE2_GcReassembleEarly(void);
 static inline uint16_t DCE2_GcReassembleThreshold(void);
 static inline DCE2_CS DCE2_GcDceDefrag(void);
+static inline bool DCE2_GcSmbFingerprintClient(void);
+static inline bool DCE2_GcSmbFingerprintServer(void);
+
 static inline DCE2_Policy DCE2_ScPolicy(const DCE2_ServerConfig *);
 static inline int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
 static inline int DCE2_ScIsAutodetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
@@ -471,6 +489,44 @@ static inline uint16_t DCE2_GcReassembleThreshold(void)
     if (DCE2_GcReassembleEarly())
         return dce2_eval_config->gconfig->reassemble_threshold;
     return UINT16_MAX;
+}
+
+/********************************************************************
+ * Function: DCE2_GcSmbFingerprintClient()
+ *
+ * Convenience function for finding out if the preprocessor is
+ * configured to fingerprint the client policy base off SMB
+ * traffic.
+ *
+ * Arguments: None
+ *
+ * Returns:
+ *  bool  - true if configure to fingerprint client, false if not
+ *
+ ********************************************************************/
+static inline bool DCE2_GcSmbFingerprintClient(void)
+{
+    return dce2_eval_config->gconfig->smb_fingerprint_policy
+        & DCE2_SMB_FINGERPRINT__CLIENT ? true : false;
+}
+
+/********************************************************************
+ * Function: DCE2_GcSmbFingerprintServer()
+ *
+ * Convenience function for finding out if the preprocessor is
+ * configured to fingerprint the server policy base off SMB
+ * traffic.
+ *
+ * Arguments: None
+ *
+ * Returns:
+ *  bool  - true if configure to fingerprint server, false if not
+ *
+ ********************************************************************/
+static inline bool DCE2_GcSmbFingerprintServer(void)
+{
+    return dce2_eval_config->gconfig->smb_fingerprint_policy
+        & DCE2_SMB_FINGERPRINT__SERVER ? true : false;
 }
 
 /********************************************************************

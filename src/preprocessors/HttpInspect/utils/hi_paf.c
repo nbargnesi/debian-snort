@@ -739,3 +739,17 @@ void hi_paf_term (void)
         hi_paf_calls, hi_paf_bytes);)
 }
 
+//--------------------------------------------------------------------
+
+bool hi_paf_simple_request (void* ssn)
+{
+    if ( ssn )
+    {
+        HiState** s = (HiState **)stream_api->get_paf_user_data(ssn, 1);
+
+        if ( s && *s )
+            return ( (*s)->flags & HIF_V09 );
+    }
+    return false;
+}
+

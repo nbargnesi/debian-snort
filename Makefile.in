@@ -41,8 +41,7 @@ DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	ChangeLog config.guess config.sub depcomp install-sh ltmain.sh \
 	missing mkinstalldirs ylwrap
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
-	$(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -170,13 +169,6 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LIBOBJS = @LIBOBJS@
-LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
-LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
-LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
-LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
-LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
-LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
-LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -271,7 +263,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign no-dependencies
-SUBDIRS = src doc etc templates contrib rpm schemas m4 preproc_rules tools
+SUBDIRS = src doc etc templates contrib rpm m4 preproc_rules tools
 EXTRA_DIST = ChangeLog snort.8 LICENSE verstuff.pl RELEASE.NOTES snort.pc.in
 man_MANS = snort.8
 DISTCLEANFILES = stamp-h.in cflags.out cppflags.out

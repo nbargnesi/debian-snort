@@ -5,8 +5,7 @@ EXTRA_DIST = \
 faq.pdf \
 faq.tex \
 snort_manual.pdf \
-snort_manual.tex \
-snort_schema_v106.pdf
+snort_manual.tex
 
 dist_doc_DATA = \
 AUTHORS \
@@ -19,12 +18,10 @@ PROBLEMS \
 README \
 README.active \
 README.alert_order \
-README.ARUBA \
 README.asn1 \
 README.counts \
 README.csv \
 README.daq \
-README.database \
 README.dcerpc2 \
 README.decode \
 README.decoder_preproc_rules \
@@ -62,6 +59,7 @@ README.stream5 \
 README.tag \
 README.thresholding \
 README.UNSOCK \
+README.unified2 \
 README.variables \
 README.WIN32 \
 TODO \

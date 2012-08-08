@@ -32,6 +32,7 @@
 #endif
 
 #include "sf_types.h"
+#include "spp_dce2.h"
 #include "dce2_cl.h"
 #include "snort_dce2.h"
 #include "dce2_list.h"
@@ -51,18 +52,6 @@
  * Global variables
  ********************************************************************/
 static uint8_t dce2_cl_rbuf[IP_MAXPKT];
-
-/********************************************************************
- * Extern variables
- ********************************************************************/
-extern DCE2_Stats dce2_stats;
-extern char *dce2_pdu_types[DCERPC_PDU_TYPE__MAX];
-
-#ifdef PERF_PROFILING
-extern PreprocStats dce2_pstat_cl_acts;
-extern PreprocStats dce2_pstat_cl_frag;
-extern PreprocStats dce2_pstat_cl_reass;
-#endif
 
 /********************************************************************
  * Macros

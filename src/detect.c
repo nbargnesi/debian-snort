@@ -1408,6 +1408,9 @@ int AlertAction(Packet * p, OptTreeNode * otn, Event *event)
 {
     RuleTreeNode *rtn = getRuntimeRtnFromOtn(otn);
 
+    if (rtn == NULL)
+        return 0;
+
     DEBUG_WRAP(DebugMessage(DEBUG_DETECT,
                 "        <!!> Generating alert! \"%s\", policyId %d\n", otn->sigInfo.message, getRuntimePolicy()););
 

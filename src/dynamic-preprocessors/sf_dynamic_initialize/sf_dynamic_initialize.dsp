@@ -4140,5 +4140,60 @@ InputName=util_unfold
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\sf_seqnums.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\sf_seqnums.h
+InputName=sfrt
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\sf_seqnums.h
+InputName=sfrt
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 IPv6 Debug"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\sf_seqnums.h
+InputName=sfrt
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 IPv6 Release"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\sf_seqnums.h
+InputName=sfrt
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
 # End Target
 # End Project

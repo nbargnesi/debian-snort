@@ -93,9 +93,7 @@ typedef struct s_DECOMPRESS_STATE
     uint16_t compress_fmt;
     uint8_t decompress_data;
     z_stream d_stream;
-    MemBucket *gzip_bucket;
-    unsigned char *compr_buffer;
-    unsigned char *decompr_buffer;
+    MemBucket *bkt;
     bool deflate_initialized;
 
 } DECOMPRESS_STATE;
@@ -111,7 +109,7 @@ typedef struct s_HTTP_RESP_STATE
     uint32_t chunk_remainder;
     int flow_depth_read;
     uint32_t max_seq;
-    int is_max_seq;
+    bool flow_depth_excd;
 }HTTP_RESP_STATE;
 
 typedef struct s_HTTP_LOG_STATE
@@ -188,6 +186,8 @@ extern HISearch hi_js_search[HI_LAST];
 extern HISearch hi_html_search[HTML_LAST];
 extern HISearch *hi_current_search;
 extern HISearchInfo hi_search_info;
+
+void ApplyFlowDepth(HTTPINSPECT_CONF *, Packet *, HttpSessionData *, int, int, uint32_t);
 
 
 
@@ -276,8 +276,6 @@ static inline void ResetGzipState(DECOMPRESS_STATE *ds)
 
     inflateEnd(&(ds->d_stream));
 
-    memset(ds->gzip_bucket->data, 0, ds->compr_depth + ds->decompr_depth);
-
     ds->inflate_init = 0;
     ds->compr_bytes_read = 0;
     ds->decompr_bytes_read = 0;
@@ -298,7 +296,6 @@ static inline void ResetRespState(HTTP_RESP_STATE *ds)
     ds->chunk_remainder = 0;
     ds->flow_depth_read = 0;
     ds->max_seq = 0;
-    ds->is_max_seq = 0;
 }
 
 static inline int SetLogBuffers(HttpSessionData *hsd)

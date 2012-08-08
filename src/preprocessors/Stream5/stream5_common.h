@@ -166,7 +166,7 @@ typedef struct _Stream5AppData
 // this struct is organized by member size for compactness
 typedef struct _Stream5LWSession
 {
-    SessionKey key;
+    SessionKey *key;
 
     snort_ip   client_ip;
     snort_ip   server_ip;
@@ -485,7 +485,6 @@ extern uint32_t firstPacketTime;
 extern MemPool s5FlowMempool;
 
 extern uint32_t mem_in_use;
-extern unsigned int giFlowbitSize;
 extern Stream5GlobalConfig *s5_global_eval_config;
 extern Stream5TcpConfig *s5_tcp_eval_config;
 extern Stream5UdpConfig *s5_udp_eval_config;

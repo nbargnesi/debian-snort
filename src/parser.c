@@ -81,6 +81,7 @@
 #include "detection-plugins/sp_icmp_type_check.h"
 #include "detection-plugins/sp_ip_proto.h"
 #include "detection-plugins/sp_pattern_match.h"
+#include "detection-plugins/sp_flowbits.h"
 #include "sf_vartable.h"
 #include "ipv6_port.h"
 #include "sfutil/sf_ip.h"
@@ -101,6 +102,7 @@
 
 #ifdef DYNAMIC_PLUGIN
 # include "dynamic-plugins/sp_dynamic.h"
+#include "dynamic-output/plugins/output.h"
 #endif
 
 /* Macros *********************************************************************/
@@ -416,7 +418,6 @@ extern VarNode *cmd_line_var_list;
 extern char *snort_conf_file;
 extern char *snort_conf_dir;
 extern RuleOptConfigFuncNode *rule_opt_config_funcs;
-extern unsigned int giFlowbitSize;
 
 /* Globals ********************************************************************/
 
@@ -486,6 +487,7 @@ static void ParseConfig(SnortConfig *, SnortPolicy *, char *);
 static void ParseDynamicDetectionInfo(SnortConfig *, SnortPolicy *, char *);
 static void ParseDynamicEngineInfo(SnortConfig *, SnortPolicy *, char *);
 static void ParseDynamicPreprocessorInfo(SnortConfig *, SnortPolicy *, char *);
+static void ParseDynamicOutputInfo(SnortConfig *, SnortPolicy *, char *);
 #endif  /* DYNAMIC_PLUGIN */
 static void ParseEventFilter(SnortConfig *, SnortPolicy *, char *);
 static void ParseInclude(SnortConfig *, SnortPolicy *, char *);
@@ -526,6 +528,7 @@ static const KeywordFunc snort_conf_keywords[] =
 #endif
     { SNORT_CONF_KEYWORD__CONFIG,            KEYWORD_TYPE__MAIN, 1, 0, ParseConfig },
 #ifdef DYNAMIC_PLUGIN
+    { SNORT_CONF_KEYWORD__DYNAMIC_OUTPUT ,   KEYWORD_TYPE__MAIN, 1, 1, ParseDynamicOutputInfo },
     { SNORT_CONF_KEYWORD__DYNAMIC_DETECTION, KEYWORD_TYPE__MAIN, 1, 1, ParseDynamicDetectionInfo },
     { SNORT_CONF_KEYWORD__DYNAMIC_ENGINE,    KEYWORD_TYPE__MAIN, 1, 1, ParseDynamicEngineInfo },
     { SNORT_CONF_KEYWORD__DYNAMIC_PREPROC,   KEYWORD_TYPE__MAIN, 1, 1, ParseDynamicPreprocessorInfo },
@@ -608,9 +611,7 @@ static const ConfigFunc config_opts[] =
 {
     { CONFIG_OPT__ALERT_FILE, 1, 1, 1, ConfigAlertFile },
     { CONFIG_OPT__ALERT_WITH_IFACE_NAME, 0, 1, 1, ConfigAlertWithInterfaceName },
-#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
     { CONFIG_OPT__AUTOGEN_PREPROC_DECODER_RULES, 0, 1, 0, ConfigAutogenPreprocDecoderRules },
-#endif
     { CONFIG_OPT__ASN1, 1, 1, 1, ConfigAsn1 },
     { CONFIG_OPT__BINDING, 1, 0, 1, ConfigBinding },
     { CONFIG_OPT__BPF_FILE, 1, 1, 1, ConfigBpfFile },
@@ -686,6 +687,7 @@ static const ConfigFunc config_opts[] =
 #ifdef TARGET_BASED
     { CONFIG_OPT__MAX_ATTRIBUTE_HOSTS, 1, 1, 1, ConfigMaxAttributeHosts },
     { CONFIG_OPT__MAX_METADATA_SERVICES, 1, 1, 1, ConfigMaxMetadataServices },
+    { CONFIG_OPT__DISABLE_ATTRIBUTE_RELOAD, 0, 1, 1, ConfigDisableAttributeReload },
 #endif
 #ifdef MPLS
     { CONFIG_OPT__MAX_MPLS_LABELCHAIN_LEN, 0, 1, 1, ConfigMaxMplsLabelChain },
@@ -911,7 +913,7 @@ SnortConfig * ParseSnortConf(void)
     sc->config_table = sfghash_new(20, 0, 0, free);
     if (sc->config_table == NULL)
     {
-        FatalError("%s(%d) No memory to create config table.\n",
+        ParseError("%s(%d) No memory to create config table.\n",
                    __FILE__, __LINE__);
     }
 
@@ -928,8 +930,7 @@ SnortConfig * ParseSnortConf(void)
     sc->policy_config = sfPolicyInit();
     if (sc->policy_config == NULL)
     {
-        FatalError("%s(%d) No memory to create policy configuration.\n",
-                   __FILE__, __LINE__);
+        ParseError("No memory to create policy configuration.\n");
     }
 
     /* Add the default policy */
@@ -961,8 +962,8 @@ SnortConfig * ParseSnortConf(void)
     sc->targeted_policies[policy_id]->preproc_rule_options = PreprocessorRuleOptionsNew();
     if (sc->targeted_policies[policy_id]->preproc_rule_options == NULL)
     {
-        FatalError("%s(%d) Could not allocate storage for preprocessor rule "
-                   "options.\n", __FILE__, __LINE__);
+        ParseError("Could not allocate storage for preprocessor rule "
+                   "options.\n");
     }
 #endif
 
@@ -1008,8 +1009,8 @@ SnortConfig * ParseSnortConf(void)
             sc->targeted_policies[policy_id]->preproc_rule_options = PreprocessorRuleOptionsNew();
             if (sc->targeted_policies[policy_id]->preproc_rule_options == NULL)
             {
-                FatalError("%s(%d) Could not allocate storage for preprocessor rule "
-                           "options.\n", __FILE__, __LINE__);
+                ParseError("Could not allocate storage for preprocessor rule "
+                           "options.\n");
             }
 #endif
 
@@ -1492,8 +1493,7 @@ static int FinishPortListRule(rule_port_tables_t *port_tables, RuleTreeNode *rtn
             pox = PortObjectDupPorts(rtn->dst_portobject);
             if (pox == NULL)
             {
-                FatalError("%s(%d) Could not dup a port object - out of memory!\n",
-                           __FILE__, __LINE__);
+                ParseError("Could not dup a port object - out of memory!\n");
             }
 
             /* Add the port object to the table, and add the rule to the port object */
@@ -1511,8 +1511,7 @@ static int FinishPortListRule(rule_port_tables_t *port_tables, RuleTreeNode *rtn
                 pox = PortObjectDupPorts(rtn->dst_portobject);
                 if (pox == NULL)
                 {
-                    FatalError("%s(%d) Could not dup a bidir-port object - out of memory!\n",
-                               __FILE__, __LINE__);
+                    ParseError("Could not dup a bidir-port object - out of memory!\n");
                 }
 
                 PortTableAddObject(srcTable, pox);
@@ -1535,8 +1534,7 @@ static int FinishPortListRule(rule_port_tables_t *port_tables, RuleTreeNode *rtn
             pox = PortObjectDupPorts(rtn->src_portobject);
             if (pox == NULL)
             {
-                FatalError("%s(%d) Could not dup a port object - out of memory!\n",
-                           __FILE__, __LINE__);
+                ParseError("Could not dup a port object - out of memory!\n");
             }
 
             PortTableAddObject(srcTable, pox);
@@ -1553,8 +1551,8 @@ static int FinishPortListRule(rule_port_tables_t *port_tables, RuleTreeNode *rtn
                 pox = PortObjectDupPorts(rtn->src_portobject);
                 if (pox == NULL)
                 {
-                    FatalError("%s(%d) Could not dup a bidir-port object - out "
-                               "of memory!\n", __FILE__, __LINE__);
+                    ParseError("Could not dup a bidir-port object - out "
+                               "of memory!\n");
                 }
 
                 PortTableAddObject(dstTable, pox);
@@ -1650,8 +1648,8 @@ static PortObject * ParsePortListTcpUdpPort(PortVarTable *pvt,
            /* Add to the un-named port var table */
            if (PortTableAddObject(noname, portobject))
            {
-               FatalError("%s(%d) Unable to add raw port object to unnamed "
-                          "port var table, out of memory!\n", __FILE__, __LINE__);
+               ParseError("Unable to add raw port object to unnamed "
+                          "port var table, out of memory!\n");
            }
        }
     }
@@ -1754,8 +1752,7 @@ static int ParsePortList(RuleTreeNode *rtn, PortVarTable *pvt, PortTable *noname
         portobject = PortVarTableFind(pvt, "any");
         if (portobject == NULL)
         {
-            FatalError("%s(%d) PortVarTable missing an 'any' variable\n",
-                       __FILE__, __LINE__);
+            ParseError("PortVarTable missing an 'any' variable\n");
         }
     }
 
@@ -3169,6 +3166,7 @@ OptTreeNode * ParseRuleOptions(SnortConfig *sc, RuleTreeNode *rtn,
     }
 
     FinalizeContentUniqueness(otn);
+    ValidateFastPattern(otn);
 
     if ((thdx_tmp != NULL) && (otn->detection_filter != NULL))
     {
@@ -3937,8 +3935,7 @@ static int PortVarDefine(SnortConfig *sc, char *name, char *s)
         po = PortObjectNew();
         if( !po )
         {
-            FatalError("%s(%d) PortVarTable missing an 'any' variable.\n",
-                       __FILE__, __LINE__);
+            ParseError("PortVarTable missing an 'any' variable.\n");
         }
         PortObjectSetName( po, name );
         PortObjectAddPortAny( po );
@@ -4828,13 +4825,13 @@ char * ProcessFileOption(SnortConfig *sc, const char *filespec)
 
     if(filespec == NULL)
     {
-        FatalError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
+        ParseError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
     }
 
     /* look for ".." in the string and complain and exit if it is found */
     if(strstr(filespec, "..") != NULL)
     {
-        FatalError("file definition contains \"..\".  Do not do that!\n");
+        ParseError("file definition contains \"..\".  Do not do that!\n");
     }
 
     if(filespec[0] == '/')
@@ -4919,7 +4916,7 @@ static void ParseConfig(SnortConfig *sc, SnortPolicy *p, char *args)
     switch (sfghash_add(sc->config_table, toks[0], opts))
     {
         case SFGHASH_NOMEM:
-            FatalError("%s(%d) No memory to add entry to config table.\n",
+            ParseError("%s(%d) No memory to add entry to config table.\n",
                        __FILE__, __LINE__);
             break;
 
@@ -5120,7 +5117,7 @@ void SetRuleStates(SnortConfig *sc)
 
         if (otn == NULL)
         {
-            FatalError("Rule state specified for invalid SID: %d GID: %d\n",
+            ParseError("Rule state specified for invalid SID: %d GID: %d\n",
                        rule_state->sid, rule_state->gid);
         }
 
@@ -5298,8 +5295,7 @@ static void ParseDynamicLibInfo(DynamicLibInfo *dylib_info, char *args)
 
     if (stat(dylib_path->path, &buf) == -1)
     {
-        FatalError("%s(%d) Could not stat dynamic module "
-                   "path \"%s\": %s.\n", __FILE__, __LINE__,
+        ParseError("Could not stat dynamic module path \"%s\": %s.\n",
                    dylib_path->path, strerror(errno));
     }
 
@@ -5382,6 +5378,81 @@ static void ParseDynamicPreprocessorInfo(SnortConfig *sc, SnortPolicy *p, char *
     }
 
     ParseDynamicLibInfo(sc->dyn_preprocs, args);
+}
+/****************************************************************************
+ *
+ * Purpose: Parses a dynamic output lib line
+ *          Format is full path of dynamic output
+ *
+ * Arguments: args => string containing a single dynamic output
+ *
+ * Returns: void function
+ *
+ *****************************************************************************/
+static void ParseDynamicOutputInfo(SnortConfig *sc, SnortPolicy *p, char *args)
+{
+    char getcwd_path[PATH_MAX];
+    char **toks = NULL;
+    int num_toks = 0;
+    char *path = NULL;
+    PathType ptype = PATH_TYPE__FILE;
+    if (sc == NULL)
+        return;
+
+    DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"DynamicOutput\n"););
+
+    if (args == NULL)
+    {
+        if (getcwd(getcwd_path, sizeof(getcwd_path)) == NULL)
+        {
+            ParseError("Dynamic library path too long.  If you really "
+                    "think your path needs to be as long as it is, please "
+                    "submit a bug to bugs@snort.org.");
+        }
+
+        path = getcwd_path;
+        ptype = PATH_TYPE__DIRECTORY;
+    }
+    else
+    {
+        toks = mSplit(args, " \t", 0, &num_toks, 0);
+
+        if (num_toks == 1)
+        {
+            path = SnortStrdup(toks[0]);
+            ptype = PATH_TYPE__FILE;
+        }
+        else if (num_toks == 2)
+        {
+            if (strcasecmp(toks[0], DYNAMIC_LIB_OPT__FILE) == 0)
+            {
+                ptype = PATH_TYPE__FILE;
+            }
+            else if (strcasecmp(toks[0], DYNAMIC_LIB_OPT__DIRECTORY) == 0)
+            {
+                ptype = PATH_TYPE__DIRECTORY;
+            }
+            else
+            {
+                ParseError("Invalid specifier for Dynamic library specifier.  "
+                        "Should be file|directory pathname.");
+            }
+
+            path = SnortStrdup(toks[1]);
+        }
+        else
+        {
+            ParseError("Missing/incorrect dynamic engine lib specifier.");
+        }
+        mSplitFree(&toks, num_toks);
+    }
+    if (ptype == PATH_TYPE__DIRECTORY)
+        output_load(path);
+    else if (ptype == PATH_TYPE__FILE)
+        output_load_module(path);
+    if (path)
+        free(path);
+
 }
 #endif
 
@@ -5882,7 +5953,7 @@ int GetPcaps(SF_LIST *pol, SF_QUEUE *pcap_queue)
 #endif
 
             default:
-                FatalError("Bad read multiple pcaps type\n");
+                ParseError("Bad read multiple pcaps type\n");
                 break;
         }
     }
@@ -5961,8 +6032,7 @@ static void InitVarTables(SnortPolicy *p)
 
     if ((p->portVarTable == NULL) || (p->nonamePortVarTable == NULL))
     {
-        FatalError("%s(%d) Failed to create port variable tables.\n",
-                   __FILE__, __LINE__);
+        ParseError("Failed to create port variable tables.\n");
     }
 }
 
@@ -6006,8 +6076,7 @@ static void InitParser(void)
     ruleIndexMap = RuleIndexMapCreate(MAX_RULE_COUNT);
     if (ruleIndexMap == NULL)
     {
-        FatalError("%s(%d) Failed to create rule index map.\n",
-                   __FILE__, __LINE__);
+        ParseError("Failed to create rule index map.\n");
     }
 
     /* This is for determining if a config option has already been
@@ -6163,7 +6232,7 @@ static void ParseConfigFile(SnortConfig *sc, SnortPolicy *p, char *fname)
     /* open the rules file */
     if (fp == NULL)
     {
-        FatalError("Unable to open rules file \"%s\": %s.\n",
+        ParseError("Unable to open rules file \"%s\": %s.\n",
                    fname, strerror(errno));
     }
 
@@ -6431,7 +6500,6 @@ void ConfigAsn1(SnortConfig *sc, char *args)
     sc->asn1_mem = num_nodes;
 }
 
-#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
 void ConfigAutogenPreprocDecoderRules(SnortConfig *sc, char *args)
 {
     SnortPolicy* policy;
@@ -6445,7 +6513,6 @@ void ConfigAutogenPreprocDecoderRules(SnortConfig *sc, char *args)
     policy->policy_flags |= POLICY_FLAG__AUTO_OTN;
     DEBUG_WRAP(DebugMessage(DEBUG_INIT, "Autogenerating Preprocessor and Decoder OTNs\n"););
 }
-#endif
 
 void ConfigBinding(SnortConfig *sc, char *args)
 {
@@ -7656,22 +7723,10 @@ void ConfigResponse (SnortConfig *sc, char *args)
 
 void ConfigFlowbitsSize(SnortConfig *sc, char *args)
 {
-    char *endptr;
-    long int size;
-
     if ((sc == NULL) || (args == NULL))
         return;
-
-    size = SnortStrtol(args, &endptr, 0);
-    if ((errno == ERANGE) || (*endptr != '\0') ||
-        (size < 0) || (size > 2096))
-    {
-        ParseError("Invalid argument to 'flowbits_size': %s.  Must be a "
-                   "positive integer and less than 2096.", args);
-    }
-
-    giFlowbitSize = (uint8_t)(size >> 3);
-    sc->flowbit_size = (uint8_t)(size >> 3);
+    setFlowbitSize(args);
+    sc->flowbit_size = (uint16_t)getFlowbitSizeInBytes();
 }
 
 /****************************************************************************
@@ -8028,6 +8083,14 @@ void ConfigMaxMetadataServices(SnortConfig *sc, char *args)
     }
 
     sc->max_metadata_services = val;
+}
+
+void ConfigDisableAttributeReload(SnortConfig *sc, char *args)
+{
+    if (sc == NULL)
+        return;
+
+    sc->run_flags |= RUN_FLAG__DISABLE_ATTRIBUTE_RELOAD_THREAD;
 }
 #endif
 
@@ -9392,6 +9455,7 @@ void ConfigControlSocketDirectory(SnortConfig *sc, char *args)
     if ( args != NULL )
         sc->cs_dir = SnortStrdup(args);
 }
+
 /****************************************************************************
  *
  * Function: ParseRule()
@@ -10773,7 +10837,7 @@ static void ParseOtnMetadata(SnortConfig *sc, RuleTreeNode *rtn,
             char **toks;
             int num_toks;
             char *endptr;
-            long int long_val;
+            uint64_t long_val;
 
             if (value == NULL)
                 ParseError("Metadata key '%s' requires a value.", key);
@@ -10895,6 +10959,7 @@ static void ParseOtnReference(SnortConfig *sc, RuleTreeNode *rtn,
     if (num_toks != 2)
     {
         ParseWarning("Ignoring invalid Reference spec '%s'.", args);
+        mSplitFree(&toks, num_toks);
         return;
     }
 
@@ -11483,80 +11548,80 @@ static rule_port_tables_t * PortTablesNew(void)
     /* No content rule objects */
     rpt->tcp_nocontent = PortObjectNew();
     if (rpt->tcp_nocontent == NULL)
-        FatalError("ParseRulesFile nocontent PortObjectNew() failed\n");
+        ParseError("ParseRulesFile nocontent PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->tcp_nocontent);
 
     rpt->udp_nocontent = PortObjectNew();
     if (rpt->udp_nocontent == NULL)
-        FatalError("ParseRulesFile nocontent PortObjectNew() failed\n");
+        ParseError("ParseRulesFile nocontent PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->udp_nocontent);
 
     rpt->icmp_nocontent = PortObjectNew();
     if (rpt->icmp_nocontent == NULL)
-        FatalError("ParseRulesFile nocontent PortObjectNew() failed\n");
+        ParseError("ParseRulesFile nocontent PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->icmp_nocontent);
 
     rpt->ip_nocontent = PortObjectNew();
     if (rpt->ip_nocontent == NULL)
-        FatalError("ParseRulesFile nocontent PortObjectNew() failed\n");
+        ParseError("ParseRulesFile nocontent PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->ip_nocontent);
 
     /* Create the Any-Any Port Objects for each protocol */
     rpt->tcp_anyany = PortObjectNew();
     if (rpt->tcp_anyany == NULL)
-        FatalError("ParseRulesFile tcp any-any PortObjectNew() failed\n");
+        ParseError("ParseRulesFile tcp any-any PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->tcp_anyany);
 
     rpt->udp_anyany = PortObjectNew();
     if (rpt->udp_anyany == NULL)
-        FatalError("ParseRulesFile udp any-any PortObjectNew() failed\n");
+        ParseError("ParseRulesFile udp any-any PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->udp_anyany);
 
     rpt->icmp_anyany = PortObjectNew();
     if (rpt->icmp_anyany == NULL)
-        FatalError("ParseRulesFile icmp any-any PortObjectNew() failed\n");
+        ParseError("ParseRulesFile icmp any-any PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->icmp_anyany);
 
     rpt->ip_anyany = PortObjectNew();
     if (rpt->ip_anyany == NULL)
-        FatalError("ParseRulesFile ip PortObjectNew() failed\n");
+        ParseError("ParseRulesFile ip PortObjectNew() failed\n");
     PortObjectAddPortAny(rpt->ip_anyany);
 
     /* Create the tcp Rules PortTables */
     rpt->tcp_src = PortTableNew();
     if (rpt->tcp_src == NULL)
-        FatalError("ParseRulesFile tcp-src PortTableNew() failed\n");
+        ParseError("ParseRulesFile tcp-src PortTableNew() failed\n");
 
     rpt->tcp_dst = PortTableNew();
     if (rpt->tcp_dst == NULL)
-        FatalError("ParseRulesFile tcp-dst PortTableNew() failed\n");
+        ParseError("ParseRulesFile tcp-dst PortTableNew() failed\n");
 
     /* Create the udp Rules PortTables */
     rpt->udp_src = PortTableNew();
     if (rpt->udp_src == NULL)
-        FatalError("ParseRulesFile udp-src PortTableNew() failed\n");
+        ParseError("ParseRulesFile udp-src PortTableNew() failed\n");
 
     rpt->udp_dst = PortTableNew();
     if (rpt->udp_dst == NULL)
-        FatalError("ParseRulesFile udp-dst PortTableNew() failed\n");
+        ParseError("ParseRulesFile udp-dst PortTableNew() failed\n");
 
     /* Create the icmp Rules PortTables */
     rpt->icmp_src = PortTableNew();
     if (rpt->icmp_src == NULL)
-        FatalError("ParseRulesFile icmp-src PortTableNew() failed\n");
+        ParseError("ParseRulesFile icmp-src PortTableNew() failed\n");
 
     rpt->icmp_dst = PortTableNew();
     if (rpt->icmp_dst == NULL)
-        FatalError("ParseRulesFile icmp-dst PortTableNew() failed\n");
+        ParseError("ParseRulesFile icmp-dst PortTableNew() failed\n");
 
     /* Create the ip Rules PortTables */
     rpt->ip_src = PortTableNew();
     if (rpt->ip_src == NULL)
-        FatalError("ParseRulesFile ip-src PortTableNew() failed\n");
+        ParseError("ParseRulesFile ip-src PortTableNew() failed\n");
 
     rpt->ip_dst = PortTableNew();
     if (rpt->ip_dst == NULL)
-        FatalError("ParseRulesFile ip-dst PortTableNew() failed\n");
+        ParseError("ParseRulesFile ip-dst PortTableNew() failed\n");
 
     /*
      * someday these could be read from snort.conf, something like...
@@ -11804,12 +11869,12 @@ static void OtnInit(SnortConfig *sc)
     /* Init sid-gid -> otn map */
     sc->so_rule_otn_map = SoRuleOtnLookupNew();
     if (sc->so_rule_otn_map == NULL)
-         FatalError("ParseRulesFile so_otn_map sfghash_new failed.\n");
+         ParseError("ParseRulesFile so_otn_map sfghash_new failed.\n");
 
     /* Init sid-gid -> otn map */
     sc->otn_map = OtnLookupNew();
     if (sc->otn_map == NULL)
-        FatalError("ParseRulesFile otn_map sfghash_new failed.\n");
+        ParseError("ParseRulesFile otn_map sfghash_new failed.\n");
 }
 
 #ifndef SOURCEFIRE
@@ -12256,7 +12321,7 @@ static void IntegrityCheckRules(SnortConfig *sc)
 
                 if(opt_func_count == 0)
                 {
-                    FatalError("Zero Length OTN List\n");
+                    ParseError("Zero Length OTN List\n");
                 }
                 //DEBUG_WRAP(DebugMessage(DEBUG_DETECT,"\n"););
 

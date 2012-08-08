@@ -29,6 +29,7 @@
 
 #define MAX_BUF 65535
 #define DECODE_SUCCESS  0
+#define DECODE_EXCEEDED  1 /* Decode Complete when we reach the max depths */
 #define DECODE_FAIL    -1
 
 typedef enum {
@@ -132,6 +133,16 @@ static inline void ClearPrevEncodeBuf(Email_DecodeState *ds)
 {
     ds->prev_encoded_bytes = 0;
     ds->prev_encoded_buf = NULL;
+}
+
+static inline void ResetBytesRead(Email_DecodeState *ds)
+{
+    ds->uu_state.begin_found = ds->uu_state.end_found = 0;
+    ClearPrevEncodeBuf(ds);
+    ds->b64_state.encode_bytes_read = ds->b64_state.decode_bytes_read = 0;
+    ds->qp_state.encode_bytes_read = ds->qp_state.decode_bytes_read = 0;
+    ds->uu_state.encode_bytes_read = ds->uu_state.decode_bytes_read = 0;
+    ds->bitenc_state.bytes_read = 0;
 }
 
 static inline void ResetDecodedBytes(Email_DecodeState *ds)

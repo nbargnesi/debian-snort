@@ -242,10 +242,9 @@ static int SMTP_Inspect(SFSnortPacket *);
 
 /**************************************************************************/
 
-static void SetSmtpBuffers(SMTP *ssn)
+static inline void SetSmtpBuffers(SMTP *ssn)
 {
-    if ((ssn != NULL) && (ssn->decode_state == NULL)
-            && (!SMTP_IsDecodingEnabled(smtp_eval_config)))
+    if ((ssn != NULL) && (ssn->decode_state == NULL))
     {
         MemBucket *bkt = mempool_alloc(smtp_mime_mempool);
 
@@ -303,6 +302,62 @@ static void SetLogBuffers(SMTP *ssn)
             }
         }
     }
+}
+
+void SMTP_MimeMempoolInit(int max_mime_mem, int max_depth)
+{
+    int encode_depth;
+    int max_sessions;
+
+    if (smtp_mime_mempool != NULL)
+        return;
+
+    encode_depth = max_depth;
+
+    if (encode_depth & 7)
+        encode_depth += (8 - (encode_depth & 7));
+
+    max_sessions = max_mime_mem / ( 2 * encode_depth);
+
+    smtp_mime_mempool = (MemPool *)calloc(1, sizeof(MemPool));
+
+    if (mempool_init(smtp_mime_mempool, max_sessions,
+            (2 * encode_depth)) != 0)
+    {
+        DynamicPreprocessorFatalMessage(
+            "SMTP:  Could not allocate SMTP mime mempool.\n");
+    }
+}
+
+void SMTP_MempoolInit(uint32_t email_hdrs_log_depth, uint32_t memcap)
+{
+    uint32_t max_bkt_size; 
+    uint32_t max_sessions_logged; 
+
+    if (smtp_mempool != NULL) 
+        return;
+
+    max_bkt_size = ((2* MAX_EMAIL) + MAX_FILE +
+        email_hdrs_log_depth);
+
+    max_sessions_logged = memcap/max_bkt_size; 
+
+    smtp_mempool = calloc(1, sizeof(*smtp_mempool)); 
+
+    if (mempool_init(smtp_mempool, max_sessions_logged, 
+            max_bkt_size) != 0) 
+    { 
+        if(!max_sessions_logged) 
+        { 
+            DynamicPreprocessorFatalMessage( 
+                "SMTP:  Could not allocate SMTP mempool.\n"); 
+        } 
+        else 
+        { 
+            DynamicPreprocessorFatalMessage( 
+                "SMTP: Error setting the \"memcap\" \n"); 
+        } 
+    } 
 }
 
 static inline void SMTP_UpdateDecodeStats(Email_DecodeState *ds)
@@ -550,7 +605,6 @@ static SMTP * SMTP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
     }
 
     smtp_ssn = ssn;
-    SetSmtpBuffers(smtp_ssn);
     SetLogBuffers(smtp_ssn);
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_SMTP,
                                          ssn, &SMTP_SessionFree);
@@ -1387,7 +1441,8 @@ static const uint8_t * SMTP_HandleData(SFSnortPacket *p, const uint8_t *ptr, con
         data_end_marker = data_end = end;
     }
 
-    _dpd.setFileDataPtr((uint8_t*)ptr, (uint16_t)(data_end - ptr));
+    if(!smtp_eval_config->ignore_data)
+        _dpd.setFileDataPtr((uint8_t*)ptr, (uint16_t)(data_end - ptr));
 
     if ((smtp_ssn->data_state == STATE_DATA_HEADER) ||
         (smtp_ssn->data_state == STATE_DATA_UNKNOWN))
@@ -1611,14 +1666,8 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                     switch (smtp_search_info.id)
                     {
                         case HDR_CONTENT_TYPE:
-                            /* for now we're just looking for the boundary in the data
-                             * header section */
-                            if (smtp_ssn->data_state != STATE_MIME_HEADER)
-                            {
-                                content_type_ptr = ptr + smtp_search_info.length;
-                                smtp_ssn->state_flags |= SMTP_FLAG_IN_CONTENT_TYPE;
-                            }
-
+                            content_type_ptr = ptr + smtp_search_info.length;
+                            smtp_ssn->state_flags |= SMTP_FLAG_IN_CONTENT_TYPE;
                             break;
                         case HDR_CONT_TRANS_ENC:
                             cont_trans_enc = ptr + smtp_search_info.length;
@@ -1718,20 +1767,38 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
         if ((smtp_ssn->state_flags &
              (SMTP_FLAG_IN_CONTENT_TYPE | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONTENT_TYPE)
         {
-            /* we got the full content-type header - look for boundary string */
-            ret = SMTP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
-            if (ret != -1)
+            if (smtp_ssn->data_state != STATE_MIME_HEADER)
             {
-                ret = SMTP_BoundarySearchInit();
+                /* we got the full content-type header - look for boundary string */
+                ret = SMTP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
                 if (ret != -1)
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Got mime boundary: %s\n",
-                                                         smtp_ssn->mime_boundary.boundary););
+                    ret = SMTP_BoundarySearchInit();
+                    if (ret != -1)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_SMTP, "Got mime boundary: %s\n",
+                                                             smtp_ssn->mime_boundary.boundary););
 
-                    smtp_ssn->state_flags |= SMTP_FLAG_GOT_BOUNDARY;
+                        smtp_ssn->state_flags |= SMTP_FLAG_GOT_BOUNDARY;
+                    }
                 }
             }
-
+            else if (!(smtp_ssn->state_flags & SMTP_FLAG_EMAIL_ATTACH))
+            {
+                if( !SMTP_IsDecodingEnabled(smtp_eval_config) && !smtp_eval_config->ignore_data)
+                {
+                    SetSmtpBuffers(smtp_ssn);
+                    if(smtp_ssn->decode_state != NULL)
+                    {
+                        ResetBytesRead(smtp_ssn->decode_state);
+                        SMTP_DecodeType((const char *)content_type_ptr, (eolm - content_type_ptr), false);
+                        smtp_ssn->state_flags |= SMTP_FLAG_EMAIL_ATTACH;
+                        /* check to see if there are other attachments in this packet */
+                        if( smtp_ssn->decode_state->decoded_bytes )
+                            smtp_ssn->state_flags |= SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                    }
+                }
+            }
             smtp_ssn->state_flags &= ~SMTP_FLAG_IN_CONTENT_TYPE;
             content_type_ptr = NULL;
         }
@@ -1739,20 +1806,25 @@ static const uint8_t * SMTP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 (SMTP_FLAG_IN_CONT_TRANS_ENC | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONT_TRANS_ENC)
         {
             /* Check for Content-Transfer-Encoding : */
-            if( (!SMTP_IsDecodingEnabled(smtp_eval_config)) && (smtp_ssn->decode_state != NULL))
+            if( !SMTP_IsDecodingEnabled(smtp_eval_config) && !smtp_eval_config->ignore_data)
             {
-                SMTP_DecodeType((const char *)cont_trans_enc, eolm - cont_trans_enc );
-                smtp_ssn->state_flags |= SMTP_FLAG_EMAIL_ATTACH;
-                /* check to see if there are other attachments in this packet */
-                if( smtp_ssn->decode_state->decoded_bytes )
-                    smtp_ssn->state_flags |= SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                SetSmtpBuffers(smtp_ssn);
+                if(smtp_ssn->decode_state != NULL)
+                {
+                    ResetBytesRead(smtp_ssn->decode_state);
+                    SMTP_DecodeType((const char *)cont_trans_enc, (eolm - cont_trans_enc), true);
+                    smtp_ssn->state_flags |= SMTP_FLAG_EMAIL_ATTACH;
+                    /* check to see if there are other attachments in this packet */
+                    if( smtp_ssn->decode_state->decoded_bytes )
+                        smtp_ssn->state_flags |= SMTP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                }
             }
             smtp_ssn->state_flags &= ~SMTP_FLAG_IN_CONT_TRANS_ENC;
 
             cont_trans_enc = NULL;
         }
-        else if ((smtp_ssn->state_flags &
-                    (SMTP_FLAG_IN_CONT_DISP | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONT_DISP)
+        else if (((smtp_ssn->state_flags &
+                    (SMTP_FLAG_IN_CONT_DISP | SMTP_FLAG_FOLDING)) == SMTP_FLAG_IN_CONT_DISP) && cont_disp)
         {
             if( smtp_eval_config->log_filename )
                 SMTP_CopyFileName(cont_disp, eolm - cont_disp);
@@ -1819,7 +1891,7 @@ static const uint8_t * SMTP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
                     smtp_ssn->state_flags &= ~SMTP_FLAG_EMAIL_ATTACH;
                     if( attach_start < attach_end )
                     {
-                        if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) != DECODE_SUCCESS )
+                        if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) < DECODE_SUCCESS )
                         {
                             SMTP_DecodeAlert();
                         }
@@ -1862,7 +1934,7 @@ static const uint8_t * SMTP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
         attach_end = data_end_marker;
         if( attach_start < attach_end )
         {
-            if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) != DECODE_SUCCESS )
+            if(EmailDecode( attach_start, attach_end, smtp_ssn->decode_state) < DECODE_SUCCESS )
             {
                 SMTP_DecodeAlert();
             }

@@ -99,6 +99,7 @@ extern char *snort_conf_dir;
 extern MemPool *hi_gzip_mempool;
 #endif
 
+
 /* Stats tracking for HTTP Inspect */
 HIStats hi_stats;
 
@@ -3291,7 +3292,7 @@ static inline void InitUriBufs( void )
 
 }
 
-static inline void ApplyFlowDepth (Packet* p, int flow_depth)
+static inline void ApplyClientFlowDepth (Packet* p, int flow_depth)
 {
     switch (flow_depth)
     {
@@ -3438,6 +3439,8 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         return 0;
     }
 
+    hsd = GetHttpSessionData(p);
+
 #ifdef ENABLE_PAF
     if ( ScPafEnabled() &&
         (p->packet_flags & PKT_STREAM_INSERT) &&
@@ -3446,12 +3449,16 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         int flow_depth;
 
         if ( iInspectMode == HI_SI_CLIENT_MODE )
+        {
             flow_depth = Session->server_conf->client_flow_depth;
+            ApplyClientFlowDepth(p, flow_depth);
+        }
         else
-            flow_depth = Session->server_conf->server_flow_depth;
+        {
+            ApplyFlowDepth(Session->server_conf, p, hsd, 0, 0, GET_PKT_SEQ(p));
+        }
 
         p->packet_flags |= PKT_HTTP_DECODE;
-        ApplyFlowDepth(p, flow_depth);
 
         if ( p->alt_dsize == 0 )
         {
@@ -3471,7 +3478,6 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
     }
 #endif
 
-    hsd = GetHttpSessionData(p);
     if (hsd == NULL)
         hsd = SetNewHttpSessionData(p, (void *)Session);
     else
@@ -3649,7 +3655,7 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
 
             if(IsLimitedDetect(p))
             {
-                ApplyFlowDepth(p, Session->server_conf->client_flow_depth);
+                ApplyClientFlowDepth(p, Session->server_conf->client_flow_depth);
 
                 if( (p->uri_count == 0) && (p->alt_dsize == 0)  )
                 {
@@ -3896,8 +3902,7 @@ void FreeHttpSessionData(void *data)
     if (hsd->decomp_state != NULL)
     {
         inflateEnd(&(hsd->decomp_state->d_stream));
-        mempool_free(hi_gzip_mempool, hsd->decomp_state->gzip_bucket);
-        free(hsd->decomp_state);
+        mempool_free(hi_gzip_mempool, hsd->decomp_state->bkt);
     }
 #endif
 

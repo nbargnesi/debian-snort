@@ -1260,6 +1260,50 @@ void FinalizeContentUniqueness(OptTreeNode *otn)
     }
 }
 
+void ValidateFastPattern(OptTreeNode *otn)
+{
+    OptFpList *fpl = NULL;
+    int fp_only = 0;
+
+    for(fpl = otn->opt_func; fpl != NULL; fpl = fpl->next)
+    {
+        /* a relative option is following a fast_pattern:only and
+         * there was no resets.
+         */
+        if (fp_only == 1)
+        {
+            if (fpl->isRelative)
+                ParseWarning("relative rule option used after "
+                    "fast_pattern:only");
+        }
+
+        /* reset the check if one of these are present.
+         */
+        if ((fpl->type == RULE_OPTION_TYPE_FILE_DATA) ||
+            (fpl->type == RULE_OPTION_TYPE_PKT_DATA) ||
+            (fpl->type == RULE_OPTION_TYPE_BASE64_DATA) ||
+            (fpl->type == RULE_OPTION_TYPE_PCRE) ||
+            (fpl->type == RULE_OPTION_TYPE_BYTE_JUMP) ||
+            (fpl->type == RULE_OPTION_TYPE_BYTE_EXTRACT))
+        {
+            fp_only = 0;
+        }
+
+        /* set/unset the check on content options.
+         */
+        if ((fpl->type == RULE_OPTION_TYPE_CONTENT) || 
+            (fpl->type == RULE_OPTION_TYPE_CONTENT_URI))
+        {
+            PatternMatchData *pmd = (PatternMatchData *)fpl->context;
+
+            if (pmd->fp_only)
+                fp_only = 1;
+            else
+                fp_only = 0;
+        }
+    }
+}
+
 void make_precomp(PatternMatchData * idx)
 {
     if(idx->skip_stride)

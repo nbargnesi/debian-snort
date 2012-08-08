@@ -54,9 +54,6 @@
 #define UNIFIED2_IDS_EVENT_VLAN      104
 #define UNIFIED2_IDS_EVENT_IPV6_VLAN 105
 #define UNIFIED2_EXTRA_DATA          110
-#define UNIFIED2_IDS_EVENT_NG        207
-#define UNIFIED2_IDS_EVENT_IPV6_NG   208
-
 
 /* Data structure used for serialization of Unified2 Records */
 typedef struct _Serial_Unified2_Header
@@ -64,81 +61,6 @@ typedef struct _Serial_Unified2_Header
     uint32_t   type;
     uint32_t   length;
 } Serial_Unified2_Header;
-
-//UNIFIED2_IDS_EVENT_NG = type 207
-typedef struct _Unified2IDSEventNG
-{
-    uint32_t sensor_id;
-    uint32_t event_id;
-    uint32_t event_second;
-    uint32_t event_microsecond;
-    uint32_t signature_id;
-    uint32_t generator_id;
-    uint32_t signature_revision;
-    uint32_t classification_id;
-    uint32_t priority_id;
-    uint32_t ip_source;
-    uint32_t ip_destination;
-    uint16_t sport_itype;
-    uint16_t dport_icode;
-    uint8_t  protocol;
-    uint8_t  impact_flag;//overloads packet_action
-    uint8_t  impact;
-    uint8_t  blocked;
-    uint32_t mpls_label;
-    uint16_t vlanId;
-    uint16_t pad;
-    /* Structure should match Unified2IDSEvent up to this point */
-    uint8_t  policy_uuid[16];
-    uint32_t user_id;
-    uint32_t web_application_id;
-    uint32_t client_application_id;
-    uint32_t application_protocol_id;
-    uint32_t policyengine_rule_id;
-    uint8_t  policyengine_policy_uuid[16];
-    uint8_t  interface_ingress_uuid[16];
-    uint8_t  interface_egress_uuid[16];
-    uint8_t  security_zone_ingress_uuid[16];
-    uint8_t  security_zone_egress_uuid[16];
-} Unified2IDSEventNG;
-
-
-//UNIFIED2_IDS_EVENT_IPV6_NG = type 208
-typedef struct _Unified2IDSEventIPv6_NG
-{
-    uint32_t sensor_id;
-    uint32_t event_id;
-    uint32_t event_second;
-    uint32_t event_microsecond;
-    uint32_t signature_id;
-    uint32_t generator_id;
-    uint32_t signature_revision;
-    uint32_t classification_id;
-    uint32_t priority_id;
-    struct in6_addr ip_source;
-    struct in6_addr ip_destination;
-    uint16_t sport_itype;
-    uint16_t dport_icode;
-    uint8_t  protocol;
-    uint8_t  impact_flag;//overloads packet_action
-    uint8_t  impact;
-    uint8_t  blocked;
-    uint32_t mpls_label;
-    uint16_t vlanId;
-    uint16_t pad;
-    /* Structure should match Unified2IDSEventIPv6 up to this point */
-    uint8_t  policy_uuid[16];
-    uint32_t user_id;
-    uint32_t web_application_id;
-    uint32_t client_application_id;
-    uint32_t application_protocol_id;
-    uint32_t policyengine_rule_id;
-    uint8_t  policyengine_policy_uuid[16];
-    uint8_t  interface_ingress_uuid[16];
-    uint8_t  interface_egress_uuid[16];
-    uint8_t  security_zone_ingress_uuid[16];
-    uint8_t  security_zone_egress_uuid[16];
-} Unified2IDSEventIPv6_NG;
 
 
 //UNIFIED2_IDS_EVENT_VLAN = type 104

@@ -34,11 +34,6 @@
 #include "sf_dynamic_preprocessor.h"
 
 /********************************************************************
- * Extern variables
- ********************************************************************/
-extern DCE2_Stats dce2_stats;
-
-/********************************************************************
  * Function:
  *
  * Purpose:
@@ -78,18 +73,9 @@ void DCE2_TcpProcess(DCE2_TcpSsnData *tsd)
     const SFSnortPacket *p = tsd->sd.wire_pkt;
     const uint8_t *data_ptr = p->payload;
     uint16_t data_len = p->payload_size;
-    uint16_t overlap_bytes = DCE2_SsnGetOverlap(&tsd->sd);
 
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Processing TCP packet.\n"));
     dce2_stats.tcp_pkts++;
-
-    if (overlap_bytes != 0)
-    {
-        if (overlap_bytes >= data_len)
-            return;
-
-        DCE2_MOVE(data_ptr, data_len, overlap_bytes);
-    }
 
     DCE2_CoProcess(&tsd->sd, &tsd->co_tracker, data_ptr, data_len);
 }

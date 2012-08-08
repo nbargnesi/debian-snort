@@ -101,7 +101,7 @@
 
 \begin{document}
 
-\title{SNORT\textsuperscript{\textregistered} Users Manual\\2.9.2}
+\title{SNORT\textsuperscript{\textregistered} Users Manual\\2.9.3}
 
 \author{The Snort Project}
 
@@ -2178,7 +2178,7 @@ See Section \ref{eventqueue} for more information and examples.\\
 \hline
 \texttt{config flowbits\_size: <num-bits>} & Specifies the maximum number of
 flowbit tags that can be used within a rule set.  The default is 1024 bits
-and maximum is 2096. \\
+and maximum is 2048. \\
 
 \hline
 \texttt{config ignore\_ports: <proto> <port-list>} & Specifies ports to ignore
@@ -4006,19 +4006,15 @@ using the \texttt{disabled} keyword.
 
 \item \texttt{max\_gzip\_mem $<$integer$>$}
 
-This option determines (in bytes) the maximum amount of memory the HTTP Inspect 
-preprocessor will use for decompression. The minimum allowed value for this option 
-is 3276 bytes. This option along with \texttt{compress\_depth} and \texttt{decompress\_depth} 
-determines the gzip sessions that will be decompressed at any given instant. The default 
-value for this option is 838860.
+This option determines (in bytes) the maximum amount of memory the HTTP Inspect preprocessor 
+will use for decompression. The minimum allowed value for this option is 3276 bytes. This option
+determines the number of concurrent sessions that can be decompressed at any given instant.
+The default value for this option is 838860.
 
 \begin{note}
 
-This value should be specified in the default policy even when the HTTP inspect preprocessor 
-is turned off using the \texttt{disabled} keyword. It is suggested to set this value such that 
-the max gzip session calculated as follows is at least 1.
-
-max gzip session = \texttt{max\_gzip\_mem} /(\texttt{decompress\_depth} + \texttt{compress\_depth})
+This value should be specified in the default policy even when the HTTP inspect preprocessor is 
+turned off using the \texttt{disabled} keyword.
 
 \end{note}
 
@@ -5162,9 +5158,8 @@ This config option is used to turn off/on or set the base64 decoding depth used 
 decode the base64 encoded MIME attachments. The value ranges from -1 to 65535.
 A value of -1 turns off the base64 decoding of MIME attachments. The value of 0
 sets the decoding of base64 encoded MIME attachments to unlimited. A value other
-than 0 or -1 restricts the decoding of base64 MIME attachments. A SMTP preprocessor
-alert with sid 10 is generated (if enabled) when the decoding fails or when this
-decode depth is exceeded. 
+than 0 or -1 restricts the decoding of base64 MIME attachments, and applies per attachment. 
+A SMTP preprocessor alert with sid 10 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
 is turned on the base64 encoded MIME attachments/data across multiple packets are decoded too.
@@ -5186,9 +5181,8 @@ This config option is used to turn off/on or set the Quoted-Printable decoding d
 used to decode the Quoted-Printable(QP) encoded MIME attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the QP decoding of MIME attachments.
 The value of 0 sets the decoding of QP encoded MIME attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of QP MIME attachments. A SMTP
-preprocessor alert with sid 11 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of QP MIME attachments, and applies per 
+attachment. A SMTP preprocessor alert with sid 11 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
 is turned on the QP encoded MIME attachments/data across multiple packets are decoded too.
@@ -5201,15 +5195,15 @@ the value specified in the default config.
 
 \item \texttt{bitenc\_decode\_depth}
 
-This config option is used to turn off/on or set the 7bit/8bit/binary/text extraction
-depth used to extract the 7bit/8bit/binary encoded or plain text MIME attachments. The
-value ranges from -1 to 65535. A value of -1 turns off the extraction of these MIME
-attachments. The value of 0 sets the extraction of these MIME attachments to unlimited.
-A value other than 0 or -1 restricts the extraction of these MIME attachments. A SMTP
-preprocessor alert with sid 12 is generated (if enabled) when this extraction depth is exceeded.
+This config option is used to turn off/on or set the non-encoded MIME extraction
+depth used to extract the non-encoded MIME attachments. The value ranges from -1 
+to 65535. A value of -1 turns off the extraction of these MIME attachments. 
+The value of 0 sets the extraction of these MIME attachments to unlimited.
+A value other than 0 or -1 restricts the extraction of these MIME attachments, and applies 
+per attachment.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
-is turned on the 7bit/8bit/binary/text MIME attachments/data across multiple packets are extracted too.
+is turned on the non-encoded MIME attachments/data across multiple packets are extracted too.
 
 The extracted data is available for detection using the rule option \texttt{file\_data}.
 See \ref{sub:file_data} rule option for more details.
@@ -5223,9 +5217,8 @@ This config option is used to turn off/on or set the Unix-to-Unix decoding depth
 used to decode the Unix-to-Unix(UU) encoded attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the UU decoding of SMTP attachments.
 The value of 0 sets the decoding of UU encoded SMTP attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of UU SMTP attachments. A SMTP
-preprocessor alert with sid 13 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of UU SMTP attachments, and applies 
+per attachment. A SMTP preprocessor alert with sid 13 is generated (if enabled) when the decoding fails.
 
 Multiple UU attachments/data in one packet are pipelined. When stateful inspection
 is turned on the UU encoded SMTP attachments/data across multiple packets are decoded too.
@@ -5252,7 +5245,7 @@ or on the base64 decoding instead.
 
 \item \texttt{max\_mime\_depth <int>}
 
-Specifies the maximum number of base64 encoded data to decode per SMTP session.
+Specifies the maximum number of base64 encoded data to decode per SMTP attachment.
 The option take values ranging from 4 to 20480 bytes. The default value for this
 in snort in 1460 bytes.
 
@@ -5266,7 +5259,7 @@ or on the base64 decoding instead.
 \item \texttt{max\_mime\_mem <int>}
 
 This option determines (in bytes) the maximum amount of memory the SMTP preprocessor
-will use for decoding base64 encoded/quoted-printable/7bit/8bit/binary MIME attachments/data
+will use for decoding base64 encoded/quoted-printable/non-encoded MIME attachments/data
 or Unix-to-Unix encoded attachments. This value can be set from 3276 bytes to 100MB.
 
 This option along with the maximum of the decoding depths will determine the SMTP
@@ -5450,9 +5443,8 @@ This config option is used to turn off/on or set the base64 decoding depth used 
 decode the base64 encoded MIME attachments. The value ranges from -1 to 65535.
 A value of -1 turns off the base64 decoding of MIME attachments. The value of 0
 sets the decoding of base64 encoded MIME attachments to unlimited. A value other
-than 0 or -1 restricts the decoding of base64 MIME attachments. A POP preprocessor
-alert with sid 4 is generated (if enabled) when the decoding fails or when this
-decode depth is exceeded.
+than 0 or -1 restricts the decoding of base64 MIME attachments, and applies per 
+attachment. A POP preprocessor alert with sid 4 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
 is turned on the base64 encoded MIME attachments/data across multiple packets are decoded too.
@@ -5472,9 +5464,8 @@ This config option is used to turn off/on or set the Quoted-Printable decoding d
 used to decode the Quoted-Printable(QP) encoded MIME attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the QP decoding of MIME attachments.
 The value of 0 sets the decoding of QP encoded MIME attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of QP MIME attachments. A POP
-preprocessor alert with sid 5 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of QP MIME attachments, and applies per 
+attachment. A POP preprocessor alert with sid 5 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
 is turned on the QP encoded MIME attachments/data across multiple packets are decoded too.
@@ -5487,15 +5478,15 @@ the value specified in the default config.
 
 \item \texttt{bitenc\_decode\_depth}
 
-This config option is used to turn off/on or set the 7bit/8bit/binary extraction
-depth used to extract the 7bit/8bit/binary encoded MIME attachments. The
-value ranges from -1 to 65535. A value of -1 turns off the extraction of these MIME
-attachments. The value of 0 sets the extraction of these MIME attachments to unlimited.
-A value other than 0 or -1 restricts the extraction of these MIME attachments. A POP 
-preprocessor alert with sid 6 is generated (if enabled) when this extraction depth is exceeded.
+This config option is used to turn off/on or set the non-encoded MIME extraction
+depth used to extract the non-encoded MIME attachments. The value ranges from -1 
+to 65535. A value of -1 turns off the extraction of these MIME attachments. 
+The value of 0 sets the extraction of these MIME attachments to unlimited.
+A value other than 0 or -1 restricts the extraction of these MIME attachments, and applies 
+per attachment.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
-is turned on the 7bit/8bit/binary MIME attachments/data across multiple packets are extracted too.
+is turned on the non-encoded MIME attachments/data across multiple packets are extracted too.
 
 The extracted data is available for detection using the rule option \texttt{file\_data}.
 See \ref{sub:file_data} rule option for more details.
@@ -5509,9 +5500,8 @@ This config option is used to turn off/on or set the Unix-to-Unix decoding depth
 used to decode the Unix-to-Unix(UU) encoded attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the UU decoding of POP attachments.
 The value of 0 sets the decoding of UU encoded POP attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of UU POP attachments. A POP 
-preprocessor alert with sid 7 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of UU POP attachments, and applies per 
+attachment. A POP preprocessor alert with sid 7 is generated (if enabled) when the decoding fails.
 
 Multiple UU attachments/data in one packet are pipelined. When stateful inspection
 is turned on the UU encoded POP attachments/data across multiple packets are decoded too.
@@ -5525,7 +5515,7 @@ the value specified in the default config.
 \item \texttt{memcap <int>}
 
 This option determines (in bytes) the maximum amount of memory the POP preprocessor
-will use for decoding base64 encoded/quoted-printable/7bit/8bit/binary MIME attachments/data
+will use for decoding base64 encoded/quoted-printable/non-encoded MIME attachments/data
 or Unix-to-Unix encoded attachments. This value can be set from 3276 bytes to 100MB.
 
 This option along with the maximum of the decoding depths will determine the POP 
@@ -5623,9 +5613,8 @@ This config option is used to turn off/on or set the base64 decoding depth used 
 decode the base64 encoded MIME attachments. The value ranges from -1 to 65535.
 A value of -1 turns off the base64 decoding of MIME attachments. The value of 0
 sets the decoding of base64 encoded MIME attachments to unlimited. A value other
-than 0 or -1 restricts the decoding of base64 MIME attachments. A IMAP preprocessor
-alert with sid 4 is generated (if enabled) when the decoding fails or when this
-decode depth is exceeded.
+than 0 or -1 restricts the decoding of base64 MIME attachments, and applies per attachment. 
+A IMAP preprocessor alert with sid 4 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
 is turned on the base64 encoded MIME attachments/data across multiple packets are decoded too.
@@ -5645,9 +5634,8 @@ This config option is used to turn off/on or set the Quoted-Printable decoding d
 used to decode the Quoted-Printable(QP) encoded MIME attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the QP decoding of MIME attachments.
 The value of 0 sets the decoding of QP encoded MIME attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of QP MIME attachments. A IMAP
-preprocessor alert with sid 5 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of QP MIME attachments, and applies per 
+attachment. A IMAP preprocessor alert with sid 5 is generated (if enabled) when the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
 is turned on the QP encoded MIME attachments/data across multiple packets are decoded too.
@@ -5660,15 +5648,15 @@ the value specified in the default config.
 
 \item \texttt{bitenc\_decode\_depth}
 
-This config option is used to turn off/on or set the 7bit/8bit/binary extraction
-depth used to extract the 7bit/8bit/binary encoded MIME attachments. The
+This config option is used to turn off/on or set the non-encoded MIME extraction
+depth used to extract the non-encoded MIME attachments. The
 value ranges from -1 to 65535. A value of -1 turns off the extraction of these MIME
 attachments. The value of 0 sets the extraction of these MIME attachments to unlimited.
-A value other than 0 or -1 restricts the extraction of these MIME attachments. A IMAP 
-preprocessor alert with sid 6 is generated (if enabled) when this extraction depth is exceeded.
+A value other than 0 or -1 restricts the extraction of these MIME attachments, and applies 
+per attachment.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection
-is turned on the 7bit/8bit/binary MIME attachments/data across multiple packets are extracted too.
+is turned on the non-encoded MIME attachments/data across multiple packets are extracted too.
 
 The extracted data is available for detection using the rule option \texttt{file\_data}.
 See \ref{sub:file_data} rule option for more details.
@@ -5682,9 +5670,8 @@ This config option is used to turn off/on or set the Unix-to-Unix decoding depth
 used to decode the Unix-to-Unix(UU) encoded attachments. The value ranges
 from -1 to 65535. A value of -1 turns off the UU decoding of IMAP attachments.
 The value of 0 sets the decoding of UU encoded IMAP attachments to unlimited. A
-value other than 0 or -1 restricts the decoding of UU IMAP attachments. A IMAP 
-preprocessor alert with sid 7 is generated (if enabled) when the decoding fails
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of UU IMAP attachments, and applies per 
+attachment. A IMAP preprocessor alert with sid 7 is generated (if enabled) when the decoding fails.
 
 Multiple UU attachments/data in one packet are pipelined. When stateful inspection
 is turned on the UU encoded IMAP attachments/data across multiple packets are decoded too.
@@ -5698,7 +5685,7 @@ the value specified in the default config.
 \item \texttt{memcap <int>}
 
 This option determines (in bytes) the maximum amount of memory the IMAP preprocessor
-will use for decoding base64 encoded/quoted-printable/7bit/8bit/binary MIME attachments/data
+will use for decoding base64 encoded/quoted-printable/non-encoded MIME attachments/data
 or Unix-to-Unix encoded attachments. This value can be set from 3276 bytes to 100MB.
 
 This option along with the maximum of the decoding depths will determine the IMAP 
@@ -6972,6 +6959,8 @@ Option & Argument & Required & Default\\
 \hline
 \texttt{disabled} & NONE & NO & OFF\\
 \hline
+\texttt{smb\_fingerprint\_policy} & \texttt{<fp-policy>} & NO & OFF\\
+\hline
 \end{tabular}
 \end{itemize}
 
@@ -6984,6 +6973,7 @@ Option & Argument & Required & Default\\
     event-list       = event | event ',' event-list
     event            = "memcap" | "smb" | "co" | "cl"
     re-thresh        = 0-65535
+    fp-policy        = "server" | "client" | "both"
 \end{verbatim}
 \normalsize
 
@@ -7078,6 +7068,17 @@ supplied as an argument to this option will, in effect, disable this option.
 Default is disabled.
 
 \end{itemize}
+
+\item[] \texttt{smb\_fingerprint\_policy}
+\begin{itemize}
+
+\item[] In the initial phase of an SMB session, the client needs to authenticate
+with a SessionSetupAndX.  Both the request and response to this command
+contain OS and version information that can allow the preprocessor to
+dynamically set the policy for a session which allows for better
+protection against Windows and Samba specific evasions.
+
+\end{itemize}
 \end{itemize}
 
 \textit{Option examples}
@@ -7093,6 +7094,8 @@ Default is disabled.
     events [smb, co]
     events [memcap, smb, co, cl]
     reassemble_threshold 500
+    smb_fingerprint_policy both
+    smb_fingerprint_policy client
 \end{verbatim}
 \normalsize
 
@@ -7105,6 +7108,7 @@ Default is disabled.
     preprocessor dcerpc2: memcap 50000, events [memcap, smb, co, cl], max_frag_len 14440
     preprocessor dcerpc2: disable_defrag, events [memcap, smb]
     preprocessor dcerpc2: reassemble_threshold 500
+    preprocessor dcerpc2: memcap 50000, events [memcap, smb, co, cl], max_frag_len 14440, smb_fingerprint_policy both
 \end{verbatim}
 \normalsize
 
@@ -7574,6 +7578,56 @@ SID & Description\\
  26 & The preprocessor will alert if it sees any of the invalid SMB shares
       configured. It looks for a \texttt{Tree Connect} or
       \texttt{Tree Connect AndX} to the share.\\
+\hline
+ 48 & The preprocessor will alert if a data count for a Core dialect write
+      command is zero.\\
+\hline
+ 49 & For some of the Core dialect commands such as \texttt{Write} and
+      \texttt{Read}, there are two data count fields, one in the main command
+      header and one in the data format section.  If these aren't the same, the
+      preprocessor will alert.\\
+\hline
+ 50 & In the initial negotiation phase of an SMB session, the server in a
+      \texttt{Negotiate} response and the client in a \texttt{SessionSetupAndX}
+      request will advertise the maximum number of outstanding requests
+      supported.  The preprocessor will alert if the lesser of the two is
+      exceeded.\\
+\hline
+ 51 & When a client sends a request it uses a value called the MID (multiplex
+      id) to match a response, which the server is supposed to echo, to a
+      request.  If there are multiple outstanding requests with the same
+      MID, the preprocessor will alert.\\
+\hline
+ 52 & In the \texttt{Negotiate} request a client gives a list of SMB dialects it
+      supports, normally in order from least desirable to most desirable
+      and the server responds with the index of the dialect to be used on
+      the SMB session.  Anything less than "NT LM 0.12" would be very odd
+      these days (even Windows 98 supports it) and the preprocessor will
+      alert if the client doesn't offer it as a supported dialect or the
+      server chooses a lesser dialect.\\
+\hline
+ 53 & There are a number of commands that are considered deprecated and/or
+       obsolete by Microsoft (see MS-CIFS and MS-SMB).  If the preprocessor
+       detects the use of a deprecated/obsolete command used it will alert.\\
+\hline
+ 54 & There are some commands that can be used that can be considered unusual
+      in the context they are used.  These include some of the transaction
+      commands such as:
+      \texttt{SMB\_COM\_TRANSACTION / TRANS\_READ\_NMPIPE}
+      \texttt{SMB\_COM\_TRANSACTION / TRANS\_WRITE\_NMPIPE}
+      \texttt{SMB\_COM\_TRANSACTION2 / TRANS2\_OPEN2}
+      \texttt{SMB\_COM\_NT\_TRANSACT / NT\_TRANSACT\_CREATE}
+      The preprocessor will alert if it detects unusual use of a command.\\
+\hline
+ 55 & Transaction commands have a setup count field that indicates the
+      number of 16bit words in the transaction setup.  The preprocessor
+      will alert if the setup count is invalid for the transaction
+      command / sub command.\\
+\hline
+ 56 & There can be only one Negotiate transaction per session and it is the
+      first thing a client and server do to determine the SMB dialect each
+      supports.  The preprocessor will alert if the client attempts multiple
+      dialect negotiations.\\
 \hline
 \end{longtable}
 \end{itemize}
@@ -8931,6 +8985,8 @@ Option & Argument & Required & Default\\
 \hline
 \texttt{nested\_ip} & [inner outer both] & NO & \texttt{nested\_ip inner}\\
 \hline
+\texttt{white} & [unblack trust] & NO & \texttt{white unblack}\\
+\hline
 \end{tabular}
 \end{itemize}
 \footnotesize
@@ -8987,6 +9043,17 @@ Option & Argument & Required & Default\\
            encapsulation. 
 \end{itemize}
 
+\item[] \texttt{white}
+\begin{itemize}
+\item[]   Specify the meaning of whitelist. When white means unblack, it 
+           unblacks IPs that are in blacklists; when white means trust, the 
+           packet gets bypassed, without further detection by snort. You can 
+           only specify either unblack or trust.
+           
+ \item[]   Note: when white means unblack, whitelist always has higher priority
+           than blacklist.
+\end{itemize}
+
 \end{itemize}
 
 \textit{Configuration examples}
@@ -9003,9 +9070,10 @@ Option & Argument & Required & Default\\
    
     preprocessor reputation: \
                    memcap  4095, scan_local, nested_ip both, \
-                   priority whitelist, \
+                   priority whitelist,  \
                    blacklist /etc/snort/default.blacklist, \
-                   whitelist /etc/snort/default.whitelist
+                   whitelist /etc/snort/default.whitelist,
+                   white trust
    
     $REP_BLACK_FILE1 = ../dshield.list
     $REP_BLACK_FILE2 = ../snort.org.list
@@ -9098,6 +9166,8 @@ SID & Description\\
  1  & Packet is blacklisted. \\
 \hline
  2  & Packet is whitelisted. \\
+\hline
+ 3  & Packet is inspected. \\
 \hline
 \end{longtable}
 \subsubsection{Shared memory support}
@@ -9194,9 +9264,9 @@ SID & Description\\
        shared_refresh 300
       \end{verbatim}
 
-   \item Start shared memory master(writer) with \texttt{-G} 1 option. Note: only one master
+   \item Start shared memory master(writer) with \texttt{-G} 0 option. Note: only one master
       should be enabled.
-   \item Start shared memory clients (readers) with \texttt{-G}  2 or other IDs. Note: for 
+   \item Start shared memory clients (readers) with \texttt{-G}  1 or other IDs. Note: for 
       one ID, only one snort instance should be enabled.
    \item You will see the IP lists got loaded and shared across snort instances! 
 \end{itemize}
@@ -9211,7 +9281,7 @@ SID & Description\\
   \item (Optional) you can create a version file named ``IPRVersion.dat'' in the IP list
       directory. This file helps managing reloading IP lists, by specifying a version. 
       When the version isn't changed, IP lists will not be reloaded if they are 
-      already in shared memory. \\
+      already in shared memory. The version number should be a 32 bit number.\\
       For example:
      \begin{verbatim}
       VERSION=1
@@ -9222,8 +9292,45 @@ SID & Description\\
       make sure to update version file if you are using version file.
       The \texttt{<path>} is the same path in first step.\\
      \begin{verbatim}
-      <snort root>/src/tools/control  <path> 1361
+      <snort root>/src/tools/control/snort_control  <path> 1361
      \end{verbatim}
+\end{itemize}
+ \item[]\textit{Using manifest file to manage loading (optional)}
+\begin{itemize}
+ \item[]  Using manifest file, you can control the file loading sequence, action taken,
+   and support zone based detection. You can create a manifest file named ``zone.info''
+   in the IP list directory.\\
+    
+ \item[]   When Snort is signaled to load new lists, a manifest file is read first to 
+   determine which zones the IPs in each list are applicable to and what action 
+   to take per list (Block, White, Monitor). \\
+   
+ \item[]   Files listed in manifest are loaded from top to bottom. You should put files 
+   that have higher priority first. In manifest file, you can put up to 255 
+   files. Without manifest file, files will be loaded in alphabet order.\\
+   
+ \item[]   Here's the format of the manifest file. Each line of the file has the 
+   following format:\\
+    \begin{verbatim} 
+     <filename>, <list id>,<action>[, <zone>]+
+  
+     <list id> ::= 32 bit integer
+     <action> ::= "monitor"|"block"|"white"
+     <zone>  ::= [0-1051]
+    \end{verbatim}
+
+ \item[]   Using manifest file, you can specify a new action called ``monitor'', which
+   indicates a packet needs to be inspected, but does not disable detection. This is
+   different from ``block'' action, which disables further detection. This new
+   action helps users evaluate their IP lists before applying it.
+ \item[] An exmple manifest file:
+    \begin{verbatim} 
+     #ipreputation manifest file
+     white.wlf, 111 ,white, 
+     black1.blf, 1112, black,  3, 12
+     black2.blf, 1113, black,  3, 12
+     monitor.blf,2222, monitor, 0, 2, 8
+    \end{verbatim}
 \end{itemize}
 \end{itemize}
 \subsection{GTP Decoder and Preprocessor}
@@ -10609,12 +10716,6 @@ events.
 
 \subsection{Configuring}
 
-The following options to configure will enable decoder and preprocessor rules:
-
-\begin{verbatim}
-    $ ./configure --enable-decoder-preprocessor-rules
-\end{verbatim}
-
 The decoder and preprocessor rules are located in the \texttt{preproc\_rules/}
 directory in the top level source tree, and have the names
 \texttt{decoder.rules} and \texttt{preprocessor.rules} respectively.  These
@@ -10762,8 +10863,7 @@ The generator ids ( gid ) for different preprocessors and the decoder are as fol
 
 \subsection{Reverting to original behavior}
 
-If you have configured snort to use decoder and preprocessor rules, the
-following config option in \texttt{snort.conf} will make Snort revert to the
+The following config option in \texttt{snort.conf} will make Snort revert to the
 old behavior:
 
 \begin{verbatim}
@@ -11988,139 +12088,6 @@ the rollover condition.  See \ref{Log Limits} for more information.
     output log_tcpdump: snort.log
 \end{verbatim}
 
-\subsection{database}
-\label{database section}
-
-\begin{note}
-The database output plugins are considered deprecated as of Snort 2.9.2 and
-will be removed in Snort 2.9.3.
-The recommended approach to logging is to use unified2 with barnyard2 or similar.
-\end{note}
-
-This module from Jed Pickel sends Snort data to a variety of SQL databases.
-More information on installing and configuring this module can be found on the
-{[}91{]}incident.org web page. The arguments to this plugin are the name of the
-database to be logged to and a parameter list. Parameters are specified with
-the format parameter = argument.  see Figure \ref{database output config} for
-example usage.
-
-\subsubsection{Format}
-
-\begin{verbatim}
-    database: <log | alert>, <database type>, <parameter list>
-\end{verbatim}
-
-The following parameters are available:
-
-\begin{description}{}
-
-\item [\texttt{host}] - Host to connect to. If a non-zero-length string is specified, TCP/IP communication is used. Without a host name, it will connect using a local UNIX domain socket.
-
-\item [\texttt{port}] - Port number to connect to at the server host, or socket
-filename extension for UNIX-domain connections. 
-
-\item [\texttt{dbname}] - Database name 
-
-\item [\texttt{user}] - Database username for authentication
-
-\item [\texttt{password}] - Password used if the database demands password
-authentication
-
-\item [\texttt{sensor\_name}] - Specify your own name for this Snort sensor. If
-you do not specify a name, one will be generated automatically
-
-\item [\texttt{encoding}] - Because the packet payload and option data is
-binary, there is no one simple and portable way to store it in a database.
-Blobs are not used because they are not portable across databases. So i leave
-the encoding option to you. You can choose from the following options. Each has
-its own advantages and disadvantages:
-
-   \begin{description}{}
-       \item [\texttt{hex}](default) - Represent binary data as a hex string. 
-
-       \begin{description}{}
-             \item [Storage~requirements]- 2x the size of the binary
-             \item [Searchability]- very good 
-
-             \item [Human~readability]- not readable unless you are a true geek, requires post processing
-
-       \end{description}
-
-       \item [\texttt{base64}] - Represent binary data as a base64 string. 
-
-      \begin{description}{}
-            \item [Storage~requirements]- $\sim$1.3x the size of the binary 
-            \item [Searchability]- impossible without post processing 
-            \item [Human~readability]- not readable requires post processing
-      \end{description}
-
-      \item [\texttt{ascii}] - Represent binary data as an ASCII string. This is
-      the only option where you will actually lose data. Non-ASCII
-      Data is represented as a `.'. If you choose this option, then data
-      for IP and TCP options will still be represented as hex because
-      it does not make any sense for that data to be ASCII.
-
-\begin{description}{}
-
-\item [Storage~requirements]- slightly larger than the binary because some
-characters are escaped (\&,$<$,$>$)
-
-\item [Searchability]- very good for searching for a text string impossible if
-you want to search for binary 
-
-\item [human~readability]- very good
-
-\end{description}
-\end{description}
-
-\item [\texttt{detail}] - How much detailed data do you want to store? The
-options are:
-
-\begin{description}{}
-
-\item [\texttt{full}](default) - Log all details of a packet that caused an
-alert (including IP/TCP options and the payload)
-
-\item [\texttt{fast}] - Log only a minimum amount of data. You severely limit
-the potential of some analysis applications if you choose this option, but this
-is still the best choice for some applications. The following fields are
-logged: \texttt{timestamp}, \texttt{signature}, \texttt{source ip},
-\texttt{destination ip}, \texttt{source port}, \texttt{destination port},
-\texttt{tcp flags}, and \texttt{protocol})
-
-\end{description}
-\end{description}
-
-Furthermore, there is a logging method and database type that must be defined.
-There are two logging types available, \texttt{log} and \texttt{alert}.
-Setting the type to log attaches the database logging functionality to the log
-facility within the program. If you set the type to log, the plugin will be
-called on the log output chain. Setting the type to alert attaches the plugin
-to the alert output chain within the program.
-
-There are five database types available in the current version of the plugin.
-These are \texttt{mssql}, \texttt{mysql}, \texttt{postgresql}, \texttt{oracle},
-and \texttt{odbc}.  Set the type to match the database you are using.
-
-\begin{note}
-
-The database output plugin does not have the ability to handle alerts that are
-generated by using the \texttt{tag} keyword.  See section \ref{tag section} for
-more details.
-
-\end{note}
-
-\begin{figure}
-
-\begin{verbatim}
-    output database: \
-        log, mysql, dbname=snort user=snort host=localhost password=xyz
-\end{verbatim}
-
-\caption{Database Output Plugin Configuration}
-\label{database output config}
-\end{figure}
-
 \subsection{csv}
 
 The csv output plugin allows alert data to be written in a format easily
@@ -12251,13 +12218,15 @@ appended to each file when it is created.
 
 \begin{verbatim}
     output alert_unified2: \
-        filename <base filename> [, <limit <size in MB>] [, nostamp] [, mpls_event_types]
+        filename <base filename> [, <limit <size in MB>] [, nostamp] [, mpls_event_types] \
+        [, vlan_event_types]
 
     output log_unified2: \
         filename <base filename> [, <limit <size in MB>] [, nostamp]
 
     output unified2: \
-        filename <base file name> [, <limit <size in MB>] [, nostamp] [, mpls_event_types]
+        filename <base file name> [, <limit <size in MB>] [, nostamp] [, mpls_event_types] \
+        [, vlan_event_types]
 \end{verbatim}
 
 \subsubsection{Example}
@@ -12267,40 +12236,160 @@ appended to each file when it is created.
     output log_unified2: filename snort.log, limit 128, nostamp
     output unified2: filename merged.log, limit 128, nostamp
     output unified2: filename merged.log, limit 128, nostamp, mpls_event_types
+    output unified2: filename merged.log, limit 128, nostamp, vlan_event_types
 \end{verbatim}
 
-\subsection{alert\_prelude}
+\subsubsection{Extra Data Configurations}
 
-\begin{note}
-The \texttt{alert\_prelude} output plugin is considered deprecated as of Snort 2.9.2 and
-will be removed in Snort 2.9.3.
-\end{note}
-
-\begin{note}
-
-support to use alert\_prelude is not built in by default.  To use
-alert\_prelude, snort must be built with the --enable-prelude argument passed
-to ./configure.
-
-\end{note}
-
-The alert\_prelude output plugin is used to log to a Prelude database.  For
-more information on Prelude, see \url{http://www.prelude-ids.org/}.
-
-\subsubsection{Format}
+  Unified2 also has logging support for various extra data. The
+  following configuration items will enable these extra data logging
+  facilities.
 
 \begin{verbatim}
-    output alert_prelude: \
-        profile=<name of prelude profile> \
-        [ info=<priority number for info priority alerts>] \
-        [ low=<priority number for low priority alerts>] \
-        [ medium=<priority number for medium priority alerts>]
+config log_ipv6_extra_data
 \end{verbatim}
 
-\subsubsection{Example}
+This option enables Snort to log IPv6 source and destination
+address as unified2 extra data events.
+
+See section \ref{Config} for more information
 
 \begin{verbatim}
-    output alert_prelude: profile=snort info=4 low=3 medium=2
+enable_xff
+\end{verbatim}
+
+This option enables HTTP Inspect to parse and log the original
+client IP present in the X-Forwarded-For or True-Client- IP HTTP
+request headers along with the generated events.
+
+See section \ref{sub:http-inspect} for more information
+
+\begin{verbatim}
+log_uri
+\end{verbatim}
+
+This option enables HTTP Inspect to parse and log the URI data
+from the HTTP request and log it along with all the generated
+events for that session.
+
+See section \ref{sub:http-inspect} for more information
+
+\begin{verbatim}
+log_hostname 
+\end{verbatim}
+
+This option enables HTTP Inspect to parse and log the Host header
+data from the HTTP request and log it along with all the generated
+events for that session.
+
+See section \ref{sub:http-inspect} for more information
+
+\begin{verbatim}
+log_hostname 
+\end{verbatim}
+
+This option enables HTTP Inspect to parse and log the Host header
+data from the HTTP request and log it along with all the generated
+events for that session.
+
+See section \ref{sub:http-inspect} for more information
+
+\begin{verbatim}
+log_mailfrom
+\end{verbatim}
+
+This option enables SMTP preprocessor to parse and log the senders
+email address extracted from the "MAIL FROM" command along with
+all the generated events for that session.
+
+See section \ref{SMTP} for more information
+
+\begin{verbatim}
+log_rcptto
+\end{verbatim}
+
+This option enables SMTP preprocessor to parse and log the
+recipients email address extracted from the "RCPT FROM" command
+along with all the generated events for that session.
+
+See section \ref{SMTP} for more information
+
+\begin{verbatim}
+log_rcptto
+\end{verbatim}
+
+This option enables SMTP preprocessor to parse and log the MIME
+attachment filenames extracted from the Content-Dispostion header
+within the MIME body along with all the generated events for that
+session.
+
+See section \ref{SMTP} for more information
+
+\begin{verbatim}
+log_email_hdrs
+\end{verbatim}
+
+This option enables SMTP preprocessor to parse and log the SMTP
+email headers extracted from the SMTP data along with all the
+generated events for that session.
+
+See section \ref{SMTP} for more information
+
+\subsubsection{Reading Unified2 Files}
+
+\subsubsection{U2SpewFoo}
+
+U2SpewFoo is a lightweight tool for dumping the contents of unified2 files to stdout.
+  
+\textbf Example usage:
+
+\begin{verbatim}    
+    u2spewfoo snort.log
+\end{verbatim}
+
+
+\textbf Example Output:
+
+\begin{verbatim}
+(Event)
+    sensor id: 0    event id: 4 event second: 1299698138    event microsecond: 146591
+    sig id: 1   gen id: 1   revision: 0  classification: 0
+    priority: 0 ip source: 10.1.2.3 ip destination: 10.9.8.7
+    src port: 60710 dest port: 80   protocol: 6 impact_flag: 0  blocked: 0
+
+Packet
+    sensor id: 0    event id: 4 event second: 1299698138
+    packet second: 1299698138   packet microsecond: 146591
+    linktype: 1 packet_length: 54
+[    0] 02 09 08 07 06 05 02 01 02 03 04 05 08 00 45 00  ..............E.
+[   16] 00 28 00 06 00 00 40 06 5C B7 0A 01 02 03 0A 09  .(....@.\.......
+[   32] 08 07 ED 26 00 50 00 00 00 62 00 00 00 2D 50 10  ...&.P...b...-P.
+[   48] 01 00 A2 BB 00 00                                ......
+
+(ExtraDataHdr)
+    event type: 4   event length: 33
+
+(ExtraData)
+    sensor id: 0    event id: 2 event second: 1299698138
+    type: 9 datatype: 1 bloblength: 9   HTTP URI: /
+
+(ExtraDataHdr)
+    event type: 4   event length: 78
+
+(ExtraData)
+    sensor id: 0    event id: 2 event second: 1299698138
+    type: 10    datatype: 1 bloblength: 12  HTTP Hostname: example.com 
+\end{verbatim}
+
+\subsubsection{U2Boat}
+
+U2boat is a tool for converting unified2 files into different formats.
+
+Currently supported conversion formats are: pcap
+
+\textbf Example usage:
+\begin{verbatim}
+    u2boat -t pcap <infile> <outfile>
 \end{verbatim}
 
 \subsection{log null}
@@ -12326,68 +12415,6 @@ line option but it is able to work within a ruletype.
         output alert_fast: info.alert
         output log_null
     }
-\end{verbatim}
-
-\subsection{alert\_aruba\_action}
-
-\begin{note}
-The \texttt{alert\_aruba\_action} output plugin is considered deprecated as of Snort 2.9.2 and
-will be removed in Snort 2.9.3.
-\end{note}
-
-\begin{note}
-
-Support to use alert\_aruba\_action is not built in by default.  To use
-alert\_aruba\_action, snort must be built with the --enable-aruba argument
-passed to ./configure.
-
-\end{note}
-
-Communicates with an Aruba Networks wireless mobility controller to change the
-status of authenticated users.  This allows Snort to take action against users
-on the Aruba controller to control their network privilege levels.
-
-For more information on Aruba Networks access control, see
-\url{http://www.arubanetworks.com/}.
-
-\subsubsection{Format}
-
-\begin{verbatim}
-    output alert_aruba_action: \
-        <controller address> <secrettype> <secret> <action>
-\end{verbatim}
-
-The following parameters are required:
-
-\begin{description}{}
-
-\item [\texttt{controller address}] - Aruba mobility controller address.
-
-\item [\texttt{secrettype}] - Secret type, one of "sha1", "md5" or "cleartext".
-
-\item [\texttt{secret}] - Authentication secret configured on the Aruba
-mobility controller with the "aaa xml-api client" configuration command,
-represented as a sha1 or md5 hash, or a cleartext password.
-
-\item [\texttt{action}] - Action to apply to the source IP address of the
-traffic generating an alert.
-
-  \begin{description}{}
-
-      \item [\texttt{blacklist}]- Blacklist the station by disabling all radio
-communication.
-
-      \item [\texttt{setrole:rolename}]- Change the user\'s role to the
-specified rolename.
-
-  \end{description}
-\end{description}
-
-\subsubsection{Example}
-
-\begin{verbatim}
-    output alert_aruba_action: \
-        10.3.9.6 cleartext foobar setrole:quarantine_role
 \end{verbatim}
 
 \subsection{Log Limits}
@@ -13372,7 +13399,7 @@ This example will create a type that will log to just tcpdump:
     }
 \end{verbatim}
 
-This example will create a rule type that will log to syslog and a MySQL
+This example will create a rule type that will log to syslog and tcpdump:
 database:
 
 \begin{verbatim}
@@ -13380,7 +13407,7 @@ database:
     {
           type alert 
           output alert_syslog: LOG_AUTH LOG_ALERT 
-          output database: log, mysql, user=snort dbname=snort host=localhost 
+          output log_tcpdump: suspicious.log
     }
 \end{verbatim}
 
@@ -15284,7 +15311,7 @@ This option sets the cursor used for detection to one of the following buffers:
 	a. SMTP/POP/IMAP data body (including Email headers and MIME when decoding
 	   is turned off)
         b. Base64 decoded MIME attachment (when \texttt{b64\_decode\_depth} is greater than -1)
-	c. 7bit/8bit/binary/text MIME attachment (when \texttt{bitenc\_decode\_depth} is greater than -1)
+	c. Non-Encoded MIME attachment (when \texttt{bitenc\_decode\_depth} is greater than -1)
 	d. Quoted-Printable decoded MIME attachment (when \texttt{qp\_decode\_depth} is greater than -1) 
 	e. Unix-to-Unix decoded attachment (when \texttt{uu\_decode\_depth} is greater than -1)
 
@@ -16452,32 +16479,37 @@ rules to track states during a transport protocol session.  The flowbits option
 is most useful for TCP sessions, as it allows rules to generically track the
 state of an application protocol.
 
-There are eight keywords associated with flowbits. Most of the options need a
-user-defined name for the specific state that is being checked.  This string
-should be limited to any alphanumeric string including periods, dashes, and
-underscores. The keywords set and toggle take an optional argument which specifies
-the group to which the keywords will belong. When no group name is specified the 
-flowbits will belong to a default group. All the flowbits in a particular group 
-(with an exception of default group) are mutually exclusive. A particular flow 
-cannot belong to more than one group.
+There are several keywords associated with flowbits. Most of the options need a
+user-defined name for the specific state that is being checked.  Some keyword 
+uses group name. When no group name is specified the flowbits will belong to a 
+default group. A particular flowbit can belong to more than one group.
+Flowbit name and group name should be limited to any alphanumeric string 
+including periods, dashes, and underscores.
+
+\subsubsection{General Format}
+
+\begin{verbatim}
+    flowbits:[set|setx|unset|toggle|isset|isnotset|noalert|reset][, <bits/bats>][, <GROUP_NAME>];
+    bits ::= bit[|bits]
+    bats ::= bit[&bats]
+\end{verbatim}
 
 \begin{tabular}{| l | p{4.5in} |}
 \hline
 {\bf Option} & {\bf Description}\\
 \hline
 \hline
-\texttt{set} & Sets the specified state for the current flow and unsets all the other 
-flowbits in a group when a GROUP\_NAME is specified.\\
+\texttt{set} & Sets the specified states for the current flow and assign them to a group when a GROUP\_NAME is specified.\\
 \hline
-\texttt{unset} & Unsets the specified state for the current flow.\\
+\texttt{setx} & Sets the specified states for the current flow and clear other states in the group\\
 \hline
-\texttt{toggle} & Sets the specified state if the state is unset and unsets all the 
-other flowbits in a group when a GROUP\_NAME is specified, otherwise unsets the state 
-if the state is set.\\
+\texttt{unset} & Unsets the specified states for the current flow.\\
 \hline
-\texttt{isset} & Checks if the specified state is set.\\
+\texttt{toggle} & For every state specifed, sets the specified state if the state is unset and unsets it if the state is set.\\
 \hline
-\texttt{isnotset} & Checks if the specified state is not set.\\
+\texttt{isset} & Checks if the specified states are set.\\
+\hline
+\texttt{isnotset} & Checks if the specified states are not set.\\
 \hline
 \texttt{noalert} & Cause the rule to not generate an alert, regardless of the rest of the detection options.\\
 \hline
@@ -16485,10 +16517,130 @@ if the state is set.\\
 \hline
 \end{tabular}
 
-\subsubsection{Format}
+\subsubsection{set}
+This keyword sets bits to group for a particular flow. When no group specified, set the default group. This keyword always returns true.
 
 \begin{verbatim}
-    flowbits:[set|unset|toggle|isset|isnotset|noalert|reset][, <STATE_NAME>][, <GROUP_NAME>];
+Syntax:
+    flowbits:set,bats[,group]
+Usage:  
+    flowbits:set,bit1,doc;
+    flowbits:set,bit2&bit3,doc;
+    First rule sets bit1 in doc group, second rule sets bit2 and bit3 in doc group. 
+    So doc group has bit 1, bit2 and bit3 set  
+\end{verbatim}
+
+\subsubsection{setx}
+This keyword sets bits to group exclusively. This clears other bits in group. 
+Group must present.This keyword always returns true.
+\begin{verbatim}
+Syntax:
+    flowbits:setx,bats,group
+Usage:  
+    flowbits: setx, bit1, doc
+    flowbits: setx, bit2&bit3, doc
+    First rule sets bit1 in doc group, second rule sets bit2 and bit3 in doc group.
+    So doc group has bit2 and bit3 set, because bit1 is cleared by rule 2.
+ \end{verbatim}
+  
+\subsubsection{unset}
+This keyword clears bits specified for a particular flow or clears all bits in the 
+group (Group must present). This keyword always returns true.
+
+\begin{verbatim}
+Syntax:
+   flowbits:unset,bats
+   flowbits:unset,all,group
+   
+Usage:  
+   flowbits: unset, bit1  
+   Clear bit1.
+   
+   flowbits: unset, bit1&bit2
+   Clear bit1 and bit2
+   
+   flowbits: unset, all, doc
+   This clears all bits in the doc group.
+\end{verbatim}
+
+
+\subsubsection{toggle}
+If flowbit is set, unset it. If it is unset, set it. Toggle every bit specified or
+toggle all the bits in group (Group must be present). This keyword always returns true.
+
+\begin{verbatim}
+Syntax:  
+   flowbits:toggle,bats
+   flowbits:toggle,all,group
+   
+Usage:
+   flowbits: toggle, bit1&bit2
+   If bit1 is 0 and bit2 is 1 before, after this rule, bit1 is 1 and bit2 is 0.
+   
+   flowbits:toggle,all,doc
+   Toggle all the bits in group doc as described above. 
+\end{verbatim}
+
+\subsubsection{isset}
+This keyword checks a bit or several bits to see if it is set.  It returns true or
+false based on the following syntax.
+
+\begin{verbatim}
+Syntax:  
+   flowbits:isset, bits => Check whether any bit is set
+   flowbits:isset, bats => Check whether all bits are set
+   flowbits:isset, any, group => Check whether any bit in the group is set.
+   flowbits:isset, all, group => Check whether all bits in the group are set. 
+   
+Usage
+   flowbits:isset, bit1|bit2 => If either bit1 or bit2 is set, return true
+   flowbits:isset, bit1&bit2 => If both bit1 and bit2 are set, return true, otherwise false
+   flowbits:isset, any, doc => If any bit in group doc is set, return true
+   flowbits:isset, all, doc => If all the bits in doc group are set, return true 
+\end{verbatim}
+
+\subsubsection{isnotset}
+This keyword is the reverse of isset.  It returns true if isset is false, it returns
+false if isset is true. Isnotset works on the final result, not on individual bits.
+
+\begin{verbatim}
+Syntax:  
+   flowbits:isnoset, bits => Check whether not any bit is set
+   flowbits:isnoset, bats => Check whether not all bits are set
+   flowbits:isnoset, any, group => Check whether not bit in the group is set.
+   flowbits:isnotset, all, group => Check whether not all bits in the group are set. 
+   
+Usage
+   flowbits:isnotset, bit1|bit2 => If either bit1 or bit2 is set, return true
+   flowbits:isnotset, bit1&bit2 => If both bit1 and bit2 are set, return true, otherwise false
+   flowbits:isnotset, any, doc => If any bit in group doc is set, return true
+   flowbits:isnotset, all, doc => If all the bits in doc group are set, return true 
+\end{verbatim}
+
+
+\subsubsection{noalert}
+This keyword always returns false.  It allows users to write rules that set,
+unset, and toggle bit without generating an alert.  This is most useful
+for writing flowbit rules that set bit on normal traffic and significantly reduces 
+unwanted alerts.  There is no bit specified with this keyword.
+
+\begin{verbatim}
+  flowbits:noalert;
+\end{verbatim}
+
+\subsubsection{reset}
+
+This keyword resets all of the states on a given flow if no group specified, otherwise, 
+reset all the bits in a group. This always returns true.  There is no bit specified with
+ this keyword.
+
+\begin{verbatim}
+Syntax: 
+   flowbits:reset[,group]
+
+Usage:  
+   flowbits:reset => reset all the bits in the flow
+   flowbits: reset, doc => reset all the bits in the doc group
 \end{verbatim}
 
 \subsubsection{Examples}
@@ -16976,8 +17128,6 @@ source and/or destination host is \emph{tagged}. Tagged traffic is logged to
 allow analysis of response codes and post-attack traffic.  \emph{tagged} alerts
 will be sent to the same output plugins as the original alert, but it is the
 responsibility of the output plugin to properly handle these special alerts.
-Currently, the database output plugin, described in Section \ref{database
-section}, does not properly handle \emph{tagged} alerts.
 
 \subsubsection{Format}
 
@@ -18074,7 +18224,7 @@ typedef struct _PCREInfo
 \item {OptionType: Flowbit \& Structure: {\em FlowBitsInfo}}
 
 The {\em FlowBitsInfo} structure defines a flowbits option.  It includes the
-name of the flowbit and the operation (set, unset, toggle, isset, isnotset).
+name of the flowbit and the operation (set, setx, unset, toggle, isset, isnotset).
 
 \begin{verbatim}
 #define FLOWBIT_SET       0x01
@@ -18084,13 +18234,19 @@ name of the flowbit and the operation (set, unset, toggle, isset, isnotset).
 #define FLOWBIT_ISNOTSET  0x10
 #define FLOWBIT_RESET     0x20
 #define FLOWBIT_NOALERT   0x40
+#define FLOWBIT_SETX      0x80
 
 typedef struct _FlowBitsInfo
 {
-    char      *flowBitsName;
-    u_int8_t   operation;
-    u_int32_t  id;
-    u_int32_t  flags;
+    char     *flowBitsName;
+    uint8_t   operation;
+    uint16_t  id;
+    uint32_t  flags;
+    char     *groupName;
+    uint8_t   eval;
+    uint16_t *ids;
+    uint8_t   num_ids;
+    
 } FlowBitsInfo;
 \end{verbatim}
 
@@ -18871,6 +19027,393 @@ Generally, new output plugins should go into the barnyard project rather than
 the Snort project. We are currently cleaning house on the available output
 options.
 
+\section{Unified2 File Format}
+
+  Unified 2 records should not be assumed to be in any order.  All
+  values are stored in network byte order.
+
+    An example structure of unified2 files
+
+\begin{verbatim}
+    [ Serial Unified2 Header    ]
+    [ Unified2 IDS Event        ]
+    [ Unified2 Packet           ]
+    [ Unified2 Extra Data       ]
+    .
+    .
+    .
+    [ Serial Unified2 Header    ]
+    [ Unified2 IDS Event        ]
+    [ Unified2 Packet           ]
+    [ Unified2 Extra Data       ]
+\end{verbatim}
+
+\subsection{Serial Unified2 Header}
+
+\begin{verbatim}
+    record type             4 bytes
+    record length           4 bytes
+\end{verbatim}
+
+  All unified2 records are preceded by a Serial Unified2 header.  This
+  unified2 record allows an interpretting application to skip past and
+  apply simple heuristics against records.
+  
+  The Record Type indicates one of the following unified2 records
+  follows the Serial Unified2 Header:
+
+\begin{verbatim}
+    Value           Record Type
+    ----------      -----------
+    2               Unified2 Packet
+    7               Unified2 IDS Event
+    72              Unified2 IDS Event IP6
+    104             Unified2 IDS Event      (Version 2)
+    105             Unified2 IDS Event IP6  (Version 2)
+    110             Unified2 Extra Data
+\end{verbatim}
+
+  The record length field specifies the entire length of the record 
+  (not including the Serial Unified2 Header itself) upto the next 
+  Serial Unified2 Header or EOF.
+
+\subsection{Unified2 Packet}
+    
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event seconds           4 bytes
+    event microseconds      4 bytes
+    linktype                4 bytes
+    packet length           4 bytes
+    packet data             <variable length>
+\end{verbatim}
+
+  A Unified2 Packet is provided with each Unified2 Event record. This
+  packet is the `alerting' packet that caused a given event.
+
+  Unified2 Packet records contain contain a copy of the packet that
+  caused an alert (Packet Data) and is packet length octets long.
+
+\subsection{Unfied2 IDS Event}
+
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event second            4 bytes
+    event microsecond       4 bytes
+    signature id            4 bytes
+    generator id            4 bytes
+    signature revision      4 bytes
+    classification id       4 bytes
+    priority id             4 bytes
+    ip source               4 bytes
+    ip destination          4 bytes
+    source port/icmp type   2 bytes
+    dest. port/icmp code    2 bytes
+    protocol                1 byte
+    impact flag             1 byte
+    impact                  1 byte
+    blocked                 1 byte
+\end{verbatim}
+
+  Unified2 IDS Event is logged for IPv4 Events without VLAN or MPLS
+  tagging. 
+
+\subsection{Unfied2 IDS Event IP6}
+
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event second            4 bytes
+    event microsecond       4 bytes
+    signature id            4 bytes
+    generator id            4 bytes
+    signature revision      4 bytes
+    classification id       4 bytes
+    priority id             4 bytes
+    ip source               16 bytes
+    ip destination          16 bytes
+    source port/icmp type   2 bytes
+    dest. port/icmp code    2 bytes
+    protocol                1 byte
+    impact flag             1 byte
+    impact                  1 byte
+    blocked                 1 byte
+\end{verbatim}
+
+  Unified2 IDS Event IP6 is logged for IPv6 Events without VLAN or 
+  MPLS tagging. 
+
+\begin{note}
+\begin{itemize}
+\item Note that you'll need to pass --enable-ipv6 to configure in order obtain IPv6 Event types.
+\end{itemize}
+\end{note}
+
+\subsection{Unfied2 IDS Event (Version 2)}
+
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event second            4 bytes
+    event microsecond       4 bytes
+    signature id            4 bytes
+    generator id            4 bytes
+    signature revision      4 bytes
+    classification id       4 bytes
+    priority id             4 bytes
+    ip source               4 bytes
+    ip destination          4 bytes
+    source port/icmp type   2 bytes
+    dest. port/icmp code    2 bytes
+    protocol                1 byte
+    impact flag             1 byte
+    impact                  1 byte
+    blocked                 1 byte
+    mpls label              4 bytes
+    vlan id                 2 bytes
+    padding                 2 bytes
+\end{verbatim}
+
+  Unified2 IDS Event (Version 2) are logged for IPv4 packets which
+  contain either  MPLS or VLAN headers. Otherwise a Unified2 IDS Event
+  is logged.
+
+\begin{note}
+\begin{itemize}
+\item Note that you'll need to pass --enable-mpls to configure in order to have Snort fill in the mpls label field.
+
+\item Note that you'll need to configure unified2 logging with either mpls\_event\_types or vlan\_event\_types to get this record type.
+\end{itemize}
+\end{note}
+
+\subsection{Unified2 IDS Event IP6 (Version 2)}
+
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event second            4 bytes
+    event microsecond       4 bytes
+    signature id            4 bytes
+    generator id            4 bytes
+    signature revision      4 bytes
+    classification id       4 bytes
+    priority id             4 bytes
+    ip source               16 bytes
+    ip destination          16 bytes
+    source port/icmp type   2 bytes
+    dest. port/icmp code    2 bytes
+    protocol                1 byte
+    impact flag             1 byte
+    impact                  1 byte
+    blocked                 1 byte
+    mpls label              4 bytes
+    vlan id                 2 bytes
+    padding                 2 bytes
+\end{verbatim}
+
+  Unified2 IDS Event IP6 (Version 2) are logged for IPv6 packets which
+  contain either MPLS or VLAN headers. Otherwise a Unified2 IDS Event
+  IP6 is logged.
+
+\begin{note}
+\begin{itemize}
+\item Note that you'll need to pass --enable-mpls to configure in order to have Snort fill in the mpls label field.
+
+\item Note that you'll need to pass --enable-ipv6 to configure in order obtain IPv6 Event types.
+
+\item Note that you'll need to configure unified2 logging with either mpls\_event\_types or vlan\_event\_types to get this record type.
+\end{itemize}
+\end{note}
+
+\subsection{Unified2 Extra Data}
+
+\begin{verbatim}
+    sensor id               4 bytes
+    event id                4 bytes
+    event second            4 bytes
+    type                    4 bytes
+    data type               4 bytes
+    data length             4 bytes
+    data                    <variable length>
+\end{verbatim}
+
+\subsection{Description of Fields}
+
+\begin{itemize}\itemsep2pt
+\item Sensor ID 
+
+Unused 
+
+\item Event ID
+
+The upper 2 bytes represent the snort instance, if specified by passing the -G option to Snort.
+
+The lower 2 bytes indicate the unique id of the event.
+
+The Event ID field is used to facilitate the task of coalescing
+events with packet data.
+
+\item Event Seconds and Event Microseconds
+
+Timestamp represented as seconds since the epoch of when the alert was generated.
+
+\item Link Type (Unified2 Packet)
+
+The Datalink type of the packet, typically EN10M but could be any of the values as returned by pcap\_datalink that Snort handles.
+   
+\item Packet Length (Unified2 Packet) 
+
+Length of the Packet Data.
+ 
+\item Packet Data (Unified2 Packet)
+
+The alerting packet, of Packet Length bytes long.
+
+\item Type (Unified2 Extra Data)
+
+Type specifies the type of extra data that was logged, the valid types are:
+
+\begin{verbatim}
+    Value           Description 
+    ----------      -----------
+    1               Original Client IPv4 
+    2               Original Client IPv6
+    3               UNUSED
+    4               GZIP Decompressed Data
+    5               SMTP Filename
+    6               SMTP Mail From
+    7               SMTP RCPT To
+    8               SMTP Email Headers
+    9               HTTP URI
+    10              HTTP Hostname
+    11              IPv6 Source Address
+    12              IPv6 Destination Address
+    13              Normalized Javascript Data
+\end{verbatim}
+    
+\item Data Type (Unified2 Extra Data)
+
+    The type of extra data in the record.
+
+\begin{verbatim}
+    Value           Description 
+    ----------      -----------
+    1               Blob  
+\end{verbatim}
+
+\item Data Length (Unified2 Extra Data)
+
+    Length of the data stored in the extra data record
+
+\item Data (Unified2 Extra Data)
+
+    Raw extra event data upto Data Length bytes in size.
+
+    All of these Extra data types, with the exception of 1, 2, 11, and
+    12 (IP Addresses) are stored in plain-text. The IP Address types
+    need to be interpreted as if they were comming off the wire.
+
+\item Signature ID
+
+    The Signature ID of the alerting rule, as specified by the sid
+    keyword.
+
+\item Generator ID
+
+    The Generator ID of the alerting rule, as specified by the gid
+    keyword.
+
+\item Signature Revision
+
+    Revision of the rule as specified by the rev keyword.
+
+\item Classification ID
+
+    Classification ID as mapped in the file classifcations.conf 
+
+\item Priority ID
+
+    Priority of the rule as mapped in the file classifications.conf or
+    overridden by the priority keyword for text rules. 
+
+\item IP Source
+
+    Source IP of the packet that generated the event.
+
+\item IP Destination
+
+    Destination IP of the packet that generated the event.
+
+\item Source Port/ICMP Type
+
+    If Protocol is TCP or UDP than this field contains the source port
+    of the alerting packet.
+
+    If Protocol is ICMP than this field contains the ICMP type of the
+    alerting packet.
+
+\item Destination Port/ICMP Code
+
+    If protocol is TCP or UDP than this field contains the source port
+    of the alerting packet.
+
+    If protocol is icmp than this field contains the icmp code of the
+    alerting packet.
+  
+\item Protocol
+
+    Transport protcol of the alerting packet. One of: ip, tcp, udp, or
+    icmp.
+
+\item Impact flag
+
+    Legacy field, specifies whether a packet was dropped or not.
+
+\begin{verbatim}
+    Value           Description 
+    ----------      -----------
+    32              Blocked 
+\end{verbatim}
+
+\item Impact
+
+    UNUSED; deprecated.
+
+\item Blocked
+
+    Whether the packet was not dropped, was dropped or would have been
+    dropped. 
+
+\begin{verbatim}
+    Value           Description 
+    ----------      -----------
+    0               Was NOT Dropped 
+    1               Was Dropped
+    2               Would Have Dropped*
+\end{verbatim}
+
+\begin{note}
+Note that you'll only obtain Would Have Dropped on rules which are set to drop
+while Snort is running in inline-test mode.
+\end{note}
+
+\item MPLS Label (4 bytes)
+
+    The extracted mpls label from the mpls header in the alerting
+    packet.
+
+\item VLAN ID
+
+    The extracted vlan id from the vlan header in the alerting packet.
+
+\item Padding
+
+    Padding is used to keep the event structures aligned on a 4 byte
+    boundary.
+\end{itemize}
+
 \section{The Snort Team}
 
 \begin{tabular}{p{3in} p{3in}}
@@ -18883,14 +19426,14 @@ options.
 & Bhagyashree Bantwal\\
 & Hui Cao\\
 & Russ Combs\\
-& Ryan Jordan\\
 & Todd Wease\\
+& Victor Roemer\\
 \\
 \textbf{Snort QA Team}
-& Matt Donnan\\
+& Chris Spencer\\
 & Andrew Blunck\\
-& Victor Roemer\\
-& Scott Czajkowski\\
+& Dan Erxleben\\
+& Jigeshwar Patel\\
 \\
 \textbf{Snort Rules Team}
 & Matt Watchinski\\
@@ -18935,16 +19478,20 @@ options.
 
 \begin{tabular}{p{3in} p{3in}}
 \textbf{Major Contributors}
+& Ryan Jordan\\
 & Erek Adams\\
 & Michael Altizer\\
+& Ayushi Agarwal\\
 & Andrew Baker\\
 & Scott Campbell\\
 & Brian Caswell\\
 & Dilbagh Chahal\\
 & JJ Cummings\\
+& Scott Czajkowski\\
 & Roman D.\\
 & Michael Davis\\
 & Ron Dempster\\
+& Matt Donnan\\
 & Chris Green\\
 & Lurene Grenier\\
 & Mike Guiterman\\
@@ -18952,6 +19499,7 @@ options.
 & Justin Heath\\
 & Patrick Harper\\
 & Jeremy Hewlett\\
+& Ryan Jordan\\
 & Victor Julien\\
 & Glenn Mansfield Keeni\\
 & Adam Keeton\\

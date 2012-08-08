@@ -98,7 +98,6 @@ typedef struct _detection_option_tree_root
 typedef struct _detection_option_eval_data
 {
     void *pomd;
-    void *otnx;
     void *pmd;
     Packet *p;
     char flowbit_failed;

@@ -74,11 +74,13 @@ static inline DCE2_TransType DCE2_TcpAutodetect(const SFSnortPacket *p)
     {
         DceRpcCoHdr *co_hdr = (DceRpcCoHdr *)p->payload;
 
-        if ((DceRpcCoVersMaj(co_hdr) == DCERPC_PROTO_MAJOR_VERS__5) &&
-            (DceRpcCoVersMin(co_hdr) == DCERPC_PROTO_MINOR_VERS__0) &&
-            ((DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND) ||
-             (DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND_ACK)) &&
-            (DceRpcCoFragLen(co_hdr) >= sizeof(DceRpcCoHdr)))
+        if ((DceRpcCoVersMaj(co_hdr) == DCERPC_PROTO_MAJOR_VERS__5)
+                && (DceRpcCoVersMin(co_hdr) == DCERPC_PROTO_MINOR_VERS__0)
+                && ((DCE2_SsnFromClient(p)
+                        && DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND)
+                    || (DCE2_SsnFromServer(p)
+                        && DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND_ACK))
+                && (DceRpcCoFragLen(co_hdr) >= sizeof(DceRpcCoHdr)))
         {
             return DCE2_TRANS_TYPE__TCP;
         }

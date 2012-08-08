@@ -59,25 +59,23 @@
 
 /*
 **  NAME
-**    sfeventq_init::
+**    sfeventq_new::
 */
 /**
 **  Initialize the event queue.  Provide the max number of nodes that this
-**  queue will support, the number of top nodes to log in the queue, the
-**  size of the event structure that the user will fill in, and the function
-**  to determine where to insert the incoming events in the queue.
+**  queue will support, the number of top nodes to log in the queue, and the
+**  size of the event structure that the user will fill in.
 **
 **  @return integer
 **
 **  @retval -1 failure
 **  @retval  0 success
 */
-SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size,
-                         int (*sort)(void *, void *))
+SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size)
 {
     SF_EVENTQ *eq;
 
-    if(max_nodes <= 0 || log_nodes <= 0 || event_size <= 0 ) /* || !sort) Jan06 -- not required */
+    if ((max_nodes <= 0) || (log_nodes <= 0) || (event_size <= 0))
         return NULL;
 
     eq = (SF_EVENTQ *)SnortAlloc(sizeof(SF_EVENTQ));
@@ -89,7 +87,6 @@ SF_EVENTQ * sfeventq_new(int max_nodes, int log_nodes, int event_size,
     eq->max_nodes = max_nodes;
     eq->log_nodes = log_nodes;
     eq->event_size = event_size;
-    eq->sort = sort;
     eq->cur_nodes = 0;
     eq->cur_events = 0;
     eq->reserve_event = (void *)(&eq->event_mem[max_nodes * eq->event_size]);
@@ -206,44 +203,8 @@ void sfeventq_free(SF_EVENTQ *eq)
 */
 static SF_EVENTQ_NODE * get_eventq_node(SF_EVENTQ *eq, void *event)
 {
-    SF_EVENTQ_NODE *node;
-
     if (eq->cur_nodes >= eq->max_nodes)
-    {
-        /*
-        **  If this event does not have a higher priority than
-        **  the last one, we don't won't it.
-        */
-        if (!eq->sort)
-        {
-            return NULL;
-        }
-
-        if (!eq->sort(event, eq->last->event))
-        {
-            eq->reserve_event = event;
-            return NULL;
-        }
-
-        node = eq->last;
-
-        /*
-        **  Set up new reserve event.
-        */
-        eq->reserve_event = node->event;
-        node->event = event;
-
-        if (eq->last->prev)
-        {
-            eq->last = eq->last->prev;
-            eq->last->next = NULL;
-        }
-
-        /*
-        **  Grab the last node for processing.
-        */
-        return node;
-    }
+        return NULL;
 
     /*
     **  We grab the next node from the node memory.
@@ -269,7 +230,6 @@ static SF_EVENTQ_NODE * get_eventq_node(SF_EVENTQ *eq, void *event)
 int sfeventq_add(SF_EVENTQ *eq, void *event)
 {
     SF_EVENTQ_NODE *node;
-    SF_EVENTQ_NODE *tmp;
 
     if(!event)
         return -1;
@@ -295,33 +255,6 @@ int sfeventq_add(SF_EVENTQ *eq, void *event)
     {
         eq->head = eq->last = node;
         return 0;
-    }
-
-    /*
-    **  Now we search for where to insert this node.
-    */
-    if (eq->sort) /* Not used --- Jan06 each action group is presorted in fpFinalSelect */
-    {
-        for(tmp = eq->head; tmp; tmp = tmp->next)
-        {
-            if(eq->sort(event, tmp->event))
-            {
-                /*
-                **  Put node here.
-                */
-                if(tmp->prev)
-                    tmp->prev->next = node;
-                else
-                    eq->head   = node;
-
-                node->prev = tmp->prev;
-                node->next = tmp;
-
-                tmp->prev  = node;
-
-                return 0;
-            }
-        }
     }
 
     /*
@@ -380,23 +313,6 @@ int sfeventq_action(SF_EVENTQ *eq, int (*action_func)(void *, void *), void *use
 #include <stdio.h>
 #include <time.h>
 
-int mysort(void *event1, void *event2)
-{
-    int *e1;
-    int *e2;
-
-    if(!event1 || !event2)
-        return 0;
-
-    e1 = (int *)event1;
-    e2 = (int *)event2;
-
-    if(*e1 < *e2)
-        return 1;
-
-    return 0;
-}
-
 int myaction(void *event, void *user)
 {
     int *e;
@@ -418,6 +334,7 @@ int main(int argc, char **argv)
     int  add_events;
     int *event;
     int  iCtr;
+    SF_EVENTQ *eq;
 
     if(argc < 4)
     {
@@ -454,7 +371,12 @@ int main(int argc, char **argv)
 
     srandom(time(NULL));
 
-    sfeventq_init(max_events, log_events, sizeof(int), mysort);
+    eq = sfeventq_new(max_events, log_events, sizeof(int));
+    if (eq == NULL)
+    {
+        printf("Couldn't allocate the event queue\n");
+        return 1;
+    }
 
     do
     {
@@ -462,7 +384,7 @@ int main(int argc, char **argv)
 
         for(iCtr = 0; iCtr < add_events; iCtr++)
         {
-            event  = (int *)sfeventq_event_alloc();
+            event  = (int *)sfeventq_event_alloc(eq);
             if(!event)
             {
                 printf("-- event allocation failed\n");
@@ -471,19 +393,19 @@ int main(int argc, char **argv)
 
             *event = (int)(random()%3);
 
-            sfeventq_add(event);
+            sfeventq_add(eq, event);
             printf("-- added %d\n", *event);
         }
 
         printf("\n-- Logging\n\n");
 
-        if(sfeventq_action(myaction, NULL))
+        if(sfeventq_action(eq, myaction, NULL))
         {
             printf("-- There was a problem.\n");
             return 1;
         }
 
-        sfeventq_reset();
+        sfeventq_reset(eq);
 
     } while(getc(stdin) < 14);
 

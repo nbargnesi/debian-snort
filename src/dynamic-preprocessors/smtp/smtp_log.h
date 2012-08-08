@@ -62,7 +62,7 @@
 #define SMTP_DECODE_MEMCAP_EXCEEDED_STR  "(smtp) No memory available for decoding. Max Mime Mem exceeded"
 #define SMTP_B64_DECODING_FAILED_STR     "(smtp) Base64 Decoding failed."
 #define SMTP_QP_DECODING_FAILED_STR      "(smtp) Quoted-Printable Decoding failed."
-#define SMTP_BITENC_DECODING_FAILED_STR  "(smtp) 7bit/8bit/binary/text Extraction failed."
+#define SMTP_BITENC_DECODING_FAILED_STR  "(smtp) Non-Encoded MIME attachment Extraction failed."
 #define SMTP_UU_DECODING_FAILED_STR      "(smtp) Unix-to-Unix Decoding failed."
 
 #define EVENT_STR_LEN  256

@@ -44,6 +44,16 @@ static void SetShmemMgmtVariables(int value, uint32_t instance_num)
     else
         temp_zerosegptr = mgmt_ptr->instance[instance_num].shmemZeroPtr;
 
+    if (value == GO_INACTIVE)
+    {    
+        mgmt_ptr->instance[instance_num].goInactive            = 1;
+        value = mgmt_ptr->instance[instance_num].active;
+    }
+    else
+    {
+       mgmt_ptr->instance[instance_num].goInactive             = 0;
+    }
+
     mgmt_ptr->instance[instance_num].active                    = value;
     mgmt_ptr->instance[instance_num].version                   =  0;
     mgmt_ptr->instance[instance_num].activeSegment             = NO_DATASEG;
@@ -58,23 +68,34 @@ static void SetShmemMgmtVariables(int value, uint32_t instance_num)
         mgmt_ptr->instance[instance_num].shmemSegmentPtr[i]    = temp_zerosegptr;
 }
 
+static void UnsetGoInactive()
+{
+    int i;
+    for(i=0; i<MAX_INSTANCES; i++)
+    {
+        mgmt_ptr->instance[i].goInactive = 0;
+    }
+}
+
+
 static void InitShmemDataSegmentMgmtVariables()
 {
     int i;
     mgmt_ptr->activeSegment = NO_DATASEG;
 
     for (i=0; i<MAX_SEGMENTS; i++)
-    {    
+    {
         mgmt_ptr->segment[i].version =  0;
         mgmt_ptr->segment[i].active  =  0;
         mgmt_ptr->segment[i].size    =  0;
     }
+    UnsetGoInactive();
 }
 
 int MapShmemMgmt()
 {
     uint32_t nBytes = sizeof(ShmemMgmtData);
-    int mgmtExists; 
+    int mgmtExists;
 
     if (!(mgmtExists = ShmemExists(shmusr_ptr->mgmtSeg)))
     {
@@ -82,7 +103,7 @@ int MapShmemMgmt()
             "No Shmem mgmt segment present\n"););
         if (shmusr_ptr->instance_type == READ)
             return SF_EINVAL;
-    }    
+    }
 
     if ((mgmt_ptr = (ShmemMgmtData *)
         ShmemMap(shmusr_ptr->mgmtSeg,nBytes,shmusr_ptr->instance_type)) == NULL)
@@ -112,15 +133,17 @@ void ForceShutdown()
 {
     int currActiveSegment;
     _dpd.logMsg("    Repuation Preprocessor: Shared memory is disabled. \n");
+    if (!mgmt_ptr)
+        return;
     mgmt_ptr->instance[shmusr_ptr->instance_num].shmemCurrPtr =
         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemZeroPtr;
 
-    if ((currActiveSegment = 
+    if ((currActiveSegment =
         mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment) >= 0)
-    {    
+    {
         mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment = NO_DATASEG;
         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[currActiveSegment] = 0;
-    }    
+    }
     return;
 }
 
@@ -137,13 +160,13 @@ int CheckForSharedMemSegment()
             return newSegment;
 
         SetShmemMgmtVariables(ACTIVE,shmusr_ptr->instance_num);
-    }   
+    }
 
-    if (!mgmt_ptr->instance[shmusr_ptr->instance_num].active)
+    if (mgmt_ptr->instance[shmusr_ptr->instance_num].goInactive)
         goto exit;
 
     if ((currActive = mgmt_ptr->activeSegment) >= 0)
-    {    
+    {
         if ( mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment != currActive &&
              mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[currActive] != TBMAP )
         {
@@ -151,17 +174,17 @@ int CheckForSharedMemSegment()
             mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[currActive] = TBMAP;
 
             if ((size = mgmt_ptr->segment[currActive].size) != 0)
-            {    
+            {
                 if ((shmem_ptr = ShmemMap(shmusr_ptr->dataSeg[currActive],size,READ)) != NULL)
-                {    
+                {
                     //Store Data segment pointer for instance
-                    mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegmentPtr[currActive] = shmem_ptr; 
+                    mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegmentPtr[currActive] = shmem_ptr;
                     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                         "Shmem ptr for segment %d is %p\n",currActive,shmem_ptr););
-                    newSegment = currActive;  
-                }    
+                    newSegment = currActive;
+                }
                 else
-                {    
+                {
                     currActive = NO_DATASEG;
                 }
             }
@@ -170,12 +193,12 @@ int CheckForSharedMemSegment()
                 mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[currActive] = 0;
             }
         }
-    }  
-    else if (mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment >= 0)   
-    {    
-        ForceShutdown(); 
+    }
+    else if (mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment >= 0)
+    {
+        ForceShutdown();
         goto exit;
-    }    
+    }
 
     DoHeartbeat();
 
@@ -203,7 +226,7 @@ int InitShmemReader (
             "Could not initialize zero segment\n"););
         return segment_number;
     }
-    
+
     zeroseg_ptr = **data_ptr;
 
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
@@ -214,7 +237,7 @@ int InitShmemReader (
         SwitchToActiveSegment(segment_number,data_ptr);
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
             "Switched to segment %d\n",segment_number););
-    }       
+    }
     return segment_number;
 }
 
@@ -226,7 +249,7 @@ static int FindFirstUnusedShmemSegment()
         if (mgmt_ptr->segment[i].active != 1)
             return i;
     }
-    return NO_DATASEG; 
+    return NO_DATASEG;
 }
 
 static int FindActiveSharedMemDataSegmentVersion()
@@ -249,12 +272,12 @@ static int MapShmemDataSegmentForWriter(uint32_t size, uint32_t disk_version, in
     int      available_segment = NO_DATASEG;
     uint32_t active_version    = 0;
     void*    shmem_ptr         = NULL;
-    *mode                      = WRITE; 
+    *mode                      = WRITE;
 
     if ((active_version =  FindActiveSharedMemDataSegmentVersion()) == disk_version )
-    {    
+    {
         if ((available_segment = mgmt_ptr->activeSegment) >= 0)
-        {    
+        {
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                 "Attaching to segment %d\n", available_segment););
             *mode = READ;
@@ -264,17 +287,17 @@ static int MapShmemDataSegmentForWriter(uint32_t size, uint32_t disk_version, in
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                 "No active segment to attach to\n"););
             goto exit;
-        }    
+        }
     }
 
     if (*mode == WRITE)
-    {       
+    {
         if ((available_segment = FindFirstUnusedShmemSegment()) < 0)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                 "No more segments available, all are in use\n"););
             goto exit;
-        }   
+        }
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                 "Shared memory segment %d will be initialized\n",available_segment););
     }
@@ -283,15 +306,15 @@ static int MapShmemDataSegmentForWriter(uint32_t size, uint32_t disk_version, in
 
     if ((shmem_ptr = ShmemMap(shmusr_ptr->dataSeg[available_segment],size,*mode)) != NULL)
     {
-        //store data segment pointer for instance 
+        //store data segment pointer for instance
         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegmentPtr[available_segment] = shmem_ptr;
-    }    
+    }
     else
-    {    
+    {
         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[available_segment] = 0;
         available_segment = NO_DATASEG;
-    }    
-    
+    }
+
 exit:
     return available_segment;
 }
@@ -354,6 +377,9 @@ int LoadSharedMemDataSegmentForWriter(int startup)
     uint32_t size = 0;
     uint32_t disk_version = 0, shmem_version = 0;
 
+    if ( !mgmt_ptr )
+        return NO_DATASEG;
+
     shmem_version = FindActiveSharedMemDataSegmentVersion();
 
     //if version file is not present(open source user), increment version and reload.
@@ -363,17 +389,17 @@ int LoadSharedMemDataSegmentForWriter(int startup)
         {
             if ((shmem_version == disk_version) && !startup)
                 goto exit;
-        }     
+        }
         else
-        {    
+        {
            goto force_shutdown;
-        }   
-    }  
+        }
+    }
     else
-    {    
+    {
         disk_version = shmem_version + 1;
         if (disk_version == 0) disk_version++;
-    }    
+    }
 
     if (GetSortedListOfShmemDataFiles())
         goto exit;
@@ -385,7 +411,7 @@ int LoadSharedMemDataSegmentForWriter(int startup)
     {
         segment_num = InitSharedMemDataSegmentForWriter(size,disk_version);
         goto exit;
-    }   
+    }
 
 force_shutdown:
     //got back zero which means its time to shutdown shared memory
@@ -426,7 +452,7 @@ int InitShmemWriter(
     {
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
             "Could not initialize shared memory management segment\n"););
-        FreeShmemDataFileList(); 
+        FreeShmemDataFileList();
         goto cleanup_exit;
     }
 
@@ -435,7 +461,7 @@ int InitShmemWriter(
 
     //valid segments are 0 through N
     if ((segment_number = LoadSharedMemDataSegmentForWriter(STARTUP)) >= 0)
-        SwitchToActiveSegment(segment_number,data_ptr); //pointer switch 
+        SwitchToActiveSegment(segment_number,data_ptr); //pointer switch
 
     goto exit;
 
@@ -449,7 +475,7 @@ exit:
 //switch to active DB
 void SwitchToActiveSegment(int segment_num, void*** data_ptr)
 {
-    if (segment_num < 0) 
+    if ((segment_num < 0)|| (!mgmt_ptr))
         return;
 
     mgmt_ptr->instance[shmusr_ptr->instance_num].shmemCurrPtr =
@@ -471,14 +497,18 @@ void SwitchToActiveSegment(int segment_num, void*** data_ptr)
 void UnmapInactiveSegments()
 {
     int i, segment_num;
-    for (i=0; i<MAX_SEGMENTS; i++) 
-    {    
-        if (i != mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment)  
-        {    
+
+    if (!mgmt_ptr)
+        return;
+
+    for (i=0; i<MAX_SEGMENTS; i++)
+    {
+        if (i != mgmt_ptr->instance[shmusr_ptr->instance_num].activeSegment)
+        {
             if (shmusr_ptr->instance_type != WRITE)
             {
                 if ((segment_num = mgmt_ptr->instance[shmusr_ptr->instance_num].prevSegment) != NO_DATASEG)
-                {    
+                {
                     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                         "Unmapping segment %d which has address %p and size %u\n",
                         segment_num,mgmt_ptr->instance[shmusr_ptr->instance_num].
@@ -491,9 +521,9 @@ void UnmapInactiveSegments()
                     mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegmentPtr[i] =
                         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemZeroPtr;
                 }
-            }    
+            }
             mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[i] = 0;
-        }    
+        }
     }
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
         "Active segment for instance %u is %d\n",
@@ -521,25 +551,28 @@ static void ExpireTimedoutInstances()
                 DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                     "Instance %d has expired, last update %jd and current time is %jd\n",
                     i,(intmax_t)mgmt_ptr->instance[i].updateTime,(intmax_t)current_time););
-                SetShmemMgmtVariables(INACTIVE,i);
+                SetShmemMgmtVariables(GO_INACTIVE,i);
             }
         }
     }
     return;
-}    
-    
-//WRITER only 
-int ManageUnusedSegments()
+}
+
+//WRITER only
+void ManageUnusedSegments()
 {
     uint32_t j,in_use = 0;
     int i;
     DoHeartbeat();    //writer heartbeat
-    ExpireTimedoutInstances();
+
+    if (UNUSED_TIMEOUT != -1)
+        ExpireTimedoutInstances();
+
     for (i=0; i<MAX_SEGMENTS; i++)
     {
         for(j=0; j<MAX_INSTANCES; j++)
         {
-            if (mgmt_ptr && mgmt_ptr->instance[j].active)
+            if (mgmt_ptr && mgmt_ptr->instance[j].active && !mgmt_ptr->instance[j].goInactive)
             {
                  if (mgmt_ptr->instance[j].shmemSegActiveFlag[i])
                  {
@@ -548,19 +581,20 @@ int ManageUnusedSegments()
                      in_use++;
                  }
             }
-        }                
+        }
         if (!in_use)
-        {    
+        {
             if (mgmt_ptr && mgmt_ptr->segment[i].active && (mgmt_ptr->activeSegment != i))
-            {    
+            {
                 DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                     "Shutting down segment %d\n",i););
                 ShutdownSegment(i);
-            }    
+            }
         }
         in_use = 0;
     }
-    return SF_SUCCESS;
+    if (UNUSED_TIMEOUT != -1)
+        UnsetGoInactive();
 }
 
 int ShutdownSharedMemory()
@@ -573,39 +607,104 @@ int ShutdownSharedMemory()
     FreeShmemDataFileList();
 
     return SF_SUCCESS;
-} 
+}
 
-void PrintShmemMgmtInfo()
+void ShmemMgmtInfo(char *buf, int bufLen)
 {
-    uint32_t i = 0;
+    uint32_t i;
+    int writed;
+    int len = bufLen -1;
+    char *index = buf;
 
     if ( !mgmt_ptr )
         return;
 
     for (i=0; i<MAX_INSTANCES; i++)
     {
-        if (mgmt_ptr->instance[i].active)
+        shmemInstance *shmem_info = (shmemInstance *) &(mgmt_ptr->instance[i]);
+        if (shmem_info->shmemCurrPtr)
         {
-            DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
-                "instance:%u address:%p updateTime:%jd\n",
-                i, (void *)mgmt_ptr->instance[i].shmemCurrPtr,
-                (intmax_t)mgmt_ptr->instance[i].updateTime););
+            writed = snprintf(index, len, 
+                "instance:%u active:%d goInactive:%d updateTime:%jd\n",
+                i,(int)shmem_info->active,
+                (int)shmem_info->goInactive,
+                (intmax_t)shmem_info->updateTime);
+
+            if (writed >= len || writed < 0)
+                return;
+
+            index += writed;
+            len -= writed;
+
+            writed = snprintf(index, len, 
+                "instance:%u activeSegment:%d prevSegment:%d currentPtr:%p zeroPtr:%p\n",
+                i,(int)shmem_info->activeSegment,
+                (int)shmem_info->prevSegment,
+                (void *)shmem_info->shmemCurrPtr,
+                (void *)shmem_info->shmemZeroPtr);
+
+            if (writed >= len || writed < 0)
+                return;
+
+            index += writed;
+            len -= writed;
         }
     }
     for (i=0; i<MAX_SEGMENTS; i++)
     {
-        if (mgmt_ptr->segment[i].active)
+        shmemSegment *shmem_seg = &(mgmt_ptr->segment[i]);
+        writed = snprintf(index, len, 
+            "segment:%u active:%d version:%u\n",
+            i,(int)shmem_seg->active,(uint32_t)shmem_seg->version);
+
+        if (writed >= len || writed < 0)
+            return;
+
+        index += writed;
+        len -= writed;
+
+    }
+
+    writed = snprintf(index, len, 
+        "active segment:%d\n\n",mgmt_ptr->activeSegment);
+    /* returning either way */
+}
+
+void PrintShmemMgmtInfo()
+{
+    uint32_t i;
+
+    if ( !mgmt_ptr )
+        return;
+
+    for (i=0; i<MAX_INSTANCES; i++)
+    {
+        shmemInstance *shmem_info = (shmemInstance *) &(mgmt_ptr->instance[i]);
+        if (shmem_info->shmemCurrPtr)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
-                "segment:%u active:%d version:%u\n",
-                i,mgmt_ptr->segment[i].active,mgmt_ptr->segment[i].version););
-        }
-    }    
+                "instance:%u active:%d goInactive:%d updateTime:%jd\n",
+                i,(int)shmem_info->active,
+                (int)shmem_info->goInactive,
+                (intmax_t)shmem_info->updateTime););
 
-    if (mgmt_ptr->activeSegment != NO_DATASEG)
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
-            "active segment:%d\n",mgmt_ptr->activeSegment););
+            DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
+                "instance:%u activeSegment:%d prevSegment:%d currentPtr:%p zeroPtr:%p\n",
+                i,(int)shmem_info->activeSegment,
+                (int)shmem_info->prevSegment,
+                (void *)shmem_info->shmemCurrPtr,
+                (void *)shmem_info->shmemZeroPtr););
+        }
     }
+    for (i=0; i<MAX_SEGMENTS; i++)
+    {
+        shmemSegment *shmem_seg = &(mgmt_ptr->segment[i]);
+        DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
+            "segment:%u active:%d version:%u\n",
+            i,(int)shmem_seg->active,(uint32_t)shmem_seg->version););
+    }
+
+    DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
+        "active segment:%d\n\n",mgmt_ptr->activeSegment););
 }
 

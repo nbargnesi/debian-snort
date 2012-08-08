@@ -295,6 +295,53 @@ static inline void _dir_fill_less_specific(int index, int fill,
     }
 }
 
+static inline void _dir_update_info(int index, int fill,
+        word length, uint32_t val, SUB_TABLE_PTR sub_ptr, updateEntryInfoFunc updateEntry, INFO *data)
+{
+
+    dir_sub_table_flat_t *subtable;
+    uint8_t *base;
+
+    base = (uint8_t *)segment_basePtr();
+    subtable = (dir_sub_table_flat_t *)(&base[sub_ptr]);
+
+    /* Fill entries */
+    for(; index < fill; index++)
+    {
+        /* If we encounter a pointer, and we're inserting at this level, we
+         * automatically know that this entry refers to more specific
+         * information.  However, there might only be one more specific entry
+         * in the entire block, meaning the rest must be filled.
+         *
+         * For instance, imagine a 24-8 with 1.2.3/24 -> A and 1.2.3.4/32 -> B
+         * There will be a pointer at 1.2.3 in the first table. The second
+         * table needs to have 255 entries pointing A, and 1 entry pointing to
+         * B.
+         *
+         * Therefore, recurse to this next level. */
+        DIR_Entry *entry = (DIR_Entry *)(&base[subtable->entries]);
+        if( entry[index].value && !entry[index].length)
+        {
+
+            dir_sub_table_flat_t *next = (dir_sub_table_flat_t*)(&base[entry[index].value]);
+            _dir_update_info(0, 1 << next->width, length, val, entry[index].value, updateEntry, data);
+        }
+        else if(length >= (unsigned)entry[index].length)
+        {
+           if (entry[index].value)
+           {
+               updateEntry(&data[entry[index].value], data[val], SAVE_TO_NEW, base);
+           }
+
+           entry[index].value = val;
+           entry[index].length = (uint8_t)length;
+        }
+        else if(entry[index].value)
+        {
+            updateEntry(&data[entry[index].value], data[val], SAVE_TO_CURRENT,  base);
+        }
+    }
+}
 /* Sub table insertion
  * This is called by dir_insert and recursively to find the the sub table
  * that should house the value "ptr"
@@ -305,7 +352,7 @@ static inline void _dir_fill_less_specific(int index, int fill,
  * @param master_table    The table that describes all, returned by dir_new */
 static int _dir_sub_insert(IPLOOKUP *ip, int length, int cur_len, INFO ptr,
         int current_depth, int behavior,
-        SUB_TABLE_PTR sub_ptr, dir_table_flat_t *root_table)
+        SUB_TABLE_PTR sub_ptr, dir_table_flat_t *root_table,updateEntryInfoFunc updateEntry, INFO *data)
 {
 
     word index;
@@ -373,9 +420,13 @@ static int _dir_sub_insert(IPLOOKUP *ip, int length, int cur_len, INFO ptr,
                     (word)ptr, sub_ptr);
         }
         /* Fill over less specific CIDR */
-        else
+        else if (behavior == RT_FAVOR_SPECIFIC)
         {
             _dir_fill_less_specific(index, fill, length, (word)ptr, sub_ptr);
+        }
+        else if (behavior == RT_FAVOR_ALL)
+        {
+            _dir_update_info(index, fill, length, (word)ptr, sub_ptr, updateEntry, data);
         }
     }
     /* Need to traverse to a sub-table */
@@ -416,12 +467,12 @@ static int _dir_sub_insert(IPLOOKUP *ip, int length, int cur_len, INFO ptr,
         ip->bits += sub_table->width;
         return (_dir_sub_insert(ip, length,
                 cur_len - sub_table->width, ptr, current_depth+1,
-                behavior, entry[index].value, root_table));
+                behavior, entry[index].value, root_table, updateEntry, data));
 #else
         iplu = *ip << sub_table->width;
         return ( _dir_sub_insert(&iplu, length,
                 cur_len - sub_table->width, ptr, current_depth+1,
-                behavior, entry[index].value, root_table));
+                behavior, entry[index].value, root_table, updateEntry, data));
 #endif
     }
 
@@ -434,7 +485,7 @@ static int _dir_sub_insert(IPLOOKUP *ip, int length, int cur_len, INFO ptr,
  * @param ptr       Information to be associated with this IP range
  * @param master_table    The table that describes all, returned by dir_new */
 int sfrt_dir_flat_insert(snort_ip_p ip, int len, word data_index,
-        int behavior, TABLE_PTR table_ptr)
+        int behavior, TABLE_PTR table_ptr, updateEntryInfoFunc updateEntry, INFO *data)
 {
     dir_table_flat_t *root;
 
@@ -460,7 +511,7 @@ int sfrt_dir_flat_insert(snort_ip_p ip, int len, word data_index,
 
     /* Find the sub table in which to insert */
     return _dir_sub_insert(&iplu, len, len, data_index,
-            0, behavior, root->sub_table, root);
+            0, behavior, root->sub_table, root, updateEntry, data);
 }
 
 /* Traverse sub tables looking for match */

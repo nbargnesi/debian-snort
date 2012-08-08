@@ -37,8 +37,7 @@ host_triplet = @host@
 subdir = src/sfutil
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
-	$(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -68,7 +67,8 @@ am__libsfutil_a_SOURCES_DIST = sfghash.c sfghash.h sfhashfcn.c \
 	sfPolicyUserData.h sfActionQueue.c sfActionQueue.h sfrf.c \
 	sfrf.h strvec.c strvec.h sf_email_attach_decode.c \
 	sf_email_attach_decode.h sf_base64decode.c sf_base64decode.h \
-	Unified2_common.h intel-soft-cpm.c intel-soft-cpm.h
+	Unified2_common.h sf_seqnums.h intel-soft-cpm.c \
+	intel-soft-cpm.h
 @HAVE_INTEL_SOFT_CPM_TRUE@am__objects_1 = intel-soft-cpm.$(OBJEXT)
 am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
 	sflsq.$(OBJEXT) sfmemcap.$(OBJEXT) sfthd.$(OBJEXT) \
@@ -142,13 +142,6 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LIBOBJS = @LIBOBJS@
-LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
-LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
-LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
-LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
-LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
-LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
-LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -288,6 +281,7 @@ libsfutil_a_SOURCES = \
     sf_email_attach_decode.c sf_email_attach_decode.h \
     sf_base64decode.c sf_base64decode.h \
     Unified2_common.h \
+    sf_seqnums.h \
     $(INTEL_SOFT_CPM_SOURCES)
 
 all: all-am

@@ -65,6 +65,7 @@ idle_processing.c idle_processing.h idle_processing_funcs.h
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
 dynamic-plugins/libdynamic.a            \
+dynamic-output/plugins/liboutput.a      \
 preprocessors/libspp.a                \
 parser/libparser.a \
 target-based/libtarget_based.a \
@@ -78,6 +79,6 @@ EXAMPLES_DIR = dynamic-examples
 endif
 
 
-SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors target-based control $(EXAMPLES_DIR)
+SUBDIRS = sfutil win32 output-plugins detection-plugins dynamic-plugins preprocessors parser dynamic-preprocessors dynamic-output target-based control $(EXAMPLES_DIR)
 
 INCLUDES = @INCLUDES@

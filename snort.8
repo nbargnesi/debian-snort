@@ -120,8 +120,7 @@ CGI attacks, SMB probes, OS fingerprinting attempts, and much more.  Snort uses
 a flexible rules language to describe traffic that it should collect or pass,
 as well as a detection engine that utilizes a modular plugin architecture.
 Snort also has a modular real-time alerting capability, incorporating alerting
-and logging plugins for syslog, a ASCII text files, UNIX sockets, database
-(Mysql/PostgreSQL/Oracle/ODBC) or XML.
+and logging plugins for syslog, a ASCII text files, UNIX sockets or XML.
 .PP
 Snort has three primary uses.  It can be used as a straight packet sniffer like
 .BR tcpdump (1),
@@ -130,7 +129,7 @@ blown network intrusion detection system.
 .PP
 Snort logs packets in
 .BR tcpdump (1)
-binary format, to a database or in Snort's decoded ASCII format to a hierarchy
+binary format or in Snort's decoded ASCII format to a hierarchy
 of logging directories that are named based on the IP address of the "foreign"
 host.
 .SH OPTIONS
@@ -201,8 +200,7 @@ Change the group/GID Snort runs under to
 after initialization.  This switch allows Snort to drop root privileges after
 it's initialization phase has completed as a security measure.
 .IP "-G id"
-Use id as a base event ID when logging events.  Useful for distinguishing
-events logged to the same database from multiple snort instances.
+Use id as a base event ID when logging events.
 .IP "-h home-net"
 Set the "home network" to
 .I home-net.

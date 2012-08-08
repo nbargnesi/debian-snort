@@ -1,16 +1,72 @@
-2012-05-08 - Snort 2.9.2.3
+2012-07-17 - Snort 2.9.3
 [*] Improvements
- * Update to GTP preprocessor to better handle GTPv1 data.
 
- * Update to DNP3 preprocessor to add stricter checking on
-   packets before processing by dnp3.  Improved checking
-   on reassembly buffer
+ * Updates to http_inspect client PAF handling and server flow_depth handling.
+ 
+ * Logging updates to the smtp preprocessor.
 
- * Update to PCRE rule option processing to prevent issues
-   seen w/ libpcre-8.30 and certain rules.
+2012-06-06 - Snort 2.9.3 RC
+[*] Improvements
 
- * Update to dcerpc2 to not abort reassembly if target-based
-   protocol is undefined.
+ * Added detailed documentation of unified2 logging configuration and
+   logging.
+
+ * Removed --enable-decoder-preprocessor-rules configure option and
+   hardened preprocessor and decoder rule event code.  To enable old
+   behavior such that specific preprocessor and decoder rules don't
+   have to be explicity added to snort.conf, add "config
+   autogenerate_preprocessor_decoder_rules" to your snort.conf.
+
+ * Fixed SMTP mempool allocation for significant memory savings.  Also
+   tweaked memory required per stream5 session tracker.
+
+ * Force exact versioning match of running dynamic engine and dynamic
+   engine used to build SO rules.
+
+ * User can now query reputation pp for routing table and management
+   information.
+
+2012-04-27 - Snort 2.9.3 Beta
+[*] New additions
+ * Update to flowbit rule option to allow for OR and AND
+  of individual bits within a single rule, and allow flowbits
+  to be used in multiple groups.  See README.flowbits and
+  the Snort manual for details.
+
+ * Dynamic output plugin architecture to provide an API that
+  developers can write their own output mechanisms to log alert
+  and packet data from Snort.
+
+ * Update to dcerpc2 preprocessor for improved accuracy and
+  handling of different OSs for SMB processing.  See README.dcerpc2
+  and the Snort manual for details.
+
+ * Updates to reputation preprocessor for handling of whitlelist
+  and trustlists and zone information.  See README.reputation
+  and the Snort manual for details.
+
+[*] Improvements
+ * Update to return error messages through the control channel.
+
+ * Updates to the processing of email attachments for better
+  handling of non-encoded attachments, and improved memory
+  management for attachment processing.
+
+ * Improvements in HTTP Inspect for better performance with gzip
+  decompression.  Also improvements for handling simple responses,
+  encoded query strings, transfer encoding and chunk encoding
+  processing.
+
+ * Updates to the packet decoders to support pflog v4.
+
+ * Fix logging of multiple unified2 alerts with reassembled packets.
+
+ * Compiler warning cleanup across multiple platforms.
+
+ * Added 116:458 and 116:459 to cover fragmentation issues.
+
+[*] Deletions
+ * Removed all database outputs.
 
 2012-03-26 - Snort 2.9.2.2
 [*] Improvements

@@ -67,10 +67,9 @@ void SnortEventqFree(SF_EVENTQ *[]);
 void SnortEventqReset(void);
 void SnortEventqResetCounts(void);
 
-int  SnortEventqLog(SF_EVENTQ *[], Packet *);
-int  SnortEventqAdd(unsigned int gid,unsigned int sid,unsigned int rev, 
-                    unsigned int classification,unsigned int pri,char *msg,
-                    void *rule_info);
+int SnortEventqLog(SF_EVENTQ *[], Packet *);
+int SnortEventqAdd(uint32_t, uint32_t, uint32_t,
+        uint32_t, uint32_t,char *, void *);
 
 void SnortEventqPush(void);
 void SnortEventqPop(void);

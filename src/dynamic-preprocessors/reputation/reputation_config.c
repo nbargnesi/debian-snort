@@ -75,21 +75,20 @@ enum
 #define REPUTATION_SCANLOCAL_KEYWORD     "scan_local"
 #define REPUTATION_BLACKLIST_KEYWORD     "blacklist"
 #define REPUTATION_WHITELIST_KEYWORD     "whitelist"
+#define REPUTATION_MONITORLIST_KEYWORD   "monitorlist"
 #define REPUTATION_PRIORITY_KEYWORD      "priority"
 #define REPUTATION_NESTEDIP_KEYWORD      "nested_ip"
 #define REPUTATION_SHAREMEM_KEYWORD      "shared_mem"
 #define REPUTATION_SHAREDREFRESH_KEYWORD "shared_refresh"
+#define REPUTATION_WHITEACTION_KEYWORD   "white"
 
 #define REPUTATION_CONFIG_SECTION_SEPERATORS     ",;"
 #define REPUTATION_CONFIG_VALUE_SEPERATORS       " "
 #define REPUTATION_SEPARATORS                " \t\r\n"
 
-
-static bw_list black = {BLACKLISTED};
-static bw_list white = {WHITELISTED};
-
 static char *black_info = REPUTATION_BLACKLIST_KEYWORD;
 static char *white_info = REPUTATION_WHITELIST_KEYWORD;
+static char *monitor_info = REPUTATION_MONITORLIST_KEYWORD;
 
 char* NestedIPKeyword[] =
 {
@@ -98,6 +97,14 @@ char* NestedIPKeyword[] =
         "both",
         NULL
 };
+
+char* WhiteActionOption[] =
+{
+        "unblack",
+        "trust",
+        NULL
+};
+
 
 #define MAX_MSGS_TO_PRINT      20
 
@@ -136,7 +143,7 @@ uint32_t estimateSizeFromEntries(uint32_t num_entries, uint32_t memcap)
     uint64_t sizeFromEntries;
 
     /*memcap value is in Megabytes*/
-    size = memcap  << 20;
+    size = (uint64_t)memcap << 20;
 
     if (size > UINT32_MAX)
         size = UINT32_MAX;
@@ -205,9 +212,17 @@ int LoadFileIntoShmem(void* ptrSegment, ShmemDataFileList** file_list, int num_f
 {
     table_flat_t *table;
     int i;
-    MEM_OFFSET black_ptr;
-    MEM_OFFSET white_ptr;
+    MEM_OFFSET list_ptr;
+    ListInfo *listInfo;
     uint8_t *base;
+
+    if (num_files > MAX_IPLIST_FILES)
+    {
+        _dpd.logMsg("Reputation preprocessor: Too many IP list files. "
+                "The maximum is: %d, current is: %d.\n",
+                 MAX_IPLIST_FILES, num_files);
+        num_files = MAX_IPLIST_FILES;
+    }
 
     segment_meminit((uint8_t*)ptrSegment, reputation_shmem_config->memsize);
 
@@ -223,17 +238,24 @@ int LoadFileIntoShmem(void* ptrSegment, ShmemDataFileList** file_list, int num_f
 #endif
     if (table == NULL)
     {
-        DynamicPreprocessorFatalMessage("%s(%d): Failed to create IP list.\n",
-                *(_dpd.config_file), *(_dpd.config_line));
+        DynamicPreprocessorFatalMessage("Reputation preprocessor: Failed to create IP list.\n");
     }
 
     reputation_shmem_config->iplist = table;
     base = (uint8_t *)ptrSegment;
 
-    black_ptr = segment_malloc(sizeof(bw_list));
-    white_ptr = segment_malloc(sizeof(bw_list));
-    *((bw_list *)&base[black_ptr]) = black;
-    *((bw_list *)&base[white_ptr]) = white;
+    /*Copy the list information table to shared memory block*/
+    list_ptr = segment_calloc(num_files, sizeof(ListInfo));
+
+    if (list_ptr == 0)
+    {
+        DynamicPreprocessorFatalMessage("Reputation preprocessor:: Failed to create IP list table.\n");
+    }
+
+    listInfo = (ListInfo *)&base[list_ptr];
+    table->list_info = list_ptr;
+
+    reputation_shmem_config->listInfo = listInfo;
 
     reputation_shmem_config->memCapReached = false;
 
@@ -241,14 +263,16 @@ int LoadFileIntoShmem(void* ptrSegment, ShmemDataFileList** file_list, int num_f
     total_duplicates = 0;
     for (i = 0; i < num_files; i++)
     {
-        if (BLACK_LIST == file_list[i]->filetype)
-            LoadListFile(file_list[i]->filename,black_ptr, reputation_shmem_config);
-        else if (WHITE_LIST == file_list[i]->filetype)
-            LoadListFile(file_list[i]->filename,white_ptr, reputation_shmem_config);
+        listInfo[i].listIndex = (uint8_t)i + 1;
+        listInfo[i].listType = (uint8_t)file_list[i]->filetype;
+        listInfo[i].listId = file_list[i]->listid;
+        memcpy(listInfo[i].zones, file_list[i]->zones, MAX_NUM_ZONES);
+        LoadListFile(file_list[i]->filename, list_ptr, reputation_shmem_config);
+        list_ptr += sizeof(ListInfo);
 
     }
 
-    _dpd.logMsg("    Reputation Preprocessor shared memory summary:\n");
+    _dpd.logMsg("Reputation Preprocessor shared memory summary:\n");
     DisplayIPlistStats(reputation_shmem_config);
     return 0;
 }
@@ -337,6 +361,12 @@ int InitPerProcessZeroSegment(void*** data_ptr)
         return 0;
     }
     reputation_shmem_config->emptySegment = malloc(size*1024*1024);
+    if (reputation_shmem_config->emptySegment == NULL)
+    {
+        DynamicPreprocessorFatalMessage(
+        "Failed to allocate memory for empty segment.\n");
+    }
+
     segment_meminit((uint8_t*) reputation_shmem_config->emptySegment, size*1024*1024);
 
     initiated = true;
@@ -353,8 +383,7 @@ int InitPerProcessZeroSegment(void*** data_ptr)
 #endif
     if (emptyIPtables == NULL)
     {
-        DynamicPreprocessorFatalMessage("%s(%d): Failed to create IP list.\n",
-                *(_dpd.config_file), *(_dpd.config_line));
+        DynamicPreprocessorFatalMessage("Reputation preprocessor: Failed to create IP list.\n");
     }
 
     *data_ptr = (void **)&emptyIPtables;
@@ -393,7 +422,7 @@ void initShareMemory(void *conf)
     }
     /*use snort instance ID to designate server (writer)*/
     snortID = _dpd.getSnortInstance();
-    if (SHMEM_SERVER_ID_1 == snortID)
+    if (SHMEM_SERVER_ID == snortID)
     {
         if ((available_segment = InitShmemWriter(snortID,IPREP,GROUP_0,NUMA_0,
                 config->sharedMem.path, &IPtables,config->sharedMem.updateInterval)) == NO_ZEROSEG)
@@ -413,7 +442,7 @@ void initShareMemory(void *conf)
         }
         switch_state = SWITCHED;
     }
-
+    SetupReputationUpdate(config->sharedMem.updateInterval);
 }
 #endif
 /* ********************************************************************
@@ -432,10 +461,10 @@ static void DisplayIPlistStats(ReputationConfig *config)
     /*Print out the summary*/
     reputation_stats.memoryAllocated = sfrt_flat_usage(config->iplist);
     _dpd.logMsg("    Reputation total memory usage: %u bytes\n",
-               reputation_stats.memoryAllocated);
+            reputation_stats.memoryAllocated);
     config->numEntries = sfrt_flat_num_entries(config->iplist);
     _dpd.logMsg("    Reputation total entries loaded: %u, invalid: %u, re-defined: %u\n",
-               config->numEntries,total_invalids,total_duplicates);
+            config->numEntries,total_invalids,total_duplicates);
 }
 /* ********************************************************************
  * Function: DisplayReputationConfig
@@ -456,29 +485,25 @@ static void DisplayReputationConfig(ReputationConfig *config)
 
     _dpd.logMsg("    Memcap: %d %s \n",
             config->memcap,
-            config->memcap
-            == REPUTATION_DEFAULT_MEMCAP ?
-                    "(Default) M bytes" : "M bytes" );
+            config->memcap == REPUTATION_DEFAULT_MEMCAP ? "(Default) M bytes" : "M bytes" );
     _dpd.logMsg("    Scan local network: %s\n",
-            config->scanlocal ?
-                    "ENABLED":"DISABLED (Default)");
+            config->scanlocal ? "ENABLED":"DISABLED (Default)");
     _dpd.logMsg("    Reputation priority:  %s \n",
-            config->priority
-            ==  WHITELISTED?
+            config->priority ==  WHITELISTED_TRUST?
                     REPUTATION_WHITELIST_KEYWORD "(Default)" : REPUTATION_BLACKLIST_KEYWORD );
     _dpd.logMsg("    Nested IP: %s %s \n",
             NestedIPKeyword[config->nestedIP],
-            config->nestedIP
-            ==  INNER?
-                    "(Default)" : "" );
+            config->nestedIP ==  INNER? "(Default)" : "" );
+    _dpd.logMsg("    White action: %s %s \n",
+            WhiteActionOption[config->whiteAction],
+            config->whiteAction ==  UNBLACK? "(Default)" : "" );
     if (config->sharedMem.path)
     {
         _dpd.logMsg("    Shared memory supported, Update directory: %s\n",
                 config->sharedMem.path );
         _dpd.logMsg("    Shared memory refresh period: %d %s \n",
                 config->sharedMem.updateInterval,
-                config->sharedMem.updateInterval
-                == REPUTATION_DEFAULT_REFRESH_PERIOD ?
+                config->sharedMem.updateInterval == REPUTATION_DEFAULT_REFRESH_PERIOD ?
                         "(Default) seconds" : "seconds" );
     }
     else
@@ -507,12 +532,21 @@ static void DisplayReputationConfig(ReputationConfig *config)
 static void IpListInit(uint32_t maxEntries, ReputationConfig *config)
 {
     uint8_t *base;
+    ListInfo *whiteInfo;
+    ListInfo *blackInfo;
+    MEM_OFFSET list_ptr;
 
     if (config->iplist == NULL)
     {
         uint32_t mem_size;
         mem_size = estimateSizeFromEntries(maxEntries, config->memcap);
         config->localSegment = malloc(mem_size);
+        if (config->localSegment == NULL)
+        {
+            DynamicPreprocessorFatalMessage(
+            "Failed to allocate memory for local segment\n");
+        }
+
         segment_meminit((uint8_t*)config->localSegment,mem_size);
         base = (uint8_t *)config->localSegment;
 
@@ -526,21 +560,136 @@ static void IpListInit(uint32_t maxEntries, ReputationConfig *config)
         config->iplist = sfrt_flat_new(DIR_8x4, IPv4,  maxEntries, config->memcap);
 
 #endif
-        config->local_black_ptr = segment_malloc(sizeof(bw_list));
-        config->local_white_ptr = segment_malloc(sizeof(bw_list));
-
-        *((bw_list *)&base[config->local_black_ptr]) = black;
-        *((bw_list *)&base[config->local_white_ptr]) = white;
-
         if (config->iplist == NULL)
         {
             DynamicPreprocessorFatalMessage("%s(%d): Failed to create IP list.\n",
                     *(_dpd.config_file), *(_dpd.config_line));
             return;
         }
+
+        list_ptr = segment_calloc((size_t)DECISION_MAX, sizeof(ListInfo));
+        config->iplist->list_info = list_ptr;
+
+        config->local_black_ptr = list_ptr + BLACKLISTED * sizeof(ListInfo);
+        blackInfo = (ListInfo *)&base[config->local_black_ptr];
+        blackInfo->listType = BLACKLISTED;
+        blackInfo->listIndex = BLACKLISTED + 1;
+#ifdef SHARED_REP
+        memset(blackInfo->zones, true, MAX_NUM_ZONES);
+#endif
+        if (UNBLACK == config->whiteAction)
+        {
+            config->local_white_ptr = list_ptr + WHITELISTED_UNBLACK * sizeof(ListInfo);
+            whiteInfo = (ListInfo *)&base[config->local_white_ptr];
+            whiteInfo->listType = WHITELISTED_UNBLACK;
+            whiteInfo->listIndex = WHITELISTED_UNBLACK + 1;
+#ifdef SHARED_REP
+        memset(whiteInfo->zones, true, MAX_NUM_ZONES);
+#endif
+        }
+        else
+        {
+            config->local_white_ptr = list_ptr + WHITELISTED_TRUST * sizeof(ListInfo);
+            whiteInfo = (ListInfo *)&base[config->local_white_ptr];
+            whiteInfo->listType = WHITELISTED_TRUST;
+            whiteInfo->listIndex = WHITELISTED_TRUST + 1;
+#ifdef SHARED_REP
+        memset(whiteInfo->zones, true, MAX_NUM_ZONES);
+#endif
+        }
     }
 }
+/*New information for the same IP will be appended to the current
+ *
+ * If current information is empty (0), new information will be created.
+ *
+ */
+static int updateEntryInfo (INFO *current, INFO new, SaveDest saveDest, uint8_t *base)
+{
+    IPrepInfo *currentInfo;
+    IPrepInfo *newInfo;
+    IPrepInfo *destInfo;
+    int bytesAllocated = 0;
+    int i;
+    char newIndex;
 
+    if(!(*current))
+    {
+        /* Copy the data to segment memory*/
+        *current = segment_calloc(1,sizeof(IPrepInfo));
+        if (!(*current))
+        {
+            return 0;
+        }
+        bytesAllocated = sizeof(IPrepInfo);
+    }
+
+    if (*current == new)
+        return 0;
+
+    currentInfo = (IPrepInfo *)&base[*current];
+    newInfo = (IPrepInfo *)&base[new];
+    newIndex = newInfo->listIndexes[0];
+
+    DEBUG_WRAP( DebugMessage(DEBUG_REPUTATION, "Current IP reptuation information: \n"););
+    DEBUG_WRAP(ReputationPrintRepInfo(currentInfo, base););
+    DEBUG_WRAP( DebugMessage(DEBUG_REPUTATION, "New IP reptuation information: \n"););
+    DEBUG_WRAP(ReputationPrintRepInfo(newInfo, base););
+
+    if (SAVE_TO_NEW == saveDest)
+    {
+        destInfo = newInfo;
+        /*Copy current to new*/
+        while (currentInfo)
+        {
+            *destInfo = *currentInfo;
+            if (!currentInfo->next)
+                break;
+            currentInfo =  (IPrepInfo *)&base[currentInfo->next];
+
+        }
+
+    }
+    else
+    {
+        destInfo = currentInfo;
+    }
+
+    /* Move to the end of current info*/
+
+    while (destInfo->next)
+    {
+        destInfo =  (IPrepInfo *)&base[destInfo->next];
+    }
+
+    for (i = 0; i < NUM_INDEX_PER_ENTRY; i++)
+    {
+        if (!destInfo->listIndexes[i])
+            break;
+    }
+
+
+    if (i < NUM_INDEX_PER_ENTRY)
+    {
+        destInfo->listIndexes[i] = newIndex;
+    }
+    else
+    {
+        IPrepInfo *nextInfo;
+        MEM_OFFSET ipInfo_ptr = segment_calloc(1,sizeof(IPrepInfo));
+        if (!ipInfo_ptr)
+            return 0;
+        destInfo->next = ipInfo_ptr;
+        nextInfo = (IPrepInfo *)&base[destInfo->next];
+        nextInfo->listIndexes[0] = newIndex;
+        bytesAllocated += sizeof(IPrepInfo);
+    }
+
+    DEBUG_WRAP( DebugMessage(DEBUG_REPUTATION, "Final IP reptuation information: \n"););
+    DEBUG_WRAP(ReputationPrintRepInfo(destInfo, base););
+
+    return bytesAllocated;
+}
 /********************************************************************
  * Function: AddIPtoList
  *
@@ -558,7 +707,7 @@ static void IpListInit(uint32_t maxEntries, ReputationConfig *config)
  *
  ********************************************************************/
 
-static int AddIPtoList(sfip_t *ipAddr,INFO info, ReputationConfig *config)
+static int AddIPtoList(sfip_t *ipAddr,INFO ipInfo_ptr, ReputationConfig *config)
 {
     int iRet;
     int iFinalRet = IP_INSERT_SUCCESS;
@@ -606,29 +755,29 @@ static int AddIPtoList(sfip_t *ipAddr,INFO info, ReputationConfig *config)
         iFinalRet = IP_INSERT_DUPLICATE;
     }
 
-
 #ifdef SUP_IP6
-    iRet = sfrt_flat_insert((void *)ipAddr, (unsigned char)ipAddr->bits, info, RT_FAVOR_TIME, config->iplist);
+    iRet = sfrt_flat_insert((void *)ipAddr, (unsigned char)ipAddr->bits, ipInfo_ptr, RT_FAVOR_ALL, config->iplist, &updateEntryInfo);
 #else
-    iRet = sfrt_flat_insert((void *)&(ipAddr->ip.u6_addr32[0]), (unsigned char)ipAddr->bits, info, RT_FAVOR_TIME, config->iplist);
+    iRet = sfrt_flat_insert((void *)&(ipAddr->ip.u6_addr32[0]), (unsigned char)ipAddr->bits, ipInfo_ptr, RT_FAVOR_ALL, config->iplist, &updateEntryInfo);
 #endif
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Unused memory: %d \n",segment_unusedmem()););
 
 
     if (RT_SUCCESS == iRet)
     {
-        totalNumEntries++;
 #ifdef DEBUG_MSGS
-
+        IPrepInfo * result;
         DebugMessage(DEBUG_REPUTATION, "Number of entries input: %d, in table: %d \n",
                 totalNumEntries,sfrt_flat_num_entries(config->iplist) );
         DebugMessage(DEBUG_REPUTATION, "Memory allocated: %d \n",sfrt_flat_usage(config->iplist) );
-        if (NULL != sfrt_flat_lookup((void *)ipAddr, config->iplist))
+        result = sfrt_flat_lookup((void *)ipAddr, config->iplist);
+        if (NULL != result)
         {
             DebugMessage(DEBUG_REPUTATION, "Find address after insert: %s \n",sfip_to_str(ipAddr) );
-
+            DEBUG_WRAP(ReputationPrintRepInfo(result, (uint8_t *)config->iplist););
         }
 #endif
+        totalNumEntries++;
     }
     else if (MEM_ALLOC_FAILURE == iRet)
     {
@@ -675,7 +824,7 @@ static int AddIPtoList(sfip_t *ipAddr,INFO info, ReputationConfig *config)
  *
  ********************************************************************/
 
-static int ProcessLine(char *line, INFO info, ReputationConfig *config)
+static int ProcessLine(char *line, INFO ipInfo_ptr, ReputationConfig *config)
 {
     sfip_t ipAddr;
     char *lineBuff;
@@ -702,7 +851,7 @@ static int ProcessLine(char *line, INFO info, ReputationConfig *config)
             return IP_INVALID;
 
         }
-        iRet = AddIPtoList(&ipAddr, info, config);
+        iRet = AddIPtoList(&ipAddr, ipInfo_ptr, config);
         if( IP_INSERT_SUCCESS != iRet)
         {
             free(lineBuff);
@@ -823,12 +972,12 @@ static int UpdatePathToFile(char *full_path_filename, unsigned int max_size, cha
 static char* GetListInfo(INFO info)
 {
     uint8_t *base;
-    bw_list *info_value;
+    ListInfo *info_value;
     base = (uint8_t *)segment_basePtr();
-    info_value = (bw_list *)(&base[info]);
+    info_value = (ListInfo *)(&base[info]);
     if (!info_value)
         return NULL;
-    switch(info_value->isBlack)
+    switch(info_value->listType)
     {
     case DECISION_NULL:
         return NULL;
@@ -836,7 +985,13 @@ static char* GetListInfo(INFO info)
     case BLACKLISTED:
         return black_info;
         break;
-    case WHITELISTED:
+    case WHITELISTED_UNBLACK:
+        return white_info;
+        break;
+    case MONITORED:
+        return monitor_info;
+        break;
+    case WHITELISTED_TRUST:
         return white_info;
         break;
     default:
@@ -869,6 +1024,10 @@ static void LoadListFile(char *filename, INFO info, ReputationConfig *config)
     FILE *fp = NULL;
     char *cmt = NULL;
     char *list_info;
+    ListInfo *listInfo;
+    IPrepInfo *ipInfo;
+    MEM_OFFSET ipInfo_ptr;
+    uint8_t *base;
 
     /*entries processing statistics*/
     unsigned int num_duplicates = 0; /*number of duplicates in this file*/
@@ -884,6 +1043,18 @@ static void LoadListFile(char *filename, INFO info, ReputationConfig *config)
 
     if (!list_info)
         return;
+
+    /*convert list info to ip entry info*/
+    ipInfo_ptr = segment_calloc(1,sizeof(IPrepInfo));
+    if (!(ipInfo_ptr))
+    {
+        return;
+    }
+    base = (uint8_t*)config->iplist;
+    ipInfo = ((IPrepInfo *)&base[ipInfo_ptr]);
+    listInfo = ((ListInfo *)&base[info]);
+    ipInfo->listIndexes[0] = listInfo->listIndex;
+
 
     _dpd.logMsg("    Processing %s file %s\n", list_info, full_path_filename);
 
@@ -913,7 +1084,7 @@ static void LoadListFile(char *filename, INFO info, ReputationConfig *config)
         }
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Reputation configurations: %s\n",lb ););
         /* process the line */
-        iRet = ProcessLine(lb, info, config);
+        iRet = ProcessLine(lb, ipInfo_ptr, config);
 
         if (IP_INSERT_SUCCESS == iRet)
         {
@@ -938,8 +1109,12 @@ static void LoadListFile(char *filename, INFO info, ReputationConfig *config)
 
         else if (IP_MEM_ALLOC_FAILURE == iRet)
         {
-            _dpd.logMsg("WARNING: %s(%d) => Memcap %u Mbytes reached when inserting IP Address: %s.",
+            char errBuf[STD_BUF];
+            snprintf(errBuf, STD_BUF, "WARNING: %s(%d) => Memcap %u Mbytes reached when inserting IP Address: %s",
                     full_path_filename, addrline, config->memcap,lb);
+            _dpd.logMsg("%s",errBuf);
+            if (config->statusBuf)
+                snprintf(config->statusBuf,config->statusBuf_len, "%s", errBuf);
             config->memCapReached = true;
             break;
         }
@@ -1045,7 +1220,7 @@ int EstimateNumEntries(ReputationConfig *config, u_char* argp)
             continue;
         }
 
-        if ( !strcmp( cur_tokenp, REPUTATION_MEMCAP_KEYWORD ))
+        if ( !strcasecmp( cur_tokenp, REPUTATION_MEMCAP_KEYWORD ))
         {
             int value;
             char *endStr = NULL;
@@ -1078,8 +1253,8 @@ int EstimateNumEntries(ReputationConfig *config, u_char* argp)
             config->memcap = (uint32_t) value;
 
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_BLACKLIST_KEYWORD )
-                ||!strcmp( cur_tokenp, REPUTATION_WHITELIST_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_BLACKLIST_KEYWORD )
+                ||!strcasecmp( cur_tokenp, REPUTATION_WHITELIST_KEYWORD ))
         {
             int numlines;
             char full_path_filename[PATH_MAX+1];
@@ -1115,8 +1290,38 @@ int EstimateNumEntries(ReputationConfig *config, u_char* argp)
             totalLines += numlines;
 
         }
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_WHITEACTION_KEYWORD ))
+        {
+            int i = 0;
+            char WhiteActionKeyworBuff[STD_BUF];
+            WhiteActionKeyworBuff[0]  = '\0';
+            cur_tokenp = strtok_r( next_tokenp, REPUTATION_CONFIG_VALUE_SEPERATORS, &next_tokenp);
+            if (!cur_tokenp)
+            {
+                DynamicPreprocessorFatalMessage(" %s(%d) => Missing argument for %s\n",
+                        *(_dpd.config_file), *(_dpd.config_line), REPUTATION_WHITEACTION_KEYWORD);
+
+            }
+            while(NULL != WhiteActionOption[i])
+            {
+                if( !strcasecmp(WhiteActionOption[i],cur_tokenp))
+                {
+                    config->whiteAction = (WhiteAction) i;
+                    break;
+                }
+                _dpd.printfappend(WhiteActionKeyworBuff, STD_BUF, "[%s] ", WhiteActionOption[i] );
+                i++;
+            }
+            if (NULL == WhiteActionOption[i])
+            {
+                DynamicPreprocessorFatalMessage(" %s(%d) => Invalid argument: %s for %s, use %s\n",
+                        *(_dpd.config_file), *(_dpd.config_line), cur_tokenp,
+                        REPUTATION_WHITEACTION_KEYWORD, WhiteActionKeyworBuff);
+            }
+
+        }
 #ifdef SHARED_REP
-        else if ( !strcmp( cur_tokenp, REPUTATION_SHAREMEM_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_SHAREMEM_KEYWORD ))
         {
 
             if (Reputation_IsEmptyStr(next_tokenp))
@@ -1179,8 +1384,9 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
 
     /*Default values*/
     config->memcap = REPUTATION_DEFAULT_MEMCAP;
-    config->priority = WHITELISTED;
+    config->priority = WHITELISTED_TRUST;
     config->nestedIP = INNER;
+    config->whiteAction = UNBLACK;
     config->localSegment = NULL;
     config->emptySegment = NULL;
     config->memsize = 0;
@@ -1237,16 +1443,16 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
         }
         cur_config = cur_tokenp;
 
-        if ( !strcmp( cur_tokenp, REPUTATION_SCANLOCAL_KEYWORD ))
+        if ( !strcasecmp( cur_tokenp, REPUTATION_SCANLOCAL_KEYWORD ))
         {
             config->scanlocal = 1;
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_MEMCAP_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_MEMCAP_KEYWORD ))
         {
             cur_tokenp = strtok( NULL, REPUTATION_CONFIG_VALUE_SEPERATORS);
             /* processed before */
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_BLACKLIST_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_BLACKLIST_KEYWORD ))
         {
             cur_tokenp = strtok( NULL, REPUTATION_CONFIG_VALUE_SEPERATORS);
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Loading blacklist from %s\n",cur_tokenp ););
@@ -1265,7 +1471,7 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
             }
         }
 
-        else if ( !strcmp( cur_tokenp, REPUTATION_WHITELIST_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_WHITELIST_KEYWORD ))
         {
             cur_tokenp = strtok( NULL, REPUTATION_CONFIG_VALUE_SEPERATORS);
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Loading whitelist from %s\n",cur_tokenp ););
@@ -1284,7 +1490,7 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
                         *(_dpd.config_file), *(_dpd.config_line), cur_tokenp);
             }
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_PRIORITY_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_PRIORITY_KEYWORD ))
         {
 
             cur_tokenp = strtok( NULL, REPUTATION_CONFIG_VALUE_SEPERATORS);
@@ -1296,14 +1502,21 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
             }
 
             if((strlen(REPUTATION_BLACKLIST_KEYWORD) == strlen (cur_tokenp))
-                    && !strcmp(REPUTATION_BLACKLIST_KEYWORD,cur_tokenp))
+                    && !strcasecmp(REPUTATION_BLACKLIST_KEYWORD,cur_tokenp))
             {
                 config->priority = BLACKLISTED;
             }
             else if((strlen(REPUTATION_WHITELIST_KEYWORD) == strlen (cur_tokenp))
-                    && !strcmp(REPUTATION_WHITELIST_KEYWORD,cur_tokenp))
+                    && !strcasecmp(REPUTATION_WHITELIST_KEYWORD,cur_tokenp))
             {
-                config->priority = WHITELISTED;
+                config->priority = WHITELISTED_TRUST;
+                if (UNBLACK == config->whiteAction)
+                {
+                    _dpd.logMsg("WARNING: %s(%d) => Keyword %s for %s is not applied "
+                            "when white action is unblack.\n", *(_dpd.config_file), *(_dpd.config_line),
+                            REPUTATION_PRIORITY_KEYWORD, REPUTATION_WHITELIST_KEYWORD);
+                    config->priority = WHITELISTED_UNBLACK;
+                }
             }
             else
             {
@@ -1316,7 +1529,7 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
             }
 
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_NESTEDIP_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_NESTEDIP_KEYWORD ))
         {
             int i = 0;
             char NestIPKeyworBuff[STD_BUF];
@@ -1331,7 +1544,7 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
             while(NULL != NestedIPKeyword[i])
             {
                 if((strlen(NestedIPKeyword[i]) == strlen (cur_tokenp))
-                        && !strcmp(NestedIPKeyword[i],cur_tokenp))
+                        && !strcasecmp(NestedIPKeyword[i],cur_tokenp))
                 {
                     config->nestedIP = (NestedIP) i;
                     break;
@@ -1348,14 +1561,21 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
             }
 
         }
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_WHITEACTION_KEYWORD ))
+        {
+
+            cur_tokenp = strtok( NULL, REPUTATION_CONFIG_VALUE_SEPERATORS);
+            /* processed before */
+
+        }
 #ifdef SHARED_REP
-        else if ( !strcmp( cur_tokenp, REPUTATION_SHAREMEM_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_SHAREMEM_KEYWORD ))
         {
             cur_sectionp = strtok_r( next_sectionp, REPUTATION_CONFIG_SECTION_SEPERATORS, &next_sectionp);
             continue;
             /* processed before */
         }
-        else if ( !strcmp( cur_tokenp, REPUTATION_SHAREDREFRESH_KEYWORD ))
+        else if ( !strcasecmp( cur_tokenp, REPUTATION_SHAREDREFRESH_KEYWORD ))
         {
             unsigned long value;
             char *endStr = NULL;
@@ -1418,3 +1638,89 @@ void ParseReputationArgs(ReputationConfig *config, u_char* argp)
     DisplayReputationConfig(config);
     free(argcpyp);
 }
+
+void ReputationRepInfo(IPrepInfo * repInfo, uint8_t *base, char *repInfoBuff, 
+    int bufLen)
+{
+
+    char *index = repInfoBuff;
+    int  len = bufLen -1 ;
+    int writed;
+
+    writed = snprintf(index, len, "Reputation Info: ");
+    if (writed >= len || writed < 0)
+        return;
+
+    index += writed;
+    len -= writed;
+
+    while(repInfo)
+    {
+        int i;
+        for(i = 0; i < NUM_INDEX_PER_ENTRY; i++)
+        {
+            writed = snprintf(index, len, "%d,",repInfo->listIndexes[i]);
+            if (writed >= len || writed < 0)
+                return;
+            else
+            {
+                index += writed;
+                len -=writed;
+            }
+
+        }
+        writed = snprintf(index, len, "->");
+        if (writed >= len || writed < 0)
+            return;
+        else
+        {
+            index += writed;
+            len -=writed;
+        }
+
+        if (!repInfo->next) break;
+
+        repInfo = (IPrepInfo *)(&base[repInfo->next]);
+    }
+}
+#ifdef DEBUG_MSGS
+void ReputationPrintRepInfo(IPrepInfo * repInfo, uint8_t *base)
+{
+
+    char repInfoBuff[STD_BUF];
+    char *index = repInfoBuff;
+    int  len = STD_BUF -1 ;
+
+    while(repInfo)
+    {
+        int i;
+        int writed;
+        for(i = 0; i < NUM_INDEX_PER_ENTRY; i++)
+        {
+            writed = snprintf(index, len, "%d,",repInfo->listIndexes[i]);
+            if (writed < 0)
+                return;
+            else
+            {
+                index += writed;
+                len -=writed;
+            }
+
+        }
+        writed = snprintf(index, len, "->");
+        if (writed < 0)
+            return;
+        else
+        {
+            index += writed;
+            len -=writed;
+        }
+
+        if (!repInfo->next) break;
+
+        repInfo = (IPrepInfo *)(&base[repInfo->next]);
+    }
+    DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "Reputation Info: %s \n",
+            repInfoBuff););
+}
+#endif

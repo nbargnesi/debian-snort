@@ -108,7 +108,7 @@ int DNP3FuncIsDefined(uint16_t code)
     if (code > func_map[num_funcs-1].value)
         return func_is_defined;
 
-    for (i = 0; i < num_funcs; i++)
+    for (i = 0; i < num_funcs-1; i++)
     {
         /* This short-circuit check assumes that the function map remains
            in-order. */

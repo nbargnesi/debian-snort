@@ -115,11 +115,6 @@ static uint8_t write_pkt_buffer_v2[sizeof(Serial_Unified2_Header) +
                                      sizeof(Unified2IDSEventIPv6) + IP_MAXPACKET];
 #define write_pkt_end_v2 (write_pkt_buffer_v2 + sizeof(write_pkt_buffer_v2))
 
-static uint8_t write_pkt_buffer_ng[sizeof(Serial_Unified2_Header) +
-                                     sizeof(Unified2IDSEventIPv6_NG) + IP_MAXPACKET];
-
-#define write_pkt_end_ng (write_pkt_buffer_ng + sizeof(write_pkt_buffer_ng))
-
 #define MAX_XDATA_WRITE_BUF_LEN (MAX_XFF_WRITE_BUF_LENGTH - \
         sizeof(struct in6_addr) + DECODE_BLEN)
 
@@ -130,14 +125,14 @@ static uint8_t write_pkt_buffer_ng[sizeof(Serial_Unified2_Header) +
 #define UNIFIED2_SETVBUF
 #ifndef WIN32
 /* use the size of the buffer we copy record data into */
-static char io_buffer[sizeof(write_pkt_buffer_ng)];
+static char io_buffer[sizeof(write_pkt_buffer_v2)];
 #else
 # ifdef _MSC_VER
 #  if _MSC_VER <= 1200
 /* use maximum size defined by VC++ 6.0 */
 static char io_buffer[32768];
 #  else
-static char io_buffer[sizeof(write_pkt_buffer_ng)];
+static char io_buffer[sizeof(write_pkt_buffer_v2)];
 #  endif  /* _MSC_VER <= 1200 */
 # else
 /* no _MSC_VER, don't set I/O buffer */
@@ -744,267 +739,6 @@ static inline void UUIDPack(uint8_t *policy_uuid, char *str, int size)
 #endif
 }
 
-static void _AlertIP4_NG(Packet *p, char *msg, Unified2Config *config, Event *event, PESessionRecord *session)
-{
-    Serial_Unified2_Header hdr;
-    Unified2IDSEventNG alertdata;
-    tSfPolicyId policy_id;
-    SnortPolicy *policy = NULL;
-    uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEventNG);
-
-    memset(&alertdata, 0, sizeof(alertdata));
-
-    alertdata.event_id = htonl(event->event_id);
-    alertdata.event_second = htonl(event->ref_time.tv_sec);
-    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
-    alertdata.generator_id = htonl(event->sig_generator);
-    alertdata.signature_id = htonl(event->sig_id);
-    alertdata.signature_revision = htonl(event->sig_rev);
-    alertdata.classification_id = htonl(event->classification);
-    alertdata.priority_id = htonl(event->priority);
-
-    if(p)
-    {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
-
-        if(IPH_IS_VALID(p))
-        {
-            alertdata.ip_source = p->iph->ip_src.s_addr;
-            alertdata.ip_destination = p->iph->ip_dst.s_addr;
-            alertdata.protocol = GET_IPH_PROTO(p);
-
-            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
-            {
-                alertdata.sport_itype = htons(p->icmph->type);
-                alertdata.dport_icode = htons(p->icmph->code);
-            }
-            else if (alertdata.protocol != 255)
-            {
-                alertdata.sport_itype = htons(p->sp);
-                alertdata.dport_icode = htons(p->dp);
-            }
-
-#ifdef MPLS
-            if((p->mpls) && (config->mpls_event_types))
-            {
-                alertdata.mpls_label = htonl(p->mplsHdr.label);
-            }
-#endif
-            if(config->vlan_event_types)
-            {
-                if(p->vh)
-                {
-                    alertdata.vlanId = htons(VTH_VLAN(p->vh));
-                }
-
-            }
-
-        }
-
-        policy_id = getRuntimePolicy();
-        if(policy_id == getDefaultPolicy())
-        {
-            if(snort_conf->base_version)
-            {
-                UUIDPack(alertdata.policy_uuid, snort_conf->base_version, sizeof(alertdata.policy_uuid));
-            }
-        }
-        else
-        {
-            policy = snort_conf->targeted_policies[policy_id];
-
-            if(policy && policy->policy_version)
-                UUIDPack(alertdata.policy_uuid, policy->policy_version, sizeof(alertdata.policy_uuid));
-        }
-
-        alertdata.user_id = htonl(session->userId);
-        alertdata.web_application_id = htonl(session->webAppId);
-        alertdata.client_application_id = htonl(session->clientId);
-        alertdata.application_protocol_id = htonl(session->appProtoId);
-        alertdata.policyengine_rule_id = htonl(session->policyengine_ruleId);
-        memcpy(alertdata.policyengine_policy_uuid, session->policyRevision, sizeof(alertdata.policyengine_policy_uuid));
-        memcpy(alertdata.interface_ingress_uuid, session->ingressIntf, sizeof(alertdata.interface_ingress_uuid));
-        memcpy(alertdata.interface_egress_uuid, session->egressIntf, sizeof(alertdata.interface_egress_uuid));
-        memcpy(alertdata.security_zone_ingress_uuid, session->ingressZone, sizeof(alertdata.security_zone_ingress_uuid));
-        memcpy(alertdata.security_zone_egress_uuid, session->egressZone, sizeof(alertdata.security_zone_egress_uuid));
-
-    }
-
-    if ((config->current + write_len) > config->limit)
-        Unified2RotateFile(config);
-
-    hdr.length = htonl(sizeof(Unified2IDSEventNG));
-    hdr.type = htonl(UNIFIED2_IDS_EVENT_NG);
-
-    if (SafeMemcpy(write_pkt_buffer_ng, &hdr, sizeof(Serial_Unified2_Header),
-                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
-                     "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    if (SafeMemcpy(write_pkt_buffer_ng + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Unified2IDSEventNG),
-                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy Unified2IDSEventNG. "
-                     "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    Unified2Write(write_pkt_buffer_ng, write_len, config);
-}
-
-static void _AlertIP6_NG(Packet *p, char *msg, Unified2Config *config, Event *event, PESessionRecord *session)
-{
-#ifdef SUP_IP6
-    Serial_Unified2_Header hdr;
-    Unified2IDSEventIPv6_NG alertdata;
-    tSfPolicyId policy_id;
-    SnortPolicy *policy = NULL;
-    uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEventIPv6_NG);
-
-    memset(&alertdata, 0, sizeof(alertdata));
-
-    alertdata.event_id = htonl(event->event_id);
-    alertdata.event_second = htonl(event->ref_time.tv_sec);
-    alertdata.event_microsecond = htonl(event->ref_time.tv_usec);
-    alertdata.generator_id = htonl(event->sig_generator);
-    alertdata.signature_id = htonl(event->sig_id);
-    alertdata.signature_revision = htonl(event->sig_rev);
-    alertdata.classification_id = htonl(event->classification);
-    alertdata.priority_id = htonl(event->priority);
-
-    if(p)
-    {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
-
-        if(IPH_IS_VALID(p))
-        {
-            snort_ip_p ip;
-
-            ip = GET_SRC_IP(p);
-            alertdata.ip_source = *(struct in6_addr*)ip->ip32;
-
-            ip = GET_DST_IP(p);
-            alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
-
-            alertdata.protocol = GET_IPH_PROTO(p);
-
-            if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
-            {
-                alertdata.sport_itype = htons(p->icmph->type);
-                alertdata.dport_icode = htons(p->icmph->code);
-            }
-            else if (alertdata.protocol != 255)
-            {
-                alertdata.sport_itype = htons(p->sp);
-                alertdata.dport_icode = htons(p->dp);
-            }
-
-#ifdef MPLS
-            if((p->mpls) && (config->mpls_event_types))
-            {
-                alertdata.mpls_label = htonl(p->mplsHdr.label);
-            }
-#endif
-            if(config->vlan_event_types)
-            {
-                if(p->vh)
-                {
-                    alertdata.vlanId = htons(VTH_VLAN(p->vh));
-                }
-
-            }
-
-        }
-
-        policy_id = getRuntimePolicy();
-        if(policy_id == getDefaultPolicy())
-        {
-            if(snort_conf->base_version)
-                UUIDPack(alertdata.policy_uuid, snort_conf->base_version, sizeof(alertdata.policy_uuid));
-        }
-        else
-        {
-            policy = snort_conf->targeted_policies[policy_id];
-
-            if(policy && policy->policy_version)
-                UUIDPack(alertdata.policy_uuid, policy->policy_version, sizeof(alertdata.policy_uuid));
-        }
-
-        alertdata.user_id = htonl(session->userId);
-        alertdata.web_application_id = htonl(session->webAppId);
-        alertdata.client_application_id = htonl(session->clientId);
-        alertdata.application_protocol_id = htonl(session->appProtoId);
-        alertdata.policyengine_rule_id = htonl(session->policyengine_ruleId);
-        memcpy(alertdata.policyengine_policy_uuid, session->policyRevision, sizeof(alertdata.policyengine_policy_uuid));
-        memcpy(alertdata.interface_ingress_uuid, session->ingressIntf, sizeof(alertdata.interface_ingress_uuid));
-        memcpy(alertdata.interface_egress_uuid, session->egressIntf, sizeof(alertdata.interface_egress_uuid));
-        memcpy(alertdata.security_zone_ingress_uuid, session->ingressZone, sizeof(alertdata.security_zone_ingress_uuid));
-        memcpy(alertdata.security_zone_egress_uuid, session->egressZone, sizeof(alertdata.security_zone_egress_uuid));
-    }
-
-    if ((config->current + write_len) > config->limit)
-        Unified2RotateFile(config);
-
-    hdr.length = htonl(sizeof(Unified2IDSEventIPv6_NG));
-    hdr.type = htonl(UNIFIED2_IDS_EVENT_IPV6_NG);
-
-    if (SafeMemcpy(write_pkt_buffer_ng, &hdr, sizeof(Serial_Unified2_Header),
-                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy Serial_Unified2_Header. "
-                     "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    if (SafeMemcpy(write_pkt_buffer_ng + sizeof(Serial_Unified2_Header),
-                   &alertdata, sizeof(Unified2IDSEventIPv6_NG),
-                   write_pkt_buffer_ng, write_pkt_end_ng) != SAFEMEM_SUCCESS)
-    {
-        ErrorMessage("%s(%d) Failed to copy Unified2IDSEventIPv6_NG. "
-                     "Not writing unified2 event.\n", __FILE__, __LINE__);
-        return;
-    }
-
-    Unified2Write(write_pkt_buffer_ng, write_len, config);
-#endif
-}
-
 void _WriteExtraData(Unified2Config *config, uint32_t event_id, uint32_t event_second, uint8_t *buffer, uint32_t len, uint32_t type )
 {
 
@@ -1099,6 +833,7 @@ void AlertExtraDataPerPacket(void *ssnptr, void *data, uint32_t xtradata_mask, u
         AlertExtraData(ssnptr, data, log_funcs, max_count, xtradata_mask, event_id, event_second);
     }
 }
+
 void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second)
 {
     Unified2Config *config = (Unified2Config *)data;
@@ -1128,51 +863,37 @@ void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t m
 static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
 {
     Unified2Config *config = (Unified2Config *)arg;
-    PESessionRecord *session = NULL;
 
     if (config == NULL)
         return;
 
     if(!event) return;
-    if(p->policyEngineData)
-    {
-        session = (PESessionRecord*)(p->policyEngineData);
-    }
+
     if(IS_IP4(p))
     {
-        if(session)
-            _AlertIP4_NG(p, msg, config, event, session);
-        else
-        {
 #ifdef MPLS
-            if((config->vlan_event_types) || (config->mpls_event_types))
+        if((config->vlan_event_types) || (config->mpls_event_types))
 #else
-            if(config->vlan_event_types)
+        if(config->vlan_event_types)
 #endif
-            {
-                _AlertIP4_v2(p, msg, config, event);
-            }
-            else
-                _AlertIP4(p, msg, config, event);
+        {
+            _AlertIP4_v2(p, msg, config, event);
         }
+        else
+            _AlertIP4(p, msg, config, event);
     }
     else
     {
-        if(session)
-            _AlertIP6_NG(p, msg, config, event, session);
-        else
-        {
 #ifdef MPLS
-            if((config->vlan_event_types) || (config->mpls_event_types))
+        if((config->vlan_event_types) || (config->mpls_event_types))
 #else
-            if(config->vlan_event_types)
+        if(config->vlan_event_types)
 #endif
-            {
-                _AlertIP6_v2(p, msg, config, event);
-            }
-            else
-                _AlertIP6(p, msg, config, event);
+        {
+            _AlertIP6_v2(p, msg, config, event);
         }
+        else
+            _AlertIP6(p, msg, config, event);
 
 #ifdef SUP_IP6
         if(ScLogIPv6Extra() && IS_IP6(p))

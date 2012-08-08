@@ -1795,7 +1795,7 @@ packets that will trigger the rules.
 There are two primary output facilities in Snort, logging and alerting. The
 alerting facility exists to let you know that something interesting has
 happened. The logging facility exists to log full packet information to the
-output format (pcap, ascii, database, etc).
+output format (pcap, ascii, etc).
 
 The ``alert'' action in Snort is hard coded to do two things when an event is
 detected by Snort, write an event to the alert facility and log as much as
@@ -1803,13 +1803,6 @@ possible/desired to the output facility. The ``log'' action merely logs the
 current packet to the logging facility without generating an alert. This is
 done so you can log interesting things (telnet sessions, whatever) without
 having to generate an alert on every packet.
-
-The database plugin is something of an anomaly because it doesn't separate the
-two functionalities very much. The ``log'' option attaches the log facility and
-the ``alert'' option attaches it to the alert facility. What this means in
-practical terms is that if the db plugin is in alert mode, it will only receive
-output from alert rules, whereas if it's in ``log'' mode it will receive output
-from both log and alert rules.
 
 \subsection{Are rule keywords ORed or ANDed together?}
 
@@ -1934,20 +1927,19 @@ number with the ``rev'' option.
 
 Barnyard is a output system for Snort. Snort creates a special binary output
 format called ``unified.'' Barnyard reads this file, and then resends the data
-to a database backend. Unlike the database output plugin, Barnyard is aware of
-a failure to send the alert to the database, and it stops sending alerts. It is
-also aware when the database can accept connections again and will start
-sending the alerts again.
+to a database backend. Barnyard is aware of a failure to send the alert to the
+database, and it stops sending alerts. It is also aware when the database can
+accept connections again and will start sending the alerts again.
 
 \subsection{Are there other output systems for Snort besides ``Barnyard''?\label{spoolers}}
 
 FLoP (Fast Logging Project) and Mudpit are two other programs that can be used.
 
 FLoP adds a patch to Snort that creates an output plugin that writes alerts to
-a Unix domain socket instead of a file. These alerts (which are stored in memory)
-are then sent to a central server where they are then written to a database.
-Advantages are that database requests are made locally rather than over
-the wire and files don't need to be stored on the sensor. 
+a Unix domain socket instead of a file. These alerts (which are stored in
+memory) are then sent to a central server where they are then written to a
+database.  Advantages are that database requests are made locally rather than
+over the wire and files don't need to be stored on the sensor. 
 
     \htmladdnormallink{http://www.geschke-online.de/FLoP/}{http://www.geschke-online.de/FLoP/}
 
@@ -2005,24 +1997,6 @@ that contains more information on a particular event.
 
 Feed the unified output files through Barnyard twice to separate databases,
 or...
-
-You can build redundancy by using multiple output plugins. Here are some
-examples.
-
-Multiple instantiations of the database plugin:
-\begin{verbatim}
-    output log_database: mysql, dbname=snort host=localhost user=xyz
-    output log_database: mysql, dbname=snort host=remote.loghost.com user=xyz
-\end{verbatim}
-Remote database and local tcpdump:
-\begin{verbatim}
-    output log_database: mysql, dbname=snort host=remote.loghost.com user=xyz
-    output log_tcpdump: /var/log/snort.tcpdump
-\end{verbatim}
-Then you can replay the tcpdump file through snort to recreate the database.
-
-CAVEAT: Just playing back the log packets might not trigger some of the state
-dependent pre-processors.
 
 \subsection{How can I test Snort without having an Ethernet card or a connection to other computers?  }
 
@@ -2204,7 +2178,7 @@ An example addition to snort.conf:
 ruletype redalert {
    type alert
    output alert_syslog: LOG_LOCAL2
-    output database: alert, postgresql, user=user dbname=snort password=pwd
+   output unified2: filename merged.log, limit 128, vlan_event_types
 }
 \end{verbatim}
 
@@ -2566,25 +2540,6 @@ Either winpcap is not installed, or you are using an incompatible version.
 Try upgrading to the latest version (2.3 as of 01/17/03).  It is available 
 from \htmladdnormallink{http://netgroup-serv.polito.it/winpcap/}{http://netgroup-serv.polito.it/winpcap/}.
 It might also be an issue with SMP machines \myref{winpcap}.
-
-\subsection{Snort is not logging to my database}
-
-There are a number of problems that may be causing Snort to fail to log to a 
-database.  You should check these:
-\begin{enumerate}
-\item You did not set up the database plugin in your configuration file.
-\item  You are using an older database schema, and should update it by running the create scripts from the ./schemas directory of the source tarball.
-\item You are using a command line option that overrides what you have in your configuration file.  This is most often -A or -s.  NOTE: If you wish to log to syslog as well, specify so in your configuration file rather then the command line.
-\item There is a problem with your database configuration itself.  Make sure the user you specify has the correct permissions, or that the database is even up and running.
-\end{enumerate}
-
-\subsection{Portscans are not being logged to my database }
-
-You need to change the output facility to 'alert' rather then 'log'.  The 
-portscan preprocessor calls output plugins registered as 'alert' plugins 
-rather then 'log'.
-
-\begin{verbatim}output database: alert, mysql, user=snort dbname=snort host=localhost\end{verbatim}
 
 \subsection{Snort is not logging to syslog}
 

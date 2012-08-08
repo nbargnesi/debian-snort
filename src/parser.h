@@ -60,6 +60,7 @@
 # define SNORT_CONF_KEYWORD__DYNAMIC_DETECTION   "dynamicdetection"
 # define SNORT_CONF_KEYWORD__DYNAMIC_ENGINE      "dynamicengine"
 # define SNORT_CONF_KEYWORD__DYNAMIC_PREPROC     "dynamicpreprocessor"
+# define SNORT_CONF_KEYWORD__DYNAMIC_OUTPUT     "dynamicoutput"
 #endif  /* DYNAMIC_PLUGIN */
 #define SNORT_CONF_KEYWORD__EVENT_FILTER         "event_filter"
 # define SNORT_CONF_KEYWORD__IPVAR               "ipvar"
@@ -77,9 +78,7 @@
 /* Config options */
 #define CONFIG_OPT__ALERT_FILE                      "alertfile"
 #define CONFIG_OPT__ALERT_WITH_IFACE_NAME           "alert_with_interface_name"
-#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
-# define CONFIG_OPT__AUTOGEN_PREPROC_DECODER_RULES  "autogenerate_preprocessor_decoder_rules"
-#endif  /* PREPROCESSOR_AND_DECODER_RULE_EVENTS */
+#define CONFIG_OPT__AUTOGEN_PREPROC_DECODER_RULES   "autogenerate_preprocessor_decoder_rules"
 #define CONFIG_OPT__ASN1                            "asn1"
 #define CONFIG_OPT__BINDING                         "binding"
 #define CONFIG_OPT__BPF_FILE                        "bpf_file"
@@ -155,6 +154,7 @@
 #ifdef TARGET_BASED
 # define CONFIG_OPT__MAX_ATTRIBUTE_HOSTS            "max_attribute_hosts"
 # define CONFIG_OPT__MAX_METADATA_SERVICES          "max_metadata_services"
+#define CONFIG_OPT__DISABLE_ATTRIBUTE_RELOAD        "disable-attribute-reload-thread"
 #endif  /* TARGET_BASED */
 #ifdef MPLS
 # define CONFIG_OPT__MAX_MPLS_LABELCHAIN_LEN        "max_mpls_labelchain_len"
@@ -245,9 +245,7 @@ void ConfigAlertBeforePass(SnortConfig *, char *);
 void ConfigAlertFile(SnortConfig *, char *);
 void ConfigAlertWithInterfaceName(SnortConfig *, char *);
 void ConfigAsn1(SnortConfig *, char *);
-#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
 void ConfigAutogenPreprocDecoderRules(SnortConfig *, char *);
-#endif
 void ConfigBinding(SnortConfig *, char *);
 void ConfigBpfFile(SnortConfig *, char *);
 void ConfigChecksumDrop(SnortConfig *, char *);
@@ -321,6 +319,7 @@ void ConfigDirtyPig(SnortConfig *, char *);
 #ifdef TARGET_BASED
 void ConfigMaxAttributeHosts(SnortConfig *, char *);
 void ConfigMaxMetadataServices(SnortConfig *, char *);
+void ConfigDisableAttributeReload(SnortConfig *, char *);
 #endif
 #ifdef MPLS
 void ConfigMaxMplsLabelChain(SnortConfig *, char *);

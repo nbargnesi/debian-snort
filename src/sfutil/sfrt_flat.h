@@ -39,6 +39,13 @@ typedef MEM_OFFSET INFO; /* To be replaced with a pointer to a policy */
 typedef MEM_OFFSET FLAT_INDEX;
 typedef MEM_OFFSET TABLE_PTR;
 
+typedef enum
+{
+   SAVE_TO_NEW,
+   SAVE_TO_CURRENT
+}SaveDest;
+
+typedef int (*updateEntryInfoFunc)(INFO *entryInfo, INFO newInfo, SaveDest saveDest, uint8_t *base);
 typedef struct {
     FLAT_INDEX index;
     int length;
@@ -62,6 +69,7 @@ typedef struct {
 #ifdef SUP_IP6
     TABLE_PTR rt6; /* Actual "routing" table */
 #endif
+    TABLE_PTR list_info; /* List file information table (entry information)*/
 
 } table_flat_t;
 /*******************************************************************/
@@ -72,7 +80,7 @@ table_flat_t * sfrt_flat_new(char table_flat_type, char ip_type,
 void sfrt_flat_free(TABLE_PTR table);
 GENERIC sfrt_flat_lookup(void *adr, table_flat_t *table);
 int sfrt_flat_insert(void *adr, unsigned char len, INFO ptr, int behavior,
-        table_flat_t *table);
+        table_flat_t *table, updateEntryInfoFunc updateEntry);
 uint32_t sfrt_flat_usage(table_flat_t *table);
 uint32_t sfrt_flat_num_entries(table_flat_t *table);
 

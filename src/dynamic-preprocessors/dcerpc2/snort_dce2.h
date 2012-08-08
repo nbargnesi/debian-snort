@@ -63,6 +63,12 @@ typedef struct _DCE2_ProtoIds
 } DCE2_ProtoIds;
 
 /********************************************************************
+ * Extern variables
+ ********************************************************************/
+extern DCE2_ProtoIds dce2_proto_ids;
+extern DCE2_CStack *dce2_pkt_stack;
+
+/********************************************************************
  * Public function prototypes
  ********************************************************************/
 DCE2_Ret DCE2_Process(SFSnortPacket *);

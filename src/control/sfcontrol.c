@@ -1,29 +1,29 @@
 /*
-**
-**  sfcontrol.c
-**
-**  Copyright (C) 2002-2012 Sourcefire, Inc.
-**  Author(s):  Ron Dempster <rdempster@sourcefire.com>
-**
-**  NOTES
-**  5.16.11 - Initial Source Code. Dempster
-**
-**  This program is free software; you can redistribute it and/or modify
-**  it under the terms of the GNU General Public License Version 2 as
-**  published by the Free Software Foundation.  You may not use, modify or
-**  distribute this program under any other version of the GNU General
-**  Public License.
-**
-**  This program is distributed in the hope that it will be useful,
-**  but WITHOUT ANY WARRANTY; without even the implied warranty of
-**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**  GNU General Public License for more details.
-**
-**  You should have received a copy of the GNU General Public License
-**  along with this program; if not, write to the Free Software
-**  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-**
-*/
+ **
+ **  sfcontrol.c
+ **
+ **  Copyright (C) 2002-2012 Sourcefire, Inc.
+ **  Author(s):  Ron Dempster <rdempster@sourcefire.com>
+ **
+ **  NOTES
+ **  5.16.11 - Initial Source Code. Dempster
+ **
+ **  This program is free software; you can redistribute it and/or modify
+ **  it under the terms of the GNU General Public License Version 2 as
+ **  published by the Free Software Foundation.  You may not use, modify or
+ **  distribute this program under any other version of the GNU General
+ **  Public License.
+ **
+ **  This program is distributed in the hope that it will be useful,
+ **  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ **  GNU General Public License for more details.
+ **
+ **  You should have received a copy of the GNU General Public License
+ **  along with this program; if not, write to the Free Software
+ **  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ **
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -55,11 +55,14 @@ static char config_unix_socket_fn[PATH_MAX];
 static int config_unix_socket;
 static volatile int stop_processing = 0;
 
+#pragma pack(1)
 typedef struct _CS_RESPONSE_MESSAGE
 {
     CSMessageHeader hdr;
+    CSMessageDataHeader msg_hdr;
     char msg[1024];
 } CSResponseMessage;
+#pragma pack()
 
 typedef struct _CS_MESSAGE
 {
@@ -165,6 +168,21 @@ static void SendResponse(ThreadElement *t, const CSResponseMessage *resp, uint32
     } while (total < total_len && !t->stop_processing);
 }
 
+static void SendErrorResponse(ThreadElement *t, const char * const msg)
+{
+    CSResponseMessage response;
+    uint32_t len;
+
+    response.hdr.version = htons(CS_HEADER_VERSION);
+    response.hdr.type = htons(CS_HEADER_ERROR);
+    response.msg_hdr.code = -1;
+    len = snprintf(response.msg, sizeof(response.msg), "%s", msg);
+    response.msg_hdr.length = htons(len);
+    len += sizeof(response.msg_hdr);
+    response.hdr.length = htonl(len);
+    SendResponse(t, &response, len);
+}
+
 static int ReadHeader(ThreadElement *t, CSMessageHeader *hdr)
 {
     ssize_t numread;
@@ -219,7 +237,8 @@ static void *ControlSocketProcessThread(void *arg)
     int fd;
     pthread_t tid = pthread_self();
     CSMessageHeader hdr;
-    uint32_t len;
+    CSMessageDataHeader *msg_hdr = NULL;
+    uint32_t len, rlen;
     uint8_t *data = NULL;
     ThreadElement **it;
     int rval;
@@ -235,7 +254,8 @@ static void *ControlSocketProcessThread(void *arg)
         return NULL;
     }
 
-    for (;;)
+    response.hdr.version = htons(CS_HEADER_VERSION);
+    while (!t->stop_processing)
     {
         if ((rval = ReadHeader(t, &hdr)) == 0)
             goto done;
@@ -246,9 +266,11 @@ static void *ControlSocketProcessThread(void *arg)
         {
             static const char * const bad_version = "Bad message header version";
 
-            response.hdr.version = htons(CS_HEADER_VERSION);
-            response.hdr.type = htons(0x0002);
+            response.hdr.type = htons(CS_HEADER_ERROR);
+            response.msg_hdr.code = -1;
             len = snprintf(response.msg, sizeof(response.msg), "%s", bad_version);
+            response.msg_hdr.length = htons(len);
+            len += sizeof(response.msg_hdr);
             response.hdr.length = htonl(len);
             SendResponse(t, &response, len);
             goto done;
@@ -258,15 +280,19 @@ static void *ControlSocketProcessThread(void *arg)
         {
             static const char * const bad_data = "Bad message data";
 
-            response.hdr.version = htons(CS_HEADER_VERSION);
-            response.hdr.type = htons(0x0002);
-            len = snprintf(response.msg, sizeof(response.msg), "%s", bad_data);
-            response.hdr.length = htonl(len);
-            SendResponse(t, &response, len);
+            SendErrorResponse(t, bad_data);
             goto done;
         }
 
-        if (hdr.length)
+        if (hdr.length && hdr.length < sizeof(*msg_hdr))
+        {
+            static const char * const bad_len = 
+                "Bad message header length";
+
+            SendErrorResponse(t, bad_len);
+            goto done;
+        }
+        else if (hdr.length >= sizeof(*msg_hdr))
         {
             if ((data = malloc(hdr.length)) == NULL)
                 goto done;
@@ -275,17 +301,24 @@ static void *ControlSocketProcessThread(void *arg)
                 goto done;
             else if (rval < 0)
                 goto done;
+
+            msg_hdr = (CSMessageDataHeader *)data;
+            msg_hdr->code = ntohl(msg_hdr->code);
+            msg_hdr->length = ntohs(msg_hdr->length);
+            data += sizeof(*msg_hdr);
+            rlen = msg_hdr->length;
+        }
+        else
+        {
+            /* We got no extra data */
+            rlen = 0;
         }
 
         if (hdr.type > CS_TYPE_MAX)
         {
             static const char invalid_type[] = "Invalid type. Must be 0-2047 inclusive.";
 
-            response.hdr.version = htons(CS_HEADER_VERSION);
-            response.hdr.type = htons(0x0002);
-            len = snprintf(response.msg, sizeof(response.msg), "%s", invalid_type);
-            response.hdr.length = htonl(len);
-            SendResponse(t, &response, len);
+            SendErrorResponse(t, invalid_type);
         }
         else
         {
@@ -304,16 +337,38 @@ static void *ControlSocketProcessThread(void *arg)
                 handler->new_context = NULL;
                 handler->old_context = NULL;
                 handler->next = NULL;
-                if (handler->oobpre && handler->oobpre(hdr.type, data, hdr.length, &handler->new_context))
+                response.msg[0] = '\0';
+                if (handler->oobpre && (rval = handler->oobpre(hdr.type, data, rlen,
+                    &handler->new_context, response.msg, sizeof(response.msg))))
                 {
-                    response.hdr.version = htons(CS_HEADER_VERSION);
-                    response.hdr.type = htons(0x0002);
-                    len = snprintf(response.msg, sizeof(response.msg), "%s", failed);
+                    response.hdr.type = htons(CS_HEADER_ERROR);
+                    response.msg_hdr.code = -1;
+                    if (!response.msg[0])
+                    {
+                        len = snprintf(response.msg, sizeof(response.msg), "%s", failed);
+                    }
+                    else
+                    {
+                        len = strlen(response.msg);
+                    }
+                    response.msg_hdr.length = htons(len);
+                    len += sizeof(response.msg_hdr);
                     response.hdr.length = htonl(len);
                     SendResponse(t, &response, len);
                     pthread_mutex_unlock(&handler->mutex);
                     goto next;
                 }
+                if (response.msg[0])
+                {
+                    response.hdr.type = htons(CS_HEADER_DATA);
+                    response.msg_hdr.code = 0;
+                    len = strlen(response.msg);
+                    response.msg_hdr.length = htons(len);
+                    len += sizeof(response.msg_hdr);
+                    response.hdr.length = htonl(len);
+                    SendResponse(t, &response, len);
+                }
+
                 if (handler->ibcontrol)
                 {
                     pthread_mutex_lock(&work_mutex);
@@ -324,17 +379,14 @@ static void *ControlSocketProcessThread(void *arg)
                         work_queue = handler;
                     s_work_to_do++;
                     pthread_mutex_unlock(&work_mutex);
-                    while (!handler->handled)
+                    while (!handler->handled && !t->stop_processing)
                         usleep(100000);
-                    if (handler->ib_rval)
+                    if (handler->ib_rval || !handler->handled)
                     {
                         if (handler->oobpost && handler->new_context)
                             handler->oobpost(hdr.type, handler->new_context);
-                        response.hdr.version = htons(CS_HEADER_VERSION);
-                        response.hdr.type = htons(0x0002);
-                        len = snprintf(response.msg, sizeof(response.msg), "%s", failed);
-                        response.hdr.length = htonl(len);
-                        SendResponse(t, &response, len);
+                        SendErrorResponse(t, failed);
+
                         pthread_mutex_unlock(&handler->mutex);
                         goto next;
                     }
@@ -344,8 +396,7 @@ static void *ControlSocketProcessThread(void *arg)
 
                 pthread_mutex_unlock(&handler->mutex);
 
-                response.hdr.version = htons(CS_HEADER_VERSION);
-                response.hdr.type = htons(0x0000);
+                response.hdr.type = htons(CS_HEADER_SUCCESS);
                 response.hdr.length = 0;
                 SendResponse(t, &response, 0);
             }
@@ -353,22 +404,20 @@ static void *ControlSocketProcessThread(void *arg)
             {
                 static const char no_handler[] = "No handler for the command.";
 
-                response.hdr.version = htons(CS_HEADER_VERSION);
-                response.hdr.type = htons(0x0002);
-                len = snprintf(response.msg, sizeof(response.msg), "%s", no_handler);
-                response.hdr.length = htonl(len);
-                SendResponse(t, &response, len);
+                SendErrorResponse(t, no_handler);
             }
         }
 next:;
-        if (data)
-            free(data);
-        data = NULL;
+        if (msg_hdr)
+            free(msg_hdr);
+        msg_hdr = NULL;
     }
 
 done:;
-    if (data)
-        free(data);
+    if (msg_hdr)
+        free(msg_hdr);
+    msg_hdr = NULL;
+
     close(fd);
     pthread_mutex_lock(&thread_mutex);
     for (it=&thread_list; *it; it=&(*it)->next)

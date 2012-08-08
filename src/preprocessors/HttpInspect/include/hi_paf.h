@@ -35,7 +35,10 @@
 
 bool hi_paf_init(uint32_t cap);
 void hi_paf_term(void);
+
 int hi_paf_register(uint16_t port, bool client, bool server, tSfPolicyId pid);
+
+bool hi_paf_simple_request(void* ssn);
 
 #endif
 

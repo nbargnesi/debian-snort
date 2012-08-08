@@ -76,8 +76,8 @@ int16_t dnp3_app_id = SFTARGET_UNKNOWN_PROTOCOL;
 
 /* Prototypes */
 static void DNP3Init(char *argp);
-static void DNP3OneTimeInit(void);
-static dnp3_config_t * DNP3PerPolicyInit(tSfPolicyUserContextId);
+static inline void DNP3OneTimeInit(void);
+static inline dnp3_config_t * DNP3PerPolicyInit(tSfPolicyUserContextId);
 static void DNP3RegisterPerPolicyCallbacks(dnp3_config_t *);
 
 static void ProcessDNP3(void *, void *);

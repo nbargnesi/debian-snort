@@ -7,7 +7,7 @@ pkglibdir = ${exec_prefix}/lib/snort_dynamicpreprocessor
 
 pkglib_LTLIBRARIES = sf_rzb_saac_preproc.la
 
-sf_rzb_saac_preproc_la_LDFLAGS = -shared -export-dynamic -module @XCCFLAGS@
+sf_rzb_saac_preproc_la_LDFLAGS = -export-dynamic -module @XCCFLAGS@
 if SO_WITH_STATIC_LIB
 PREPROCLIB=../libsf_dynamic_preproc.la
 else

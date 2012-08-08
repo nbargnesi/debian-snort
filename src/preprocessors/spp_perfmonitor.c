@@ -647,7 +647,7 @@ static void PerfMonitorChangeLogFilesPermission(void)
             if ((0 == pt.st_uid) || (0 == pt.st_gid))
             {
                 chmod(perfmon_config->flowip_file, mode);
-                chown(perfmon_config->file, ScUid(), ScGid());
+                chown(perfmon_config->flowip_file, ScUid(), ScGid());
             }
         }
 

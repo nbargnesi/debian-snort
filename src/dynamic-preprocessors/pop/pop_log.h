@@ -50,7 +50,7 @@
 #define POP_MEMCAP_EXCEEDED_STR             "(POP) No memory available for decoding. Memcap exceeded"
 #define POP_B64_DECODING_FAILED_STR         "(POP) Base64 Decoding failed."
 #define POP_QP_DECODING_FAILED_STR          "(POP) Quoted-Printable Decoding failed."
-#define POP_BITENC_DECODING_FAILED_STR      "(POP) 7bit/8bit/binary/text Extraction failed."
+#define POP_BITENC_DECODING_FAILED_STR      "(POP) Non-Encoded MIME attachment failed."
 #define POP_UU_DECODING_FAILED_STR          "(POP) Unix-to-Unix Decoding failed."
 
 #define EVENT_STR_LEN  256

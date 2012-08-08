@@ -234,8 +234,7 @@ static int IMAP_Inspect(SFSnortPacket *);
 
 static void SetImapBuffers(IMAP *ssn)
 {
-    if ((ssn != NULL) && (ssn->decode_state == NULL)
-            && (!IMAP_IsDecodingEnabled(imap_eval_config)))
+    if ((ssn != NULL) && (ssn->decode_state == NULL))
     {
         MemBucket *bkt = mempool_alloc(imap_mempool);
 
@@ -484,7 +483,6 @@ static IMAP * IMAP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
     }
 
     imap_ssn = ssn;
-    SetImapBuffers(ssn);
 
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_IMAP,
                                          ssn, &IMAP_SessionFree);
@@ -1175,14 +1173,8 @@ static const uint8_t * IMAP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                     switch (imap_search_info.id)
                     {
                         case HDR_CONTENT_TYPE:
-                            /* for now we're just looking for the boundary in the data
-                             * header section */
-                            if (imap_ssn->data_state != STATE_MIME_HEADER)
-                            {
-                                content_type_ptr = ptr + imap_search_info.length;
-                                imap_ssn->state_flags |= IMAP_FLAG_IN_CONTENT_TYPE;
-                            }
-
+                            content_type_ptr = ptr + imap_search_info.length;
+                            imap_ssn->state_flags |= IMAP_FLAG_IN_CONTENT_TYPE;
                             break;
                         case HDR_CONT_TRANS_ENC:
                             cont_trans_enc = ptr + imap_search_info.length;
@@ -1238,17 +1230,37 @@ static const uint8_t * IMAP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
         if ((imap_ssn->state_flags &
              (IMAP_FLAG_IN_CONTENT_TYPE | IMAP_FLAG_FOLDING)) == IMAP_FLAG_IN_CONTENT_TYPE)
         {
-            /* we got the full content-type header - look for boundary string */
-            ret = IMAP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
-            if (ret != -1)
+            if (imap_ssn->data_state != STATE_MIME_HEADER)
             {
-                ret = IMAP_BoundarySearchInit();
+                /* we got the full content-type header - look for boundary string */
+                ret = IMAP_GetBoundary((const char *)content_type_ptr, eolm - content_type_ptr);
                 if (ret != -1)
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_IMAP, "Got mime boundary: %s\n",
-                                                         imap_ssn->mime_boundary.boundary););
+                    ret = IMAP_BoundarySearchInit();
+                    if (ret != -1)
+                    {
+                        DEBUG_WRAP(DebugMessage(DEBUG_IMAP, "Got mime boundary: %s\n",
+                                                             imap_ssn->mime_boundary.boundary););
 
-                    imap_ssn->state_flags |= IMAP_FLAG_GOT_BOUNDARY;
+                        imap_ssn->state_flags |= IMAP_FLAG_GOT_BOUNDARY;
+                    }
+                }
+            } 
+            else if (!(imap_ssn->state_flags & IMAP_FLAG_EMAIL_ATTACH))
+            {
+                /* Check for Encoding Type */
+                if( !IMAP_IsDecodingEnabled(imap_eval_config))
+                {
+                    SetImapBuffers(imap_ssn);
+                    if(imap_ssn->decode_state != NULL)
+                    {
+                        ResetBytesRead(imap_ssn->decode_state);
+                        IMAP_DecodeType((const char *)content_type_ptr, (eolm - content_type_ptr), false );
+                        imap_ssn->state_flags |= IMAP_FLAG_EMAIL_ATTACH;
+                        /* check to see if there are other attachments in this packet */
+                        if( imap_ssn->decode_state->decoded_bytes )
+                            imap_ssn->state_flags |= IMAP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                    }
                 }
             }
 
@@ -1259,13 +1271,18 @@ static const uint8_t * IMAP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                 (IMAP_FLAG_IN_CONT_TRANS_ENC | IMAP_FLAG_FOLDING)) == IMAP_FLAG_IN_CONT_TRANS_ENC)
         {
             /* Check for Encoding Type */
-            if( (!IMAP_IsDecodingEnabled(imap_eval_config)) && (imap_ssn->decode_state != NULL))
+            if( !IMAP_IsDecodingEnabled(imap_eval_config))
             {
-                IMAP_DecodeType((const char *)cont_trans_enc, eolm - cont_trans_enc );
-                imap_ssn->state_flags |= IMAP_FLAG_EMAIL_ATTACH;
-                /* check to see if there are other attachments in this packet */
-                if( imap_ssn->decode_state->decoded_bytes )
-                    imap_ssn->state_flags |= IMAP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                SetImapBuffers(imap_ssn);
+                if(imap_ssn->decode_state != NULL)
+                {
+                    ResetBytesRead(imap_ssn->decode_state);
+                    IMAP_DecodeType((const char *)cont_trans_enc, (eolm - cont_trans_enc), true );
+                    imap_ssn->state_flags |= IMAP_FLAG_EMAIL_ATTACH;
+                    /* check to see if there are other attachments in this packet */
+                    if( imap_ssn->decode_state->decoded_bytes )
+                        imap_ssn->state_flags |= IMAP_FLAG_MULTIPLE_EMAIL_ATTACH;
+                }
             }
             imap_ssn->state_flags &= ~IMAP_FLAG_IN_CONT_TRANS_ENC;
 
@@ -1329,7 +1346,7 @@ static const uint8_t * IMAP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
                     imap_ssn->state_flags &= ~IMAP_FLAG_EMAIL_ATTACH;
                     if(attach_start < attach_end)
                     {
-                        if(EmailDecode( attach_start, attach_end, imap_ssn->decode_state) != DECODE_SUCCESS )
+                        if(EmailDecode( attach_start, attach_end, imap_ssn->decode_state) < DECODE_SUCCESS )
                         {
                             IMAP_DecodeAlert();
                         }
@@ -1372,7 +1389,7 @@ static const uint8_t * IMAP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
         attach_end = data_end_marker;
         if(attach_start < attach_end)
         {
-            if(EmailDecode( attach_start, attach_end, imap_ssn->decode_state) != DECODE_SUCCESS )
+            if(EmailDecode( attach_start, attach_end, imap_ssn->decode_state) < DECODE_SUCCESS )
             {
                 IMAP_DecodeAlert();
             }

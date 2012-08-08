@@ -610,7 +610,7 @@ uint32_t detection_option_tree_hash(detection_option_tree_node_t *node)
              * warning on 64bit OSs */
             uint64_t ptr; /* Addresses are 64bits */
             ptr = (uint64_t)node->children[i]->option_data;
-            a += (ptr << 32) & 0XFFFFFFFF;
+            a += (ptr >> 32);
             b += (ptr & 0xFFFFFFFF);
         }
 #else
@@ -851,7 +851,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
     uint16_t save_dflags = 0;
     NODE_PROFILE_VARS;
 
-    if (!node || !eval_data || !eval_data->p || !eval_data->pomd || !eval_data->otnx)
+    if (!node || !eval_data || !eval_data->p || !eval_data->pomd)
         return 0;
 
     save_dflags = Get_DetectFlags();
@@ -1041,7 +1041,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
 #endif
                             if (!eval_data->flowbit_noalert)
                             {
-                                fpAddMatch(eval_data->pomd, eval_data->otnx, pattern_size, otn);
+                                fpAddMatch(eval_data->pomd, pattern_size, otn);
                             }
                             result = rval = DETECTION_OPTION_MATCH;
                         }

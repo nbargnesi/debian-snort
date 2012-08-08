@@ -466,7 +466,7 @@ ENGINE_LINKAGE int checkFlow(void *p, FlowFlags *flowFlags)
 ENGINE_LINKAGE int processFlowbits(void *p, FlowBitsInfo *flowBits)
 {
     /* flowbitCheck returns non-zero if the flow bit operation succeeded. */
-    if (_ded.flowbitCheck(p, flowBits->operation, flowBits->id))
+    if (_ded.flowbitCheck(p, flowBits) == RULE_MATCH)
         return RULE_MATCH;
 
     return RULE_NOMATCH;

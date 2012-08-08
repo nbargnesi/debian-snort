@@ -350,8 +350,8 @@ void sfiph_build(Packet *p, const void *hdr, int family)
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
         memcpy(&p->inner_ip4h, hdr4, sizeof(IPHdr) - 8);
-        sfip_set_raw(&p->inner_ip4h.ip_src, &hdr4->ip_src, p->family);
-        sfip_set_raw(&p->inner_ip4h.ip_dst, &hdr4->ip_dst, p->family);
+        sfip_set_raw(&p->inner_ip4h.ip_src, &hdr4->ip_src, family);
+        sfip_set_raw(&p->inner_ip4h.ip_dst, &hdr4->ip_dst, family);
         p->actual_ip_len = ntohs(p->inner_ip4h.ip_len);
         p->ip4h = &p->inner_ip4h;
     }
@@ -363,8 +363,8 @@ void sfiph_build(Packet *p, const void *hdr, int family)
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
         memcpy(&p->inner_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
-        sfip_set_raw(&p->inner_ip6h.ip_src, &hdr6->ip6_src, p->family);
-        sfip_set_raw(&p->inner_ip6h.ip_dst, &hdr6->ip6_dst, p->family);
+        sfip_set_raw(&p->inner_ip6h.ip_src, &hdr6->ip6_src, family);
+        sfip_set_raw(&p->inner_ip6h.ip_dst, &hdr6->ip6_dst, family);
         p->actual_ip_len = ntohs(p->inner_ip6h.len) + IP6_HDR_LEN;
         p->ip6h = &p->inner_ip6h;
     }
@@ -401,8 +401,8 @@ void sfiph_orig_build(Packet *p, const void *hdr, int family)
          * with the exception of the IP addresses. Copy over everything but
          * the IPs */
         memcpy(&p->inner_orig_ip4h, hdr4, sizeof(IPHdr) - 8);
-        sfip_set_raw(&p->inner_orig_ip4h.ip_src, &hdr4->ip_src, p->family);
-        sfip_set_raw(&p->inner_orig_ip4h.ip_dst, &hdr4->ip_dst, p->family);
+        sfip_set_raw(&p->inner_orig_ip4h.ip_src, &hdr4->ip_src, family);
+        sfip_set_raw(&p->inner_orig_ip4h.ip_dst, &hdr4->ip_dst, family);
         p->actual_ip_len = ntohs(p->inner_orig_ip4h.ip_len);
         p->orig_ip4h = &p->inner_orig_ip4h;
     }
@@ -414,8 +414,8 @@ void sfiph_orig_build(Packet *p, const void *hdr, int family)
          * with the exception of the IP addresses. Copy over everything but
          * the IPs*/
         memcpy(&p->inner_orig_ip6h, hdr6, sizeof(IP6RawHdr) - 32);
-        sfip_set_raw(&p->inner_orig_ip6h.ip_src, &hdr6->ip6_src, p->family);
-        sfip_set_raw(&p->inner_orig_ip6h.ip_dst, &hdr6->ip6_dst, p->family);
+        sfip_set_raw(&p->inner_orig_ip6h.ip_src, &hdr6->ip6_src, family);
+        sfip_set_raw(&p->inner_orig_ip6h.ip_dst, &hdr6->ip6_dst, family);
         p->actual_ip_len = ntohs(p->inner_orig_ip6h.len) + IP6_HDR_LEN;
         p->orig_ip6h = &p->inner_orig_ip6h;
     }

@@ -37,53 +37,54 @@
 #define PROFILE_SORT_TOTAL_TICKS 7
 
 /* MACROS that handle profiling of rules and preprocessors */
-#define PROFILE_VARS uint64_t ticks_start, ticks_end
+#define PROFILE_VARS_NAMED(name) uint64_t name##_ticks_start, name##_ticks_end
+#define PROFILE_VARS PROFILE_VARS_NAMED(snort)
 
-#define PROFILE_START \
-    get_clockticks(ticks_start)
+#define PROFILE_START_NAMED(name) \
+    get_clockticks(name##_ticks_start)
 
-#define PROFILE_END \
-    get_clockticks(ticks_end)
+#define PROFILE_END_NAMED(name) \
+    get_clockticks(name##_ticks_end)
 
 #define NODE_PROFILE_END \
-    PROFILE_END; \
-    ticks_delta = ticks_end - ticks_start
+    PROFILE_END_NAMED(node); \
+    node_ticks_delta = node_ticks_end - node_ticks_start
 
 #ifndef PROFILING_RULES
 #define PROFILING_RULES ScProfileRules()
 #endif
 
-#define NODE_PROFILE_VARS uint64_t ticks_start, ticks_end, ticks_delta, node_deltas = 0
+#define NODE_PROFILE_VARS uint64_t node_ticks_start, node_ticks_end, node_ticks_delta, node_deltas = 0
 
 #define NODE_PROFILE_START(node) \
     if (PROFILING_RULES) { \
         node->checks++; \
-        PROFILE_START; \
+        PROFILE_START_NAMED(node); \
     }
 
 #define NODE_PROFILE_END_MATCH(node) \
     if (PROFILING_RULES) { \
         NODE_PROFILE_END; \
-        node->ticks += ticks_delta + node_deltas; \
-        node->ticks_match += ticks_delta + node_deltas; \
+        node->ticks += node_ticks_delta + node_deltas; \
+        node->ticks_match += node_ticks_delta + node_deltas; \
     }
 
 #define NODE_PROFILE_END_NOMATCH(node) \
     if (PROFILING_RULES) { \
         NODE_PROFILE_END; \
-        node->ticks += ticks_delta + node_deltas; \
-        node->ticks_no_match += ticks_delta + node_deltas; \
+        node->ticks += node_ticks_delta + node_deltas; \
+        node->ticks_no_match += node_ticks_delta + node_deltas; \
     }
 
 #define NODE_PROFILE_TMPSTART(node) \
     if (PROFILING_RULES) { \
-        PROFILE_START; \
+        PROFILE_START_NAMED(node); \
     }
 
 #define NODE_PROFILE_TMPEND(node) \
     if (PROFILING_RULES) { \
         NODE_PROFILE_END; \
-        node_deltas += ticks_delta; \
+        node_deltas += node_ticks_delta; \
     }
 
 #define OTN_PROFILE_ALERT(otn) otn->alerts++;
@@ -92,43 +93,49 @@
 #define PROFILING_PREPROCS ScProfilePreprocs()
 #endif
 
-#define PREPROC_PROFILE_START(ppstat) \
+#define PREPROC_PROFILE_START_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
         ppstat.checks++; \
-        PROFILE_START; \
-        ppstat.ticks_start = ticks_start; \
+        PROFILE_START_NAMED(name); \
+        ppstat.ticks_start = name##_ticks_start; \
     }
+#define PREPROC_PROFILE_START(ppstat) PREPROC_PROFILE_START_NAMED(snort, ppstat)
 
-#define PREPROC_PROFILE_REENTER_START(ppstat) \
+#define PREPROC_PROFILE_REENTER_START_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
-        PROFILE_START; \
-        ppstat.ticks_start = ticks_start; \
+        PROFILE_START_NAMED(name); \
+        ppstat.ticks_start = name##_ticks_start; \
     }
+#define PREPROC_PROFILE_REENTER_START(ppstat) PREPROC_PROFILE_REENTER_START_NAMED(snort, ppstat)
 
-#define PREPROC_PROFILE_TMPSTART(ppstat) \
+#define PREPROC_PROFILE_TMPSTART_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
-        PROFILE_START; \
-        ppstat.ticks_start = ticks_start; \
+        PROFILE_START_NAMED(name); \
+        ppstat.ticks_start = name##_ticks_start; \
     }
+#define PREPROC_PROFILE_TMPSTART(ppstat) PREPROC_PROFILE_TMPSTART_NAMED(snort, ppstat)
 
-#define PREPROC_PROFILE_END(ppstat) \
+#define PREPROC_PROFILE_END_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
-        PROFILE_END; \
+        PROFILE_END_NAMED(name); \
         ppstat.exits++; \
-        ppstat.ticks += ticks_end - ppstat.ticks_start; \
+        ppstat.ticks += name##_ticks_end - ppstat.ticks_start; \
     }
+#define PREPROC_PROFILE_END(ppstat) PREPROC_PROFILE_END_NAMED(snort, ppstat)
 
-#define PREPROC_PROFILE_REENTER_END(ppstat) \
+#define PREPROC_PROFILE_REENTER_END_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
-        PROFILE_END; \
-        ppstat.ticks += ticks_end - ppstat.ticks_start; \
+        PROFILE_END_NAMED(name); \
+        ppstat.ticks += name##_ticks_end - ppstat.ticks_start; \
     }
+#define PREPROC_PROFILE_REENTER_END(ppstat) PREPROC_PROFILE_REENTER_END_NAMED(snort, ppstat)
 
-#define PREPROC_PROFILE_TMPEND(ppstat) \
+#define PREPROC_PROFILE_TMPEND_NAMED(name, ppstat) \
     if (PROFILING_PREPROCS) { \
-        PROFILE_END; \
-        ppstat.ticks += ticks_end - ppstat.ticks_start; \
+        PROFILE_END_NAMED(name); \
+        ppstat.ticks += name##_ticks_end - ppstat.ticks_start; \
     }
+#define PREPROC_PROFILE_TMPEND(ppstat) PREPROC_PROFILE_TMPEND_NAMED(snort, ppstat)
 
 /************** Profiling API ******************/
 void ShowRuleProfiles(void);
@@ -167,6 +174,7 @@ void CleanupPreprocStatsNodeList(void);
 extern PreprocStats totalPerfStats;
 #else
 #define PROFILE_VARS
+#define PROFILE_VARS_NAMED(name)
 #define NODE_PROFILE_VARS
 #define NODE_PROFILE_START(node)
 #define NODE_PROFILE_END_MATCH(node)
@@ -175,11 +183,17 @@ extern PreprocStats totalPerfStats;
 #define NODE_PROFILE_TMPEND(node)
 #define OTN_PROFILE_ALERT(otn)
 #define PREPROC_PROFILE_START(ppstat)
+#define PREPROC_PROFILE_START_NAMED(name, ppstat)
 #define PREPROC_PROFILE_REENTER_START(ppstat)
+#define PREPROC_PROFILE_REENTER_START_NAMED(name, ppstat)
 #define PREPROC_PROFILE_TMPSTART(ppstat)
+#define PREPROC_PROFILE_TMPSTART_NAMED(name, ppstat)
 #define PREPROC_PROFILE_END(ppstat)
+#define PREPROC_PROFILE_END_NAMED(name, ppstat)
 #define PREPROC_PROFILE_REENTER_END(ppstat)
+#define PREPROC_PROFILE_REENTER_END_NAMED(name, ppstat)
 #define PREPROC_PROFILE_TMPEND(ppstat)
+#define PREPROC_PROFILE_TMPEND_NAMED(name, ppstat)
 #endif
 
 #endif  /* __PROFILER_H__ */

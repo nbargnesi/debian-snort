@@ -531,8 +531,8 @@ void SMTP_CheckConfig(SMTPConfig *pPolicyConfig, tSfPolicyUserContextId context)
 
         if(!pPolicyConfig->bitenc_depth && defaultConfig->bitenc_depth)
         {
-            DynamicPreprocessorFatalMessage("%s(%d) => SMTP: Cannot enable unlimited 7bit/8bit/binary extraction"
-                                        " in non-default config without turning on unlimited 7bit/8bit/binary extraction in the default "
+            DynamicPreprocessorFatalMessage("%s(%d) => SMTP: Cannot enable unlimited Non-Encoded MIME attachment extraction"
+                                        " in non-default config without turning on unlimited Non-Encoded MIME attachment extraction in the default "
                                         " config.\n",
                                         *(_dpd.config_file), *(_dpd.config_line));
         }
@@ -768,19 +768,19 @@ void SMTP_PrintConfig(SMTPConfig *config)
 
     if(config->bitenc_depth > -1)
     {
-        _dpd.logMsg("    7bit/8bit/binary Extraction: %s\n","Enabled");
+        _dpd.logMsg("    Non-Encoded MIME attachment Extraction: %s\n","Enabled");
         switch(config->bitenc_depth)
         {
             case 0:
-                _dpd.logMsg("    7bit/8bit/binary Extraction Depth: %s\n", "Unlimited");
+                _dpd.logMsg("    Non-Encoded MIME attachment Extraction Depth: %s\n", "Unlimited");
                 break;
             default:
-                _dpd.logMsg("    7bit/8bit/binary Extraction Depth: %d\n", config->bitenc_depth);
+                _dpd.logMsg("    Non-Encoded MIME attachment Extraction Depth: %d\n", config->bitenc_depth);
                 break;
         }
     }
     else
-        _dpd.logMsg("    7bit/8bit/binary Extraction: %s\n", "Disabled");
+        _dpd.logMsg("    Non-Encoded MIME attachment Extraction/text: %s\n", "Disabled");
 
     _dpd.logMsg("    Log Attachment filename: %s\n",
                 config->log_filename ? "Enabled" : "Not Enabled");
@@ -1278,6 +1278,13 @@ static int ProcessLogDepth(SMTPConfig *config, char *ErrorString, int ErrStrLen)
         log_depth = MAX_LOG_DEPTH;
     }
 
+    /* Rounding the log depth to a multiple of 8 since
+     * multiple sessions use the same mempool
+     *
+     * Moved from spp_smtp.c
+     */
+    if (log_depth & 7)
+        log_depth += (8 - (log_depth & 7));
 
     config->email_hdrs_log_depth = log_depth;
     return 0;

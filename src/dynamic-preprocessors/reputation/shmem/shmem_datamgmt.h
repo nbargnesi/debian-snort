@@ -27,6 +27,7 @@
 #define _SHMEM_DMGMT_H_
 
 #include <stdint.h>
+#include "sf_types.h"
 
 #define SF_EINVAL  1
 #define SF_SUCCESS 0
@@ -34,14 +35,19 @@
 #define SF_EEXIST  3
 
 #define MAX_NAME  1024  
-#define MAX_FILES 1024
 
-#define FILE_LIST_BUCKET_SIZE 100
+#define FILE_LIST_BUCKET_SIZE     100
+#define MAX_NUM_ZONES             1052
+#define MAX_MANIFEST_LINE_LENGTH  8*MAX_NUM_ZONES
+#define MAX_LIST_ID               UINT32_MAX
+#define MAX_IPLIST_FILES          255
 
 typedef struct _FileList
 {
     char*    filename;
     int      filetype;
+    uint32_t      listid;
+    bool zones[MAX_NUM_ZONES];
 } ShmemDataFileList;
 
 extern ShmemDataFileList** filelist_ptr;
@@ -51,5 +57,6 @@ int GetSortedListOfShmemDataFiles(void);
 int GetLatestShmemDataSetVersionOnDisk(uint32_t* shmemVersion);
 void FreeShmemDataFileList(void);
 void PrintDataFiles(void);
+void PrintListInfo (bool *zones, uint32_t listid);
 #endif
 

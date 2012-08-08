@@ -35,6 +35,7 @@
 #include "dce2_stats.h"
 #include "dce2_event.h"
 #include "dce2_paf.h"
+#include "dce2_smb.h"
 #include "snort_dce2.h"
 #include "preprocids.h"
 #include "profiler.h"
@@ -56,10 +57,12 @@ PreprocStats dce2_pstat_session_state;
 PreprocStats dce2_pstat_detect;
 PreprocStats dce2_pstat_log;
 PreprocStats dce2_pstat_smb_seg;
-PreprocStats dce2_pstat_smb_trans;
+PreprocStats dce2_pstat_smb_req;
 PreprocStats dce2_pstat_smb_uid;
 PreprocStats dce2_pstat_smb_tid;
 PreprocStats dce2_pstat_smb_fid;
+PreprocStats dce2_pstat_smb_fingerprint;
+PreprocStats dce2_pstat_smb_negotiate;
 PreprocStats dce2_pstat_co_seg;
 PreprocStats dce2_pstat_co_frag;
 PreprocStats dce2_pstat_co_reass;
@@ -68,22 +71,6 @@ PreprocStats dce2_pstat_cl_acts;
 PreprocStats dce2_pstat_cl_frag;
 PreprocStats dce2_pstat_cl_reass;
 #endif
-
-/********************************************************************
- * Extern variables
- ********************************************************************/
-extern tSfPolicyUserContextId dce2_config;
-extern DCE2_Config *dce2_eval_config;
-
-#ifdef SNORT_RELOAD
-extern tSfPolicyUserContextId dce2_swap_config;
-#endif
-
-extern DCE2_Stats dce2_stats;
-extern DCE2_Memory dce2_memory;
-extern char **dce2_trans_strs;
-extern DCE2_CStack *dce2_pkt_stack;
-extern DCE2_ProtoIds dce2_proto_ids;
 
 const int MAJOR_VERSION = 1;
 const int MINOR_VERSION = 0;
@@ -107,10 +94,12 @@ const char *PREPROC_NAME = "SF_DCERPC2";
 #define DCE2_PSTAT__DETECT       "DceRpcDetect"
 #define DCE2_PSTAT__LOG          "DceRpcLog"
 #define DCE2_PSTAT__SMB_SEG      "DceRpcSmbSeg"
-#define DCE2_PSTAT__SMB_TRANS    "DceRpcSmbTrans"
+#define DCE2_PSTAT__SMB_REQ      "DceRpcSmbReq"
 #define DCE2_PSTAT__SMB_UID      "DceRpcSmbUid"
 #define DCE2_PSTAT__SMB_TID      "DceRpcSmbTid"
 #define DCE2_PSTAT__SMB_FID      "DceRpcSmbFid"
+#define DCE2_PSTAT__SMB_FP       "DceRpcSmbFingerprint"
+#define DCE2_PSTAT__SMB_NEG      "DceRpcSmbNegotiate"
 #define DCE2_PSTAT__CO_SEG       "DceRpcCoSeg"
 #define DCE2_PSTAT__CO_FRAG      "DceRpcCoFrag"
 #define DCE2_PSTAT__CO_REASS     "DceRpcCoReass"
@@ -208,6 +197,8 @@ static void DCE2_InitGlobal(char *args)
         /* Initialize reassembly packet */
         DCE2_InitRpkts();
 
+        DCE2_SmbInitGlobals();
+
         _dpd.addPreprocConfCheck(DCE2_CheckConfig);
         _dpd.registerPreprocStats(DCE2_GNAME, DCE2_PrintStats);
         _dpd.addPreprocReset(DCE2_Reset, NULL, PRIORITY_LAST, PP_DCE2);
@@ -222,10 +213,12 @@ static void DCE2_InitGlobal(char *args)
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__LOG, &dce2_pstat_log, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__DETECT, &dce2_pstat_detect, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_SEG, &dce2_pstat_smb_seg, 1, &dce2_pstat_main);
-        _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_TRANS, &dce2_pstat_smb_trans, 1, &dce2_pstat_main);
+        _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_REQ, &dce2_pstat_smb_req, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_UID, &dce2_pstat_smb_uid, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_TID, &dce2_pstat_smb_tid, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_FID, &dce2_pstat_smb_fid, 1, &dce2_pstat_main);
+        _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_FP, &dce2_pstat_smb_fingerprint, 1, &dce2_pstat_main);
+        _dpd.addPreprocProfileFunc(DCE2_PSTAT__SMB_NEG, &dce2_pstat_smb_negotiate, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__CO_SEG, &dce2_pstat_co_seg, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__CO_FRAG, &dce2_pstat_co_frag, 1, &dce2_pstat_main);
         _dpd.addPreprocProfileFunc(DCE2_PSTAT__CO_REASS, &dce2_pstat_co_reass, 1, &dce2_pstat_main);
@@ -354,7 +347,9 @@ static int DCE2_CheckConfigPolicy(
         DCE2_ScCheckTransports(pPolicyConfig);
     }
 
+#ifdef ENABLE_PAF
     DCE2_AddPortsToPaf(pPolicyConfig, policyId);
+#endif
 
     /* Register routing table memory */
     if (pPolicyConfig->sconfigs != NULL)
@@ -402,11 +397,11 @@ static void DCE2_Main(void *pkt, void *context)
 #ifdef DEBUG_MSGS
     if (DCE2_SsnFromServer(p))
     {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Packet from server.\n"));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Packet from Server.\n"));
     }
     else
     {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Packet from client.\n"));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Packet from Client.\n"));
     }
 #endif
 
@@ -469,16 +464,17 @@ static void DCE2_Main(void *pkt, void *context)
  ******************************************************************/
 static void DCE2_PrintStats(int exiting)
 {
+    int smb_com;
+    int sub_com;
+
     _dpd.logMsg("dcerpc2 Preprocessor Statistics\n");
     _dpd.logMsg("  Total sessions: "STDu64"\n", dce2_stats.sessions);
     if (dce2_stats.sessions > 0)
     {
-        if (dce2_stats.missed_bytes > 0)
-            _dpd.logMsg("  Missed bytes: "STDu64"\n", dce2_stats.missed_bytes);
-        if (dce2_stats.overlapped_bytes > 0)
-            _dpd.logMsg("  Overlapped bytes: "STDu64"\n", dce2_stats.overlapped_bytes);
         if (dce2_stats.sessions_autodetected > 0)
             _dpd.logMsg("  Total sessions autodetected: "STDu64"\n", dce2_stats.sessions_autodetected);
+        if (dce2_stats.sessions_aborted > 0)
+            _dpd.logMsg("  Total sessions aborted: "STDu64"\n", dce2_stats.sessions_aborted);
         if (dce2_stats.bad_autodetects > 0)
             _dpd.logMsg("  Bad autodetects: "STDu64"\n", dce2_stats.bad_autodetects);
         if (dce2_stats.events > 0)
@@ -522,483 +518,102 @@ static void DCE2_PrintStats(int exiting)
             _dpd.logMsg("        Packets: "STDu64"\n", dce2_stats.smb_pkts);
             if (dce2_stats.smb_ignored_bytes > 0)
                 _dpd.logMsg("        Ignored bytes: "STDu64"\n", dce2_stats.smb_ignored_bytes);
-            if (dce2_stats.smb_non_ipc_packets > 0)
-                _dpd.logMsg("        Not IPC packets (after tree connect): "STDu64"\n", dce2_stats.smb_non_ipc_packets);
             if (dce2_stats.smb_nbss_not_message > 0)
                 _dpd.logMsg("        Not NBSS Session Message: "STDu64"\n", dce2_stats.smb_nbss_not_message);
+            if (dce2_stats.smb_non_ipc_packets > 0)
+                _dpd.logMsg("        Not IPC packets (after tree connect): "STDu64"\n", dce2_stats.smb_non_ipc_packets);
+            if (dce2_stats.smb_cli_seg_reassembled > 0)
+                _dpd.logMsg("        Client TCP reassembled: "STDu64"\n", dce2_stats.smb_cli_seg_reassembled);
+            if (dce2_stats.smb_srv_seg_reassembled > 0)
+                _dpd.logMsg("        Server TCP reassembled: "STDu64"\n", dce2_stats.smb_srv_seg_reassembled);
 
-            if (dce2_stats.smb_seg_reassembled > 0)
-                _dpd.logMsg("        Seg reassembled: "STDu64"\n", dce2_stats.smb_seg_reassembled);
+            _dpd.logMsg("        Maximum outstanding requests: "STDu64"\n",
+                    dce2_stats.smb_max_outstanding_requests);
 
-            if ((dce2_stats.smb_ssx_req > 0) || (dce2_stats.smb_ssx_resp > 0))
+            // SMB command stats
+            _dpd.logMsg("        SMB command requests/responses processed\n");
+            for (smb_com = 0; smb_com < SMB_MAX_NUM_COMS; smb_com++)
             {
-                _dpd.logMsg("        Session Setup AndX requests: "STDu64"\n", dce2_stats.smb_ssx_req);
-                if (dce2_stats.smb_ssx_chained > 0)
+                SmbAndXCom andx = smb_chain_map[smb_com];
+
+                // Print out the stats for command requests
+                if ((dce2_stats.smb_com_stats[SMB_TYPE__REQUEST][smb_com] != 0)
+                        || (dce2_stats.smb_com_stats[SMB_TYPE__RESPONSE][smb_com] != 0))
                 {
-                    _dpd.logMsg("        Session Setup AndX chained requests\n");
-                    if (dce2_stats.smb_ssx_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_ssx_req_chained_loffx);
-                    if (dce2_stats.smb_ssx_req_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_ssx_req_chained_tc);
-                    if (dce2_stats.smb_ssx_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_ssx_req_chained_tcx);
-                    if (dce2_stats.smb_ssx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_ssx_req_chained_tdis);
-                    if (dce2_stats.smb_ssx_req_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_ssx_req_chained_open);
-                    if (dce2_stats.smb_ssx_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_ssx_req_chained_openx);
-                    if (dce2_stats.smb_ssx_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_ssx_req_chained_ntcx);
-                    if (dce2_stats.smb_ssx_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_ssx_req_chained_close);
-                    if (dce2_stats.smb_ssx_req_chained_trans > 0)
-                        _dpd.logMsg("          Transact: "STDu64"\n", dce2_stats.smb_ssx_req_chained_trans);
-                    if (dce2_stats.smb_ssx_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_ssx_req_chained_write);
-                    if (dce2_stats.smb_ssx_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_ssx_req_chained_readx);
-                    if (dce2_stats.smb_ssx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_ssx_req_chained_other);
+                    _dpd.logMsg("          %s (0x%02X) : "STDu64"/"STDu64"\n",
+                            smb_com_strings[smb_com], smb_com,
+                            dce2_stats.smb_com_stats[SMB_TYPE__REQUEST][smb_com],
+                            dce2_stats.smb_com_stats[SMB_TYPE__RESPONSE][smb_com]);
+
+                    switch (smb_com)
+                    {
+                        case SMB_COM_TRANSACTION:
+                            for (sub_com = 0; sub_com < TRANS_SUBCOM_MAX+1; sub_com++)
+                            {
+                                if ((dce2_stats.smb_trans_subcom_stats[SMB_TYPE__REQUEST][sub_com] != 0)
+                                        || (dce2_stats.smb_trans_subcom_stats[SMB_TYPE__RESPONSE][sub_com] != 0))
+                                {
+                                    _dpd.logMsg("            %s (0x%04X) : "STDu64"/"STDu64"\n",
+                                            (sub_com < TRANS_SUBCOM_MAX)
+                                            ? smb_transaction_sub_command_strings[sub_com] : "Unknown",
+                                            sub_com,
+                                            dce2_stats.smb_trans_subcom_stats[SMB_TYPE__REQUEST][sub_com],
+                                            dce2_stats.smb_trans_subcom_stats[SMB_TYPE__RESPONSE][sub_com]);
+                                }
+                            }
+                            break;
+                        case SMB_COM_TRANSACTION2:
+                            for (sub_com = 0; sub_com < TRANS2_SUBCOM_MAX+1; sub_com++)
+                            {
+                                if ((dce2_stats.smb_trans2_subcom_stats[SMB_TYPE__REQUEST][sub_com] != 0)
+                                        || (dce2_stats.smb_trans2_subcom_stats[SMB_TYPE__RESPONSE][sub_com] != 0))
+                                {
+                                    _dpd.logMsg("            %s (0x%04X) : "STDu64"/"STDu64"\n",
+                                            (sub_com < TRANS2_SUBCOM_MAX)
+                                            ? smb_transaction2_sub_command_strings[sub_com] : "Unknown",
+                                            sub_com,
+                                            dce2_stats.smb_trans2_subcom_stats[SMB_TYPE__REQUEST][sub_com],
+                                            dce2_stats.smb_trans2_subcom_stats[SMB_TYPE__RESPONSE][sub_com]);
+                                }
+                            }
+                            break;
+                        case SMB_COM_NT_TRANSACT:
+                            for (sub_com = 0; sub_com < NT_TRANSACT_SUBCOM_MAX+1; sub_com++)
+                            {
+                                if ((dce2_stats.smb_nt_transact_subcom_stats[SMB_TYPE__REQUEST][sub_com] != 0)
+                                        || (dce2_stats.smb_nt_transact_subcom_stats[SMB_TYPE__RESPONSE][sub_com] != 0))
+                                {
+                                    _dpd.logMsg("            %s (0x%04X) : "STDu64"/"STDu64"\n",
+                                            (sub_com < NT_TRANSACT_SUBCOM_MAX)
+                                            ? smb_nt_transact_sub_command_strings[sub_com] : "Unknown",
+                                            sub_com,
+                                            dce2_stats.smb_nt_transact_subcom_stats[SMB_TYPE__REQUEST][sub_com],
+                                            dce2_stats.smb_nt_transact_subcom_stats[SMB_TYPE__RESPONSE][sub_com]);
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
                 }
-                _dpd.logMsg("        Session Setup AndX responses: "STDu64"\n", dce2_stats.smb_ssx_resp);
-                if (dce2_stats.smb_ssx_chained > 0)
+
+                // Print out chaining stats for AndX command requests
+                if (andx != SMB_ANDX_COM__NONE)
                 {
-                    _dpd.logMsg("        Session Setup AndX chained responses\n");
-                    if (dce2_stats.smb_ssx_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_loffx);
-                    if (dce2_stats.smb_ssx_resp_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_tc);
-                    if (dce2_stats.smb_ssx_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_tcx);
-                    if (dce2_stats.smb_ssx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_tdis);
-                    if (dce2_stats.smb_ssx_resp_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_open);
-                    if (dce2_stats.smb_ssx_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_openx);
-                    if (dce2_stats.smb_ssx_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_ntcx);
-                    if (dce2_stats.smb_ssx_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_close);
-                    if (dce2_stats.smb_ssx_resp_chained_trans > 0)
-                        _dpd.logMsg("          Transact: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_trans);
-                    if (dce2_stats.smb_ssx_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_write);
-                    if (dce2_stats.smb_ssx_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_readx);
-                    if (dce2_stats.smb_ssx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_ssx_resp_chained_other);
+                    int chained_com;
+
+                    for (chained_com = 0; chained_com < SMB_MAX_NUM_COMS; chained_com++)
+                    {
+                        if ((dce2_stats.smb_chained_stats[SMB_TYPE__REQUEST][andx][chained_com] != 0)
+                                || (dce2_stats.smb_chained_stats[SMB_TYPE__RESPONSE][andx][chained_com] != 0))
+                        {
+                            _dpd.logMsg("            => %s (0x%02X) : "STDu64"/"STDu64"\n",
+                                    smb_com_strings[chained_com], chained_com,
+                                    dce2_stats.smb_chained_stats[SMB_TYPE__REQUEST][andx][chained_com],
+                                    dce2_stats.smb_chained_stats[SMB_TYPE__RESPONSE][andx][chained_com]);
+                        }
+                    }
                 }
-            }
-
-            if ((dce2_stats.smb_loffx_req > 0) || (dce2_stats.smb_loffx_resp > 0))
-            {
-                _dpd.logMsg("        Logoff AndX requests: "STDu64"\n", dce2_stats.smb_loffx_req);
-                if (dce2_stats.smb_loffx_chained > 0)
-                {
-                    _dpd.logMsg("        Logoff AndX chained requests\n");
-                    if (dce2_stats.smb_loffx_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_loffx_req_chained_ssx);
-                    if (dce2_stats.smb_loffx_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_loffx_req_chained_tcx);
-                    if (dce2_stats.smb_loffx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_loffx_req_chained_tdis);
-                    if (dce2_stats.smb_loffx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_loffx_req_chained_other);
-                }
-                _dpd.logMsg("        Logoff AndX responses: "STDu64"\n", dce2_stats.smb_loffx_resp);
-                if (dce2_stats.smb_loffx_chained > 0)
-                {
-                    _dpd.logMsg("        Logoff AndX chained responses\n");
-                    if (dce2_stats.smb_loffx_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_loffx_resp_chained_ssx);
-                    if (dce2_stats.smb_loffx_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_loffx_resp_chained_tcx);
-                    if (dce2_stats.smb_loffx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_loffx_resp_chained_tdis);
-                    if (dce2_stats.smb_loffx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_loffx_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_tc_req > 0) || (dce2_stats.smb_tc_resp > 0))
-            {
-                _dpd.logMsg("        Tree Connect requests: "STDu64"\n", dce2_stats.smb_tc_req);
-                _dpd.logMsg("        Tree Connect responses: "STDu64"\n", dce2_stats.smb_tc_resp);
-            }
-
-            if ((dce2_stats.smb_tcx_req > 0) || (dce2_stats.smb_tcx_resp > 0))
-            {
-                _dpd.logMsg("        Tree Connect AndX requests: "STDu64"\n", dce2_stats.smb_tcx_req);
-                if (dce2_stats.smb_tcx_chained > 0)
-                {
-                    _dpd.logMsg("        Tree Connect AndX chained requests\n");
-                    if (dce2_stats.smb_tcx_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_tcx_req_chained_ssx);
-                    if (dce2_stats.smb_tcx_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_tcx_req_chained_loffx);
-                    if (dce2_stats.smb_tcx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_tcx_req_chained_tdis);
-                    if (dce2_stats.smb_tcx_req_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_tcx_req_chained_open);
-                    if (dce2_stats.smb_tcx_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_tcx_req_chained_openx);
-                    if (dce2_stats.smb_tcx_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_tcx_req_chained_ntcx);
-                    if (dce2_stats.smb_tcx_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_tcx_req_chained_close);
-                    if (dce2_stats.smb_tcx_req_chained_trans > 0)
-                        _dpd.logMsg("          Transact: "STDu64"\n", dce2_stats.smb_tcx_req_chained_trans);
-                    if (dce2_stats.smb_tcx_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_tcx_req_chained_write);
-                    if (dce2_stats.smb_tcx_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_tcx_req_chained_readx);
-                    if (dce2_stats.smb_tcx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_tcx_req_chained_other);
-                }
-                _dpd.logMsg("        Tree Connect AndX responses: "STDu64"\n", dce2_stats.smb_tcx_resp);
-                if (dce2_stats.smb_tcx_chained > 0)
-                {
-                    _dpd.logMsg("        Tree Connect AndX chained responses\n");
-                    if (dce2_stats.smb_tcx_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_ssx);
-                    if (dce2_stats.smb_tcx_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_loffx);
-                    if (dce2_stats.smb_tcx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_tdis);
-                    if (dce2_stats.smb_tcx_resp_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_open);
-                    if (dce2_stats.smb_tcx_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_openx);
-                    if (dce2_stats.smb_tcx_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_ntcx);
-                    if (dce2_stats.smb_tcx_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_close);
-                    if (dce2_stats.smb_tcx_resp_chained_trans > 0)
-                        _dpd.logMsg("          Transact: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_trans);
-                    if (dce2_stats.smb_tcx_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_write);
-                    if (dce2_stats.smb_tcx_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_readx);
-                    if (dce2_stats.smb_tcx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_tcx_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_tdis_req > 0) || (dce2_stats.smb_tdis_resp > 0))
-            {
-                _dpd.logMsg("        Tree Disconnect requests: "STDu64"\n", dce2_stats.smb_tdis_req);
-                _dpd.logMsg("        Tree Disconnect responses: "STDu64"\n", dce2_stats.smb_tdis_resp);
-            }
-
-            if ((dce2_stats.smb_open_req > 0) || (dce2_stats.smb_open_resp > 0))
-            {
-                _dpd.logMsg("        Open requests: "STDu64"\n", dce2_stats.smb_open_req);
-                _dpd.logMsg("        Open responses: "STDu64"\n", dce2_stats.smb_open_resp);
-            }
-
-            if ((dce2_stats.smb_openx_req > 0) || (dce2_stats.smb_openx_resp > 0))
-            {
-                _dpd.logMsg("        Open AndX requests: "STDu64"\n", dce2_stats.smb_openx_req);
-                if (dce2_stats.smb_openx_chained > 0)
-                {
-                    _dpd.logMsg("        Open AndX chained requests\n");
-                    if (dce2_stats.smb_openx_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_ssx);
-                    if (dce2_stats.smb_openx_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_loffx);
-                    if (dce2_stats.smb_openx_req_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_openx_req_chained_tc);
-                    if (dce2_stats.smb_openx_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_tcx);
-                    if (dce2_stats.smb_openx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_openx_req_chained_tdis);
-                    if (dce2_stats.smb_openx_req_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_openx_req_chained_open);
-                    if (dce2_stats.smb_openx_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_openx);
-                    if (dce2_stats.smb_openx_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_ntcx);
-                    if (dce2_stats.smb_openx_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_openx_req_chained_close);
-                    if (dce2_stats.smb_openx_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_openx_req_chained_write);
-                    if (dce2_stats.smb_openx_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_openx_req_chained_readx);
-                    if (dce2_stats.smb_openx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_openx_req_chained_other);
-                }
-                _dpd.logMsg("        Open AndX responses: "STDu64"\n", dce2_stats.smb_openx_resp);
-                if (dce2_stats.smb_openx_chained > 0)
-                {
-                    _dpd.logMsg("        Open AndX chained responses\n");
-                    if (dce2_stats.smb_openx_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_ssx);
-                    if (dce2_stats.smb_openx_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_loffx);
-                    if (dce2_stats.smb_openx_resp_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_openx_resp_chained_tc);
-                    if (dce2_stats.smb_openx_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_tcx);
-                    if (dce2_stats.smb_openx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_openx_resp_chained_tdis);
-                    if (dce2_stats.smb_openx_resp_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_openx_resp_chained_open);
-                    if (dce2_stats.smb_openx_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_openx);
-                    if (dce2_stats.smb_openx_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_ntcx);
-                    if (dce2_stats.smb_openx_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_openx_resp_chained_close);
-                    if (dce2_stats.smb_openx_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_openx_resp_chained_write);
-                    if (dce2_stats.smb_openx_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_openx_resp_chained_readx);
-                    if (dce2_stats.smb_openx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_openx_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_ntcx_req > 0) || (dce2_stats.smb_ntcx_resp > 0))
-            {
-                _dpd.logMsg("        Nt Create AndX requests: "STDu64"\n", dce2_stats.smb_ntcx_req);
-                if (dce2_stats.smb_ntcx_chained > 0)
-                {
-                    _dpd.logMsg("        Nt Create AndX chained requests\n");
-                    if (dce2_stats.smb_ntcx_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_ssx);
-                    if (dce2_stats.smb_ntcx_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_loffx);
-                    if (dce2_stats.smb_ntcx_req_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_tc);
-                    if (dce2_stats.smb_ntcx_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_tcx);
-                    if (dce2_stats.smb_ntcx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_tdis);
-                    if (dce2_stats.smb_ntcx_req_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_open);
-                    if (dce2_stats.smb_ntcx_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_openx);
-                    if (dce2_stats.smb_ntcx_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_ntcx);
-                    if (dce2_stats.smb_ntcx_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_close);
-                    if (dce2_stats.smb_ntcx_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_write);
-                    if (dce2_stats.smb_ntcx_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_readx);
-                    if (dce2_stats.smb_ntcx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_ntcx_req_chained_other);
-                }
-                _dpd.logMsg("        Nt Create AndX responses: "STDu64"\n", dce2_stats.smb_ntcx_resp);
-                if (dce2_stats.smb_ntcx_chained > 0)
-                {
-                    _dpd.logMsg("        Nt Create AndX chained responses\n");
-                    if (dce2_stats.smb_ntcx_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_ssx);
-                    if (dce2_stats.smb_ntcx_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_loffx);
-                    if (dce2_stats.smb_ntcx_resp_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_tc);
-                    if (dce2_stats.smb_ntcx_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_tcx);
-                    if (dce2_stats.smb_ntcx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_tdis);
-                    if (dce2_stats.smb_ntcx_resp_chained_open > 0)
-                        _dpd.logMsg("          Open: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_open);
-                    if (dce2_stats.smb_ntcx_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_openx);
-                    if (dce2_stats.smb_ntcx_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_ntcx);
-                    if (dce2_stats.smb_ntcx_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_close);
-                    if (dce2_stats.smb_ntcx_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_write);
-                    if (dce2_stats.smb_ntcx_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_readx);
-                    if (dce2_stats.smb_ntcx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_ntcx_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_close_req > 0) || (dce2_stats.smb_close_resp > 0))
-            {
-                _dpd.logMsg("        Close requests: "STDu64"\n", dce2_stats.smb_close_req);
-                _dpd.logMsg("        Close responses: "STDu64"\n", dce2_stats.smb_close_resp);
-            }
-
-            if ((dce2_stats.smb_trans_req > 0) || (dce2_stats.smb_trans_resp > 0))
-            {
-                _dpd.logMsg("        Transact requests: "STDu64"\n", dce2_stats.smb_trans_req);
-                if (dce2_stats.smb_trans_sec_req > 0)
-                    _dpd.logMsg("        Transact Secondary requests: "STDu64"\n", dce2_stats.smb_trans_sec_req);
-                _dpd.logMsg("        Transact responses: "STDu64"\n", dce2_stats.smb_trans_resp);
-            }
-
-            if ((dce2_stats.smb_write_req > 0) || (dce2_stats.smb_write_resp > 0))
-            {
-                _dpd.logMsg("        Write requests: "STDu64"\n", dce2_stats.smb_write_req);
-                _dpd.logMsg("        Write responses: "STDu64"\n", dce2_stats.smb_write_resp);
-            }
-
-            if ((dce2_stats.smb_writebr_req > 0) || (dce2_stats.smb_writebr_resp > 0))
-            {
-                _dpd.logMsg("        Write Block Raw requests: "STDu64"\n", dce2_stats.smb_writebr_req);
-                _dpd.logMsg("        Write Block Raw responses: "STDu64"\n", dce2_stats.smb_writebr_resp);
-            }
-
-            if ((dce2_stats.smb_writex_req > 0) || (dce2_stats.smb_writex_resp > 0))
-            {
-                _dpd.logMsg("        Write AndX requests: "STDu64"\n", dce2_stats.smb_writex_req);
-                if (dce2_stats.smb_writex_chained > 0)
-                {
-                    _dpd.logMsg("        Write AndX chained requests\n");
-                    if (dce2_stats.smb_writex_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_ssx);
-                    if (dce2_stats.smb_writex_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_loffx);
-                    if (dce2_stats.smb_writex_req_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_writex_req_chained_tc);
-                    if (dce2_stats.smb_writex_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_tcx);
-                    if (dce2_stats.smb_writex_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_openx);
-                    if (dce2_stats.smb_writex_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_ntcx);
-                    if (dce2_stats.smb_writex_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_writex_req_chained_close);
-                    if (dce2_stats.smb_writex_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_writex_req_chained_write);
-                    if (dce2_stats.smb_writex_req_chained_writex > 0)
-                        _dpd.logMsg("          Write AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_writex);
-                    if (dce2_stats.smb_writex_req_chained_read > 0)
-                        _dpd.logMsg("          Read: "STDu64"\n", dce2_stats.smb_writex_req_chained_read);
-                    if (dce2_stats.smb_writex_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_writex_req_chained_readx);
-                    if (dce2_stats.smb_writex_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_writex_req_chained_other);
-                }
-                _dpd.logMsg("        Write AndX responses: "STDu64"\n", dce2_stats.smb_writex_resp);
-                if (dce2_stats.smb_writex_chained > 0)
-                {
-                    _dpd.logMsg("        Write AndX chained responses\n");
-                    if (dce2_stats.smb_writex_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_ssx);
-                    if (dce2_stats.smb_writex_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_loffx);
-                    if (dce2_stats.smb_writex_resp_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_writex_resp_chained_tc);
-                    if (dce2_stats.smb_writex_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_tcx);
-                    if (dce2_stats.smb_writex_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_openx);
-                    if (dce2_stats.smb_writex_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_ntcx);
-                    if (dce2_stats.smb_writex_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_writex_resp_chained_close);
-                    if (dce2_stats.smb_writex_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_writex_resp_chained_write);
-                    if (dce2_stats.smb_writex_resp_chained_writex > 0)
-                        _dpd.logMsg("          Write AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_writex);
-                    if (dce2_stats.smb_writex_resp_chained_read > 0)
-                        _dpd.logMsg("          Read: "STDu64"\n", dce2_stats.smb_writex_resp_chained_read);
-                    if (dce2_stats.smb_writex_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_writex_resp_chained_readx);
-                    if (dce2_stats.smb_writex_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_writex_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_writeclose_req > 0) || (dce2_stats.smb_writeclose_resp > 0))
-            {
-                _dpd.logMsg("        Write and Close requests: "STDu64"\n", dce2_stats.smb_writeclose_req);
-                _dpd.logMsg("        Write and Close responses: "STDu64"\n", dce2_stats.smb_writeclose_resp);
-            }
-
-            if (dce2_stats.smb_writecomplete_resp > 0)
-                _dpd.logMsg("        Write Complete responses: "STDu64"\n", dce2_stats.smb_writecomplete_resp);
-
-            if ((dce2_stats.smb_read_req > 0) || (dce2_stats.smb_read_resp > 0))
-            {
-                _dpd.logMsg("        Read requests: "STDu64"\n", dce2_stats.smb_read_req);
-                _dpd.logMsg("        Read responses: "STDu64"\n", dce2_stats.smb_read_resp);
-            }
-
-            if ((dce2_stats.smb_readbr_req > 0) || (dce2_stats.smb_readbr_resp > 0))
-            {
-                _dpd.logMsg("        Read Block Raw requests: "STDu64"\n", dce2_stats.smb_readbr_req);
-                _dpd.logMsg("        Read Block Raw responses: "STDu64"\n", dce2_stats.smb_readbr_resp);
-            }
-
-            if ((dce2_stats.smb_readx_req > 0) || (dce2_stats.smb_readx_resp > 0))
-            {
-                _dpd.logMsg("        Read AndX requests: "STDu64"\n", dce2_stats.smb_readx_req);
-                if (dce2_stats.smb_readx_chained > 0)
-                {
-                    _dpd.logMsg("        Read AndX chained requests\n");
-                    if (dce2_stats.smb_readx_req_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_ssx);
-                    if (dce2_stats.smb_readx_req_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_loffx);
-                    if (dce2_stats.smb_readx_req_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_readx_req_chained_tc);
-                    if (dce2_stats.smb_readx_req_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_tcx);
-                    if (dce2_stats.smb_readx_req_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_readx_req_chained_tdis);
-                    if (dce2_stats.smb_readx_req_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_openx);
-                    if (dce2_stats.smb_readx_req_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_ntcx);
-                    if (dce2_stats.smb_readx_req_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_readx_req_chained_close);
-                    if (dce2_stats.smb_readx_req_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_readx_req_chained_write);
-                    if (dce2_stats.smb_readx_req_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_readx_req_chained_readx);
-                    if (dce2_stats.smb_readx_req_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_readx_req_chained_other);
-                }
-                _dpd.logMsg("        Read AndX responses: "STDu64"\n", dce2_stats.smb_readx_resp);
-                if (dce2_stats.smb_readx_chained > 0)
-                {
-                    _dpd.logMsg("        Read AndX chained responses\n");
-                    if (dce2_stats.smb_readx_resp_chained_ssx > 0)
-                        _dpd.logMsg("          Session Setup AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_ssx);
-                    if (dce2_stats.smb_readx_resp_chained_loffx > 0)
-                        _dpd.logMsg("          Logoff AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_loffx);
-                    if (dce2_stats.smb_readx_resp_chained_tc > 0)
-                        _dpd.logMsg("          Tree Connect: "STDu64"\n", dce2_stats.smb_readx_resp_chained_tc);
-                    if (dce2_stats.smb_readx_resp_chained_tcx > 0)
-                        _dpd.logMsg("          Tree Connect AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_tcx);
-                    if (dce2_stats.smb_readx_resp_chained_tdis > 0)
-                        _dpd.logMsg("          Tree Disconnect: "STDu64"\n", dce2_stats.smb_readx_resp_chained_tdis);
-                    if (dce2_stats.smb_readx_resp_chained_openx > 0)
-                        _dpd.logMsg("          Open AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_openx);
-                    if (dce2_stats.smb_readx_resp_chained_ntcx > 0)
-                        _dpd.logMsg("          Nt Create AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_ntcx);
-                    if (dce2_stats.smb_readx_resp_chained_close > 0)
-                        _dpd.logMsg("          Close: "STDu64"\n", dce2_stats.smb_readx_resp_chained_close);
-                    if (dce2_stats.smb_readx_resp_chained_write > 0)
-                        _dpd.logMsg("          Write: "STDu64"\n", dce2_stats.smb_readx_resp_chained_write);
-                    if (dce2_stats.smb_readx_resp_chained_readx > 0)
-                        _dpd.logMsg("          Read AndX: "STDu64"\n", dce2_stats.smb_readx_resp_chained_readx);
-                    if (dce2_stats.smb_readx_resp_chained_other > 0)
-                        _dpd.logMsg("          Other: "STDu64"\n", dce2_stats.smb_readx_resp_chained_other);
-                }
-            }
-
-            if ((dce2_stats.smb_rename_req > 0) || (dce2_stats.smb_rename_resp > 0))
-            {
-                _dpd.logMsg("        Rename requests: "STDu64"\n", dce2_stats.smb_rename_req);
-                _dpd.logMsg("        Rename responses: "STDu64"\n", dce2_stats.smb_rename_resp);
-            }
-
-            if ((dce2_stats.smb_other_req > 0) || (dce2_stats.smb_other_resp > 0))
-            {
-                _dpd.logMsg("        SMB other command requests: "STDu64"\n", dce2_stats.smb_other_req);
-                _dpd.logMsg("        SMB other command responses: "STDu64"\n", dce2_stats.smb_other_resp);
             }
 
 #ifdef DEBUG_MSGS
@@ -1015,10 +630,8 @@ static void DCE2_PrintStats(int exiting)
             _dpd.logMsg("        Maximum tid tracking: %u\n", dce2_memory.smb_tid_max);
             _dpd.logMsg("        Current fid tracking: %u\n", dce2_memory.smb_fid);
             _dpd.logMsg("        Maximum fid tracking: %u\n", dce2_memory.smb_fid_max);
-            _dpd.logMsg("        Current fid binding tracking: %u\n", dce2_memory.smb_ut);
-            _dpd.logMsg("        Maximum fid binding tracking: %u\n", dce2_memory.smb_ut_max);
-            _dpd.logMsg("        Current multiplex tracking: %u\n", dce2_memory.smb_pm);
-            _dpd.logMsg("        Maximum multiplex tracking: %u\n", dce2_memory.smb_pm_max);
+            _dpd.logMsg("        Current request tracking: %u\n", dce2_memory.smb_req);
+            _dpd.logMsg("        Maximum request tracking: %u\n", dce2_memory.smb_req_max);
 #endif
         }
 
@@ -1084,39 +697,39 @@ static void DCE2_PrintStats(int exiting)
                 _dpd.logMsg("        PDUs: "STDu64"\n", dce2_stats.co_pdus);
                 if ((dce2_stats.co_bind > 0) || (dce2_stats.co_bind_ack > 0))
                 {
-                    _dpd.logMsg("        Bind: "STDu64"\n", dce2_stats.co_bind);
-                    _dpd.logMsg("        Bind Ack: "STDu64"\n", dce2_stats.co_bind_ack);
+                    _dpd.logMsg("          Bind: "STDu64"\n", dce2_stats.co_bind);
+                    _dpd.logMsg("          Bind Ack: "STDu64"\n", dce2_stats.co_bind_ack);
                 }
                 if ((dce2_stats.co_alter_ctx > 0) || (dce2_stats.co_alter_ctx_resp > 0))
                 {
-                    _dpd.logMsg("        Alter context: "STDu64"\n", dce2_stats.co_alter_ctx);
-                    _dpd.logMsg("        Alter context response: "STDu64"\n", dce2_stats.co_alter_ctx_resp);
+                    _dpd.logMsg("          Alter context: "STDu64"\n", dce2_stats.co_alter_ctx);
+                    _dpd.logMsg("          Alter context response: "STDu64"\n", dce2_stats.co_alter_ctx_resp);
                 }
                 if (dce2_stats.co_bind_nack > 0)
-                    _dpd.logMsg("        Bind Nack: "STDu64"\n", dce2_stats.co_bind_nack);
+                    _dpd.logMsg("          Bind Nack: "STDu64"\n", dce2_stats.co_bind_nack);
                 if ((dce2_stats.co_request > 0) || (dce2_stats.co_response > 0))
                 {
-                    _dpd.logMsg("        Request: "STDu64"\n", dce2_stats.co_request);
-                    _dpd.logMsg("        Response: "STDu64"\n", dce2_stats.co_response);
+                    _dpd.logMsg("          Request: "STDu64"\n", dce2_stats.co_request);
+                    _dpd.logMsg("          Response: "STDu64"\n", dce2_stats.co_response);
                 }
                 if (dce2_stats.co_fault > 0)
-                    _dpd.logMsg("        Fault: "STDu64"\n", dce2_stats.co_fault);
+                    _dpd.logMsg("          Fault: "STDu64"\n", dce2_stats.co_fault);
                 if (dce2_stats.co_reject > 0)
-                    _dpd.logMsg("        Reject: "STDu64"\n", dce2_stats.co_reject);
+                    _dpd.logMsg("          Reject: "STDu64"\n", dce2_stats.co_reject);
                 if (dce2_stats.co_auth3 > 0)
-                    _dpd.logMsg("        Auth3: "STDu64"\n", dce2_stats.co_auth3);
+                    _dpd.logMsg("          Auth3: "STDu64"\n", dce2_stats.co_auth3);
                 if (dce2_stats.co_shutdown > 0)
-                    _dpd.logMsg("        Shutdown: "STDu64"\n", dce2_stats.co_shutdown);
+                    _dpd.logMsg("          Shutdown: "STDu64"\n", dce2_stats.co_shutdown);
                 if (dce2_stats.co_cancel > 0)
-                    _dpd.logMsg("        Cancel: "STDu64"\n", dce2_stats.co_cancel);
+                    _dpd.logMsg("          Cancel: "STDu64"\n", dce2_stats.co_cancel);
                 if (dce2_stats.co_orphaned > 0)
-                    _dpd.logMsg("        Orphaned: "STDu64"\n", dce2_stats.co_orphaned);
+                    _dpd.logMsg("          Orphaned: "STDu64"\n", dce2_stats.co_orphaned);
                 if (dce2_stats.co_ms_pdu > 0)
-                    _dpd.logMsg("        Microsoft Outlook/Exchange 2003 pdu: "STDu64"\n", dce2_stats.co_ms_pdu);
+                    _dpd.logMsg("          Microsoft Request To Send RPC over HTTP: "STDu64"\n", dce2_stats.co_ms_pdu);
                 if (dce2_stats.co_other_req > 0)
-                    _dpd.logMsg("        Other request type: "STDu64"\n", dce2_stats.co_other_req);
+                    _dpd.logMsg("          Other request type: "STDu64"\n", dce2_stats.co_other_req);
                 if (dce2_stats.co_other_resp > 0)
-                    _dpd.logMsg("        Other response type: "STDu64"\n", dce2_stats.co_other_resp);
+                    _dpd.logMsg("          Other response type: "STDu64"\n", dce2_stats.co_other_resp);
                 _dpd.logMsg("        Request fragments: "STDu64"\n", dce2_stats.co_req_fragments);
                 if (dce2_stats.co_req_fragments > 0)
                 {
@@ -1131,8 +744,10 @@ static void DCE2_PrintStats(int exiting)
                     _dpd.logMsg("          Max fragment size: "STDu64"\n", dce2_stats.co_srv_max_frag_size);
                     _dpd.logMsg("          Frag reassembled: "STDu64"\n", dce2_stats.co_srv_frag_reassembled);
                 }
-                _dpd.logMsg("        Client seg reassembled: "STDu64"\n", dce2_stats.co_cli_seg_reassembled);
-                _dpd.logMsg("        Server seg reassembled: "STDu64"\n", dce2_stats.co_srv_seg_reassembled);
+                _dpd.logMsg("        Client PDU segmented reassembled: "STDu64"\n",
+                        dce2_stats.co_cli_seg_reassembled);
+                _dpd.logMsg("        Server PDU segmented reassembled: "STDu64"\n",
+                        dce2_stats.co_srv_seg_reassembled);
 #ifdef DEBUG_MSGS
                 _dpd.logMsg("      Memory stats (bytes)\n");
                 _dpd.logMsg("        Current segmentation buffering: %u\n", dce2_memory.co_seg);
@@ -1426,7 +1041,9 @@ static int DCE2_ReloadVerifyPolicy(
         DCE2_ScCheckTransports(swap_config);
     }
 
+#ifdef ENABLE_PAF
     DCE2_AddPortsToPaf(swap_config, policyId);
+#endif
 
     /* Register routing table memory */
     if (swap_config->sconfigs != NULL)

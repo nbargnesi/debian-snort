@@ -58,7 +58,7 @@
 #include "detection_filter.h"
 #include "generators.h"
 #include <signal.h>
-#if defined(HAVE_LIBPRELUDE) || defined(INLINE_FAILOPEN) || \
+#if defined(INLINE_FAILOPEN) || \
     defined(TARGET_BASED) || defined(SNORT_RELOAD)
 # include <pthread.h>
 #endif
@@ -227,6 +227,8 @@ typedef enum _GetOptLongIds
     DYNAMIC_ENGINE_FILE,
     DYNAMIC_ENGINE_DIRECTORY,
     DUMP_DYNAMIC_RULES,
+    DYNAMIC_OUTPUT_DIRECTORY,
+    DYNAMIC_OUTPUT_FILE,
 #endif
 
     CREATE_PID_FILE,
@@ -694,7 +696,7 @@ typedef struct _SnortConfig
     uint32_t ipv6_frag_timeout;
     uint32_t ipv6_max_frag_sessions;
 
-    uint8_t flowbit_size;
+    uint16_t flowbit_size;
 
     char pid_filename[STD_BUF];  /* used with pid_path */
     char pidfile_suffix[MAX_PIDFILE_SUFFIX + 1];  /* -R */
@@ -865,6 +867,7 @@ typedef struct _SnortConfig
     uint32_t so_rule_memcap;
     uint32_t paf_max;          /* config paf_max */
     char *cs_dir;
+    char *output_dir;
 } SnortConfig;
 
 /* struct to collect packet statistics */
@@ -1351,12 +1354,10 @@ static inline int ScStaticHash(void)
     return snort_conf->run_flags & RUN_FLAG__STATIC_HASH;
 }
 
-#ifdef PREPROCESSOR_AND_DECODER_RULE_EVENTS
 static inline int ScAutoGenPreprocDecoderOtns(void)
 {
     return (((snort_conf->targeted_policies[getRuntimePolicy()])->policy_flags) & POLICY_FLAG__AUTO_OTN );
 }
-#endif
 
 static inline int ScProcessAllEvents(void)
 {

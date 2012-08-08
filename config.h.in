@@ -79,12 +79,6 @@
 /* Define to 1 if you have the `pfring' library (-lpfring). */
 #undef HAVE_LIBPFRING
 
-/* Define to 1 if you have the `pq' library (-lpq). */
-#undef HAVE_LIBPQ
-
-/* Define whether Prelude support is enabled */
-#undef HAVE_LIBPRELUDE
-
 /* Define to 1 if you have the `rt' library (-lrt). */
 #undef HAVE_LIBRT
 
@@ -244,12 +238,6 @@
 
 /* Define if MacOS */
 #undef MACOS
-
-/* For MySQL versions 5.0.13 and greater */
-#undef MYSQL_HAS_OPT_RECONNECT
-
-/* For MySQL versions 5.0.13 to 5.0.18 */
-#undef MYSQL_HAS_OPT_RECONNECT_BUG
 
 /* Define if OpenBSD < 2.3 */
 #undef OPENBSD

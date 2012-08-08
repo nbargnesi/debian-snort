@@ -36,8 +36,7 @@ host_triplet = @host@
 subdir = src/preprocessors/HttpInspect/include
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
-	$(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -87,13 +86,6 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LIBOBJS = @LIBOBJS@
-LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
-LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
-LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
-LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
-LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
-LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
-LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@

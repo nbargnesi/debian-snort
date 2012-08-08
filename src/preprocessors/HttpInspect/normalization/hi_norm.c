@@ -89,6 +89,7 @@ typedef int (*DECODE_FUNC)(HI_SESSION *, const u_char *,
                           const u_char *, const u_char **, URI_NORM_STATE *, uint16_t *);
 
 
+bool byte_decoded=false;
 /*
 **  NAME
 **    GetPtr::
@@ -248,6 +249,8 @@ static int UDecode(HI_SESSION *Session, const u_char *start,
         hi_eo_client_event_log(Session, HI_EO_CLIENT_U_ENCODE, NULL, NULL);
     }
 
+    byte_decoded = true;
+
     return iNorm;
 }
 
@@ -385,6 +388,7 @@ static int PercentDecode(HI_SESSION *Session, const u_char *start,
     iNorm = (iNorm | (hex_lookup[(u_char)iByte])) & 0xff;
 
     *encodeType |= HTTP_ENCODE_TYPE__ASCII;
+    byte_decoded = true;
 
     if(hi_eo_generate_event(Session,ServerConf->ascii.alert) &&
        !norm_state->param)
@@ -809,6 +813,7 @@ static int DoubleDecode(HI_SESSION *Session, const u_char *start,
         hi_eo_client_event_log(Session, HI_EO_CLIENT_DOUBLE_DECODE,
                                NULL, NULL);
     }
+    byte_decoded = true;
 
     return iNorm;
 }
@@ -1365,7 +1370,7 @@ static inline int InspectUriChar(HI_SESSION *Session, int iChar,
         return HI_SUCCESS;
     }
 
-    if((u_char)iChar == '?')
+    if((!byte_decoded && (u_char)iChar == '?'))
     {
         /*
         **  We assume that this is the beginning of the parameter field,
@@ -1450,6 +1455,7 @@ int hi_norm_uri(HI_SESSION *Session, u_char *uribuf, int *uribuf_size,
 
     while(hi_util_in_bounds(ub_start, ub_end, ub_ptr))
     {
+        byte_decoded = false;
 
         iChar = GetDecodedByte(Session, start, end, &ptr, &norm_state, encodeType);
         if(iChar == END_OF_BUFFER)

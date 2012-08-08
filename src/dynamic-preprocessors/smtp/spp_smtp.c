@@ -443,78 +443,23 @@ static void SMTPCheckConfig(void)
         SMTPConfig *defaultConfig =
                 (SMTPConfig *)sfPolicyUserDataGetDefault(smtp_config);
 
+        if (defaultConfig == NULL)
+        {
+            DynamicPreprocessorFatalMessage(
+            "SMTP: Must configure a default configuration if you "
+            "want to enable smtp decoding.\n");
+        }
+
         if (sfPolicyUserDataIterate(smtp_config, SMTPEnableDecoding) != 0)
         {
-            int encode_depth;
-            int max_sessions;
-
-            if (defaultConfig == NULL)
-            {
-                /*error message */
-                DynamicPreprocessorFatalMessage("SMTP: Must configure a default "
-                                "configuration if you want to enable smtp decoding.\n");
-            }
-
-            encode_depth = defaultConfig->max_depth;
-
-            if (encode_depth & 7)
-            {
-                encode_depth += (8 - (encode_depth & 7));
-            }
-
-            max_sessions = defaultConfig->max_mime_mem / (2 * encode_depth );
-
-            smtp_mime_mempool = (MemPool *)calloc(1, sizeof(MemPool));
-
-            if (mempool_init(smtp_mime_mempool, max_sessions,
-                        (2 * encode_depth )) != 0)
-            {
-                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mime mempool.\n");
-            }
-
+            SMTP_MimeMempoolInit(defaultConfig->max_mime_mem,
+                defaultConfig->max_depth);
         }
 
         if (sfPolicyUserDataIterate(smtp_config, SMTPLogExtraData) != 0)
         {
-            uint32_t log_depth, max_bkt_size;
-            uint32_t max_sessions_logged;
-
-            if (defaultConfig == NULL)
-            {
-                /*error message */
-                DynamicPreprocessorFatalMessage("SMTP: Must configure a default "
-                        "configuration if you want to log email headers.\n");
-            }
-
-            log_depth = defaultConfig->email_hdrs_log_depth;
-
-            /* Rounding the log depth to a multiple of 8 since
-             * multiple sessions use the same mempool
-             */
-
-            if (log_depth & 7)
-            {
-                log_depth += (8 - (log_depth & 7));
-                defaultConfig->email_hdrs_log_depth = log_depth;
-            }
-
-            max_bkt_size = ( (2 * MAX_EMAIL) + MAX_FILE + defaultConfig->email_hdrs_log_depth);
-            max_sessions_logged = defaultConfig->memcap / max_bkt_size;
-
-
-            smtp_mempool = calloc(1, sizeof(*smtp_mempool));
-
-            if (mempool_init(smtp_mempool, max_sessions_logged, max_bkt_size) != 0)
-            {
-                if(!max_sessions_logged)
-                {
-                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
-                }
-                else
-                {
-                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"memcap\" \n");
-                }
-            }
+            SMTP_MempoolInit(defaultConfig->email_hdrs_log_depth,
+                defaultConfig->memcap);
         }
     }
 
@@ -533,8 +478,8 @@ static void SMTP_PrintStats(int exiting)
         _dpd.logMsg("  Total Quoted decoded bytes                        : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_QP]);
         _dpd.logMsg("  UU attachments decoded                            : "STDu64"\n", smtp_stats.attachments[DECODE_UU]);
         _dpd.logMsg("  Total UU decoded bytes                            : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_UU]);
-        _dpd.logMsg("  Bit/Binary/Text attachments extracted             : "STDu64"\n", smtp_stats.attachments[DECODE_BITENC]);
-        _dpd.logMsg("  Total Bit/Binary/Text bytes extracted             : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_BITENC]);
+        _dpd.logMsg("  Non-Encoded MIME attachments extracted            : "STDu64"\n", smtp_stats.attachments[DECODE_BITENC]);
+        _dpd.logMsg("  Total Non-Encoded MIME bytes extracted            : "STDu64"\n", smtp_stats.decoded_bytes[DECODE_BITENC]);
         if ( smtp_stats.memcap_exceeded )
             _dpd.logMsg("  Sessions not decoded due to memory unavailability : "STDu64"\n", smtp_stats.memcap_exceeded);
     }
@@ -706,7 +651,7 @@ static int SMTPReloadVerify(void)
         if (configNext->email_hdrs_log_depth & 7)
             configNext->email_hdrs_log_depth += (8 - (configNext->email_hdrs_log_depth & 7));
 
-        if(config->email_hdrs_log_depth != config->email_hdrs_log_depth)
+        if(configNext->email_hdrs_log_depth != config->email_hdrs_log_depth)
         {
             _dpd.errMsg("SMTP reload: Changing the email_hdrs_log_depth requires a restart.\n");
             SMTP_FreeConfigs(smtp_swap_config);
@@ -717,61 +662,12 @@ static int SMTPReloadVerify(void)
     else if(configNext != NULL)
     {
         if (sfPolicyUserDataIterate(smtp_swap_config, SMTPEnableDecoding) != 0)
-        {
-            int encode_depth;
-            int max_sessions;
-
-
-            encode_depth = configNext->max_depth;
-
-            if (encode_depth & 7)
-            {
-                encode_depth += (8 - (encode_depth & 7));
-            }
-
-            max_sessions = configNext->max_mime_mem / ( 2 * encode_depth);
-
-            smtp_mime_mempool = (MemPool *)calloc(1, sizeof(MemPool));
-
-            if (mempool_init(smtp_mime_mempool, max_sessions,
-                    (2 * encode_depth)) != 0)
-            {
-                DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mime mempool.\n");
-            }
-        }
+            SMTP_MimeMempoolInit(configNext->max_mime_mem,
+                configNext->max_depth);
 
         if (sfPolicyUserDataIterate(smtp_config, SMTPLogExtraData) != 0)
-        {
-            uint32_t log_depth, max_bkt_size;
-            uint32_t max_sessions_logged;
-
-            log_depth = configNext->email_hdrs_log_depth;
-
-
-            if (log_depth & 7)
-            {
-                log_depth += (8 - (log_depth & 7));
-                configNext->email_hdrs_log_depth = log_depth;
-            }
-
-            max_bkt_size = configNext->memcap/((2* MAX_EMAIL) + MAX_FILE + configNext->email_hdrs_log_depth);
-            max_sessions_logged = configNext->memcap/max_bkt_size;
-
-            smtp_mempool = calloc(1, sizeof(*smtp_mempool));
-
-            if (mempool_init(smtp_mempool, max_sessions_logged, max_bkt_size) != 0)
-            {
-                if(!max_sessions_logged)
-                {
-                    DynamicPreprocessorFatalMessage("SMTP:  Could not allocate SMTP mempool.\n");
-                }
-                else
-                {
-                    DynamicPreprocessorFatalMessage("SMTP: Error setting the \"memcap\" \n");
-                }
-            }
-        }
-
+            SMTP_MempoolInit(configNext->email_hdrs_log_depth,
+                configNext->memcap);
     }
 
 

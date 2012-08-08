@@ -29,12 +29,18 @@
 #include "dce2_session.h"
 #include "dce2_config.h"
 #include "snort_debug.h"
+#include "dcerpc.h"
 #include "sf_types.h"
 
 /********************************************************************
  * Macros
  ********************************************************************/
 #define GENERATOR_DCE2  133
+
+/********************************************************************
+ * Externs
+ ********************************************************************/
+extern char *dce2_pdu_types[DCERPC_PDU_TYPE__MAX];
 
 /********************************************************************
  * Enumerations
@@ -93,6 +99,15 @@ typedef enum _DCE2_Event
     DCE2_EVENT__SMB_V2,
     DCE2_EVENT__SMB_INVALID_BINDING,
     DCE2_EVENT__SMB2_EXCESSIVE_COMPOUNDING,
+    DCE2_EVENT__SMB_DCNT_ZERO,
+    DCE2_EVENT__SMB_DCNT_MISMATCH,
+    DCE2_EVENT__SMB_MAX_REQS_EXCEEDED,
+    DCE2_EVENT__SMB_REQS_SAME_MID,
+    DCE2_EVENT__SMB_DEPR_DIALECT_NEGOTIATED,
+    DCE2_EVENT__SMB_DEPR_COMMAND_USED,
+    DCE2_EVENT__SMB_UNUSUAL_COMMAND_USED,
+    DCE2_EVENT__SMB_INVALID_SETUP_COUNT,
+    DCE2_EVENT__SMB_MULTIPLE_NEGOTIATIONS,
     DCE2_EVENT__MAX
 
 } DCE2_Event;

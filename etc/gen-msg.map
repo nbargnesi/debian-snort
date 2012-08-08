@@ -154,7 +154,7 @@
 116 || 282 || snort_decoder: WARNING: IPv6 header includes a routing extension header followed by a hop-by-hop header
 116 || 283 || snort_decoder: WARNING: IPv6 header includes two routing extension headers
 116 || 285 || snort_decoder: WARNING: ICMPv6 packet of type 2 (message too big) with MTU field < 1280
-116 || 286 || snort_decoder: WARNING: ICMPv6 packet of type 1 (destination unreachable) with invalid code field
+116 || 286 || snort_decoder: WARNING: ICMPv6 packet of type 1 (destination unreachable) with non-RFC 2463 code 
 116 || 287 || snort_decoder: WARNING: ICMPv6 router solicitation packet with a code not equal to 0
 116 || 288 || snort_decoder: WARNING: ICMPv6 router advertisement packet with a code not equal to 0
 116 || 289 || snort_decoder: WARNING: ICMPv6 router solicitation packet with the reserved field not equal to 0
@@ -224,6 +224,9 @@
 116 || 454 || snort_decoder: WARNING: PGM NAK overflow
 116 || 455 || snort_decoder: WARNING: IGMP options dos
 116 || 456 || snort_decoder: WARNING: too many IPV6 extension headers
+116 || 457 || snort_decoder: WARNING: ICMPv6 packet of type 1 (destination unreachable) with non-RFC 4443 code 
+116 || 458 || snort_decoder: WARNING: bogus fragmentation packet. Possible BSD attack
+116 || 459 || snort_decoder: WARNING: zero length fragment
 117 || 1 || spp_portscan2: Portscan detected
 118 || 1 || spp_conversation: Bad IP protocol
 119 || 1 || http_inspect: ASCII ENCODING
@@ -324,7 +327,7 @@
 124 || 9 || smtp: No memory available for decoding. Max Mime Mem exceeded.
 124 || 10 || smtp: Base64 Decoding failed
 124 || 11 || smtp: Quoted-Printable Decoding failed
-124 || 12 || smtp: 7bit/8bit/binary/text Extraction failed
+124 || 12 || smtp: Non-Encoded MIME attachment Extraction failed
 124 || 13 || smtp: Unix-to-Unix Decoding failed
 125 || 1 || ftp_pp: Telnet command on FTP command channel
 125 || 2 || ftp_pp: Invalid FTP command
@@ -415,6 +418,15 @@
 #133 || 45 || dcerpc2: SMB - Invalid SMB version 2 seen
 #133 || 46 || dcerpc2: SMB - Invalid user, tree connect, file binding
 #133 || 47 || dcerpc2: SMB - Excessive command compounding
+133 || 48 || dcerpc2: SMB - Zero data count
+133 || 49 || dcerpc2: SMB - Data count mismatch
+133 || 50 || dcerpc2: SMB - Maximum number of outstanding requests exceeded
+133 || 51 || dcerpc2: SMB - Outstanding requests with the same MID
+133 || 52 || dcerpc2: SMB - Deprecated dialect negotiated
+133 || 53 || dcerpc2: SMB - Deprecated command used
+133 || 54 || dcerpc2: SMB - Unusual command used
+133 || 55 || dcerpc2: SMB - Invalid setup count
+133 || 56 || dcerpc2: SMB - Client attempted multiple dialect negotiations on session
 134 || 1 || ppm: rule tree disabled
 134 || 2 || ppm: rule tree enabled
 135 || 1 || internal: syn received
@@ -462,14 +474,14 @@
 141 || 3 || imap: No memory available for decoding. Memcap exceeded.
 141 || 4 || imap: Base64 Decoding failed
 141 || 5 || imap: Quoted-Printable Decoding failed
-141 || 6 || imap: 7bit/8bit/binary/text Extraction failed
+141 || 6 || imap: Non-Encoded MIME attachment Extraction failed
 141 || 7 || imap: Unix-to-Unix Decoding failed
 142 || 1 || pop: Unknown POP3 command
 142 || 2 || pop: Unknown POP3 response
 142 || 3 || pop: No memory available for decoding. Memcap exceeded.
 142 || 4 || pop: Base64 Decoding failed
 142 || 5 || pop: Quoted-Printable Decoding failed
-142 || 6 || pop: 7bit/8bit/binary/text Extraction failed
+142 || 6 || pop: Non-Encoded MIME attachment Extraction failed
 142 || 7 || pop: Unix-to-Unix Decoding failed
 143 || 1 || gtp: Message length is invalid
 143 || 2 || gtp: Information element length is invalid

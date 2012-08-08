@@ -496,6 +496,7 @@ void * DCE2_ListLast(DCE2_List *list)
         return NULL;
 
     list->current = list->tail;
+    list->prev = NULL;
 
     if (list->current != NULL)
         return list->current->data;
@@ -935,6 +936,7 @@ void * DCE2_QueueFirst(DCE2_Queue *queue)
         return NULL;
 
     queue->current = queue->head;
+    queue->next = NULL;
 
     if (queue->current != NULL)
         return queue->current->data;
@@ -966,7 +968,13 @@ void * DCE2_QueueNext(DCE2_Queue *queue)
     if (queue == NULL)
         return NULL;
 
-    if (queue->current != NULL)
+    if (queue->next != NULL)
+    {
+        queue->current = queue->next;
+        queue->next = NULL;
+        return queue->current->data;
+    }
+    else if (queue->current != NULL)
     {
         queue->current = queue->current->next;
         if (queue->current != NULL)
@@ -1000,6 +1008,7 @@ void * DCE2_QueueLast(DCE2_Queue *queue)
         return NULL;
 
     queue->current = queue->tail;
+    queue->prev = NULL;
 
     if (queue->current != NULL)
         return queue->current->data;
@@ -1031,7 +1040,13 @@ void * DCE2_QueuePrev(DCE2_Queue *queue)
     if (queue == NULL)
         return NULL;
 
-    if (queue->current != NULL)
+    if (queue->prev != NULL)
+    {
+        queue->current = queue->prev;
+        queue->prev = NULL;
+        return queue->current->data;
+    }
+    else if (queue->current != NULL)
     {
         queue->current = queue->current->prev;
         if (queue->current != NULL)
@@ -1039,6 +1054,52 @@ void * DCE2_QueuePrev(DCE2_Queue *queue)
     }
 
     return NULL;
+}
+
+/********************************************************************
+ * Function: DCE2_QueueRemoveCurrent()
+ *
+ * Removes the current node pointed to in the queue.  This is set
+ * when a call to DCE2_QueueFirst or DCE2_QueueNext is called.  For
+ * either of these if data is returned and the user want to remove
+ * that data from the queue, this function should be called.
+ * Sets a next pointer, so a next call to DCE2_QueueNext will point
+ * to the node after the deleted one.
+ *
+ * Arguments:
+ *  DCE2_Queue *
+ *      A pointer to the list object.
+ *
+ * Returns: None
+ *
+ ********************************************************************/
+void DCE2_QueueRemoveCurrent(DCE2_Queue *queue)
+{
+    if (queue == NULL)
+        return;
+
+    if (queue->current == NULL)
+        return;
+
+    queue->next = queue->current->next;
+    queue->prev = queue->current->prev;
+
+    if (queue->current == queue->head)
+        queue->head = queue->current->next;
+    if (queue->current == queue->tail)
+        queue->tail = queue->current->prev;
+    if (queue->current->prev != NULL)
+        queue->current->prev->next = queue->current->next;
+    if (queue->current->next != NULL)
+        queue->current->next->prev = queue->current->prev;
+
+    if (queue->data_free != NULL)
+        queue->data_free(queue->current->data);
+
+    DCE2_Free((void *)queue->current, sizeof(DCE2_QueueNode), queue->mtype);
+    queue->current = NULL;
+
+    queue->num_nodes--;
 }
 
 /********************************************************************

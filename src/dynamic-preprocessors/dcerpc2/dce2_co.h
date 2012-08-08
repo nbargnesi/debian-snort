@@ -42,8 +42,8 @@
  ********************************************************************/
 typedef struct _DCE2_CoFragTracker
 {
-    DCE2_Buffer *cli_frag_buf;
-    DCE2_Buffer *srv_frag_buf;
+    DCE2_Buffer *cli_stub_buf;
+    DCE2_Buffer *srv_stub_buf;
 
     int opnum;    /* Opnum that is ultimatley used for request */
     int ctx_id;   /* Context id that is ultimatley used for request */
@@ -60,7 +60,7 @@ typedef struct _DCE2_CoSeg
     DCE2_Buffer *buf;
 
     /* If there is enough data in segmentation buffer for header,
-     * this will be set the frag length in the header */
+     * this will be set to the frag length in the header */
     uint16_t frag_len;
 
 } DCE2_CoSeg;
@@ -90,9 +90,6 @@ typedef struct _DCE2_CoTracker
     /* For transport segmentation */
     DCE2_CoSeg cli_seg;
     DCE2_CoSeg srv_seg;
-
-    /* Boolean for whether or not packets have been currently been missed */
-    char missed_pkts;
 
 } DCE2_CoTracker;
 

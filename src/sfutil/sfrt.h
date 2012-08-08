@@ -165,7 +165,8 @@ extern char *rt_error_messages[];
 enum
 {
    RT_FAVOR_TIME,
-   RT_FAVOR_SPECIFIC
+   RT_FAVOR_SPECIFIC,
+   RT_FAVOR_ALL
 };
 
 /*******************************************************************/

@@ -47,6 +47,7 @@ int DAQ_Unprivileged(void);
 int DAQ_UnprivilegedStart(void);
 int DAQ_CanReplace(void);
 int DAQ_CanInject(void);
+int DAQ_CanWhitelist(void);
 int DAQ_RawInjection(void);
 
 const char* DAQ_GetInterfaceSpec(void);

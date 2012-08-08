@@ -178,4 +178,7 @@ int sfDynArrayCheckBounds (
         unsigned int index,
         unsigned int *maxElements
         );
+
+typedef tSfPolicyId (*GetPolicyFunc)(void);
+
 #endif

@@ -56,6 +56,7 @@
 #include "sfthreshold.h"
 #include "rate_filter.h"
 #include "event_queue.h"
+#include "event_wrapper.h"
 #include "active.h"
 
 #include "sp_pattern_match.h"
@@ -105,7 +106,6 @@ static inline int fpEvalHeaderUdp(Packet *p, OTNX_MATCH_DATA *);
 static inline int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p,
                                  int check_ports, char ip_rule, OTNX_MATCH_DATA *);
 static int rule_tree_match (void* id, void * tree, int index, void * data, void *neg_list );
-int fpAddMatch( OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen, OptTreeNode *otn);
 static inline int fpAddSessionAlert(Packet *p, OptTreeNode *otn, int alerted);
 static inline int fpSessionAlerted(Packet *p, OptTreeNode *otn);
 
@@ -389,7 +389,6 @@ int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p)
 **
 **  FORMAL INPUTS
 **    OTNX_MATCH_DATA    * - the omd to add the event to.
-**    OTNX               * - the otnx to add.
 **    int pLen             - length of pattern that matched, 0 for no content
 **    OptTreeNode        * - the otn to add.
 **
@@ -397,8 +396,7 @@ int fpLogEvent(RuleTreeNode *rtn, OptTreeNode *otn, Packet *p)
 **    int - 1 max_events variable hit, 0 successful.
 **
 */
-int fpAddMatch(OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen,
-               OptTreeNode *otn)
+int fpAddMatch(OTNX_MATCH_DATA *omd_local, int pLen, OptTreeNode *otn)
 {
     MATCH_INFO * pmi;
     int evalIndex;
@@ -605,8 +603,6 @@ static int rule_tree_match( void * id, void *tree, int index, void * data, void 
 {
     OTNX_MATCH_DATA  *pomd   = (OTNX_MATCH_DATA *)data;
     PMX              *pmx    = (PMX*)id;
-    RULE_NODE        *rnNode = (RULE_NODE*)(pmx->RuleNode);
-    OTNX             *otnx   = (OTNX*)(rnNode->rnRuleData);
     PatternMatchData *pmd    = (PatternMatchData*)pmx->PatternMatchData;
     detection_option_tree_root_t *root = (detection_option_tree_root_t *)tree;
     detection_option_eval_data_t eval_data;
@@ -615,7 +611,6 @@ static int rule_tree_match( void * id, void *tree, int index, void * data, void 
     PROFILE_VARS;
 
     eval_data.pomd = pomd;
-    eval_data.otnx = otnx;
     eval_data.p = pomd->p;
     eval_data.pmd = pmd;
     eval_data.flowbit_failed = 0;
@@ -923,7 +918,7 @@ static inline int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
                                    otn->sigInfo.class_id,
                                    otn->sigInfo.priority,
                                    otn->sigInfo.message,
-                                   (void *)NULL);
+                                   (void *)otn);
                     if ( err )
                         pc.queue_limit++;
 
@@ -970,9 +965,9 @@ static inline int fpFinalSelectEvent(OTNX_MATCH_DATA *o, Packet *p)
 **    This function flags an alert per session.
 **
 **  FORMAL INPUTS
-**    Packet *     - the packet to inspect
-**    OTNX *       - the rule that generated the alert
-**    int          - if the packet generated alert or not.
+**    Packet *      - the packet to inspect
+**    OptTreeNode * - the rule that generated the alert
+**    int           - if the packet generated alert or not.
 **
 **  FORMAL OUTPUTS
 **    int - 0 if not flagged
@@ -1005,8 +1000,8 @@ static inline int fpAddSessionAlert(Packet *p, OptTreeNode *otn, int alerted)
 **    in this session, but only if this is a rebuilt packet.
 **
 **  FORMAL INPUTS
-**    Packet *     - the packet to inspect
-**    OTNX *       - the rule that generated the alert
+**    Packet *      - the packet to inspect
+**    OptTreeNode * - the rule that generated the alert
 **
 **  FORMAL OUTPUTS
 **    int - 0 if alert NOT previously generated
@@ -1323,7 +1318,6 @@ static inline int fpEvalHeaderSW(PORT_GROUP *port_group, Packet *p,
 
             rnWalk = port_group->pgHeadNC;
             eval_data.pomd = omd;
-            eval_data.otnx = rnWalk->rnRuleData;
             eval_data.p = p;
             eval_data.pmd = NULL;
             eval_data.flowbit_failed = 0;
@@ -1403,6 +1397,9 @@ static inline int fpEvalHeaderUdp(Packet *p, OTNX_MATCH_DATA *omd)
 
         if (proto_ordinal > 0)
         {
+            /* Grab the generic group -- the any-any rules */
+            prmFindGenericRuleGroup(snort_conf->prmTcpRTNX, &gen);
+
             /* TODO:  To From Server ?, else we apply  */
             dst = fpGetServicePortGroupByOrdinal(snort_conf->sopgTable, IPPROTO_UDP,
                                                  TO_SERVER, proto_ordinal);
@@ -1477,6 +1474,9 @@ static inline int fpEvalHeaderTcp(Packet *p, OTNX_MATCH_DATA *omd)
 
         if (proto_ordinal > 0)
         {
+            /* Grab the generic group -- the any-any rules */
+            prmFindGenericRuleGroup(snort_conf->prmTcpRTNX, &gen);
+
             if (p->packet_flags & PKT_FROM_SERVER) /* to cli */
             {
                 DEBUG_WRAP(DebugMessage(DEBUG_ATTRIBUTE, "pkt_from_server\n"););
@@ -1502,7 +1502,7 @@ static inline int fpEvalHeaderTcp(Packet *p, OTNX_MATCH_DATA *omd)
 
     if ((src == NULL) && (dst == NULL))
     {
-        /* we did not have a target based group, use ports */
+        /* grab the src/dst groups from the lookup above */
         if (!prmFindRuleGroupTcp(snort_conf->prmTcpRTNX, p->dp, p->sp, &src, &dst, &gen))
             return 0;
 
@@ -1738,7 +1738,7 @@ void fpEvalIpProtoOnlyRules(SF_LIST **ip_proto_only_lists, Packet *p)
                                otn->sigInfo.class_id,
                                otn->sigInfo.priority,
                                otn->sigInfo.message,
-                               (void *)NULL);
+                               (void *)otn);
                 if (RULE_TYPE__PASS == getRuntimeRtnFromOtn(otn)->type)
                 {
                     p->packet_flags |= PKT_PASS_RULE;
@@ -1748,3 +1748,38 @@ void fpEvalIpProtoOnlyRules(SF_LIST **ip_proto_only_lists, Packet *p)
     }
 }
 
+OptTreeNode * GetOTN(uint32_t gid, uint32_t sid,
+        uint32_t rev, uint32_t classification, uint32_t priority, char *msg)
+{
+    OptTreeNode *otn = OtnLookup(snort_conf->otn_map, gid, sid);
+
+    if (ScAutoGenPreprocDecoderOtns()
+            && ((otn == NULL) || otn->generated))
+    {
+        if (otn == NULL)
+        {
+            otn = GenerateSnortEventOtn(gid, sid,
+                    rev, classification, priority, msg);
+            if (otn == NULL)
+                return NULL;
+
+            OtnLookupAdd(snort_conf->otn_map, otn);
+        }
+        else
+        {
+            tSfPolicyId policy_id = getRuntimePolicy();
+
+            if ((getRtnFromOtn(otn, policy_id) == NULL)
+                    && (GenerateSnortEventRtn(otn, policy_id) == NULL))
+                return NULL;
+        }
+    }
+    else if ((otn != NULL) && (getRtnFromOtn(otn, getRuntimePolicy()) == NULL))
+    {
+        // If not configured to autogenerate and there isn't an RTN, meaning
+        // this rule isn't in the current policy, return NULL.
+        return NULL;
+    }
+
+    return otn;
+}

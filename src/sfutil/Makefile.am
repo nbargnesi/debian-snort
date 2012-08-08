@@ -49,6 +49,7 @@ libsfutil_a_SOURCES = \
     sf_email_attach_decode.c sf_email_attach_decode.h \
     sf_base64decode.c sf_base64decode.h \
     Unified2_common.h \
+    sf_seqnums.h \
     $(INTEL_SOFT_CPM_SOURCES)
 
 INCLUDES = @INCLUDES@

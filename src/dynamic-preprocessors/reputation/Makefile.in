@@ -37,8 +37,7 @@ host_triplet = @host@
 subdir = src/dynamic-preprocessors/reputation
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
-	$(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -154,13 +153,6 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LIBOBJS = @LIBOBJS@
-LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
-LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
-LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
-LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
-LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
-LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
-LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -256,7 +248,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 lib_LTLIBRARIES = libsf_reputation_preproc.la
-libsf_reputation_preproc_la_LDFLAGS = -shared -export-dynamic -module @XCCFLAGS@
+libsf_reputation_preproc_la_LDFLAGS = -export-dynamic -module @XCCFLAGS@
 @SO_WITH_STATIC_LIB_TRUE@libsf_reputation_preproc_la_LIBADD = ../libsf_dynamic_preproc.la
 @SO_WITH_STATIC_LIB_FALSE@nodist_libsf_reputation_preproc_la_SOURCES = \
 @SO_WITH_STATIC_LIB_FALSE@../include/sf_dynamic_preproc_lib.c \

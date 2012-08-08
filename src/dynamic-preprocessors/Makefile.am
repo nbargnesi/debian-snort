@@ -71,7 +71,8 @@ include/str_search.h \
 include/preprocids.h \
 include/attribute_table_api.h \
 include/sfcontrol.h \
-include/idle_processing.h
+include/idle_processing.h \
+include/sf_seqnums.h
 
 all-local: $(LTLIBRARIES)
 	$(MAKE) DESTDIR=`pwd`/build install-preproclibLTLIBRARIES
@@ -145,7 +146,8 @@ BUILT_SOURCES = \
 	include/Unified2_common.h \
 	include/attribute_table_api.h \
 	include/sfcontrol.h \
-	include/idle_processing.h
+	include/idle_processing.h \
+	include/sf_seqnums.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
@@ -483,6 +485,9 @@ include/sfcontrol.h: $(top_srcdir)/src/control/sfcontrol.h
 include/idle_processing.h: $(top_srcdir)/src/idle_processing.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
+include/sf_seqnums.h: $(top_srcdir)/src/sfutil/sf_seqnums.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
 if WANT_SF_SAAC
 RZB_SAAC_DIR=rzb_saac
 endif
@@ -544,7 +549,8 @@ include/event.h \
 include/Unified2_common.h \
 include/attribute_table_api.h \
 include/sfcontrol.h \
-include/idle_processing.h
+include/idle_processing.h \
+include/sf_seqnums.h
 
 install-data-local:
 	@for f in $(exported_files); do \
