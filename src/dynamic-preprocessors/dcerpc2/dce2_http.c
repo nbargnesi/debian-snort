@@ -37,11 +37,6 @@
 #include "sf_dynamic_preprocessor.h"
 
 /********************************************************************
- * Extern variables
- ********************************************************************/
-extern DCE2_Stats dce2_stats;
-
-/********************************************************************
  * Private function prototypes
  ********************************************************************/
 static DCE2_HttpSsnData * DCE2_HttpSsnInit(void);
@@ -202,7 +197,6 @@ static void DCE2_HttpProcess(DCE2_HttpSsnData *hsd)
     const SFSnortPacket *p = hsd->sd.wire_pkt;
     const uint8_t *data_ptr = p->payload;
     uint16_t data_len = p->payload_size;
-    uint16_t overlap_bytes = DCE2_SsnGetOverlap(&hsd->sd);
 
     switch (hsd->state)
     {
@@ -218,16 +212,7 @@ static void DCE2_HttpProcess(DCE2_HttpSsnData *hsd)
             break;
 
         case DCE2_HTTP_STATE__RPC_DATA:
-            if (overlap_bytes != 0)
-            {
-                if (overlap_bytes >= data_len)
-                    return;
-
-                DCE2_MOVE(data_ptr, data_len, overlap_bytes);
-            }
-
             DCE2_CoProcess(&hsd->sd, &hsd->co_tracker, data_ptr, data_len);
-
             break;
 
         default:

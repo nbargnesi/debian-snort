@@ -240,40 +240,44 @@ int SMTP_CopyEmailID(const uint8_t *start, int length, int command_type)
 }
 
 
-void SMTP_DecodeType(const char *start, int length)
+void SMTP_DecodeType(const char *start, int length, bool cnt_xf)
 {               
     const char *tmp = NULL;
-    
-    if(smtp_ssn->decode_state->b64_state.encode_depth > -1)
-    {       
-        tmp = _dpd.SnortStrcasestr(start, length, "base64");
-        if( tmp != NULL )
-        {   
-            smtp_ssn->decode_state->decode_type = DECODE_B64;
-            smtp_stats.attachments[DECODE_B64]++;
-            return;
-        }
-    }   
-                    
-    if(smtp_ssn->decode_state->qp_state.encode_depth > -1)
-    {   
-        tmp = _dpd.SnortStrcasestr(start, length, "quoted-printable");
-        if( tmp != NULL )
-        {   
-            smtp_ssn->decode_state->decode_type = DECODE_QP;
-            smtp_stats.attachments[DECODE_QP]++;
-            return;
-        }
-    }
 
-    if(smtp_ssn->decode_state->uu_state.encode_depth > -1)
+    if(cnt_xf)
     {
-        tmp = _dpd.SnortStrcasestr(start, length, "uuencode");
-        if( tmp != NULL )
+    
+        if(smtp_ssn->decode_state->b64_state.encode_depth > -1)
+        {       
+            tmp = _dpd.SnortStrcasestr(start, length, "base64");
+            if( tmp != NULL )
+            {   
+                smtp_ssn->decode_state->decode_type = DECODE_B64;
+                smtp_stats.attachments[DECODE_B64]++;
+                return;
+            }
+        }   
+                        
+        if(smtp_ssn->decode_state->qp_state.encode_depth > -1)
+        {   
+            tmp = _dpd.SnortStrcasestr(start, length, "quoted-printable");
+            if( tmp != NULL )
+            {   
+                smtp_ssn->decode_state->decode_type = DECODE_QP;
+                smtp_stats.attachments[DECODE_QP]++;
+                return;
+            }
+        }
+
+        if(smtp_ssn->decode_state->uu_state.encode_depth > -1)
         {
-            smtp_ssn->decode_state->decode_type = DECODE_UU;
-            smtp_stats.attachments[DECODE_UU]++;
-            return;
+            tmp = _dpd.SnortStrcasestr(start, length, "uuencode");
+            if( tmp != NULL )
+            {
+                smtp_ssn->decode_state->decode_type = DECODE_UU;
+                smtp_stats.attachments[DECODE_UU]++;
+                return;
+            }
         }
     }
 
@@ -371,8 +375,11 @@ int SMTP_CopyFileName(const uint8_t *start, int length)
     int log_avail = 0;
 
 
-    if(length == 0)
+    if(!start || (length <= 0))
+    {
+        smtp_ssn->state_flags &= ~SMTP_FLAG_IN_CONT_DISP_CONT;
         return -1;
+    }
 
     if(smtp_ssn->state_flags & SMTP_FLAG_IN_CONT_DISP_CONT)
         cont = 1;

@@ -91,6 +91,7 @@ typedef HANDLE PluginHandle;
 #include "detection_util.h"
 #include "sfcontrol_funcs.h"
 #include "idle_processing_funcs.h"
+#include "../dynamic-output/plugins/output.h"
 
 #ifdef TARGET_BASED
 #include "target-based/sftarget_protocol_reference.h"
@@ -489,11 +490,14 @@ int ValidateDynamicEngines(void)
                     testNum = versFunc(&curPlugin->metaData, &reqEngineMeta);
                     if( testNum )
                     {
-                        FatalError("Dynamic detection lib %s %d.%d isn't compatible with the current dynamic engine library "
-                                "%s %d.%d.\n"
-                                "The dynamic detection lib is compiled with an older version of the dynamic engine.\n",
-                                lib->metaData.libraryPath, lib->metaData.major, lib->metaData.minor,
-                                curPlugin->metaData.libraryPath, curPlugin->metaData.major, curPlugin->metaData.minor);
+                        FatalError("The dynamic detection library \"%s\" version "
+                                "%d.%d compiled with dynamic engine library "
+                                "version %d.%d isn't compatible with the current "
+                                "dynamic engine library \"%s\" version %d.%d.\n",
+                                lib->metaData.libraryPath, lib->metaData.major,
+                                lib->metaData.minor, reqEngineMeta.major,
+                                reqEngineMeta.minor, curPlugin->metaData.libraryPath,
+                                curPlugin->metaData.major, curPlugin->metaData.minor);
                     }
 
                 }
@@ -1443,10 +1447,12 @@ void DynamicForceDropReset(void *p)
     Active_ForceDropResetAction((Packet *)p);
 }
 
+#ifdef ACTIVE_RESPONSE
 void DynamicActiveSetEnabled(int on_off)
 {
      Active_SetEnabled(on_off);
 }
+#endif
 
 void *DynamicGetRuleClassByName(char *name)
 {
@@ -1548,12 +1554,14 @@ static void DynamicEncodeUpdate (void* p)
     Encode_Update((Packet*)p);
 }
 
+#ifdef ACTIVE_RESPONSE
 void DynamicSendBlockResponseMsg(void *p, const uint8_t* buffer, uint32_t buffer_len)
 {
     Packet *packet = (Packet *)p;
     EncodeFlags df = (packet->packet_flags & PKT_FROM_SERVER) ? ENC_FLAG_FWD:0;
     Active_SendData(packet, df, buffer, buffer_len);
 }
+#endif
 
 void DynamicSetParserPolicy(tSfPolicyId id)
 {
@@ -1630,6 +1638,11 @@ uint32_t DynamicGetSnortInstance(void)
 bool DynamicIsPafEnabled(void)
 {
     return ScPafEnabled();
+}
+
+int DynamicCanWhitelist(void)
+{
+    return DAQ_CanWhitelist();
 }
 
 int DynamicSnortIsStrEmpty(const char *s)
@@ -1781,13 +1794,19 @@ int InitDynamicPreprocessors(void)
 
     preprocData.inlineForceDropPacket = &DynamicForceDropPacket;
     preprocData.inlineForceDropAndReset = &DynamicForceDropReset;
+#ifdef ACTIVE_RESPONSE
     preprocData.activeSetEnabled = &DynamicActiveSetEnabled;
+#endif
     preprocData.SnortIsStrEmpty = DynamicSnortIsStrEmpty;
+#ifdef ACTIVE_RESPONSE
     preprocData.dynamicSendBlockResponse = &DynamicSendBlockResponseMsg;
+#endif
     preprocData.dynamicSetFlowId = &setFlowId;
     preprocData.addPeriodicCheck = &AddFuncToPeriodicCheckList;
     preprocData.addPostConfigFunc = &AddFuncToPreprocPostConfigList;
     preprocData.snort_conf_dir = &snort_conf_dir;
+    preprocData.addOutputModule = &output_load_module;
+    preprocData.canWhitelist = DynamicCanWhitelist;
 
     return InitDynamicPreprocessorPlugins(&preprocData);
 }

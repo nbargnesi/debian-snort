@@ -297,8 +297,8 @@ void IMAP_CheckConfig(IMAPConfig *pPolicyConfig, tSfPolicyUserContextId context)
 
         if(!pPolicyConfig->bitenc_depth && defaultConfig->bitenc_depth)
         {
-            DynamicPreprocessorFatalMessage("%s(%d) => IMAP: Cannot enable unlimited 7bit/8bit/binary extraction"
-                    " in non-default config without turning on unlimited 7bit/8bit/binary extraction in the default "
+            DynamicPreprocessorFatalMessage("%s(%d) => IMAP: Cannot enable unlimited Non-Encoded MIME attachment extraction"
+                    " in non-default config without turning on unlimited Non-Encoded MIME attachment extraction in the default "
                     " config.\n",
                     *(_dpd.config_file), *(_dpd.config_line));
         }
@@ -397,19 +397,19 @@ void IMAP_PrintConfig(IMAPConfig *config)
 
     if(config->bitenc_depth > -1)
     {
-        _dpd.logMsg("    7bit/8bit/binary Extraction: %s\n","Enabled");
+        _dpd.logMsg("    Non-Encoded MIME attachment Extraction: %s\n","Enabled");
         switch(config->bitenc_depth)
         {
             case 0:
-                _dpd.logMsg("    7bit/8bit/binary Extraction Depth: %s\n", "Unlimited");
+                _dpd.logMsg("    Non-Encoded MIME attachment Extraction Depth: %s\n", "Unlimited");
                 break;
             default:
-                _dpd.logMsg("    7bit/8bit/binary Extraction Depth: %d\n", config->bitenc_depth);
+                _dpd.logMsg("    Non-Encoded MIME attachment Extraction Depth: %d\n", config->bitenc_depth);
                 break;
         }
     }
     else
-        _dpd.logMsg("    7bit/8bit/binary Extraction: %s\n", "Disabled");
+        _dpd.logMsg("    Non-Encoded MIME attachment Extraction: %s\n", "Disabled");
 
 }
 

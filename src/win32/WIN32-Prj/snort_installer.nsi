@@ -1,17 +1,17 @@
 ; $Id$
 ;
-; NSIS Installation script for Snort 2.9.2 Win32
+; NSIS Installation script for Snort 2.9.3 Win32
 ; Written by Chris Reid <chris.reid@codecraftconsultants.com>
 ; Updated by Steven Sturges <ssturges@sourcefire.com>
 ;
-; This script will create a Win32 installer for Snort 2.9.2 (Win32 only).
+; This script will create a Win32 installer for Snort 2.9.3 (Win32 only).
 ; For more information about NSIS, see their homepage:
 ;     http://nsis.sourceforge.net/
 ;
 ; Note that this NSIS script is designed for NSIS version 2.09.
 ;
 
-Name "Snort 2.9.2.3"
+Name "Snort 2.9.3.1"
 
 CRCCheck On
 
@@ -23,7 +23,7 @@ CRCCheck On
 ;Configuration
 
   ;General
-  OutFile "Snort_2_9_2_3_Installer.exe"  ; The name of the installer executable
+  OutFile "Snort_2_9_3_1_Installer.exe"  ; The name of the installer executable
 
   ;Folder selection page
   InstallDir "C:\Snort"
@@ -55,7 +55,6 @@ CRCCheck On
   LangString DESC_Snort   ${LANG_ENGLISH} "Install snort, configuration files, and rules."
   LangString DESC_Dynamic ${LANG_ENGLISH} "Install dynamic preprocessor and dynamic engine modules."
   LangString DESC_Doc     ${LANG_ENGLISH} "Install snort documentation."
-  LangString DESC_Schemas ${LANG_ENGLISH} "Copy database schemas."
   
   ;Header
   LangString TEXT_IO_TITLE    ${LANG_ENGLISH} "Installation Options"
@@ -180,21 +179,9 @@ Section "Snort" Snort
 
   ; $0 - will be set to one of:  "MySQL", "MSSQL" or "Oracle"
 
-  StrCpy $0 "MySQL"
-
-  ; CheckForMSSqlServer:
-  !insertmacro MUI_INSTALLOPTIONS_READ ${TEMP} "snort_installer_options.ini" "Field 3" "State"
-  StrCmp ${TEMP} "1" 0 +2
-  StrCpy $0 "MSSQL"
-
-  ; CheckForFlexResp:
-  !insertmacro MUI_INSTALLOPTIONS_READ ${TEMP} "snort_installer_options.ini" "Field 4" "State"
-  StrCmp ${TEMP} "1" 0 +2
-  StrCpy $0 "Oracle"
-
   StrCpy $1 "IPv4"
 
-  !insertmacro MUI_INSTALLOPTIONS_READ ${TEMP} "snort_installer_options.ini" "Field 5" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ ${TEMP} "snort_installer_options.ini" "Field 1" "State"
   StrCmp ${TEMP} "1" 0 +2
   StrCpy $1 "IPv6"
 
@@ -204,20 +191,10 @@ Section "Snort" Snort
   ; --------------------------------------------------------------------
   ; Configurations
   ; --------------------------------------------------------------------
-  StrCmp $1 "IPv4" 0 +7
-  StrCmp $0 "MySQL" 0 +2
-  File ".\snort___Win32_MySQL_Release\snort.exe"
-  StrCmp $0 "MSSQL" 0 +2
-  File ".\snort___Win32_SQLServer_Release\snort.exe"
-  StrCmp $0 "Oracle" 0 +2
-  File ".\snort___Win32_Oracle_Release\snort.exe"
-  StrCmp $1 "IPv6" 0 +7
-  StrCmp $0 "MySQL" 0 +2
-  File ".\snort___Win32_MySQL_IPv6_Release\snort.exe"
-  StrCmp $0 "MSSQL" 0 +2
-  File ".\snort___Win32_SQLServer_IPv6_Release\snort.exe"
-  StrCmp $0 "Oracle" 0 +2
-  File ".\snort___Win32_Oracle_IPv6_Release\snort.exe"
+  StrCmp $1 "IPv4" 0 +2
+  File ".\snort___Win32_Release\snort.exe"
+  StrCmp $1 "IPv6" 0 +2
+  File ".\snort___Win32_IPv6_Release\snort.exe"
 
   ;Create uninstaller
   SetOutPath "$INSTDIR"
@@ -287,12 +264,6 @@ Section "Documentation" Doc
   Delete "$INSTDIR\contrib\.cvsignore"
 SectionEnd
 
-Section "Schemas" Schemas
-  CreateDirectory "$INSTDIR\schemas"
-  SetOutPath "$INSTDIR\schemas"
-  File "..\..\..\schemas\*.*"
-  Delete "$INSTDIR\schemas\Makefile.am"
-SectionEnd
 
 ;Display the Finish header
 ;Insert this macro after the sections if you are not using a finish page
@@ -306,7 +277,6 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${Snort}   $(DESC_Snort)
   !insertmacro MUI_DESCRIPTION_TEXT ${Dynamic} $(DESC_Dynamic)
   !insertmacro MUI_DESCRIPTION_TEXT ${Doc}     $(DESC_Doc)
-  !insertmacro MUI_DESCRIPTION_TEXT ${Schemas} $(DESC_Schemas)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------

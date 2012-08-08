@@ -226,7 +226,7 @@ static int addLiveHost(
         snort_ip_p ip
         )
 {
-    int ret;
+    int ret = RT_SUCCESS;
     HostAttributeEntry *host;
 
     host = SFLAT_findHost(ip);
@@ -238,9 +238,9 @@ static int addLiveHost(
             return SFAT_ERROR;
         }
 
-    sfip_set_ip(&host->ipAddr, ip);
+        sfip_set_ip(&host->ipAddr, ip);
 
-    ret = sfrt_insert(ip, (unsigned char)ip->bits, host,
+        ret = sfrt_insert(ip, (unsigned char)ip->bits, host,
                         RT_FAVOR_SPECIFIC, currLiveTable.lookupTable);
 
         if (ret != RT_SUCCESS)

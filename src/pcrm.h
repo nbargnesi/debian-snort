@@ -192,6 +192,7 @@ RULE_PTR prmGetNextRuleNC( PORT_GROUP * pg );
 
 
 int prmFindRuleGroup( PORT_RULE_MAP * p, int dport, int sport, PORT_GROUP ** src, PORT_GROUP **dst , PORT_GROUP ** gen);
+int prmFindGenericRuleGroup(PORT_RULE_MAP *prm, PORT_GROUP ** gen);
 int prmFindByteRuleGroup( BYTE_RULE_MAP * p, int dport, PORT_GROUP **dst , PORT_GROUP ** gen);
 
 PORT_GROUP * prmFindDstRuleGroup( PORT_RULE_MAP * p, int port );

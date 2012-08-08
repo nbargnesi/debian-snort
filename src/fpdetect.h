@@ -95,9 +95,9 @@ typedef struct
 OTNX_MATCH_DATA * OtnXMatchDataNew(int);
 void OtnxMatchDataFree(OTNX_MATCH_DATA *);
 
-int fpAddMatch( OTNX_MATCH_DATA *omd_local, OTNX *otnx, int pLen,
-                OptTreeNode *otn);
+int fpAddMatch( OTNX_MATCH_DATA *omd_local, int pLen, OptTreeNode *otn);
 void fpEvalIpProtoOnlyRules(SF_LIST **, Packet *);
+OptTreeNode * GetOTN(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, char *);
 
 #define TO_SERVER 1
 #define TO_CLIENT 0

@@ -50,7 +50,7 @@
 #define IMAP_MEMCAP_EXCEEDED_STR             "(IMAP) No memory available for decoding. Memcap exceeded"
 #define IMAP_B64_DECODING_FAILED_STR         "(IMAP) Base64 Decoding failed."
 #define IMAP_QP_DECODING_FAILED_STR          "(IMAP) Quoted-Printable Decoding failed."
-#define IMAP_BITENC_DECODING_FAILED_STR      "(IMAP) 7bit/8bit/binary/text Extraction failed."
+#define IMAP_BITENC_DECODING_FAILED_STR      "(IMAP) Non-Encoded MIME attachment Extraction failed."
 #define IMAP_UU_DECODING_FAILED_STR          "(IMAP) Unix-to-Unix Decoding failed."
 
 #define EVENT_STR_LEN  256

@@ -87,6 +87,12 @@ static char dce2_config_error[1024];
 #define DCE2_GARG__EVENTS_CL      "cl"   /* Connectionless DCE/RPC */
 #define DCE2_GARG__EVENTS_ALL     "all"
 
+#define DCE2_GOPT__SMB_FINGERPRINT   "smb_fingerprint_policy"
+#define DCE2_GARG__SMBFP_CLIENT      "client"
+#define DCE2_GARG__SMBFP_SERVER      "server"
+#define DCE2_GARG__SMBFP_BOTH        "both"
+#define DCE2_GARG__SMBFP_NONE        "none"
+
 #define DCE2_SOPT__DEFAULT  "default"
 #define DCE2_SOPT__NET      "net"
 
@@ -158,7 +164,8 @@ typedef enum _DCE2_GcOptFlag
     DCE2_GC_OPT_FLAG__MAX_FRAG_LEN = 0x0008,
     DCE2_GC_OPT_FLAG__EVENTS = 0x0010,
     DCE2_GC_OPT_FLAG__REASSEMBLE_THRESHOLD = 0x0020,
-    DCE2_GC_OPT_FLAG__DISABLED = 0x0040
+    DCE2_GC_OPT_FLAG__DISABLED = 0x0040,
+    DCE2_GC_OPT_FLAG__SMB_FINGERPRINT = 0x0080
 
 } DCE2_GcOptFlag;
 
@@ -227,6 +234,7 @@ static inline void DCE2_GcClearEvent(DCE2_GlobalConfig *, DCE2_EventFlag);
 static inline void DCE2_GcClearAllEvents(DCE2_GlobalConfig *);
 static inline DCE2_EventFlag DCE2_GcParseEvent(char *, char *, int *);
 static DCE2_Ret DCE2_GcParseReassembleThreshold(DCE2_GlobalConfig *, char **, char *);
+static DCE2_Ret DCE2_GcParseSmbFingerprintPolicy(DCE2_GlobalConfig *, char **, char *);
 static void DCE2_GcPrintConfig(const DCE2_GlobalConfig *);
 static void DCE2_GcError(const char *, ...);
 
@@ -423,6 +431,11 @@ static DCE2_Ret DCE2_GcParseConfig(DCE2_GlobalConfig *gc, char *args)
                             gc->disabled = 1;
                             break;
 
+                        case DCE2_GC_OPT_FLAG__SMB_FINGERPRINT:
+                            if (DCE2_GcParseSmbFingerprintPolicy(gc, &ptr, end) != DCE2_RET__SUCCESS)
+                                return DCE2_RET__ERROR;
+                            break;
+
                         default:
                             return DCE2_RET__ERROR;
                     }
@@ -521,6 +534,11 @@ static inline DCE2_GcOptFlag DCE2_GcParseOption(char *opt_start, char *opt_end, 
              strncasecmp(DCE2_GOPT__DISABLED, opt_start, opt_len) == 0)
     {
         opt_flag = DCE2_GC_OPT_FLAG__DISABLED;
+    }
+    else if (opt_len == strlen(DCE2_GOPT__SMB_FINGERPRINT) &&
+             strncasecmp(DCE2_GOPT__SMB_FINGERPRINT, opt_start, opt_len) == 0)
+    {
+        opt_flag = DCE2_GC_OPT_FLAG__SMB_FINGERPRINT;
     }
     else
     {
@@ -971,6 +989,122 @@ static DCE2_Ret DCE2_GcParseReassembleThreshold(DCE2_GlobalConfig *gc, char **pt
     }
 
     gc->reassemble_threshold = reassemble_threshold;
+
+    return DCE2_RET__SUCCESS;
+}
+
+/********************************************************************
+ * Function: DCE2_GcParseSmbFingerPrintPolicy()
+ *
+ * Parses the smb_fingerprint_policy option
+ *
+ * Arguments:
+ *  DCE2_GlobalConfig *
+ *      Pointer to the global configuration structure.
+ *  char **
+ *      Pointer to the pointer to the current position in the
+ *      configuration line.  This is updated to the current position
+ *      after parsing the reassemble threshold.
+ *  char *
+ *      Pointer to the end of the configuration line.
+ *
+ * Returns:
+ *  DCE2_Ret
+ *      DCE2_RET__SUCCESS if we were able to successfully parse.
+ *      DCE2_RET__ERROR if an error occured in parsing.
+ *
+ ********************************************************************/
+static DCE2_Ret DCE2_GcParseSmbFingerprintPolicy(DCE2_GlobalConfig *gc, char **ptr, char *end)
+{
+    DCE2_WordListState state = DCE2_WORD_LIST_STATE__START;
+    char *fp_start = *ptr;
+    char last_char = 0;
+
+    while (*ptr < end)
+    {
+        char c = **ptr;
+
+        if (state == DCE2_WORD_LIST_STATE__END)
+            break;
+
+        switch (state)
+        {
+            case DCE2_WORD_LIST_STATE__START:
+                if (DCE2_IsWordChar(c, DCE2_WORD_CHAR_POSITION__START))
+                {
+                    fp_start = *ptr;
+                    state = DCE2_WORD_LIST_STATE__WORD;
+                }
+                else if (!DCE2_IsSpaceChar(c))
+                {
+                    DCE2_GcError("Invalid \"%s\" syntax: \"%s\"",
+                            DCE2_GOPT__SMB_FINGERPRINT, *ptr);
+                    return DCE2_RET__ERROR;
+                }
+
+                break;
+
+            case DCE2_WORD_LIST_STATE__WORD:
+                if (!DCE2_IsWordChar(c, DCE2_WORD_CHAR_POSITION__MIDDLE))
+                {
+                    size_t len = *ptr - fp_start;
+
+                    if (!DCE2_IsWordChar(last_char, DCE2_WORD_CHAR_POSITION__END))
+                    {
+                        DCE2_GcError("Invalid \"%s\" argument: \"%*.s\"",
+                                DCE2_GOPT__SMB_FINGERPRINT, *ptr - fp_start, fp_start);
+                        return DCE2_RET__ERROR;
+                    }
+
+                    if (len == strlen(DCE2_GARG__SMBFP_CLIENT) &&
+                            strncasecmp(DCE2_GARG__SMBFP_CLIENT, fp_start, len) == 0)
+                    {
+                        gc->smb_fingerprint_policy = DCE2_SMB_FINGERPRINT__CLIENT;
+                    }
+                    else if (len == strlen(DCE2_GARG__SMBFP_SERVER) &&
+                            strncasecmp(DCE2_GARG__SMBFP_SERVER, fp_start, len) == 0)
+                    {
+                        gc->smb_fingerprint_policy = DCE2_SMB_FINGERPRINT__SERVER;
+                    }
+                    else if (len == strlen(DCE2_GARG__SMBFP_BOTH) &&
+                            strncasecmp(DCE2_GARG__SMBFP_BOTH, fp_start, len) == 0)
+                    {
+                        gc->smb_fingerprint_policy = DCE2_SMB_FINGERPRINT__SERVER;
+                        gc->smb_fingerprint_policy |= DCE2_SMB_FINGERPRINT__CLIENT;
+                    }
+                    else if (len == strlen(DCE2_GARG__SMBFP_NONE) &&
+                            strncasecmp(DCE2_GARG__SMBFP_NONE, fp_start, len) == 0)
+                    {
+                        gc->smb_fingerprint_policy = DCE2_SMB_FINGERPRINT__NONE;
+                    }
+                    else
+                    {
+                        DCE2_GcError("Invalid \"%s\" argument: \"%.*s\"",
+                                DCE2_GOPT__SMB_FINGERPRINT, *ptr - fp_start, fp_start);
+                        return DCE2_RET__ERROR;
+                    }
+
+                    state = DCE2_WORD_LIST_STATE__END;
+                    continue;
+                }
+
+                break;
+
+            default:
+                DCE2_Log(DCE2_LOG_TYPE__ERROR, "%s(%d) Invalid smb fingerprint state: %d",
+                         __FILE__, __LINE__, state);
+                return DCE2_RET__ERROR;
+        }
+
+        last_char = c;
+        (*ptr)++;
+    }
+
+    if (state != DCE2_WORD_LIST_STATE__END)
+    {
+        DCE2_GcError("Invalid \"%s\" syntax: \"%s\"", DCE2_GOPT__SMB_FINGERPRINT, *ptr);
+        return DCE2_RET__ERROR;
+    }
 
     return DCE2_RET__SUCCESS;
 }
@@ -3110,6 +3244,19 @@ static void DCE2_GcPrintConfig(const DCE2_GlobalConfig *gc)
     }
 
     strncat(events, "\n", (sizeof(events) - 1) - strlen(events));
+    _dpd.logMsg(events);
+
+    // Just use the events buffer
+    snprintf(events, sizeof(events), "    SMB Fingerprint policy: ");
+    if (gc->smb_fingerprint_policy == DCE2_SMB_FINGERPRINT__NONE)
+        strncat(events, "Disabled\n", (sizeof(events) - 1) - strlen(events));
+    else if (gc->smb_fingerprint_policy ==
+            (DCE2_SMB_FINGERPRINT__CLIENT|DCE2_SMB_FINGERPRINT__SERVER))
+        strncat(events, "Client and Server\n", (sizeof(events) - 1) - strlen(events));
+    else if (gc->smb_fingerprint_policy & DCE2_SMB_FINGERPRINT__CLIENT)
+        strncat(events, "Client\n", (sizeof(events) - 1) - strlen(events));
+    else if (gc->smb_fingerprint_policy & DCE2_SMB_FINGERPRINT__SERVER)
+        strncat(events, "Server\n", (sizeof(events) - 1) - strlen(events));
     _dpd.logMsg(events);
 }
 

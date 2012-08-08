@@ -54,6 +54,7 @@
 #define UNMAP_OLDSEG   -3
 #define NO_FILE        -4
 #define ZEROSEG       100
+#define GO_INACTIVE    10
 
 #define NUMA_0          0
 #define NUMA_1          1
@@ -63,7 +64,7 @@
 #define SLEEP_TIME      2  // in micro seconds
 
 #define TBMAP                 99
-#define UNUSED_TIMEOUT        10 //this number is multiplied with outofband check time to determine timeout.
+#define UNUSED_TIMEOUT        -1 //this number is multiplied with outofband check time to determine timeout.If set to -1 it disables expiring timed out instances.
 #define OUT_OF_BAND_CHEK_TIME 10 
 
 typedef struct shmemUserInfo {

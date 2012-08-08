@@ -135,7 +135,7 @@
 #define     DECODE_IPV6_TWO_ROUTE_HEADERS         283
 
 #define     DECODE_ICMPV6_TOO_BIG_BAD_MTU         285
-#define     DECODE_ICMPV6_UNREACHABLE_BAD_CODE    286
+#define     DECODE_ICMPV6_UNREACHABLE_NON_RFC_2463_CODE    286
 #define     DECODE_ICMPV6_SOLICITATION_BAD_CODE   287
 #define     DECODE_ICMPV6_ADVERT_BAD_CODE         288
 #define     DECODE_ICMPV6_SOLICITATION_BAD_RESERVED     289
@@ -215,6 +215,9 @@ enum {
     DECODE_PGM_NAK_OVERFLOW,
     DECODE_IGMP_OPTIONS_DOS,
     DECODE_IP6_EXCESS_EXT_HDR,
+    DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE,
+    DECODE_IPV6_BAD_FRAG_PKT,
+    DECODE_ZERO_LENGTH_FRAG,
     
     DECODE_INDEX_MAX
 };
@@ -457,7 +460,15 @@ enum {
 #define     DCE2_EVENT__SMB_V2                       45
 #define     DCE2_EVENT__SMB_INVALID_BINDING          46
 #define     DCE2_EVENT__SMB2_EXCESSIVE_COMPOUNDING   47
-
+#define     DCE2_EVENT__SMB_DCNT_ZERO                48
+#define     DCE2_EVENT__SMB_DCNT_MISMATCH            49
+#define     DCE2_EVENT__SMB_MAX_REQS_EXCEEDED        50
+#define     DCE2_EVENT__SMB_REQS_SAME_MID            51
+#define     DCE2_EVENT__SMB_DEPR_DIALECT_NEGOTIATED  52
+#define     DCE2_EVENT__SMB_DEPR_COMMAND_USED        53
+#define     DCE2_EVENT__SMB_UNUSUAL_COMMAND_USED     54
+#define     DCE2_EVENT__SMB_INVALID_SETUP_COUNT      55
+#define     DCE2_EVENT__SMB_MULTIPLE_NEGOTIATIONS    56
 
 #define GENERATOR_PPM                               134
 #define     PPM_EVENT_RULE_TREE_DISABLED              1
@@ -626,7 +637,7 @@ enum {
 #define DECODE_IPV6_TWO_ROUTE_HEADERS_STR "(snort_decoder) WARNING: IPv6 header includes two routing extension headers"
 #define DECODE_IPV6_DSTOPTS_WITH_ROUTING_STR "(snort_decoder) WARNING: IPv6 header has destination options followed by a routing header"
 #define DECODE_ICMPV6_TOO_BIG_BAD_MTU_STR "(snort_decoder) WARNING: ICMPv6 packet of type 2 (message too big) with MTU field < 1280"
-#define DECODE_ICMPV6_UNREACHABLE_BAD_CODE_STR "(snort_decoder) WARNING: ICMPv6 packet of type 1 (destination unreachable) with invalid code field"
+#define DECODE_ICMPV6_UNREACHABLE_NON_RFC_2463_CODE_STR "(snort_decoder) WARNING: ICMPv6 packet of type 1 (destination unreachable) with non-RFC 2463 code"
 #define DECODE_ICMPV6_SOLICITATION_BAD_CODE_STR "(snort_decoder) WARNING: ICMPv6 router solicitation packet with a code not equal to 0"
 #define DECODE_ICMPV6_ADVERT_BAD_CODE_STR "(snort_decoder) WARNING: ICMPv6 router advertisement packet with a code not equal to 0"
 #define DECODE_ICMPV6_SOLICITATION_BAD_RESERVED_STR "(snort_decoder) WARNING: ICMPv6 router solicitation packet with the reserved field not equal to 0"
@@ -700,6 +711,9 @@ enum {
 #define DECODE_PGM_NAK_OVERFLOW_STR "(snort_decoder) WARNING: BAD-TRAFFIC PGM nak list overflow attempt"
 #define DECODE_IGMP_OPTIONS_DOS_STR "(snort_decoder) WARNING: DOS IGMP IP Options validation attempt"
 #define DECODE_IP6_EXCESS_EXT_HDR_STR "(snort_decoder) WARNING: too many IP6 extension headers"
+#define DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE_STR "(snort_decoder) WARNING: ICMPv6 packet of type 1 (destination unreachable) with non-RFC 4443 code"
+#define DECODE_IPV6_BAD_FRAG_PKT_STR "(snort_decoder) WARNING: bogus fragmentation packet. Possible BSD attack"
+#define DECODE_ZERO_LENGTH_FRAG_STR "(snort_decoder) WARNING: fragment with zero length"
 
 /*  RPC decode preprocessor strings */
 #define RPC_FRAG_TRAFFIC_STR "(spp_rpc_decode) Fragmented RPC Records"

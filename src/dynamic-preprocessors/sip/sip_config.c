@@ -488,7 +488,11 @@ static SIPMethodNode* SIP_AddMethodToList(char *methodName, SIPMethodsFlag metho
         return NULL;
     method->methodName = strdup(methodName);
     if (NULL == method->methodName)
+    {
+        free(method);
         return NULL;
+    }
+
     method->methodLen =  methodLen;
     method->methodFlag =  methodConf;
     method->nextm = NULL;

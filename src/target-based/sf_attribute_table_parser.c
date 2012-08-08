@@ -6801,10 +6801,11 @@ YY_RULE_SETUP
                             /* Store the value of the string, but not
                              * more than STD_BUF. */
                             int i;
-                            for (i=0; i < sfatleng && i < STD_BUF; i++)
+                            for (i=0; i < sfatleng && i < STD_BUF-1; i++)
                             {
                                 sfat_lval.stringValue[i] = sfattext[i];
                             }
+
                             sfat_lval.stringValue[i] = '\0';
 #ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,
@@ -6816,32 +6817,32 @@ YY_RULE_SETUP
 case 54:
 /* rule 54 can match eol */
 YY_RULE_SETUP
-#line 177 "sf_attribute_table_parser.l"
+#line 178 "sf_attribute_table_parser.l"
 { sfat_linenumber++; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 178 "sf_attribute_table_parser.l"
+#line 179 "sf_attribute_table_parser.l"
 { ; /* Do nothing -- ignore it */}
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 180 "sf_attribute_table_parser.l"
+#line 181 "sf_attribute_table_parser.l"
 { return 0; }
 	YY_BREAK
 /* Error, no meaningful input provided */
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(waiting_for_comma_prior_to_data):
 case YY_STATE_EOF(waiting_for_data):
-#line 183 "sf_attribute_table_parser.l"
+#line 184 "sf_attribute_table_parser.l"
 { yyterminate(); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 185 "sf_attribute_table_parser.l"
+#line 186 "sf_attribute_table_parser.l"
 ECHO;
 	YY_BREAK
-#line 6845 "sf_attribute_table_parser.c"
+#line 6846 "sf_attribute_table_parser.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -7797,7 +7798,7 @@ void sfatfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 185 "sf_attribute_table_parser.l"
+#line 186 "sf_attribute_table_parser.l"
 
 
 char *sfat_grammar_error=NULL;

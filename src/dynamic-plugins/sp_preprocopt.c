@@ -224,18 +224,18 @@ uint32_t PreprocessorRuleOptionHash(void *d)
         else
         {
             ptr = (uint64_t)option_data->data;
-            a = (ptr << 32) & 0XFFFFFFFF;
+            a = (ptr >> 32);
             b = (ptr & 0xFFFFFFFF);
         }
 
         ptr = (uint64_t)option_data->optionInit;
-        c = (ptr << 32) & 0XFFFFFFFF;
+        c = (ptr >> 32);
         mix(a,b,c);
 
         a += (ptr & 0xFFFFFFFF); /* mix in the last half of optionInit */
 
         ptr = (uint64_t)option_data->optionEval;
-        b += (ptr << 32) & 0XFFFFFFFF;
+        b += (ptr >> 32);
         c += (ptr & 0xFFFFFFFF);
 
         mix(a,b,c);

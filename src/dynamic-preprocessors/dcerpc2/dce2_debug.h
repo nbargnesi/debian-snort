@@ -55,8 +55,10 @@ int DCE2_DebugThis(int level);
 #define DCE2_DEBUG__PAF       0x00000200
 #define DCE2_DEBUG__ALL       0xffffffff
 
-#define DCE2_DEBUG__START_MSG  "DCE/RPC Start ********************************************"
-#define DCE2_DEBUG__END_MSG    "DCE/RPC End **********************************************"
+#define DCE2_DEBUG__START_MSG  "DCE/RPC Preprocessor *************************************"
+#define DCE2_DEBUG__END_MSG    "**********************************************************"
+#define DCE2_DEBUG__PAF_START_MSG  "DCE/RPC PAF =============================================="
+#define DCE2_DEBUG__PAF_END_MSG    "=========================================================="
 
 #ifdef DEBUG
 #include <assert.h>

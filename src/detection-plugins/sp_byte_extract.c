@@ -132,7 +132,7 @@ uint32_t ByteExtractHash(void *d)
         uint64_t ptr; /* Addresses are 64bits */
 
         ptr = (uint64_t) data->byte_order_func;
-        b += (ptr << 32) & 0XFFFFFFFF;
+        b += (ptr >> 32);
         c += (ptr & 0xFFFFFFFF);
     }
 #else

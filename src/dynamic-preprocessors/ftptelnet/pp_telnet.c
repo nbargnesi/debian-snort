@@ -119,8 +119,8 @@ int normalize_telnet(FTPTELNET_GLOBAL_CONF *GlobalConf,
         }
         else
         {
-            /* Okay, it wasn't an IAC */
-            if (*read_ptr > 0x7F)
+            /* Okay, it wasn't an IAC also its a midstream pickup */
+            if (*read_ptr > 0x7F && _dpd.streamAPI->get_session_flags(p->stream_session_ptr) & SSNFLAG_MIDSTREAM)
             {
                 consec_8bit_chars++;
                 if (consec_8bit_chars > CONSECUTIVE_8BIT_THRESHOLD)

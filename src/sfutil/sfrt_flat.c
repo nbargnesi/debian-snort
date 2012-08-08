@@ -42,10 +42,13 @@ table_flat_t *sfrt_flat_new(char table_flat_type, char ip_type,  long data_size,
 
     table_ptr = segment_malloc(sizeof(table_flat_t));
 
+#if 0
+    /*The first allocation always return 0*/
     if(!table_ptr)
     {
       //  return NULL;
     }
+#endif
 
     base = (uint8_t *)segment_basePtr();
     table = (table_flat_t *)(&base[table_ptr]);
@@ -287,10 +290,10 @@ GENERIC sfrt_flat_lookup(void *adr, table_flat_t *table)
 /* Insert "ip", of length "len", into "table", and have it point to "ptr" */
 /* Insert "ip", of length "len", into "table", and have it point to "ptr" */
 int sfrt_flat_insert(void *adr, unsigned char len, INFO ptr,
-        int behavior, table_flat_t* table)
+        int behavior, table_flat_t* table, updateEntryInfoFunc updateEntry)
 {
     int index;
-    int res;
+    int res =  RT_SUCCESS;
     INFO *data;
 #ifdef SUP_IP6
     sfip_t *ip;
@@ -347,6 +350,8 @@ int sfrt_flat_insert(void *adr, unsigned char len, INFO ptr,
 
     tuple = sfrt_dir_flat_lookup(ip, table->rt);
 
+    base = (uint8_t *)segment_basePtr();
+    data = (INFO *)(&base[table->data]);
 
     if(tuple.length != len)
     {
@@ -358,20 +363,22 @@ int sfrt_flat_insert(void *adr, unsigned char len, INFO ptr,
 
         index = table->num_ent;
         table->num_ent++;
+        /* Insert value into policy table */
+        data[index] = 0;
+
+        table->allocated += updateEntry(&data[index], ptr, SAVE_TO_CURRENT, base);
+
+        /* The actual value that is looked-up is an index
+         * into the data table. */
+        res = sfrt_dir_flat_insert(ip, len, index, behavior, rt, updateEntry, data);
     }
     else
     {
         index = tuple.index;
+        /* update the current index*/
+        table->allocated += updateEntry(&data[index], ptr, SAVE_TO_CURRENT, base);
+        return RT_SUCCESS;
     }
-
-    /* Insert value into policy table */
-    base = (uint8_t *)segment_basePtr();
-    data = (INFO *)(&base[table->data]);
-    data[index] = ptr;
-
-    /* The actual value that is looked-up is an index
-     * into the data table. */
-    res = sfrt_dir_flat_insert(ip, len, index, behavior, rt);
 
     /* Check if we ran out of memory. If so, need to decrement
      * table->num_ent */

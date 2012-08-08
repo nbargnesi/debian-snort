@@ -632,7 +632,9 @@ struct enc_header {
 #define PKT_STREAM_ORDER_BAD 0x02000000  /* this stream had at last one gap */
 #define PKT_REASSEMBLED_OLD  0x04000000  /* for backwards compat with so rules */
 
-// 0x0F800000 are available
+#define PKT_IPREP_SOURCE_TRIGGERED  0x08000000
+#define PKT_IPREP_DATA_SET          0x10000000
+// 0x20000000 are available
 
 #define PKT_PDU_FULL (PKT_PDU_HEAD | PKT_PDU_TAIL)
 
@@ -802,6 +804,7 @@ typedef struct _SLLHdr {
  * Pflog1_Hdr:  CVS = 1.3,  DLT_OLD_PFLOG = 17,  Length = 28
  * Pflog2_Hdr:  CVS = 1.8,  DLT_PFLOG     = 117, Length = 48
  * Pflog3_Hdr:  CVS = 1.12, DLT_PFLOG     = 117, Length = 64
+ * Pflog3_Hdr:  CVS = 1.172, DLT_PFLOG     = 117, Length = 100 
  *
  * Since they have the same DLT, Pflog{2,3}Hdr are distinguished
  * by their actual length.  The minimum required length excludes
@@ -870,6 +873,33 @@ typedef struct _Pflog3_hdr
 
 #define PFLOG3_HDRLEN (sizeof(struct _Pflog3_hdr))
 #define PFLOG3_HDRMIN (PFLOG3_HDRLEN - PFLOG_PADLEN)
+
+
+typedef struct _Pflog4_hdr
+{
+    uint8_t  length;
+    uint8_t  af;
+    uint8_t  action;
+    uint8_t  reason;
+    char     ifname[IFNAMSIZ];
+    char     ruleset[PFLOG_RULELEN];
+    uint32_t rulenr;
+    uint32_t subrulenr;
+    uint32_t uid;
+    uint32_t pid;
+    uint32_t rule_uid;
+    uint32_t rule_pid;
+    uint8_t  dir;
+    uint8_t  rewritten;
+    uint8_t  pad[2];
+    uint8_t saddr[16];
+    uint8_t daddr[16];
+    uint16_t sport;
+    uint16_t dport;
+} Pflog4Hdr;
+
+#define PFLOG4_HDRLEN sizeof(struct _Pflog4_hdr)
+#define PFLOG4_HDRMIN sizeof(struct _Pflog4_hdr)
 
 /*
  * ssl_pkttype values.
@@ -1661,8 +1691,6 @@ typedef struct _Packet
     void *ssnptr;               /* for tcp session tracking info... */
     void *fragtracker;          /* for ip fragmentation tracking info... */
     void *flow;                 /* for flow info */
-    void *streamptr;            /* for tcp pkt dump */
-    void *policyEngineData;
 
     //vvv-----------------------------
     IP4Hdr *ip4h, *orig_ip4h;   /* SUP_IP6 members */
@@ -1696,6 +1724,10 @@ typedef struct _Packet
 
     uint32_t http_pipeline_count; /* Counter for HTTP pipelined requests */
     uint32_t packet_flags;      /* special flags for the packet */
+
+    uint32_t xtradata_mask;
+    uint32_t per_packet_xtradata;
+
     uint16_t proto_bits;
 
     //vvv-----------------------------
@@ -1743,9 +1775,6 @@ typedef struct _Packet
 
     uint8_t next_layer;         /* index into layers for next encap */
 
-    uint32_t xtradata_mask;
-    uint32_t per_packet_xtradata;
-
 #ifndef NO_NON_ETHER_DECODER
     const Fddi_hdr *fddihdr;    /* FDDI support headers */
     Fddi_llc_saps *fddisaps;
@@ -1760,6 +1789,7 @@ typedef struct _Packet
     Pflog1Hdr *pf1h;            /* OpenBSD pflog interface header - version 1 */
     Pflog2Hdr *pf2h;            /* OpenBSD pflog interface header - version 2 */
     Pflog3Hdr *pf3h;            /* OpenBSD pflog interface header - version 3 */
+    Pflog4Hdr *pf4h;            /* OpenBSD pflog interface header - version 4 */
 
 #ifdef DLT_LINUX_SLL
     const SLLHdr *sllh;         /* Linux cooked sockets header */
@@ -1788,6 +1818,9 @@ typedef struct _Packet
      * with event output
      */
     uint16_t configPolicyId;
+
+    uint32_t iplist_id;
+    unsigned char iprep_layer;
 
 } Packet;
 

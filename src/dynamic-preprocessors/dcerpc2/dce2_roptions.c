@@ -697,6 +697,9 @@ static int DCE2_IfaceAddFastPatterns(void *rule_opt_data, int protocol,
         char *server_fp = "\x05\x00\x02";
         char *no_dir_fp = "\x05\x00";
 
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS, "Adding fast pattern "
+                    "content for TCP rule option.\n"));
+
         switch (direction)
         {
             case FLAG_FROM_CLIENT:
@@ -730,6 +733,9 @@ static int DCE2_IfaceAddFastPatterns(void *rule_opt_data, int protocol,
         uint32_t time32;
         uint16_t time16;
         int index = 0;
+
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS, "Adding fast pattern "
+                    "content for UDP rule option.\n"));
 
         time32 = DceRpcNtohl(&iface_data->iface.time_low,
                 DCERPC_BO_FLAG__BIG_ENDIAN);
@@ -772,7 +778,7 @@ static int DCE2_IfaceAddFastPatterns(void *rule_opt_data, int protocol,
         little_fp->length = sizeof(Uuid);
 
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
-                    "Iface: %s\nBig endian: %s\n, Little endian: %s\n",
+                    " Iface: %s\n  Big endian: %s\n  Little endian: %s\n",
                     DCE2_UuidToStr(&iface_data->iface, DCERPC_BO_FLAG__NONE),
                     DCE2_UuidToStr((Uuid *)big_fp->content, DCERPC_BO_FLAG__NONE),
                     DCE2_UuidToStr((Uuid *)little_fp->content, DCERPC_BO_FLAG__NONE)););
@@ -1551,9 +1557,8 @@ static int DCE2_IfaceEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)
-        _dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));
@@ -1688,9 +1693,8 @@ static int DCE2_OpnumEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)
-        _dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));
@@ -1776,7 +1780,7 @@ static int DCE2_StubDataEval(void *pkt, const uint8_t **cursor, void *data)
         return RULE_NOMATCH;
 
     sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));
@@ -1834,7 +1838,7 @@ static int DCE2_ByteTestEval(void *pkt, const uint8_t **cursor, void *data)
         return RULE_NOMATCH;
 
     sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));
@@ -2093,7 +2097,7 @@ static int DCE2_ByteJumpEval(void *pkt, const uint8_t **cursor, void *data)
         return RULE_NOMATCH;
 
     sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));
@@ -2734,27 +2738,27 @@ static int DCE2_ByteJumpKeyCompare(void *l, void *r)
  ********************************************************************/
 void DCE2_PrintRoptions(DCE2_Roptions *ropts)
 {
-    printf("First frag: %s\n", ropts->first_frag == 1 ? "yes" : (ropts->first_frag == 0 ? "no" : "unset"));
+    printf("  First frag: %s\n", ropts->first_frag == 1 ? "yes" : (ropts->first_frag == 0 ? "no" : "unset"));
     if (ropts->first_frag == DCE2_SENTINEL)
     {
-        printf("Iface: unset\n");
-        printf("Iface version: unset\n");
+        printf("  Iface: unset\n");
+        printf("  Iface version: unset\n");
     }
     else
     {
-        printf("Iface: %s\n", DCE2_UuidToStr(&ropts->iface, DCERPC_BO_FLAG__NONE));
-        printf("Iface version: %u\n", ropts->iface_vers_maj);
+        printf("  Iface: %s\n", DCE2_UuidToStr(&ropts->iface, DCERPC_BO_FLAG__NONE));
+        printf("  Iface version: %u\n", ropts->iface_vers_maj);
     }
-    if (ropts->opnum == DCE2_SENTINEL) printf("Opnum: unset\n");
-    else printf("Opnum: %u\n", ropts->opnum);
-    printf("Header byte order: %s\n",
+    if (ropts->opnum == DCE2_SENTINEL) printf("  Opnum: unset\n");
+    else printf("  Opnum: %u\n", ropts->opnum);
+    printf("  Header byte order: %s\n",
             ropts->hdr_byte_order == DCERPC_BO_FLAG__LITTLE_ENDIAN ? "little endian" :
             (ropts->hdr_byte_order == DCERPC_BO_FLAG__BIG_ENDIAN ? "big endian" : "unset"));
-    printf("Data byte order: %s\n",
+    printf("  Data byte order: %s\n",
             ropts->data_byte_order == DCERPC_BO_FLAG__LITTLE_ENDIAN ? "little endian" :
             (ropts->data_byte_order == DCERPC_BO_FLAG__BIG_ENDIAN ? "big endian" : "unset"));
-    if (ropts->stub_data != NULL) printf("Stub data: %p\n", ropts->stub_data);
-    else printf("Stub data: NULL\n");
+    if (ropts->stub_data != NULL) printf("  Stub data: %p\n", ropts->stub_data);
+    else printf("  Stub data: NULL\n");
 }
 
 /********************************************************************
@@ -2819,7 +2823,7 @@ int DCE2_GetByteOrder(void *data, int32_t offset)
         return -1;
 
     sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
-    if (sd == NULL)
+    if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
                     "No session data - not evaluating.\n"));

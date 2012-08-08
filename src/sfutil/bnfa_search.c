@@ -1194,13 +1194,15 @@ int _bnfa_conv_list_to_csparse_array(bnfa_struct_t * bnfa)
 void bnfaPrint(bnfa_struct_t * bnfa)
 {
   int               k;
-  bnfa_match_node_t  ** MatchList = bnfa->bnfaMatchList;
+  bnfa_match_node_t  ** MatchList;
   bnfa_match_node_t   * mlist;
   int              ps_index=0;
   bnfa_state_t      * ps=0;
 
   if( !bnfa )
       return;
+
+  MatchList = bnfa->bnfaMatchList;
 
   if( !bnfa->bnfaNumStates )
       return;
@@ -1442,7 +1444,11 @@ bnfaAddPattern (bnfa_struct_t * p,
   if(!plist) return -1;
 
   plist->casepatrn = (unsigned char *)BNFA_MALLOC(n,p->pat_memory );
-  if(!plist->casepatrn) return -1;
+  if(!plist->casepatrn) 
+  {
+      BNFA_FREE(plist,sizeof(bnfa_pattern_t),p->pat_memory);
+      return -1;
+  }
 
   memcpy (plist->casepatrn, pat, n);
 

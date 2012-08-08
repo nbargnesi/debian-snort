@@ -43,10 +43,12 @@
  */
 #define GENERATOR_SPP_REPUTATION	136
 
-#define CS_TYPE_REPUTATION_SHAREMEM     ((GENERATOR_SPP_REPUTATION *10) + 1)
+#define CS_TYPE_REPUTATION_SHAREMEM             ((GENERATOR_SPP_REPUTATION *10) + 1)
+#define CS_TYPE_REPUTATION_SHAREMEM_LOOKUP      ((GENERATOR_SPP_REPUTATION *10) + 2)
+#define CS_TYPE_REPUTATION_SHAREMEM_MGMT_INFO   ((GENERATOR_SPP_REPUTATION *10) + 3)
 
 /*These IDs are reserved for snort shared memory server (writer)*/
-#define SHMEM_SERVER_ID_1           1
+#define SHMEM_SERVER_ID             0
 
 /* Ultimately calls SnortEventqAdd */
 /* Arguments are: gid, sid, rev, classification, priority, message, rule_info */
@@ -56,12 +58,14 @@
 #define REPUTATION_EVENT_BLACKLIST_STR     "(spp_reputation) packets blacklisted"
 #define REPUTATION_EVENT_WHITELIST       2
 #define REPUTATION_EVENT_WHITELIST_STR     "(spp_reputation) packets whitelisted"
-
+#define REPUTATION_EVENT_MONITOR         3
+#define REPUTATION_EVENT_MONITOR_STR       "(spp_reputation) packets monitored"
 
 typedef struct _Reputation_Stats
 {
     uint64_t blacklisted;
     uint64_t whitelisted;
+    uint64_t monitored;
     uint64_t memoryAllocated;
 
 } Reputation_Stats;
@@ -86,5 +90,5 @@ extern ReputationConfig *reputation_shmem_config;
 #endif
 /* Prototypes for public interface */
 void SetupReputation(void);
-
+void SetupReputationUpdate(uint32_t interval);
 #endif /* SPP_REPUTATION_H */

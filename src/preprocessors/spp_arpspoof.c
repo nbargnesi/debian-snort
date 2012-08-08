@@ -100,8 +100,6 @@
 #include "profiler.h"
 #include "sfPolicy.h"
 
-#undef inet_ntoa
-
 
 /*  D E F I N E S  **************************************************/
 #define MODNAME "spp_arpspoof"
@@ -271,13 +269,19 @@ static void ParseARPspoofArgs(ArpSpoofConfig *config, char *args)
 
 static void ARPspoofHostInit(char *args)
 {
-    int policy_id = (int)getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy();
     ArpSpoofConfig *pPolicyConfig = NULL;
-    sfPolicyUserPolicySet (arp_spoof_config, policy_id);
+
+    if (arp_spoof_config == NULL)
+    {
+        ParseError("Please activate arpspoof before trying to "
+                   "use arpspoof_detect_host.");
+    }
+
+    sfPolicyUserPolicySet(arp_spoof_config, policy_id);
     pPolicyConfig = (ArpSpoofConfig *)sfPolicyUserDataGetCurrent(arp_spoof_config);
 
-
-    if ((arp_spoof_config == NULL) || (pPolicyConfig == NULL) )
+    if (pPolicyConfig == NULL)
     {
         ParseError("Please activate arpspoof before trying to "
                    "use arpspoof_detect_host.");
@@ -526,8 +530,12 @@ static IPMacEntry *LookupIPMacEntryByIP(IPMacEntryList *ip_mac_entry_list,
 {
     IPMacEntryListNode *current;
 #if defined(DEBUG)
-    struct in_addr ina, inb;
     char *cha, *chb;
+# ifndef SUP_IP6
+    struct in_addr ina, inb;
+# else
+    snort_ip ina, inb;
+# endif
 #endif
 
     if (ip_mac_entry_list == NULL)
@@ -537,10 +545,15 @@ static IPMacEntry *LookupIPMacEntryByIP(IPMacEntryList *ip_mac_entry_list,
             current = current->next)
     {
 #if defined(DEBUG)
+# ifndef SUP_IP6
         ina.s_addr = ipv4_addr;
         inb.s_addr = current->ip_mac_entry->ipv4_addr;
-        cha = strdup(inet_ntoa(ina));
-        chb = strdup(inet_ntoa(inb));
+# else
+        sfip_set_raw(&ina, &ipv4_addr, AF_INET);
+        sfip_set_raw(&inb, &current->ip_mac_entry->ipv4_addr, AF_INET);
+# endif
+        cha = strdup(inet_ntoa(IP_ARG(ina)));
+        chb = strdup(inet_ntoa(IP_ARG(inb)));
 
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
             "MODNAME: LookupIPMacEntryByIP() comparing %s to %s\n", cha, chb););
@@ -632,7 +645,12 @@ static void PrintIPMacEntryList(IPMacEntryList *ip_mac_entry_list)
 {
     IPMacEntryListNode *current;
     int i;
+# ifndef SUP_IP6
     struct in_addr in;
+# else
+    snort_ip in;
+# endif
+
     if (ip_mac_entry_list == NULL)
         return;
 
@@ -641,8 +659,12 @@ static void PrintIPMacEntryList(IPMacEntryList *ip_mac_entry_list)
     printf("  Size: %i\n", ip_mac_entry_list->size);
     while (current != NULL)
     {
+# ifndef SUP_IP6
         in.s_addr = current->ip_mac_entry->ipv4_addr;
-        printf("%s -> ", inet_ntoa(in));
+# else
+        sfip_set_raw(&in, &current->ip_mac_entry->ipv4_addr, AF_INET);
+# endif
+        printf("%s -> ", inet_ntoa(IP_ARG(in)));
         for (i = 0; i < 6; i++)
         {
             printf("%02x", current->ip_mac_entry->mac_addr[i]);

@@ -1507,16 +1507,25 @@ static int PortscanGetProtoBits(int detect_scans)
     int proto_bits = 0;
 
     if (detect_scans & PS_PROTO_IP)
+    {
+        proto_bits |= PROTO_BIT__ICMP;
         proto_bits |= PROTO_BIT__IP;
+    }
 
     if (detect_scans & PS_PROTO_UDP)
+    {
+        proto_bits |= PROTO_BIT__ICMP;
         proto_bits |= PROTO_BIT__UDP;
+    }
 
     if (detect_scans & PS_PROTO_ICMP)
         proto_bits |= PROTO_BIT__ICMP;
 
     if (detect_scans & PS_PROTO_TCP)
+    {
+        proto_bits |= PROTO_BIT__ICMP;
         proto_bits |= PROTO_BIT__TCP;
+    }
 
     return proto_bits;
 }

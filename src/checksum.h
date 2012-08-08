@@ -38,6 +38,22 @@
 #include "snort_debug.h"
 #include <sys/types.h>
 
+typedef struct
+{
+    uint32_t sip[4], dip[4];
+    uint8_t  zero;
+    uint8_t  protocol;
+    uint16_t len;
+} pseudoheader6;
+
+typedef struct
+{
+    uint32_t sip, dip;
+    uint8_t  zero;
+    uint8_t  protocol;
+    uint16_t len;
+} pseudoheader;
+
 /*
 *  checksum IP  - header=20+ bytes
 *
@@ -45,7 +61,7 @@
 *  blen - byte length
 *
 */
-static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
+static inline unsigned short in_chksum_ip( unsigned short * w, int blen )
 {
    unsigned int cksum;
 
@@ -86,8 +102,10 @@ static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
 *  dlen - length of tcp hdr + payload in bytes
 *
 */
-static inline unsigned short in_chksum_tcp(  unsigned short *h, unsigned short * d, int dlen )
+static inline unsigned short in_chksum_tcp(pseudoheader *ph,
+    unsigned short * d, int dlen )
 {
+   uint16_t *h = (uint16_t *)ph;
    unsigned int cksum;
    unsigned short answer=0;
 
@@ -175,8 +193,10 @@ static inline unsigned short in_chksum_tcp(  unsigned short *h, unsigned short *
 *  dlen - length of tcp hdr + payload in bytes
 *
 */
-static inline unsigned short in_chksum_tcp6(  unsigned short *h, unsigned short * d, int dlen )
+static inline unsigned short in_chksum_tcp6(pseudoheader6 *ph,
+    unsigned short * d, int dlen )
 {
+   uint16_t *h = (uint16_t *)ph;
    unsigned int cksum;
    unsigned short answer=0;
 
@@ -277,8 +297,10 @@ static inline unsigned short in_chksum_tcp6(  unsigned short *h, unsigned short 
 *  dlen - length of payload in bytes
 *
 */
-static inline unsigned short in_chksum_udp6(  unsigned short *h, unsigned short * d, int dlen )
+static inline unsigned short in_chksum_udp6(pseudoheader6 *ph,
+    unsigned short * d, int dlen )
 {
+   uint16_t *h = (uint16_t *)ph;
    unsigned int cksum;
    unsigned short answer=0;
 
@@ -363,8 +385,10 @@ static inline unsigned short in_chksum_udp6(  unsigned short *h, unsigned short 
 
 
 
-static inline unsigned short in_chksum_udp(  unsigned short *h, unsigned short * d, int dlen )
+static inline unsigned short in_chksum_udp(pseudoheader *ph,
+     unsigned short * d, int dlen )
 {
+   uint16_t *h = (uint16_t *)ph;
    unsigned int cksum;
    unsigned short answer=0;
 
@@ -497,8 +521,10 @@ static inline unsigned short in_chksum_icmp( unsigned short * w, int blen )
 /*
 *  checksum icmp6
 */
-static inline unsigned short in_chksum_icmp6( unsigned short *h, unsigned short *w, int blen )
+static inline unsigned short in_chksum_icmp6(pseudoheader6 *ph,
+     unsigned short *w, int blen )
 {
+  uint16_t *h = (uint16_t *)ph;
   unsigned  short answer=0;
   unsigned int cksum = 0;
 

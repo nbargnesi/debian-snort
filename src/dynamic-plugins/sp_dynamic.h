@@ -81,9 +81,9 @@ int ReloadDynamicRules(SnortConfig *);
 #endif
 
 int DynamicPreprocRuleOptInit(void *);
-uint32_t DynamicFlowbitRegister(char *name, int op);
-void DynamicFlowbitUnregister(char *name, int op);
-int DynamicFlowbitCheck(void *pkt, int op, uint32_t id);
+void* DynamicFlowbitRegister(void *);
+void DynamicFlowbitUnregister(void *);
+int DynamicFlowbitCheck(void *pkt, void *);
 int DynamicAsn1Detect(void *pkt, void *ctxt, const uint8_t *cursor);
 int DynamicsfUnfold(const uint8_t *, uint32_t , uint8_t *, uint32_t , uint32_t *);
 int Dynamicsfbase64decode(uint8_t *, uint32_t , uint8_t *, uint32_t , uint32_t *);

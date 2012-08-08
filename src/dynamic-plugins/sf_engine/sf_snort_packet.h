@@ -534,8 +534,6 @@ typedef struct _SFSnortPacket
     void *stream_session_ptr;
     void *fragmentation_tracking_ptr;
     void *flow_ptr;
-    void *stream_ptr;
-    void *policyEngineData;
 
     IP4Hdr *ip4h, *orig_ip4h;
     IP6Hdr *ip6h, *orig_ip6h;
@@ -566,6 +564,10 @@ typedef struct _SFSnortPacket
 
     uint32_t http_pipeline_count;
     uint32_t flags;
+
+    uint32_t xtradata_mask;
+    uint32_t per_packet_xtradata;
+
     uint16_t proto_bits;
 
     uint16_t payload_size;
@@ -606,9 +608,6 @@ typedef struct _SFSnortPacket
 
     uint8_t next_layer_index;
 
-    uint32_t xtradata_mask;
-    uint32_t per_packet_xtradata;
-
 #ifndef NO_NON_ETHER_DECODER
     const void *fddi_header;
     void *fddi_saps;
@@ -623,6 +622,7 @@ typedef struct _SFSnortPacket
     void *pflog1_header;
     void *pflog2_header;
     void *pflog3_header;
+    void *pflog4_header;
 
 #ifdef DLT_LINUX_SLL
     const void *sll_header;
@@ -652,7 +652,14 @@ typedef struct _SFSnortPacket
      */
     uint16_t configPolicyId;
 
+    uint32_t iplist_id;
+    unsigned char iprep_layer;
+
+
 } SFSnortPacket;
+
+#define IP_INNER_LAYER   1
+#define IP_OUTTER_LAYER  0
 
 #define PKT_ZERO_LEN offsetof(SFSnortPacket, ip_options)
 
@@ -728,7 +735,9 @@ typedef struct _SFSnortPacket
 #define FLAG_STREAM_ORDER_BAD 0x02000000  /* this stream had at least one gap */
 #define FLAG_REASSEMBLED_OLD  0x04000000  /* for backwards compat with so rules */
 
-// 0x0F800000 are available
+#define FLAG_IPREP_SOURCE_TRIGGERED  0x08000000
+#define FLAG_IPREP_DATA_SET          0x10000000
+// 0x20000000 are available
 
 #define FLAG_PDU_FULL (FLAG_PDU_HEAD | FLAG_PDU_TAIL)
 

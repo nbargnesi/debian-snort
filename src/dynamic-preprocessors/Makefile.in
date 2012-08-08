@@ -38,8 +38,7 @@ host_triplet = @host@
 subdir = src/dynamic-preprocessors
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libprelude.m4 \
-	$(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -193,13 +192,6 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LIBOBJS = @LIBOBJS@
-LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
-LIBPRELUDE_CONFIG = @LIBPRELUDE_CONFIG@
-LIBPRELUDE_CONFIG_PREFIX = @LIBPRELUDE_CONFIG_PREFIX@
-LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
-LIBPRELUDE_LIBS = @LIBPRELUDE_LIBS@
-LIBPRELUDE_PREFIX = @LIBPRELUDE_PREFIX@
-LIBPRELUDE_PTHREAD_CFLAGS = @LIBPRELUDE_PTHREAD_CFLAGS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -355,7 +347,8 @@ AUTOMAKE_OPTIONS = foreign no-dependencies
 @HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/preprocids.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/attribute_table_api.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sfcontrol.h \
-@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/idle_processing.h
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/idle_processing.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@@SO_WITH_STATIC_LIB_TRUE@include/sf_seqnums.h
 
 BUILT_SOURCES = \
 	include/snort_bounds.h \
@@ -422,7 +415,8 @@ BUILT_SOURCES = \
 	include/Unified2_common.h \
 	include/attribute_table_api.h \
 	include/sfcontrol.h \
-	include/idle_processing.h
+	include/idle_processing.h \
+	include/sf_seqnums.h
 
 sed_ipv6_headers = \
 	sed -e "s/->iph->ip_src/->ip4_header->source/" \
@@ -606,7 +600,8 @@ treenodes.sed
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/Unified2_common.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/attribute_table_api.h \
 @HAVE_DYNAMIC_PLUGINS_TRUE@include/sfcontrol.h \
-@HAVE_DYNAMIC_PLUGINS_TRUE@include/idle_processing.h
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/idle_processing.h \
+@HAVE_DYNAMIC_PLUGINS_TRUE@include/sf_seqnums.h
 
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -1294,6 +1289,9 @@ include/sfcontrol.h: $(top_srcdir)/src/control/sfcontrol.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 include/idle_processing.h: $(top_srcdir)/src/idle_processing.h
+	@src_header=$?; dst_header=$@; $(copy_headers)
+
+include/sf_seqnums.h: $(top_srcdir)/src/sfutil/sf_seqnums.h
 	@src_header=$?; dst_header=$@; $(copy_headers)
 
 clean-local:

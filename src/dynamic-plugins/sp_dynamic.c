@@ -87,11 +87,9 @@ PreprocStats dynamicRuleEvalPerfStats;
 extern PreprocStats ruleOTNEvalPerfStats;
 #endif
 
-extern const unsigned int giFlowbitSize;
 extern SFGHASH *flowbits_hash;
 extern SF_QUEUE *flowbits_bit_queue;
 extern uint32_t flowbits_count;
-extern int flowbits_toggle;
 extern volatile int snort_initializing;
 extern DynamicRuleNode *dynamic_rules;
 
@@ -110,22 +108,22 @@ uint32_t DynamicRuleHash(void *d)
          * warning on 64bit OSs */
         uint64_t ptr; /* Addresses are 64bits */
         ptr = (uint64_t)dynData->contextData;
-        a = (ptr << 32) & 0XFFFFFFFF;
+        a = (ptr >> 32);
         b = (ptr & 0xFFFFFFFF);
 
         ptr = (uint64_t)dynData->checkFunction;
-        c = (ptr << 32) & 0XFFFFFFFF;
+        c = (ptr >> 32);
 
         mix (a,b,c);
 
         a += (ptr & 0xFFFFFFFF);
 
         ptr = (uint64_t)dynData->hasOptionFunction;
-        b += (ptr << 32) & 0XFFFFFFFF;
+        b += (ptr >> 32);
         c += (ptr & 0xFFFFFFFF);
 
         ptr = (uint64_t)dynData->getDynamicContents;
-        a += (ptr << 32) & 0XFFFFFFFF;
+        a += (ptr >> 32);
         b += (ptr & 0xFFFFFFFF);
         c += dynData->contentFlags;
 
@@ -486,7 +484,7 @@ int ReloadDynamicRules(SnortConfig *sc)
                 case OPTION_TYPE_FLOWBIT:
                     {
                         FlowBitsInfo *flowbits = option->option_u.flowBit;
-                        flowbits->id = DynamicFlowbitRegister(flowbits->flowBitsName, flowbits->operation);
+                        flowbits = DynamicFlowbitRegister(flowbits);
                     }
 
                     break;
@@ -496,10 +494,29 @@ int ReloadDynamicRules(SnortConfig *sc)
             }
         }
 
-        RegisterDynamicRule(node->rule->info.sigID, node->rule->info.genID,
-                            (void *)node->rule, node->chkFunc, node->hasFunc,
-                            node->contentFlags, node->contentsFunc,
-                            node->freeFunc, node->preprocFpContentsFunc);
+        if (RegisterDynamicRule(node->rule->info.sigID, node->rule->info.genID,
+                    (void *)node->rule, node->chkFunc, node->hasFunc,
+                    node->contentFlags, node->contentsFunc,
+                    node->freeFunc, node->preprocFpContentsFunc) == -1)
+        {
+            for (i = 0; node->rule->options[i] != NULL; i++)
+            {
+                RuleOption *option = node->rule->options[i];
+                switch (option->optionType)
+                {
+                    case OPTION_TYPE_FLOWBIT:
+                        {
+                            FlowBitsInfo *flowbits = option->option_u.flowBit;
+                            DynamicFlowbitUnregister(flowbits);
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+        }
     }
 
     snort_conf_for_parsing = NULL;
@@ -552,7 +569,7 @@ int DynamicPreprocRuleOptInit(void *opt)
 
     result = optionInit(option_name, option_params, &preprocOpt->dataPtr);
 
-    if (option_name != NULL) free(option_name);
+    free(option_name);
     if (option_params != NULL) free(option_params);
 
     if (!result)
@@ -561,80 +578,45 @@ int DynamicPreprocRuleOptInit(void *opt)
     return 0;
 }
 
-uint32_t DynamicFlowbitRegister(char *name, int op)
+void *DynamicFlowbitRegister(void *info)
 {
-    uint32_t retFlowId; /* ID */
-    int hashRet;
-    FLOWBITS_OBJECT *flowbits_item;
+    FlowBitsInfo *flowbitsInfo = (FlowBitsInfo *)info;
+    FLOWBITS_OP *flowbits;
 
-    /* Auto init hash table and queue */
-    if (flowbits_hash == NULL)
-        FlowBitsHashInit();
+    if (!info)
+        return NULL;
 
-    flowbits_item = sfghash_find(flowbits_hash, name);
+    flowbits = (FLOWBITS_OP *) SnortAlloc(sizeof(FLOWBITS_OP));
+    flowbits->type = flowbitsInfo->operation;
+    processFlowBitsWithGroup(flowbitsInfo->flowBitsName, flowbitsInfo->groupName, flowbits);
 
-    if (flowbits_item != NULL)
+    // SO rules sometimes reuse the same option structure for multiple rule
+    // definitions.  Also on snort reload we can't muck with the structure
+    // since it'll possibly be in use.  So if flowbitsInfo->ids is already set,
+    // the flowbits structure has already been parsed and flowbits->ids will
+    // remain unchanged, so just return.
+    // processFlowBitsWithGroup() is called again, mainly for reload in
+    // case flowbits have been removed or added and/or the actual id values
+    // have changed.
+    if (flowbitsInfo->ids != NULL)
     {
-        retFlowId = flowbits_item->id;
-    }
-    else
-    {
-        flowbits_item =
-            (FLOWBITS_OBJECT *)SnortAlloc(sizeof(FLOWBITS_OBJECT));
-
-        if (sfqueue_count(flowbits_bit_queue) > 0)
-        {
-            retFlowId = (uint32_t)(uintptr_t)sfqueue_remove(flowbits_bit_queue);
-            flowbits_item->id = retFlowId;
-        }
-        else
-        {
-            retFlowId = flowbits_count;
-            flowbits_item->id = flowbits_count;
-
-            hashRet = sfghash_add(flowbits_hash, name, flowbits_item);
-            if (hashRet != SFGHASH_OK)
-            {
-                FatalError("Could not add flowbits key (%s) to hash.\n", name);
-            }
-
-            flowbits_count++;
-
-            if(flowbits_count > (giFlowbitSize<<3) )
-            {
-                FatalError("FLOWBITS: The number of flowbit IDs in the "
-                           "current ruleset (%d) exceed the maximum number of IDs "
-                           "that are allowed (%d).\n", flowbits_count,giFlowbitSize<<3);
-            }
-        }
+        if (flowbits->ids != NULL)
+            free(flowbits->ids);
+        free(flowbits);
+        return flowbitsInfo;
     }
 
-    flowbits_item->toggle = flowbits_toggle;
-    flowbits_item->types |= op;
-    switch (op)
-    {
-        case FLOWBITS_SET:
-        case FLOWBITS_UNSET:
-        case FLOWBITS_TOGGLE:
-        case FLOWBITS_RESET:
-            flowbits_item->set++;
-            break;
-        case FLOWBITS_ISSET:
-        case FLOWBITS_ISNOTSET:
-            flowbits_item->isset++;
-            break;
-        default:
-            break;
-    }
-
-    return retFlowId;
+    flowbitsInfo->eval = flowbits->eval;
+    flowbitsInfo->ids = flowbits->ids;
+    flowbitsInfo->num_ids = flowbits->num_ids;
+    free(flowbits);
+    return flowbitsInfo;
 }
 
-void DynamicFlowbitUnregister(char *name, int op)
+static void unregisterFlowbit(char *name, int op)
 {
     FLOWBITS_OBJECT *flowbits_item;
 
-    /* Auto init hash table and queue */
     if (flowbits_hash == NULL)
         return;
 
@@ -645,6 +627,7 @@ void DynamicFlowbitUnregister(char *name, int op)
     switch (op)
     {
         case FLOWBITS_SET:
+        case FLOWBITS_SETX:
         case FLOWBITS_UNSET:
         case FLOWBITS_TOGGLE:
         case FLOWBITS_RESET:
@@ -665,73 +648,41 @@ void DynamicFlowbitUnregister(char *name, int op)
     }
 }
 
-int DynamicFlowbitCheck(void *pkt, int op, uint32_t id)
+void DynamicFlowbitUnregister(void *info)
 {
-    StreamFlowData *flowdata;
-    Packet *p = (Packet *)pkt;
-    int result = 0;
+    FlowBitsInfo *flowbitsInfo = (FlowBitsInfo *)info;
+    char *names;
+    char *flowbitName;
+    char *nextName;
+    int op;
 
-    if ((stream_api == NULL) || (p->ssnptr == NULL))
-        return 0;
+    if ((!flowbitsInfo)||(!flowbitsInfo->flowBitsName))
+        return;
 
-    flowdata = stream_api->get_flow_data(p);
-    if (!flowdata)
-        return 0;
-
-    switch(op)
+    op = flowbitsInfo->operation;
+    names = SnortStrdup(flowbitsInfo->flowBitsName);
+    flowbitName = strtok_r(names, "|&", &nextName);
+    while ( flowbitName )
     {
-        case FLOWBITS_SET:
-            boSetBit(&(flowdata->boFlowbits), id);
-            result = 1;
-            break;
-
-        case FLOWBITS_UNSET:
-            boClearBit(&(flowdata->boFlowbits), id);
-            result = 1;
-            break;
-
-        case FLOWBITS_RESET:
-            boResetBITOP(&(flowdata->boFlowbits));
-            result = 1;
-
-        case FLOWBITS_ISSET:
-            if (boIsBitSet(&(flowdata->boFlowbits), id))
-                result = 1;
-            break;
-
-        case FLOWBITS_ISNOTSET:
-            if (boIsBitSet(&(flowdata->boFlowbits), id))
-                result = 0;
-            else
-                result = 1;
-            break;
-
-        case FLOWBITS_TOGGLE:
-            if (boIsBitSet(&(flowdata->boFlowbits), id))
-            {
-                boClearBit(&(flowdata->boFlowbits), id);
-            }
-            else
-            {
-                boSetBit(&(flowdata->boFlowbits), id);
-            }
-            result = 1;
-            break;
-        case FLOWBITS_NOALERT:
-            /* Shouldn't see this case here... But, just for
-             * safety sake, return 0.
-             */
-            result = 0;
-            break;
-
-        default:
-            /* Shouldn't see this case here... But, just for
-             * safety sake, return 0.
-             */
-            result = 0;
-            break;
+        unregisterFlowbit(flowbitName, op);
+        flowbitName = strtok_r(nextName, "|&", &nextName);
     }
 
+    // Don't free flowbits->ids here for SO rules as it may cause a segfault
+    // with rules that share the same flowbits structure when not all of the
+    // stub rules are enabled.  The ids array will be free'd at shutdown in
+    // FreeOneRule().
+
+    free(names);
+}
+
+int DynamicFlowbitCheck(void *pkt, void *info)
+{
+    Packet *p = (Packet *)pkt;
+    FlowBitsInfo *flowbitsInfo = (FlowBitsInfo *)info;
+    int result = 0;
+    result = checkFlowBits(flowbitsInfo->operation, flowbitsInfo->eval, flowbitsInfo->ids,
+            flowbitsInfo->num_ids,flowbitsInfo->groupName, p);
     return result;
 }
 

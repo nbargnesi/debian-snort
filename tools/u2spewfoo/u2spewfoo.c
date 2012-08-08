@@ -33,6 +33,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
 #ifdef HAVE_UUID_UUID_H
@@ -534,161 +535,6 @@ static inline void print_uuid (const char* label, uint8_t* data)
 #endif
 }
 
-void eventng_dump(u2record *record) {
-    uint8_t *field;
-    int i;
-
-    Unified2IDSEventNG event;
-
-    memcpy(&event, record->data, sizeof(Unified2IDSEventNG));
-
-    /* network to host ordering */
-    /* In the event structure, only the last 40 bits are not 32 bit fields */
-    /* The first 11 fields need to be convertted */
-    field = (uint8_t*)&event;
-    for(i=0; i<11; i++, field+=4) {
-        *(uint32_t*)field = ntohl(*(uint32_t*)field);
-    }
-
-    /* last 3 fields, with the exception of the last most since it's just one byte */
-    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
-    field += 2;
-    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
-    field +=6;
-    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
-    field += 4;
-    /* vlanid */
-    *(uint16_t*)field = ntohs(*(uint16_t*)field);
-    field+=4;
-
-    /* done changing the network ordering */
-
-
-    printf("\n(Event NG)\n"
-            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
-            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
-            "\tpriority: %u\tip source: %u.%u.%u.%u\tip destination: %u.%u.%u.%u\n"
-            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
-            "\tmpls label: %u\tvland id: %u\n",
-             event.sensor_id, event.event_id,
-             event.event_second, event.event_microsecond,
-             event.signature_id, event.generator_id,
-             event.signature_revision, event.classification_id,
-             event.priority_id, TO_IP(event.ip_source),
-             TO_IP(event.ip_destination), event.sport_itype,
-             event.dport_icode, event.protocol,
-             event.impact_flag, event.blocked,
-             event.mpls_label, event.vlanId);
-
-
-    print_uuid("\tpolicy UUID", field);
-    field+=16;
-
-    for(i=0; i<5; i++, field+=4) {
-        *(uint32_t*)field = ntohl(*(uint32_t*)field);
-    }
-
-    printf("\tuser id: %u\t web application id: %u\n",
-                event.user_id, event.web_application_id);
-
-    printf("\tclient application id: %u\tapplication protocol id%u\tpolicy engine rule id: %u\n",
-            event.client_application_id, event.application_protocol_id, event.policyengine_rule_id);
-
-    print_uuid("\tpolicy engine policy uuid", field);
-    field+=16;
-
-    print_uuid("\tinterface ingress uuid", field);
-    field+=16;
-
-    print_uuid("\tinterface engress uuid", field);
-    field+=16;
-
-    print_uuid("\tsecurity zone ingress uuid", field);
-    field+=16;
-
-    print_uuid("\tsecurity zone egress uuid", field);
-}
-
-void eventng_6_dump(u2record *record) {
-    uint8_t *field;
-    int i;
-    char ip6buf[INET6_ADDRSTRLEN+1];
-    Unified2IDSEventIPv6_NG event;
-
-    memcpy(&event, record->data, sizeof(Unified2IDSEventIPv6_NG));
-
-    /* network to host ordering */
-    /* In the event structure, only the last 40 bits are not 32 bit fields */
-    /* The first fields need to be convertted */
-    field = (uint8_t*)&event;
-    for(i=0; i<9; i++, field+=4) {
-        *(uint32_t*)field = ntohl(*(uint32_t*)field);
-    }
-
-    field = field + 2*sizeof(struct in6_addr);
-
-    /* last 3 fields, with the exception of the last most since it's just one byte */
-    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
-    field += 2;
-    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
-    field +=6;
-    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
-    field += 4;
-    *(uint16_t*)field = ntohs(*(uint16_t*)field);
-    field += 4;
-    /* done changing the network ordering */
-
-    inet_ntop(AF_INET6, &event.ip_source, ip6buf, INET6_ADDRSTRLEN);
-
-    printf("\n(IPv6 NGFW Event)\n"
-            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
-            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
-            "\tpriority: %u\tip source: %s\t",
-             event.sensor_id, event.event_id,
-             event.event_second, event.event_microsecond,
-             event.signature_id, event.generator_id,
-             event.signature_revision, event.classification_id,
-             event.priority_id, ip6buf);
-
-
-    inet_ntop(AF_INET6, &event.ip_destination, ip6buf, INET6_ADDRSTRLEN);
-    printf("ip destination: %s\n"
-            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
-            "\tmpls label: %u\tvland id: %u\n",
-             ip6buf, event.sport_itype,
-             event.dport_icode, event.protocol,
-             event.impact_flag, event.blocked,
-             event.mpls_label, event.vlanId);
-
-    print_uuid("\tpolicy UUID", field);
-    field+=16;
-
-    for(i=0; i<5; i++, field+=4) {
-        *(uint32_t*)field = ntohl(*(uint32_t*)field);
-    }
-
-    printf("\tuser id: %u\t web application id: %u\n",
-                event.user_id, event.web_application_id);
-
-    printf("\tclient application id: %u\tapplication protocol id%u\tpolicy engine rule id: %u\n",
-            event.client_application_id, event.application_protocol_id, event.policyengine_rule_id);
-
-    print_uuid("\tpolicy engine policy uuid", field);
-    field+=16;
-
-    print_uuid("\tinterface ingress uuid", field);
-    field+=16;
-
-    print_uuid("\tinterface engress uuid", field);
-    field+=16;
-
-    print_uuid("\tsecurity zone ingress uuid", field);
-    field+=16;
-
-    print_uuid("\tsecurity zone egress uuid", field);
-
-}
-
 #define LOG_CHARS 16
 
 static void LogBuffer (const uint8_t* p, unsigned n)
@@ -780,8 +626,6 @@ int u2dump(char *file) {
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6) event6_dump(&record);
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6_VLAN) event2_6_dump(&record);
         else if(record.type == UNIFIED2_EXTRA_DATA) extradata_dump(&record);
-        else if(record.type == UNIFIED2_IDS_EVENT_NG) eventng_dump(&record);
-        else if(record.type == UNIFIED2_IDS_EVENT_IPV6_NG) eventng_6_dump(&record);
     }
 
     free_iterator(it);

@@ -32,6 +32,7 @@
 
 typedef struct _shmemInstance {
     int             active; 
+    int             goInactive; 
     uint32_t        version;
     time_t          updateTime;
     int             activeSegment;
@@ -66,8 +67,9 @@ int   InitShmemWriter(uint32_t instance_num, int dataset, int group_id, int numa
 int   LoadSharedMemDataSegmentForWriter(int startup);
 void  SwitchToActiveSegment(int segment_num,void*** data_ptr);
 void  UnmapInactiveSegments(void);
-int   ManageUnusedSegments(void);
+void  ManageUnusedSegments(void);
 int   ShutdownSharedMemory(void);
+void ShmemMgmtInfo(char *buf, int bufLen);
 void  PrintShmemMgmtInfo(void);
 
 #endif

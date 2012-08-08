@@ -31,6 +31,7 @@
 #endif
 
 #include "sf_types.h"
+#include "spp_dce2.h"
 #include "dce2_co.h"
 #include "dce2_tcp.h"
 #include "dce2_smb.h"
@@ -49,25 +50,12 @@
  * Macros
  ********************************************************************/
 #define DCE2_FRAG__MIN_ALLOC_SIZE  50
-#define DCE2_MAX_XMIT_SIZE_FUZZ    10
+#define DCE2_MAX_XMIT_SIZE_FUZZ    500
 
 /********************************************************************
  * Global variables
  ********************************************************************/
 static int co_reassembled = 0;
-
-/********************************************************************
- * Extern variables
- ********************************************************************/
-extern DCE2_Stats dce2_stats;
-extern char *dce2_pdu_types[DCERPC_PDU_TYPE__MAX];
-
-#ifdef PERF_PROFILING
-extern PreprocStats dce2_pstat_co_seg;
-extern PreprocStats dce2_pstat_co_frag;
-extern PreprocStats dce2_pstat_co_reass;
-extern PreprocStats dce2_pstat_co_ctx;
-#endif
 
 /********************************************************************
  * Enumerations
@@ -125,8 +113,8 @@ static void DCE2_CoResponse(DCE2_SsnData *, DCE2_CoTracker *,
                             const DceRpcCoHdr *, const uint8_t *, uint16_t);
 static void DCE2_CoHandleFrag(DCE2_SsnData *, DCE2_CoTracker *,
                               const DceRpcCoHdr *, const uint8_t *, uint16_t);
-static inline DCE2_Ret DCE2_CoHandleSegmentation(
-    DCE2_CoSeg *, const uint8_t *, uint16_t, uint16_t, uint16_t *, int);
+static inline DCE2_Ret DCE2_CoHandleSegmentation(DCE2_CoSeg *, const uint8_t *,
+        uint16_t, uint16_t, uint16_t *);
 static void DCE2_CoReassemble(DCE2_SsnData *, DCE2_CoTracker *, DCE2_CoRpktType);
 static inline void DCE2_CoFragReassemble(DCE2_SsnData *, DCE2_CoTracker *);
 static inline void DCE2_CoSegReassemble(DCE2_SsnData *, DCE2_CoTracker *);
@@ -138,9 +126,7 @@ static inline void DCE2_CoSetRopts(DCE2_SsnData *, DCE2_CoTracker *, const DceRp
 static inline void DCE2_CoSetRdata(DCE2_SsnData *, DCE2_CoTracker *, uint8_t *, uint16_t);
 static inline void DCE2_CoResetFragTracker(DCE2_CoFragTracker *);
 static inline void DCE2_CoResetTracker(DCE2_CoTracker *);
-static inline void DCE2_CoResetForMissedPkts(DCE2_CoTracker *);
 static inline DCE2_Ret DCE2_CoInitCtxStorage(DCE2_CoTracker *);
-static inline int DCE2_CoAutodetect(const uint8_t *, uint16_t);
 static inline void DCE2_CoEraseCtxIds(DCE2_CoTracker *);
 static inline void DCE2_CoSegAlert(DCE2_SsnData *, DCE2_CoTracker *, DCE2_Event);
 static inline SFSnortPacket * DCE2_CoGetSegRpkt(DCE2_SsnData *, const uint8_t *, uint32_t);
@@ -241,12 +227,10 @@ static inline void DCE2_CoSetRdata(DCE2_SsnData *sd, DCE2_CoTracker *cot,
  * Function: DCE2_CoProcess()
  *
  * Main entry point for connection-oriented DCE/RPC processing.
- * It attempts to handle missed packets and overlapped bytes,
- * i.e. bytes we've already seen and processed.  Since there can
- * be more than one DCE/RPC pdu in the packet, it loops through
- * the packet data until none is left.  It handles transport layer
- * segmentation and buffers data until it gets the full pdu, then
- * hands off to pdu processing.
+ * Since there can be more than one DCE/RPC pdu in the packet, it
+ * loops through the packet data until none is left.  It handles
+ * transport layer segmentation and buffers data until it gets the
+ * full pdu, then hands off to pdu processing.
  *
  * Arguments:
  *  DCE2_SsnData *
@@ -271,26 +255,6 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     dce2_stats.co_pdus++;
     co_reassembled = 0;
 
-    /* Check to see if we've missed packets */
-    if (DCE2_SsnMissedPkts(sd) || cot->missed_pkts)
-    {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO missed pkts ...\n"));
-
-        DCE2_CoResetForMissedPkts(cot);
-
-        /* If we don't autodetect, consider this another missed packet */
-        if (!DCE2_CoAutodetect(data_ptr, data_len))
-        {
-            cot->missed_pkts = 1;
-            return;
-        }
-
-        /* Reset tracker missed packets, since we've just
-         * dealt with it */
-        cot->missed_pkts = 0;
-        DCE2_SsnClearMissedPkts(sd);
-    }
-
     while (data_len > 0)
     {
         num_frags++;
@@ -307,9 +271,10 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             /* Not enough data left for a header.  Buffer it and return */
             if (data_len < sizeof(DceRpcCoHdr))
             {
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Not enough data in packet for CO header.\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO,
+                            "Not enough data in packet for DCE/RPC Connection-oriented header.\n"));
 
-                DCE2_CoHandleSegmentation(seg, data_ptr, data_len, sizeof(DceRpcCoHdr), &data_used, 1);
+                DCE2_CoHandleSegmentation(seg, data_ptr, data_len, sizeof(DceRpcCoHdr), &data_used);
 
                 /* Just break out of loop in case early detect is enabled */
                 break;
@@ -323,12 +288,13 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             /* Not enough data left for the pdu. */
             if (data_len < frag_len)
             {
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Not enough data in packet for fragment length.\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO,
+                            "Not enough data in packet for fragment length: %u\n", frag_len));
 
                 /* Set frag length so we don't have to check it again in seg code */
                 seg->frag_len = frag_len;
 
-                DCE2_CoHandleSegmentation(seg, data_ptr, data_len, frag_len, &data_used, 1);
+                DCE2_CoHandleSegmentation(seg, data_ptr, data_len, frag_len, &data_used);
                 break;
             }
 
@@ -348,8 +314,7 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
         }
         else  /* We've already buffered data */
         {
-            uint16_t data_used;
-            int append = 0;
+            uint16_t data_used = 0;
 
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Segmentation buffer has %u bytes\n",
                            DCE2_BufferLength(seg->buf)));
@@ -357,8 +322,7 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             /* Need more data to get header */
             if (DCE2_BufferLength(seg->buf) < sizeof(DceRpcCoHdr))
             {
-                append = 1;
-                status = DCE2_CoHandleSegmentation(seg, data_ptr, data_len, sizeof(DceRpcCoHdr), &data_used, append);
+                status = DCE2_CoHandleSegmentation(seg, data_ptr, data_len, sizeof(DceRpcCoHdr), &data_used);
 
                 /* Still not enough for header */
                 if (status != DCE2_RET__SUCCESS)
@@ -369,21 +333,20 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 
                 if (DCE2_CoHdrChecks(sd, cot, (DceRpcCoHdr *)DCE2_BufferData(seg->buf)) != DCE2_RET__SUCCESS)
                 {
-                	int data_back;
-                	DCE2_BufferEmpty(seg->buf);
-                	/* Move back to original packet header */
-                	data_back = -data_used;
-                	DCE2_MOVE(data_ptr, data_len, data_back);
-                	/*Check the original packet*/
-                	if (DCE2_CoHdrChecks(sd, cot, (DceRpcCoHdr *)data_ptr) != DCE2_RET__SUCCESS)
-                		return;
-                	else
-                	{
-                	   /*Only use the original packet, ignore the data in seg_buffer*/
-                		num_frags = 0;
-                		continue;
-                	}
-
+                    int data_back;
+                    DCE2_BufferEmpty(seg->buf);
+                    /* Move back to original packet header */
+                    data_back = -data_used;
+                    DCE2_MOVE(data_ptr, data_len, data_back);
+                    /*Check the original packet*/
+                    if (DCE2_CoHdrChecks(sd, cot, (DceRpcCoHdr *)data_ptr) != DCE2_RET__SUCCESS)
+                        return;
+                    else
+                    {
+                        /*Only use the original packet, ignore the data in seg_buffer*/
+                        num_frags = 0;
+                        continue;
+                    }
                 }
 
                 seg->frag_len = DceRpcCoFragLen((DceRpcCoHdr *)DCE2_BufferData(seg->buf));
@@ -392,7 +355,7 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             /* Need more data for full pdu */
             if (DCE2_BufferLength(seg->buf) < seg->frag_len)
             {
-                status = DCE2_CoHandleSegmentation(seg, data_ptr, data_len, seg->frag_len, &data_used, append);
+                status = DCE2_CoHandleSegmentation(seg, data_ptr, data_len, seg->frag_len, &data_used);
 
                 /* Still not enough */
                 if (status != DCE2_RET__SUCCESS)
@@ -438,8 +401,6 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
  *      Pointer to basically a return value for the amount of
  *      data in the packet that was actually used for
  *      desegmentation.
- *  int
- *      bool is true if we must append.
  *
  * Returns:
  *  DCE2_Ret
@@ -452,14 +413,12 @@ void DCE2_CoProcess(DCE2_SsnData *sd, DCE2_CoTracker *cot,
  *          i.e. the need length was met.
  *
  ********************************************************************/
-static inline DCE2_Ret DCE2_CoHandleSegmentation(
-    DCE2_CoSeg *seg, const uint8_t *data_ptr,
-    uint16_t data_len, uint16_t need_len,
-    uint16_t *data_used, int append)
+static inline DCE2_Ret DCE2_CoHandleSegmentation(DCE2_CoSeg *seg,
+        const uint8_t *data_ptr, uint16_t data_len, uint16_t need_len,
+        uint16_t *data_used)
 {
     DCE2_Ret status;
     PROFILE_VARS;
-    uint32_t offset;
 
     PREPROC_PROFILE_START(dce2_pstat_co_seg);
 
@@ -484,10 +443,8 @@ static inline DCE2_Ret DCE2_CoHandleSegmentation(
         DCE2_BufferSetMinAllocSize(seg->buf, need_len);
     }
 
-    offset = DCE2_GetWriteOffset(need_len, append);
-
-    status = DCE2_HandleSegmentation(
-        seg->buf, data_ptr, data_len, offset, need_len, data_used);
+    status = DCE2_HandleSegmentation(seg->buf,
+            data_ptr, data_len, need_len, data_used);
 
     PREPROC_PROFILE_END(dce2_pstat_co_seg);
 
@@ -584,9 +541,9 @@ static DCE2_Ret DCE2_CoHdrChecks(DCE2_SsnData *sd, DCE2_CoTracker *cot, const Dc
                 DCE2_Alert(sd, DCE2_EVENT__CO_FRAG_GT_MAX_XMIT_FRAG, dce2_pdu_types[pdu_type],
                            frag_len, cot->max_xmit_frag);
         }
-        else if (!DceRpcCoLastFrag(co_hdr) &&
-                 (pdu_type == DCERPC_PDU_TYPE__REQUEST) &&
-                 ((int)frag_len < ((int)cot->max_xmit_frag - DCE2_MAX_XMIT_SIZE_FUZZ)))
+        else if (!DceRpcCoLastFrag(co_hdr) && (pdu_type == DCERPC_PDU_TYPE__REQUEST)
+                && ((((int)cot->max_xmit_frag - DCE2_MAX_XMIT_SIZE_FUZZ) < 0)
+                    || ((int)frag_len < ((int)cot->max_xmit_frag - DCE2_MAX_XMIT_SIZE_FUZZ))))
         {
             /* If client needs to fragment the DCE/RPC request, it shouldn't be less than the
              * maximum xmit size negotiated. Only if it's not a last fragment. Make this alert
@@ -637,13 +594,15 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
      * start of the pdu */
     DCE2_MOVE(frag_ptr, frag_len, sizeof(DceRpcCoHdr));
 
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "PDU type: "));
+
     /* Client specific pdu types - some overlap with server */
     if (DCE2_SsnFromClient(sd->wire_pkt))
     {
         switch (pdu_type)
         {
             case DCERPC_PDU_TYPE__BIND:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Bind\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Bind\n"));
                 dce2_stats.co_bind++;
 
                 /* Make sure context id list and queue are initialized */
@@ -655,7 +614,7 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__ALTER_CONTEXT:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Alter Context\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Alter Context\n"));
                 dce2_stats.co_alter_ctx++;
 
                 if (DCE2_CoInitCtxStorage(cot) != DCE2_RET__SUCCESS)
@@ -666,7 +625,7 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__REQUEST:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Request\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Request\n"));
                 dce2_stats.co_request++;
 
                 if (DCE2_ListIsEmpty(cot->ctx_ids) &&
@@ -680,27 +639,27 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__AUTH3:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Auth3\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Auth3\n"));
                 dce2_stats.co_auth3++;
                 break;
 
             case DCERPC_PDU_TYPE__CO_CANCEL:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Cancel\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Cancel\n"));
                 dce2_stats.co_cancel++;
                 break;
 
             case DCERPC_PDU_TYPE__ORPHANED:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Orphaned\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Orphaned\n"));
                 dce2_stats.co_orphaned++;
                 break;
 
             case DCERPC_PDU_TYPE__MICROSOFT_PROPRIETARY_OUTLOOK2003_RPC_OVER_HTTP:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Microsoft unknown pdu type\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Microsoft Request To Send RPC over HTTP\n"));
                 dce2_stats.co_ms_pdu++;
                 break;
 
             default:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Unknown request pdu type: 0x%02x\n", pdu_type));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Unknown (0x%02x)\n", pdu_type));
                 dce2_stats.co_other_req++;
                 break;
         }
@@ -713,12 +672,12 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             case DCERPC_PDU_TYPE__ALTER_CONTEXT_RESP:
                 if (pdu_type == DCERPC_PDU_TYPE__BIND_ACK)
                 {
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Bind Ack\n"));
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Bind Ack\n"));
                     dce2_stats.co_bind_ack++;
                 }
                 else
                 {
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Alter Context Response\n"));
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Alter Context Response\n"));
                     dce2_stats.co_alter_ctx_resp++;
                 }
 
@@ -735,11 +694,11 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__BIND_NACK:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Bind Nack\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Bind Nack\n"));
                 dce2_stats.co_bind_nack++;
 
                 /* Bind nack in Windows seems to blow any previous context away */
-                switch (DCE2_ScPolicy(sd->sconfig))
+                switch (DCE2_SsnGetServerPolicy(sd))
                 {
                     case DCE2_POLICY__WIN2000:
                     case DCE2_POLICY__WIN2003:
@@ -759,31 +718,31 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__RESPONSE:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Response\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Response\n"));
                 dce2_stats.co_response++;
                 DCE2_CoResponse(sd, cot, co_hdr, frag_ptr, frag_len);
                 break;
 
             case DCERPC_PDU_TYPE__FAULT:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Fault\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Fault\n"));
                 dce2_stats.co_fault++;
 
                 /* Clear out the client side */
                 DCE2_QueueEmpty(cot->pending_ctx_ids);
                 DCE2_BufferEmpty(cot->cli_seg.buf);
-                DCE2_BufferEmpty(cot->frag_tracker.cli_frag_buf);
+                DCE2_BufferEmpty(cot->frag_tracker.cli_stub_buf);
 
                 DCE2_CoResetTracker(cot);
 
                 break;
 
             case DCERPC_PDU_TYPE__SHUTDOWN:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Shutdown\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Shutdown\n"));
                 dce2_stats.co_shutdown++;
                 break;
 
             case DCERPC_PDU_TYPE__REJECT:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Reject\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Reject\n"));
                 dce2_stats.co_reject++;
 
                 DCE2_QueueEmpty(cot->pending_ctx_ids);
@@ -791,12 +750,12 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 break;
 
             case DCERPC_PDU_TYPE__MICROSOFT_PROPRIETARY_OUTLOOK2003_RPC_OVER_HTTP:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Microsoft Exchange/Outlook 2003 pdu type\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Microsoft Request To Send RPC over HTTP\n"));
                 dce2_stats.co_ms_pdu++;
                 break;
 
             default:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "CO Unknown response pdu type: 0x%02x\n", pdu_type));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Unknown (0x%02x)\n", pdu_type));
                 dce2_stats.co_other_resp++;
                 break;
         }
@@ -830,7 +789,7 @@ static void DCE2_CoDecode(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 static void DCE2_CoBind(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                         const DceRpcCoHdr *co_hdr, const uint8_t *frag_ptr, uint16_t frag_len)
 {
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
     DceRpcCoBind *bind = (DceRpcCoBind *)frag_ptr;
 
     if (frag_len < sizeof(DceRpcCoBind))
@@ -882,7 +841,7 @@ static void DCE2_CoBind(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             return;
     }
 
-    cot->max_xmit_frag = DceRpcCoBindMaxXmitFrag(co_hdr, bind);
+    cot->max_xmit_frag = (int)DceRpcCoBindMaxXmitFrag(co_hdr, bind);
     DCE2_CoCtxReq(sd, cot, co_hdr, DceRpcCoNumCtxItems(bind), frag_ptr, frag_len);
 }
 
@@ -913,7 +872,7 @@ static void DCE2_CoBind(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 static void DCE2_CoAlterCtx(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                             const DceRpcCoHdr *co_hdr, const uint8_t *frag_ptr, uint16_t frag_len)
 {
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
     DceRpcCoAltCtx *alt_ctx = (DceRpcCoAltCtx *)frag_ptr;
 
     if (frag_len < sizeof(DceRpcCoAltCtx))
@@ -996,7 +955,7 @@ static void DCE2_CoAlterCtx(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 static void DCE2_CoCtxReq(DCE2_SsnData *sd, DCE2_CoTracker *cot, const DceRpcCoHdr *co_hdr,
                           const uint8_t num_ctx_items, const uint8_t *frag_ptr, uint16_t frag_len)
 {
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
     unsigned int i;
     DCE2_Ret status;
 
@@ -1093,10 +1052,10 @@ static void DCE2_CoCtxReq(DCE2_SsnData *sd, DCE2_CoTracker *cot, const DceRpcCoH
         PREPROC_PROFILE_END(dce2_pstat_co_ctx);
 
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Added Context item to queue.\n"
-                       "Context id: %u\n"
-                       "Interface: %s\n"
-                       "Interface major version: %u\n"
-                       "Interface minor version: %u\n",
+                       " Context id: %u\n"
+                       " Interface: %s\n"
+                       " Interface major version: %u\n"
+                       " Interface minor version: %u\n",
                        ctx_node->ctx_id,
                        DCE2_UuidToStr(&ctx_node->iface, DCERPC_BO_FLAG__NONE),
                        ctx_node->iface_vers_maj, ctx_node->iface_vers_min));
@@ -1145,7 +1104,7 @@ static void DCE2_CoCtxReq(DCE2_SsnData *sd, DCE2_CoTracker *cot, const DceRpcCoH
 static void DCE2_CoBindAck(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                            const DceRpcCoHdr *co_hdr, const uint8_t *frag_ptr, uint16_t frag_len)
 {
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
     DceRpcCoBindAck *bind_ack = (DceRpcCoBindAck *)frag_ptr;
     uint16_t sec_addr_len;
     const uint8_t *ctx_data;
@@ -1169,14 +1128,12 @@ static void DCE2_CoBindAck(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     /* Set what should be the maximum amount of data a client can send in a fragment */
     max_recv_frag = DceRpcCoBindAckMaxRecvFrag(co_hdr, bind_ack);
     if ((cot->max_xmit_frag == DCE2_SENTINEL) || (max_recv_frag < cot->max_xmit_frag))
-        cot->max_xmit_frag = max_recv_frag;
+        cot->max_xmit_frag = (int)max_recv_frag;
 
     sec_addr_len = DceRpcCoSecAddrLen(co_hdr, bind_ack);
 
     ctx_data = frag_ptr;
     ctx_len = frag_len;
-
-    DCE2_MOVE(frag_ptr, frag_len, frag_len);
 
     /* First move past secondary address */
     if (ctx_len < sec_addr_len)
@@ -1250,11 +1207,11 @@ static void DCE2_CoBindAck(DCE2_SsnData *sd, DCE2_CoTracker *cot,
             return;
         }
 
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Adding ctx node to context id list.\n"
-                       "Context id: %u\n"
-                       "Interface: %s\n"
-                       "Interface major version: %u\n"
-                       "Interface minor version: %u\n",
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "Adding Context item to context item list.\n"
+                       " Context id: %u\n"
+                       " Interface: %s\n"
+                       " Interface major version: %u\n"
+                       " Interface minor version: %u\n",
                        ctx_node->ctx_id,
                        DCE2_UuidToStr(&ctx_node->iface, DCERPC_BO_FLAG__NONE),
                        ctx_node->iface_vers_maj, ctx_node->iface_vers_min));
@@ -1330,8 +1287,7 @@ static void DCE2_CoBindAck(DCE2_SsnData *sd, DCE2_CoTracker *cot,
                 /* Hit memcap */
                 DCE2_Free((void *)ctx_node, sizeof(DCE2_CoCtxIdNode), DCE2_MEM_TYPE__CO_CTX);
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO,
-                            "%s(%d) Failed to add context id node to list.",
-                            __FILE__, __LINE__));
+                            "Failed to add context id node to list.\n"));
                 PREPROC_PROFILE_END(dce2_pstat_co_ctx);
                 return;
             }
@@ -1372,7 +1328,7 @@ static void DCE2_CoRequest(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 {
     DceRpcCoRequest *rhdr = (DceRpcCoRequest *)frag_ptr;
     uint16_t req_size = sizeof(DceRpcCoRequest);
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
 
     /* Account for possible object uuid */
     if (DceRpcCoObjectFlag(co_hdr))
@@ -1407,13 +1363,11 @@ static void DCE2_CoRequest(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     DCE2_MOVE(frag_ptr, frag_len, req_size);
 
     /* If for some reason we had some fragments queued */
-    if (
-        DceRpcCoFirstFrag(co_hdr) &&
-       !DceRpcCoLastFrag(co_hdr) &&
-       !DCE2_BufferIsEmpty(cot->frag_tracker.cli_frag_buf))
+    if (DceRpcCoFirstFrag(co_hdr) && !DceRpcCoLastFrag(co_hdr)
+            && !DCE2_BufferIsEmpty(cot->frag_tracker.cli_stub_buf))
     {
         DCE2_CoFragReassemble(sd, cot);
-        DCE2_BufferEmpty(cot->frag_tracker.cli_frag_buf);
+        DCE2_BufferEmpty(cot->frag_tracker.cli_stub_buf);
         DCE2_CoResetFragTracker(&cot->frag_tracker);
     }
 
@@ -1448,7 +1402,7 @@ static void DCE2_CoRequest(DCE2_SsnData *sd, DCE2_CoTracker *cot,
         if (auth_len == -1)
             return;
 
-        if (DCE2_BufferIsEmpty(ft->cli_frag_buf))
+        if (DCE2_BufferIsEmpty(ft->cli_stub_buf))
         {
             ft->expected_opnum = cot->opnum;
             ft->expected_ctx_id = cot->ctx_id;
@@ -1567,8 +1521,7 @@ static void DCE2_CoRequest(DCE2_SsnData *sd, DCE2_CoTracker *cot,
  * Samba responds to SMB bind write, request write before read with
  * a response to the request and doesn't send a bind ack.  Get the
  * context id from the pending context id list and put in stable
- * list.  Otherwise the bind ack might have been missed.  Might as
- * well just move items from pending queue to list.
+ * list.
  *
  * Arguments:
  *  DCE2_SsnData *
@@ -1591,7 +1544,7 @@ static void DCE2_CoResponse(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 {
     DceRpcCoResponse *rhdr = (DceRpcCoResponse *)frag_ptr;
     uint16_t ctx_id;
-    DCE2_Policy policy = DCE2_ScPolicy(sd->sconfig);
+    DCE2_Policy policy = DCE2_SsnGetServerPolicy(sd);
 
     if (frag_len < sizeof(DceRpcCoResponse))
     {
@@ -1650,10 +1603,10 @@ static void DCE2_CoResponse(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     DCE2_MOVE(frag_ptr, frag_len, sizeof(DceRpcCoResponse));
 
     /* If for some reason we had some fragments queued */
-    if (DceRpcCoFirstFrag(co_hdr) && !DCE2_BufferIsEmpty(cot->frag_tracker.srv_frag_buf))
+    if (DceRpcCoFirstFrag(co_hdr) && !DCE2_BufferIsEmpty(cot->frag_tracker.srv_stub_buf))
     {
         DCE2_CoFragReassemble(sd, cot);
-        DCE2_BufferEmpty(cot->frag_tracker.srv_frag_buf);
+        DCE2_BufferEmpty(cot->frag_tracker.srv_stub_buf);
         DCE2_CoResetFragTracker(&cot->frag_tracker);
     }
 
@@ -1664,15 +1617,20 @@ static void DCE2_CoResponse(DCE2_SsnData *sd, DCE2_CoTracker *cot,
 
     if (DceRpcCoFirstFrag(co_hdr) && DceRpcCoLastFrag(co_hdr))
     {
+        int auth_len = DCE2_CoGetAuthLen(sd, co_hdr, frag_ptr, frag_len);
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__CO, "First and last fragment.\n"));
+        if (auth_len == -1)
+            return;
         DCE2_CoSetRopts(sd, cot, co_hdr);
     }
     else
     {
         //DCE2_CoFragTracker *ft = &cot->frag_tracker;
-        uint16_t auth_len = DceRpcCoAuthLen(co_hdr);
+        int auth_len = DCE2_CoGetAuthLen(sd, co_hdr, frag_ptr, frag_len);
 
         dce2_stats.co_resp_fragments++;
+        if (auth_len == -1)
+            return;
 
 #if 0
         /* TBD - Target based foo */
@@ -1699,38 +1657,14 @@ static void DCE2_CoResponse(DCE2_SsnData *sd, DCE2_CoTracker *cot,
         }
 #endif
 
-        /* Don't want to include authentication data in fragment */
-        if (auth_len != 0)
-        {
-            DceRpcCoAuthVerifier *auth_hdr;
-
-            auth_len += sizeof(DceRpcCoAuthVerifier);
-
-            /* This means the auth len was bogus */
-            if (auth_len > frag_len)
-            {
-                DCE2_Alert(sd, DCE2_EVENT__CO_FLEN_LT_SIZE, dce2_pdu_types[DceRpcCoPduType(co_hdr)],
-                           frag_len, auth_len);
-                return;
-            }
-
-            auth_hdr = (DceRpcCoAuthVerifier *)(frag_ptr + (frag_len - auth_len));
-            auth_len += DceRpcCoAuthPad(auth_hdr);
-
-            /* This means the auth pad len was bogus */
-            if (auth_len > frag_len)
-            {
-                DCE2_Alert(sd, DCE2_EVENT__CO_FLEN_LT_SIZE, dce2_pdu_types[DceRpcCoPduType(co_hdr)],
-                           frag_len, auth_len);
-                return;
-            }
-        }
-
         DCE2_CoSetRopts(sd, cot, co_hdr);
 
         /* If we're configured to do defragmentation */
         if (DCE2_GcDceDefrag())
-            DCE2_CoHandleFrag(sd, cot, co_hdr, frag_ptr, (uint16_t)(frag_len - auth_len));
+        {
+            DCE2_CoHandleFrag(sd, cot, co_hdr, frag_ptr,
+                    (uint16_t)(frag_len - (uint16_t)auth_len));
+        }
     }
 }
 
@@ -1790,15 +1724,15 @@ static void DCE2_CoHandleFrag(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     {
         if (DCE2_SsnFromServer(sd->wire_pkt))
         {
-            cot->frag_tracker.srv_frag_buf =
+            cot->frag_tracker.srv_stub_buf =
                 DCE2_BufferNew(size, DCE2_FRAG__MIN_ALLOC_SIZE, DCE2_MEM_TYPE__CO_FRAG);
-            frag_buf = cot->frag_tracker.srv_frag_buf;
+            frag_buf = cot->frag_tracker.srv_stub_buf;
         }
         else
         {
-            cot->frag_tracker.cli_frag_buf =
+            cot->frag_tracker.cli_stub_buf =
                 DCE2_BufferNew(size, DCE2_FRAG__MIN_ALLOC_SIZE, DCE2_MEM_TYPE__CO_FRAG);
-            frag_buf = cot->frag_tracker.cli_frag_buf;
+            frag_buf = cot->frag_tracker.cli_stub_buf;
         }
 
         if (frag_buf == NULL)
@@ -1811,7 +1745,10 @@ static void DCE2_CoHandleFrag(DCE2_SsnData *sd, DCE2_CoTracker *cot,
     /* If there's already data in the buffer and this is a first frag
      * we probably missed packets */
     if (DceRpcCoFirstFrag(co_hdr) && !DCE2_BufferIsEmpty(frag_buf))
+    {
+        DCE2_CoResetFragTracker(&cot->frag_tracker);
         DCE2_BufferEmpty(frag_buf);
+    }
 
     /* Check for potential overflow */
     if (sd->trans == DCE2_TRANS_TYPE__SMB)
@@ -1833,7 +1770,8 @@ static void DCE2_CoHandleFrag(DCE2_SsnData *sd, DCE2_CoTracker *cot,
         if (DceRpcCoLastFrag(co_hdr) || (DCE2_BufferLength(frag_buf) == max_frag_data))
             mflag = DCE2_BUFFER_MIN_ADD_FLAG__IGNORE;
 
-        status = DCE2_BufferAddData(frag_buf, frag_ptr, frag_len, 0, mflag);
+        status = DCE2_BufferAddData(frag_buf, frag_ptr,
+                frag_len, DCE2_BufferLength(frag_buf), mflag);
 
         if (status != DCE2_RET__SUCCESS)
         {
@@ -2251,32 +2189,6 @@ static inline void DCE2_CoResetTracker(DCE2_CoTracker *cot)
 }
 
 /********************************************************************
- * Function: DCE2_CoResetForMissedPkts()
- *
- * Resets state of the tracker for when we've missed packets.
- *
- * Arguments:
- *  DCE2_CoTracker *
- *      Pointer to the relevant connection-oriented tracker.
- *  SFSnortPacket *
- *      Pointer to the wire packet.
- *
- * Returns: None
- *
- ********************************************************************/
-static inline void DCE2_CoResetForMissedPkts(DCE2_CoTracker *cot)
-{
-    if (cot == NULL)
-        return;
-
-    DCE2_BufferEmpty(cot->cli_seg.buf);
-    DCE2_BufferEmpty(cot->srv_seg.buf);
-    DCE2_BufferEmpty(cot->frag_tracker.srv_frag_buf);
-    DCE2_BufferEmpty(cot->frag_tracker.cli_frag_buf);
-    DCE2_CoResetTracker(cot);
-}
-
-/********************************************************************
  * Function: DCE2_CoCleanTracker()
  *
  * Destroys all dynamically allocated data associated with
@@ -2294,11 +2206,11 @@ void DCE2_CoCleanTracker(DCE2_CoTracker *cot)
     if (cot == NULL)
         return;
 
-    DCE2_BufferDestroy(cot->frag_tracker.cli_frag_buf);
-    cot->frag_tracker.cli_frag_buf = NULL;
+    DCE2_BufferDestroy(cot->frag_tracker.cli_stub_buf);
+    cot->frag_tracker.cli_stub_buf = NULL;
 
-    DCE2_BufferDestroy(cot->frag_tracker.srv_frag_buf);
-    cot->frag_tracker.srv_frag_buf = NULL;
+    DCE2_BufferDestroy(cot->frag_tracker.srv_stub_buf);
+    cot->frag_tracker.srv_stub_buf = NULL;
 
     DCE2_BufferDestroy(cot->cli_seg.buf);
     cot->cli_seg.buf = NULL;
@@ -2313,43 +2225,6 @@ void DCE2_CoCleanTracker(DCE2_CoTracker *cot)
     cot->pending_ctx_ids = NULL;
 
     DCE2_CoInitTracker(cot);
-}
-
-/********************************************************************
- * Function: DCE2_CoAutodetect()
- *
- * This function is used to affirm, after missing packets, that we
- * are starting at the beginning a DCE/RPC header so we decoding
- * can continue without false positives.  If we're not starting
- * at the beginning of the header, we can't decode it.
- *
- * Arguments:
- *  const uint8_t *
- *      Pointer to the current position in the packet data.
- *  uint16_t
- *      Remaining length of the packet data.
- *
- * Returns:
- *  int
- *      1 if successfully autodetected
- *      0 if unsuccessful
- *
- ********************************************************************/
-static inline int DCE2_CoAutodetect(const uint8_t *data_ptr, uint16_t data_len)
-{
-    if (data_len >= sizeof(DceRpcCoHdr))
-    {
-        DceRpcCoHdr *co_hdr = (DceRpcCoHdr *)data_ptr;
-
-        if ((DceRpcCoVersMaj(co_hdr) == DCERPC_PROTO_MAJOR_VERS__5) &&
-            (DceRpcCoVersMin(co_hdr) == DCERPC_PROTO_MINOR_VERS__0) &&
-            (DceRpcCoPduType(co_hdr) < DCERPC_PDU_TYPE__MAX))
-        {
-            return 1;
-        }
-    }
-
-    return 0;
 }
 
 /********************************************************************
@@ -3172,9 +3047,9 @@ static inline DCE2_CoSeg * DCE2_CoGetSegPtr(DCE2_SsnData *sd, DCE2_CoTracker *co
 static inline DCE2_Buffer * DCE2_CoGetFragBuf(DCE2_SsnData *sd, DCE2_CoFragTracker *ft)
 {
     if (DCE2_SsnFromServer(sd->wire_pkt))
-        return ft->srv_frag_buf;
+        return ft->srv_stub_buf;
 
-    return ft->cli_frag_buf;
+    return ft->cli_stub_buf;
 }
 
 static int DCE2_CoGetAuthLen(DCE2_SsnData *sd, const DceRpcCoHdr *co_hdr,

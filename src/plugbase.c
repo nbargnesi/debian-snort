@@ -107,7 +107,6 @@
 /* built-in output plugins */
 #include "output-plugins/spo_alert_syslog.h"
 #include "output-plugins/spo_log_tcpdump.h"
-#include "output-plugins/spo_database.h"
 #include "output-plugins/spo_alert_fast.h"
 #include "output-plugins/spo_alert_full.h"
 #include "output-plugins/spo_alert_unixsock.h"
@@ -116,14 +115,6 @@
 #include "output-plugins/spo_log_null.h"
 #include "output-plugins/spo_log_ascii.h"
 #include "output-plugins/spo_unified2.h"
-
-#ifdef ARUBA
-#include "output-plugins/spo_alert_arubaaction.h"
-#endif
-
-#ifdef HAVE_LIBPRELUDE
-#include "output-plugins/spo_alert_prelude.h"
-#endif
 
 #ifdef LINUX
 #include "output-plugins/spo_alert_sf_socket.h"
@@ -1493,7 +1484,6 @@ void RegisterOutputPlugins(void)
 
     AlertSyslogSetup();
     LogTcpdumpSetup();
-    DatabaseSetup();
     AlertFastSetup();
     AlertFullSetup();
 #ifndef WIN32
@@ -1506,17 +1496,9 @@ void RegisterOutputPlugins(void)
     Unified2Setup();
     LogAsciiSetup();
 
-#ifdef ARUBA
-    AlertArubaActionSetup();
-#endif
-
 #ifdef LINUX
     /* This uses linux only capabilities */
     AlertSFSocket_Setup();
-#endif
-
-#ifdef HAVE_LIBPRELUDE
-    AlertPreludeSetup();
 #endif
 
     AlertTestSetup();
@@ -1571,6 +1553,41 @@ void RegisterOutputPlugin(char *keyword, int type_flags, OutputConfigFunc oc_fun
     node->keyword = SnortStrdup(keyword);
     node->config_func = oc_func;
     node->output_type_flags = type_flags;
+}
+
+void RemoveOutputPlugin(char *keyword)
+{
+    OutputConfigFuncNode *head = output_config_funcs;
+
+    if (!head ||(keyword == NULL))
+        return;
+
+    /*If head node, remove head*/
+    if (strcasecmp(head->keyword, keyword) == 0)
+    {
+        output_config_funcs = head->next;
+        if (head->keyword != NULL)
+            free(head->keyword);
+        free(head);
+        return;
+    }
+
+    while (head->next != NULL)
+    {
+        OutputConfigFuncNode *next;
+        next = head->next;
+        if (strcasecmp(next->keyword, keyword) == 0)
+        {
+            head->next = next->next;
+            if (next->keyword != NULL)
+                free(next->keyword);
+            free(next);
+            break;
+        }
+        head = head->next;
+    }
+
+    return;
 }
 
 OutputConfigFunc GetOutputConfigFunc(char *keyword)

@@ -182,7 +182,7 @@ int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *e
 
     while(hi_util_in_bounds(start, end, ptr))
     {
-        if(*ptr == '\n' || *ptr == ' ' || *ptr == '\t')
+        if(*ptr == '\n')
         {
             if(iCheckChunk && iChunkLen != 0)
             {
@@ -254,6 +254,13 @@ int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *e
 
                 if(*ptr == '\n')
                     ptr++;
+
+                if(!hi_util_in_bounds(start, end, ptr))
+                {
+                    if(updated_chunk_remainder)
+                        *updated_chunk_remainder = iChunkLen;
+                    break;
+                }
 
                 iDataLen = end - ptr ;
 
@@ -335,23 +342,21 @@ int CheckChunkEncoding(HI_SESSION *Session, const u_char *start, const u_char *e
                     if(*ptr == '\n')
                         continue;
                 }
-                else if(*ptr == ';')
+                else if(*ptr != '\n')
                 {
                     /*
-                    **  This is where we skip through the chunk name=value
-                    **  field.
-                    */
-                    ptr++;
-
-                    while(hi_util_in_bounds(start, end, ptr))
+                     **  This is where we skip through the chunk name=value
+                     ** field.
+                     */
+                    ptr = memchr(ptr, '\n', (end-ptr));
+                    if(ptr == NULL)
                     {
-                        if(*ptr == '\n')
-                            break;
-
-                        ptr++;
+                        ptr = end;
+                        break;
                     }
+                    else
+                        continue;
 
-                    continue;
                 }
 
                 iCheckChunk = 0;
@@ -2149,8 +2154,8 @@ const u_char *extract_http_content_length(HI_SESSION *Session,
             }
         }
     }
-    if ( header_field_ptr && (header_field_ptr->content_len->cont_len_start) &&
-      (header_field_ptr->content_len->cont_len_end) )
+    if ( header_field_ptr->content_len->cont_len_start &&
+         header_field_ptr->content_len->cont_len_end )
     {
         char *pcEnd;
         uint64_t len;
@@ -2437,7 +2442,12 @@ static inline const u_char *hi_client_extract_header(
                 {
                     p++;
 
-                    if(hi_util_in_bounds(start, end, p) && (*p == '\n'))
+                    if (!hi_util_in_bounds(start, end, p))
+                    {
+                        header_ptr->header.uri_end = p;
+                        return p;
+                    }
+                    else if(*p == '\n')
                     {
                         p++;
                         header_ptr->header.uri_end = p;

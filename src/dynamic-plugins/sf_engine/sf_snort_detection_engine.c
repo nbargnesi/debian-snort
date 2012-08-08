@@ -47,7 +47,7 @@
 #include "sf_snort_detection_engine.h"
 
 #define MAJOR_VERSION   1
-#define MINOR_VERSION   15
+#define MINOR_VERSION   16
 #define BUILD_VERSION   18
 #define DETECT_NAME     "SF_SNORT_DETECTION_ENGINE"
 
@@ -159,9 +159,8 @@ ENGINE_LINKAGE int CheckCompatibility(DynamicPluginMeta* eng, DynamicPluginMeta*
     if ( !eng || !req ) return 1;
     if ( eng->type != req->type ) return 2;
     if ( strcmp(eng->uniqueName, req->uniqueName) ) return 3;
-    if ( eng->major < req->major ) return 4;
-    if ( eng->major > req->major ) return 0;
-    if ( eng->minor < req->minor ) return 5;
+    if ( eng->major != req->major ) return 4;
+    if ( eng->minor != req->minor ) return 5;
     return 0;
 }
 
@@ -856,7 +855,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
             case OPTION_TYPE_FLOWBIT:
                 {
                     FlowBitsInfo *flowbits = option->option_u.flowBit;
-                    flowbits->id = _ded.flowbitRegister(flowbits->flowBitsName, flowbits->operation);
+                    flowbits = (FlowBitsInfo *)_ded.flowbitRegister(flowbits);
                     if (flowbits->operation & FLOWBIT_NOALERT)
                         rule->noAlert = 1;
                 }
@@ -1006,7 +1005,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
                     case OPTION_TYPE_FLOWBIT:
                         {
                             FlowBitsInfo *flowbits = option->option_u.flowBit;
-                            _ded.flowbitUnregister(flowbits->flowBitsName, flowbits->operation);
+                            _ded.flowbitUnregister(flowbits);
                         }
                         break;
 
@@ -1110,7 +1109,17 @@ static void FreeOneRule(void *data)
             case OPTION_TYPE_HDR_CHECK:
             case OPTION_TYPE_BASE64_DECODE:
             case OPTION_TYPE_ASN1:
+                break;
+                
             case OPTION_TYPE_FLOWBIT:
+                {
+                    FlowBitsInfo *flowbits = option->option_u.flowBit;
+                    if (flowbits && flowbits->ids)
+                    {
+                        free(flowbits->ids);
+                        flowbits->ids = NULL;
+                    }
+                }
             case OPTION_TYPE_BYTE_TEST:
             case OPTION_TYPE_BYTE_JUMP:
             case OPTION_TYPE_FILE_DATA:
@@ -1175,6 +1184,9 @@ static int DumpRule(FILE *fp, Rule *rule)
                 case FLOWBIT_SET:
                     fprintf(fp, "set,");
                     break;
+                case FLOWBIT_SETX:
+                    fprintf(fp, "setx,");
+                    break;
                 case FLOWBIT_UNSET:
                     fprintf(fp, "unset,");
                     break;
@@ -1188,11 +1200,11 @@ static int DumpRule(FILE *fp, Rule *rule)
                     fprintf(fp, "toggle,");
                     break;
                 case FLOWBIT_RESET:
-                    fprintf(fp, "reset; ");
+                    fprintf(fp, "reset");
                     print_name = 0;
                     break;
                 case FLOWBIT_NOALERT:
-                    fprintf(fp, "noalert; ");
+                    fprintf(fp, "noalert");
                     print_name = 0;
                     break;
                 default:
@@ -1200,7 +1212,11 @@ static int DumpRule(FILE *fp, Rule *rule)
                     break;
             }
             if (print_name)
-                fprintf(fp, "%s; ", flowbit->flowBitsName);
+                fprintf(fp, "%s", flowbit->flowBitsName);
+            if(flowbit->groupName)
+                fprintf(fp, ",%s; ", flowbit->groupName);
+            else
+                fprintf(fp, "; ");
         }
     }
 

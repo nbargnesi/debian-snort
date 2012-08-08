@@ -187,7 +187,8 @@ Option syntax
     max_frag_len            <max-frag-len>        NO      OFF
     events                  <events>              NO      OFF
     reassemble_threshold    <re-thresh>           NO      OFF
-    disabled                NONE		  NO	  OFF
+    disabled                NONE                  NO      OFF
+    smb_fingerprint_policy  <fp-policy>           NO      OFF
 
     memcap           = 1024-4194303 (kilobytes)
     max-frag-len     = 1514-65535
@@ -196,6 +197,7 @@ Option syntax
     event-list       = event | event ',' event-list
     event            = "memcap" | "smb" | "co" | "cl"
     re-thresh        = 0-65535
+    fp-policy        = "server" | "client" | "both"
 
 Option explanations
     memcap
@@ -204,7 +206,7 @@ Option explanations
         Default is 100 MB.
     disabled
         This optional keyword is allowed with any policy to avoid packet processing. 
-	This option disables the preprocessor. When the preprocessor is disabled
+        This option disables the preprocessor. When the preprocessor is disabled
         only the memcap option is applied when specified with the configuration.
         The other options are parsed but not used. Any valid configuration may have
         "disabled" added to it.
@@ -236,6 +238,13 @@ Option explanations
         potentially catch an exploit early before full defragmentation is done.
         A value of 0 supplied as an argument to this option will, in effect,
         disable this option.  Default is disabled.
+    smb_fingerprint_policy
+        In the initial phase of an SMB session, the client needs to authenticate
+        with a SessionSetupAndX.  Both the request and response to this command
+        contain OS and version information that can allow the preprocessor to
+        dynamically set the policy for a session which allows for better
+        protection against Windows and Samba specific evasions.
+        
 
 Option examples
      memcap 30000
@@ -248,6 +257,8 @@ Option examples
      events [smb, co]
      events [memcap, smb, co, cl]
      reassemble_threshold 500
+     smb_fingerprint_policy both
+     smb_fingerprint_policy client
 
 Configuration examples
      preprocessor dcerpc2
@@ -257,6 +268,8 @@ Configuration examples
                            max_frag_len 14440
      preprocessor dcerpc2: disable_defrag, events [memcap, smb]
      preprocessor dcerpc2: reassemble_threshold 500
+     preprocessor dcerpc2: memcap 50000, events [memcap, smb, co, cl], \
+                           max_frag_len 14440, smb_fingerprint_policy both
 
 Default configuration
      preprocessor dcerpc2: memcap 102400
@@ -573,6 +586,46 @@ SMB events
   26   The preprocessor will alert if it sees any of the invalid SMB shares
        configured. It looks for a Tree Connect or Tree Connect AndX to the
        share.
+  48   The preprocessor will alert if a data count for a Core dialect write
+       command is zero.
+  49   For some of the Core dialect commands such as Write and Read, there are
+       two data count fields, one in the main command header and one in the
+       data format section.  If these aren't the same, the preprocessor will
+       alert.
+  50   In the initial negotiation phase of an SMB session, the server in a
+       Negotiate response and the client in a SessionSetupAndX request will
+       advertise the maximum number of outstanding requests supported.  The
+       preprocessor will alert if the lesser of the two is exceeded.
+  51   When a client sends a request it uses a value called the MID (multiplex
+       id) to match a response, which the server is supposed to echo, to a
+       request.  If there are multiple outstanding requests with the same
+       MID, the preprocessor will alert.
+  52   In the Negotiate request a client gives a list of SMB dialects it
+       supports, normally in order from least desirable to most desirable
+       and the server responds with the index of the dialect to be used on
+       the SMB session.  Anything less than "NT LM 0.12" would be very odd
+       these days (even Windows 98 supports it) and the preprocessor will
+       alert if the client doesn't offer it as a supported dialect or the
+       server chooses a lesser dialect.
+  53   There are a number of commands that are considered deprecated and/or
+       obsolete by Microsoft (see MS-CIFS and MS-SMB).  If the preprocessor
+       detects the use of a deprecated/obsolete command used it will alert.
+  54   There are some commands that can be used that can be considered unusual
+       in the context they are used.  These include some of the transaction
+       commands such as:
+       SMB_COM_TRANSACTION / TRANS_READ_NMPIPE
+       SMB_COM_TRANSACTION / TRANS_WRITE_NMPIPE
+       SMB_COM_TRANSACTION2 / TRANS2_OPEN2
+       SMB_COM_NT_TRANSACT / NT_TRANSACT_CREATE
+       The preprocessor will alert if it detects unusual use of a command.
+  55   Transaction commands have a setup count field that indicates the
+       number of 16bit words in the transaction setup.  The preprocessor
+       will alert if the setup count is invalid for the transaction
+       command / sub command.
+  56   There can be only one Negotiate transaction per session and it is the
+       first thing a client and server do to determine the SMB dialect each
+       supports.  The preprocessor will alert if the client attempts multiple
+       dialect negotiations.
 
 Connection-oriented DCE/RPC events
  SID   Description 

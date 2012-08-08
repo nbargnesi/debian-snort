@@ -783,7 +783,12 @@ static inline void ResetFlushMgrs(void)
 
 void** Stream5GetPAFUserDataTcp (Stream5LWSession* lwssn, bool to_server)
 {
-    TcpSession* tcpssn = (TcpSession *)lwssn->proto_specific_data->data;
+    TcpSession* tcpssn;
+
+    if ( !lwssn->proto_specific_data )
+        return NULL;
+
+    tcpssn = (TcpSession *)lwssn->proto_specific_data->data;
 
     if ( !tcpssn )
         return NULL;
@@ -1363,7 +1368,7 @@ static void Stream5ParseTcpArgs(Stream5TcpConfig *config, char *args, Stream5Tcp
             {
                 if (stoks[1])
                 {
-                    s5TcpPolicy->flush_factor = (uint8_t)SnortStrtoulRange(
+                    s5TcpPolicy->flush_factor = (uint16_t)SnortStrtoulRange(
                         stoks[1], &endPtr, 10, 0, S5_MAX_FLUSH_FACTOR);
                 }
                 if (
@@ -5419,6 +5424,9 @@ static void FinishServerInit(Packet *p, TcpDataBlock *tdb, TcpSession *ssn)
 
     client->r_nxt_ack = tdb->end_seq;
 
+    if ( p->tcph->th_flags & TH_FIN )
+        server->l_nxt_seq--;
+
     STREAM5_DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,
                "seglist_base_seq = %X\n", client->seglist_base_seq););
 
@@ -8487,13 +8495,8 @@ static int ProcessTcp(Stream5LWSession *lwssn, Packet *p, TcpDataBlock *tdb,
 
             case TCP_STATE_LAST_ACK:
                 UpdateSsn(p, listener, talker, tdb);
-                // FIXTHIS this special case should be eliminated
-                if ( lwssn->session_flags & SSNFLAG_MIDSTREAM )
-                {
-                    if ( SEQ_EQ(tdb->ack+1, listener->l_nxt_seq) )
-                        listener->s_mgr.state = TCP_STATE_CLOSED;
-                }
-                else if ( SEQ_EQ(tdb->ack, listener->l_nxt_seq) )
+
+                if ( SEQ_EQ(tdb->ack, listener->l_nxt_seq) )
                 {
                     listener->s_mgr.state = TCP_STATE_CLOSED;
                 }
@@ -8723,7 +8726,10 @@ dupfin:
                         PKT_FROM_CLIENT);
 
                 if(flushed)
+                {
                     purge_alerts(talker, talker->r_win_base, (void *)tcpssn->lwssn);
+                    purge_to_seq(tcpssn, talker, talker->seglist->seq + flushed);
+                }
             }
 
             if(listener->seg_bytes_logical)
@@ -8734,7 +8740,10 @@ dupfin:
                         PKT_FROM_SERVER);
 
                 if(flushed)
+                {
                     purge_alerts(listener, listener->r_win_base, (void *)tcpssn->lwssn);
+                    purge_to_seq(tcpssn, listener, listener->seglist->seq + flushed);
+                }
             }
         }
         else
@@ -8749,7 +8758,10 @@ dupfin:
                         PKT_FROM_CLIENT);
 
                 if(flushed)
+                {
                     purge_alerts(listener, listener->r_win_base, (void *)tcpssn->lwssn);
+                    purge_to_seq(tcpssn, listener, listener->seglist->seq + flushed);
+                }
             }
 
             if(talker->seg_bytes_logical)
@@ -8760,7 +8772,10 @@ dupfin:
                         PKT_FROM_SERVER);
 
                 if(flushed)
+                {
                     purge_alerts(talker, talker->r_win_base,(void *)tcpssn->lwssn);
+                    purge_to_seq(tcpssn, talker, talker->seglist->seq + flushed);
+                }
             }
         }
         /* yoink that shit */
@@ -9433,6 +9448,8 @@ int GetTcpRebuiltPackets(Packet *p, Stream5LWSession *ssn,
     TcpSession *tcpssn = (TcpSession *)ssn->proto_specific_data->data;
     StreamTracker *st;
     StreamSegment *ss;
+    uint32_t start_seq = ntohl(p->tcph->th_seq);
+    uint32_t end_seq = start_seq + p->dsize;
 
     if (!tcpssn)
     {
@@ -9454,15 +9471,19 @@ int GetTcpRebuiltPackets(Packet *p, Stream5LWSession *ssn,
         st = &tcpssn->client;
     }
 
-    // skip over previously returned segments
-    for (ss = st->seglist; ss && ss->buffered == SL_BUF_DUMPED; ss = ss->next);
+    // skip over segments not covered by this reassembled packet
+    for (ss = st->seglist; ss && SEQ_LT(ss->seq, start_seq); ss = ss->next);
 
     // return flushed segments only
     for (; ss && ss->buffered == SL_BUF_FLUSHED; ss = ss->next)
     {
-        callback(&ss->pkth, ss->pkt, userdata);
-        packets++;
-        ss->buffered = SL_BUF_DUMPED;
+        if (SEQ_GEQ(ss->seq,start_seq) && SEQ_LT(ss->seq, end_seq))
+        {
+            callback(&ss->pkth, ss->pkt, userdata);
+            packets++;
+        }
+        else
+            break;
     }
 
     return packets;
@@ -9478,6 +9499,8 @@ int GetTcpStreamSegments(Packet *p, Stream5LWSession *ssn,
     TcpSession *tcpssn = (TcpSession *)ssn->proto_specific_data->data;
     StreamTracker *st;
     StreamSegment *ss;
+    uint32_t start_seq = ntohl(p->tcph->th_seq);
+    uint32_t end_seq = start_seq + p->dsize;
 
     if (tcpssn == NULL)
         return -1;
@@ -9493,17 +9516,21 @@ int GetTcpStreamSegments(Packet *p, Stream5LWSession *ssn,
     else
         st = &tcpssn->client;
 
-    // skip over previously returned segments
-    for (ss = st->seglist; ss && ss->buffered == SL_BUF_DUMPED; ss = ss->next);
+    // skip over segments not covered by this reassembled packet
+    for (ss = st->seglist; ss && SEQ_LT(ss->seq, start_seq); ss = ss->next);
 
     // return flushed segments only
     for (; ss && ss->buffered == SL_BUF_FLUSHED; ss = ss->next)
     {
-        if (callback(&ss->pkth, ss->pkt, ss->data, ss->seq, userdata) != 0)
-            return -1;
+        if (SEQ_GEQ(ss->seq,start_seq) && SEQ_LT(ss->seq, end_seq))
+        {
+            if (callback(&ss->pkth, ss->pkt, ss->data, ss->seq, userdata) != 0)
+                return -1;
 
-        packets++;
-        ss->buffered = SL_BUF_DUMPED;
+            packets++;
+        }
+        else
+            break;
     }
 
     return packets;

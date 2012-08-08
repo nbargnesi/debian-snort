@@ -76,6 +76,7 @@ typedef struct _OutputFuncNode
 void RegisterOutputPlugins(void);
 void RegisterOutputPlugin(char *, int, OutputConfigFunc);
 OutputConfigFunc GetOutputConfigFunc(char *);
+void RemoveOutputPlugin(char *);
 int GetOutputTypeFlags(char *);
 void DumpOutputPlugins(void);
 void AddFuncToOutputList(OutputFunc, OutputType, void *);

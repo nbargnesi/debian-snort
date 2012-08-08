@@ -23,10 +23,17 @@
 #include "config.h"
 #endif
 
-#include <syslog.h>
-#include <stdarg.h>
-#include <stdlib.h>
 #include <stdio.h>
+#ifndef __USE_ISOC95
+# define __USE_ISOC95
+# include <wchar.h>
+# undef __USE_ISOC95
+#else
+# include <wchar.h>
+#endif
+#include <stdarg.h>
+#include <syslog.h>
+#include <stdlib.h>
 #include "sf_types.h"
 #include "snort_debug.h"
 #include "snort.h"

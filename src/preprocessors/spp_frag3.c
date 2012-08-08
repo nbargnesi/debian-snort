@@ -1856,6 +1856,17 @@ static void Frag3Defrag(Packet *p, void *context)
 
     DEBUG_WRAP(DebugMessage(DEBUG_FRAG, "Found frag tracker\n"););
 
+    //dont forward fragments to target if some previous fragment was dropped
+    if ( ft->frag_flags & FRAG_DROP_FRAGMENTS )
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_FRAG,
+                    "Blocking fragments due to earlier fragment drop\n"););
+        DisableDetect(p);
+        SetPreprocBit(p, PP_PERFMONITOR);
+        Active_DropPacket();
+        f3stats.drops++;
+    }
+
     /*
      * insert the fragment into the FragTracker
      */
@@ -1913,17 +1924,6 @@ static void Frag3Defrag(Packet *p, void *context)
     }
 
     p->fragtracker = (void *)ft;
-
-    //dont forward fragments to target if some previous fragment was dropped
-    if ( ft->frag_flags & FRAG_DROP_FRAGMENTS )
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_FRAG,
-                    "Blocking fragments due to earlier fragment drop\n"););
-        DisableDetect(p);
-        SetPreprocBit(p, PP_PERFMONITOR);
-        Active_DropPacket();
-        f3stats.drops++;
-    }
 
     /*
      * check to see if it's reassembly time
@@ -4728,8 +4728,8 @@ static inline void Frag3FraglistDeleteNode(FragTracker *ft, Frag3Frag *node)
 **    This function flags an alert per frag tracker.
 **
 **  FORMAL INPUTS
-**    Packet *     - the packet to inspect
-**    OTNX *       - the rule that generated the alert
+**    Packet *      - the packet to inspect
+**    OptTreeNode * - the rule that generated the alert
 **
 **  FORMAL OUTPUTS
 **    int - 0 if not flagged
@@ -4767,8 +4767,8 @@ int fpAddFragAlert(Packet *p, OptTreeNode *otn)
 **    in this session, but only if this is a rebuilt packet.
 **
 **  FORMAL INPUTS
-**    Packet *     - the packet to inspect
-**    OTNX *       - the rule that generated the alert
+**    Packet *      - the packet to inspect
+**    OptTreeNode * - the rule that generated the alert
 **
 **  FORMAL OUTPUTS
 **    int - 0 if alert NOT previously generated

@@ -2534,11 +2534,20 @@ void DecodeIP(const uint8_t * pkt, const uint32_t len, Packet * p)
 
     if(p->frag_offset || p->mf)
     {
-        /* set the packet fragment flag */
-        p->frag_flag = 1;
-        p->ip_frag_start = pkt + hlen;
-        p->ip_frag_len = (uint16_t)ip_len;
-        pc.frags++;
+        if ( !ip_len && Event_Enabled(DECODE_ZERO_LENGTH_FRAG) )
+        {
+            DecoderEvent(p, DECODE_ZERO_LENGTH_FRAG,
+                DECODE_ZERO_LENGTH_FRAG_STR, 1, 1);
+            p->frag_flag = 0;
+        }
+        else
+        {
+            /* set the packet fragment flag */
+            p->frag_flag = 1;
+            p->ip_frag_start = pkt + hlen;
+            p->ip_frag_len = (uint16_t)ip_len;
+            pc.frags++;
+        }
     }
     else
     {
@@ -3517,6 +3526,7 @@ static void CheckIPV6Multicast(Packet *p)
             case 0x000000FB: // mDNSv6
             case 0x00010003: // All-dhcp-servers
             case 0x00010004: // Deprecated
+            case 0x00010005: // SL-MANET-ROUTERS
                 break;
             default:
                 DecoderEvent(p, DECODE_IPV6_DST_RESERVED_MULTICAST,
@@ -3577,7 +3587,7 @@ static void CheckIPV6Multicast(Packet *p)
                              DECODE_IPV6_DST_RESERVED_MULTICAST_STR, 1, 1);
         }
     }
-    else if ((p->ip6h->ip_dst.ip.u6_addr8[1] & 0xF0) == 3)
+    else if ((p->ip6h->ip_dst.ip.u6_addr8[1] & 0xF0) == 0x30)
     {
         // Source-Specific Multicast block
         if ((ntohl(p->ip6h->ip_dst.ip.u6_addr32[3]) >= 0x40000001) &&
@@ -3730,6 +3740,43 @@ static inline int IPV6ExtensionOrder(uint8_t type)
     }
 }
 
+/* Check for out-of-order IPv6 Extension Headers */
+static inline void CheckIPv6ExtensionOrder(Packet *p)
+{
+    int routing_seen = 0;
+    int current_type_order, next_type_order, i;
+
+    if (Event_Enabled(DECODE_IPV6_UNORDERED_EXTENSIONS))
+    {
+        if (p->ip6_extension_count > 0)
+            current_type_order = IPV6ExtensionOrder(p->ip6_extensions[0].type);
+
+        for (i = 1; i < (p->ip6_extension_count); i++)
+        {
+            next_type_order = IPV6ExtensionOrder(p->ip6_extensions[i].type);
+
+            if (p->ip6_extensions[i].type == IPPROTO_ROUTING)
+                routing_seen = 1;
+
+            if (next_type_order <= current_type_order)
+            {
+                /* A second "Destination Options" header is allowed iff:
+                   1) A routing header was already seen, and
+                   2) The second destination header is the last one before the upper layer.
+                */
+                if (!routing_seen ||
+                    !(p->ip6_extensions[i].type == IPPROTO_DSTOPTS) ||
+                    !(i+1 == p->ip6_extension_count))
+                {
+                    DecoderEvent(p, EVARGS(IPV6_UNORDERED_EXTENSIONS), 1, 1);
+                }
+            }
+
+            current_type_order = next_type_order;
+        }
+    }
+}
+
 void DecodeIPV6Extensions(uint8_t next, const uint8_t *pkt, uint32_t len, Packet *p);
 
 static inline int CheckIPV6HopOptions(const uint8_t *pkt, uint32_t len, Packet *p)
@@ -3874,11 +3921,14 @@ void DecodeIPV6Options(int type, const uint8_t *pkt, uint32_t len, Packet *p)
             break;
 
         case IPPROTO_FRAGMENT:
-            if (len < sizeof(IP6Frag))
+            if (len <= sizeof(IP6Frag))
             {
-                DecoderEvent(p, DECODE_IPV6_TRUNCATED_EXT,
-                             DECODE_IPV6_TRUNCATED_EXT_STR,
-                             1, 1);
+                if ( len < sizeof(IP6Frag) )
+                    DecoderEvent(p, DECODE_IPV6_TRUNCATED_EXT,
+                        DECODE_IPV6_TRUNCATED_EXT_STR, 1, 1);
+                else
+                    DecoderEvent(p, DECODE_ZERO_LENGTH_FRAG,
+                        DECODE_ZERO_LENGTH_FRAG_STR, 1, 1);
                 return;
             }
             else
@@ -3887,19 +3937,39 @@ void DecodeIPV6Options(int type, const uint8_t *pkt, uint32_t len, Packet *p)
                 /* If this is an IP Fragment, set some data... */
                 p->ip6_frag_index = p->ip6_extension_count;
                 p->ip_frag_start = pkt + sizeof(IP6Frag);
-                p->frag_flag = 1;
-                pc.frag6++;
 
                 p->df = 0;
                 p->rf = IP6F_RES(ip6frag_hdr);
                 p->mf = IP6F_MF(ip6frag_hdr);
                 p->frag_offset = IP6F_OFFSET(ip6frag_hdr);
+
+                if ( p->frag_offset || p->mf )
+                {
+                    p->frag_flag = 1;
+                    pc.frag6++;
+                }
+                else
+                {
+                    DecoderEvent(p, DECODE_IPV6_BAD_FRAG_PKT,
+                        DECODE_IPV6_BAD_FRAG_PKT_STR , 1, 1);
+                }
+                if ( 
+                    !(p->frag_offset) &&
+                    Event_Enabled(DECODE_IPV6_UNORDERED_EXTENSIONS) )
+                {
+                    // check header ordering of fragged (next) header
+                    if ( IPV6ExtensionOrder(ip6frag_hdr->ip6f_nxt) <
+                         IPV6ExtensionOrder(IPPROTO_FRAGMENT) )
+                        DecoderEvent(p, EVARGS(IPV6_UNORDERED_EXTENSIONS), 1, 1);
+                }
+                // check header ordering up thru frag header
+                CheckIPv6ExtensionOrder(p);
             }
             hdrlen = sizeof(IP6Frag);
             p->ip_frag_len = (uint16_t)(len - hdrlen);
 
-            if ( (p->frag_offset > 0) ||
-                 (exthdr->ip6e_nxt != IPPROTO_UDP) )
+            if ( p->frag_flag && ((p->frag_offset > 0) ||
+                 (exthdr->ip6e_nxt != IPPROTO_UDP)) )
             {
                 /* For non-zero offset frags, we stop decoding after the
                    Frag header. According to RFC 2460, the "Next Header"
@@ -3942,43 +4012,6 @@ void DecodeIPV6Options(int type, const uint8_t *pkt, uint32_t len, Packet *p)
         DebugMessage(DEBUG_DECODE, "WARNING - no next ip6 header decoded\n");
     }
 #endif
-}
-
-/* Check for out-of-order IPv6 Extension Headers */
-static inline void CheckIPv6ExtensionOrder(Packet *p)
-{
-    int routing_seen = 0;
-    int current_type_order, next_type_order, i;
-
-    if (Event_Enabled(DECODE_IPV6_UNORDERED_EXTENSIONS))
-    {
-        if (p->ip6_extension_count > 0)
-            current_type_order = IPV6ExtensionOrder(p->ip6_extensions[0].type);
-
-        for (i = 1; i < (p->ip6_extension_count); i++)
-        {
-            next_type_order = IPV6ExtensionOrder(p->ip6_extensions[i].type);
-
-            if (p->ip6_extensions[i].type == IPPROTO_ROUTING)
-                routing_seen = 1;
-
-            if (next_type_order <= current_type_order)
-            {
-                /* A second "Destination Options" header is allowed iff:
-                   1) A routing header was already seen, and
-                   2) The second destination header is the last one before the upper layer.
-                */
-                if (!routing_seen ||
-                    !(p->ip6_extensions[i].type == IPPROTO_DSTOPTS) ||
-                    !(i+1 == p->ip6_extension_count))
-                {
-                    DecoderEvent(p, EVARGS(IPV6_UNORDERED_EXTENSIONS), 1, 1);
-                }
-            }
-
-            current_type_order = next_type_order;
-        }
-    }
 }
 
 void DecodeIPV6Extensions(uint8_t next, const uint8_t *pkt, uint32_t len, Packet *p)
@@ -4210,13 +4243,6 @@ decodeipv6_fail:
 #ifdef SUP_IP6
 void DecodeICMP6(const uint8_t *pkt, uint32_t len, Packet *p)
 {
-    struct pseudoheader6
-    {
-        uint32_t sip[4], dip[4];
-        uint8_t  zero;
-        uint8_t  protocol;
-        uint16_t icmplen;
-    };
     if(len < ICMP6_MIN_HEADER_LEN)
     {
         DEBUG_WRAP(DebugMessage(DEBUG_DECODE,
@@ -4245,14 +4271,14 @@ void DecodeICMP6(const uint8_t *pkt, uint32_t len, Packet *p)
         /* IPv6 traffic */
         else
         {
-            struct pseudoheader6 ph6;
+            pseudoheader6 ph6;
             COPY4(ph6.sip, p->ip6h->ip_src.ip32);
             COPY4(ph6.dip, p->ip6h->ip_dst.ip32);
             ph6.zero = 0;
             ph6.protocol = GET_IPH_PROTO(p);
-            ph6.icmplen = htons((u_short)len);
+            ph6.len = htons((u_short)len);
 
-            csum = in_chksum_icmp6((uint16_t *)&ph6, (uint16_t *)(p->icmph), len);
+            csum = in_chksum_icmp6(&ph6, (uint16_t *)(p->icmph), len);
         }
 #endif
         if(csum)
@@ -4352,10 +4378,18 @@ void DecodeICMP6(const uint8_t *pkt, uint32_t len, Packet *p)
                 p->data += 4;
                 p->dsize -= 4;
 
-                if ((p->icmp6h->type == ICMP6_UNREACH) && (p->icmp6h->code == 2))
+                if (p->icmp6h->type == ICMP6_UNREACH)
                 {
-                    DecoderEvent(p, DECODE_ICMPV6_UNREACHABLE_BAD_CODE,
-                                 DECODE_ICMPV6_UNREACHABLE_BAD_CODE_STR, 1, 1);
+                    if (p->icmp6h->code == 2)
+                    {
+                        DecoderEvent(p, DECODE_ICMPV6_UNREACHABLE_NON_RFC_2463_CODE,
+                                DECODE_ICMPV6_UNREACHABLE_NON_RFC_2463_CODE_STR, 1, 1);
+                    }
+                    else if (p->icmp6h->code > 6)
+                    {
+                        DecoderEvent(p, DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE,
+                                DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE_STR, 1, 1);
+                    }
                 }
 
                 PushLayer(PROTO_ICMP6, p, pkt, ICMP_NORMAL_LEN);
@@ -5156,21 +5190,6 @@ static inline void PopUdp (Packet* p)
 
 void DecodeUDP(const uint8_t * pkt, const uint32_t len, Packet * p)
 {
-    struct pseudoheader6
-    {
-        uint32_t sip[4], dip[4];
-        uint8_t  zero;
-        uint8_t  protocol;
-        uint16_t udplen;
-    };
-
-    struct pseudoheader
-    {
-        uint32_t sip, dip;
-        uint8_t  zero;
-        uint8_t  protocol;
-        uint16_t udplen;
-    };
     uint16_t uhlen;
     u_char fragmented_udp_flag = 0;
 
@@ -5251,25 +5270,25 @@ void DecodeUDP(const uint8_t * pkt, const uint32_t len, Packet * p)
 #ifdef SUP_IP6
         if(IS_IP4(p))
         {
-            struct pseudoheader ph;
+            pseudoheader ph;
             ph.sip = *p->ip4h->ip_src.ip32;
             ph.dip = *p->ip4h->ip_dst.ip32;
 #else
-            struct pseudoheader ph;
+            pseudoheader ph;
             ph.sip = (uint32_t)(p->iph->ip_src.s_addr);
             ph.dip = (uint32_t)(p->iph->ip_dst.s_addr);
 #endif
             ph.zero = 0;
             ph.protocol = GET_IPH_PROTO(p);
-            ph.udplen = p->udph->uh_len;
+            ph.len = p->udph->uh_len;
             /* Don't do checksum calculation if
              * 1) Fragmented, OR
              * 2) UDP header chksum value is 0.
              */
             if( !fragmented_udp_flag && p->udph->uh_chk )
             {
-                csum = in_chksum_udp((uint16_t *)&ph,
-                        (uint16_t *)(p->udph), uhlen);
+                csum = in_chksum_udp(&ph,
+                    (uint16_t *)(p->udph), uhlen);
             }
             else
             {
@@ -5279,12 +5298,12 @@ void DecodeUDP(const uint8_t * pkt, const uint32_t len, Packet * p)
         }
         else
         {
-            struct pseudoheader6 ph6;
+            pseudoheader6 ph6;
             COPY4(ph6.sip, p->ip6h->ip_src.ip32);
             COPY4(ph6.dip, p->ip6h->ip_dst.ip32);
             ph6.zero = 0;
             ph6.protocol = GET_IPH_PROTO(p);
-            ph6.udplen = htons((u_short)len);
+            ph6.len = htons((u_short)len);
 
             /* Alert on checksum value 0 for ipv6 packets */
             if(!p->udph->uh_chk)
@@ -5299,8 +5318,8 @@ void DecodeUDP(const uint8_t * pkt, const uint32_t len, Packet * p)
              */
             else if( !fragmented_udp_flag )
             {
-                csum = in_chksum_udp6((uint16_t *)&ph6,
-                        (uint16_t *)(p->udph), uhlen);
+                csum = in_chksum_udp6(&ph6,
+                    (uint16_t *)(p->udph), uhlen);
             }
             else
             {
@@ -5407,21 +5426,6 @@ static inline void TCPMiscTests(Packet *p)
  */
 void DecodeTCP(const uint8_t * pkt, const uint32_t len, Packet * p)
 {
-    struct pseudoheader6       /* pseudo header for TCP checksum calculations */
-    {
-        uint32_t sip[4], dip[4];   /* IP addr */
-        uint8_t  zero;       /* checksum placeholder */
-        uint8_t  protocol;   /* protocol number */
-        uint16_t tcplen;     /* tcp packet length */
-    };
-
-    struct pseudoheader       /* pseudo header for TCP checksum calculations */
-    {
-        uint32_t sip, dip;   /* IP addr */
-        uint8_t  zero;       /* checksum placeholder */
-        uint8_t  protocol;   /* protocol number */
-        uint16_t tcplen;     /* tcp packet length */
-    };
     uint32_t hlen;            /* TCP header length */
 
     if(len < TCP_HEADER_LEN)
@@ -5491,36 +5495,36 @@ void DecodeTCP(const uint8_t * pkt, const uint32_t len, Packet * p)
 #ifdef SUP_IP6
         if(IS_IP4(p))
         {
-            struct pseudoheader ph;
+            pseudoheader ph;
             ph.sip = *p->ip4h->ip_src.ip32;
             ph.dip = *p->ip4h->ip_dst.ip32;
 #else
-            struct pseudoheader ph;
+            pseudoheader ph;
             ph.sip = (uint32_t)(p->iph->ip_src.s_addr);
             ph.dip = (uint32_t)(p->iph->ip_dst.s_addr);
 #endif
             /* setup the pseudo header for checksum calculation */
             ph.zero = 0;
             ph.protocol = GET_IPH_PROTO(p);
-            ph.tcplen = htons((u_short)len);
+            ph.len = htons((u_short)len);
 
             /* if we're being "stateless" we probably don't care about the TCP
              * checksum, but it's not bad to keep around for shits and giggles */
             /* calculate the checksum */
-            csum = in_chksum_tcp((uint16_t *)&ph, (uint16_t *)(p->tcph), len);
+            csum = in_chksum_tcp(&ph, (uint16_t *)(p->tcph), len);
 #ifdef SUP_IP6
         }
         /* IPv6 traffic */
         else
         {
-            struct pseudoheader6 ph6;
+            pseudoheader6 ph6;
             COPY4(ph6.sip, p->ip6h->ip_src.ip32);
             COPY4(ph6.dip, p->ip6h->ip_dst.ip32);
             ph6.zero = 0;
             ph6.protocol = GET_IPH_PROTO(p);
-            ph6.tcplen = htons((u_short)len);
+            ph6.len = htons((u_short)len);
 
-            csum = in_chksum_tcp6((uint16_t *)&ph6, (uint16_t *)(p->tcph), len);
+            csum = in_chksum_tcp6(&ph6, (uint16_t *)(p->tcph), len);
         }
 #endif
 
@@ -6837,6 +6841,7 @@ void DecodePflog(Packet * p, const DAQ_PktHdr_t * pkthdr, const uint8_t * pkt)
     uint32_t cap_len = pkthdr->caplen;
     uint8_t af, pflen;
     uint32_t hlen;
+    uint32_t padlen = PFLOG_PADLEN;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(decodePerfStats);
@@ -6858,26 +6863,45 @@ void DecodePflog(Packet * p, const DAQ_PktHdr_t * pkthdr, const uint8_t * pkt)
         if (ScLogVerbose())
         {
             ErrorMessage("Captured data length < minimum Pflog length! "
-                    "(%d < %lu)\n", cap_len, PFLOG2_HDRMIN);
+                    "(%d < %lu)\n", cap_len, (unsigned long)PFLOG2_HDRMIN);
         }
         PREPROC_PROFILE_END(decodePerfStats);
         return;
     }
+
     /* lay the pf header structure over the packet data */
-    if ( *((uint8_t*)pkt) < PFLOG3_HDRMIN )
+    switch(*((uint8_t*)pkt))
     {
-        p->pf2h = (Pflog2Hdr*)pkt;
-        pflen = p->pf2h->length;
-        hlen = PFLOG2_HDRLEN;
-        af = p->pf2h->af;
+        case PFLOG2_HDRMIN:
+            p->pf2h = (Pflog2Hdr*)pkt;
+            pflen = p->pf2h->length;
+            hlen = PFLOG2_HDRLEN;
+            af = p->pf2h->af;
+            break;
+        case PFLOG3_HDRMIN:
+            p->pf3h = (Pflog3Hdr*)pkt;
+            pflen = p->pf3h->length;
+            hlen = PFLOG3_HDRLEN;
+            af = p->pf3h->af;
+            break;
+        case PFLOG4_HDRMIN:
+            p->pf4h = (Pflog4Hdr*)pkt;
+            pflen = p->pf4h->length;
+            hlen = PFLOG4_HDRLEN;
+            af = p->pf4h->af;
+            padlen = sizeof(p->pf4h->pad);
+            break;
+        default:
+            if (ScLogVerbose())
+            {
+                ErrorMessage("unrecognized pflog header length! (%d)\n",
+                    *((uint8_t*)pkt));
+            }
+            pc.discards++;
+            PREPROC_PROFILE_END(decodePerfStats);
+            return;
     }
-    else
-    {
-        p->pf3h = (Pflog3Hdr*)pkt;
-        pflen = p->pf3h->length;
-        hlen = PFLOG3_HDRLEN;
-        af = p->pf3h->af;
-    }
+
     /* now that we know a little more, do a little more validation */
     if(cap_len < hlen)
     {
@@ -6886,16 +6910,18 @@ void DecodePflog(Packet * p, const DAQ_PktHdr_t * pkthdr, const uint8_t * pkt)
             ErrorMessage("Captured data length < Pflog header length! "
                     "(%d < %d)\n", cap_len, hlen);
         }
+        pc.discards++;
         PREPROC_PROFILE_END(decodePerfStats);
         return;
     }
     /* note that the pflen may exclude the padding which is always present */
-    if(pflen < hlen - PFLOG_PADLEN || pflen > hlen)
+    if(pflen < hlen - padlen || pflen > hlen)
     {
         if (ScLogVerbose())
         {
             ErrorMessage("Bad Pflog header length! (%d bytes)\n", pflen);
         }
+        pc.discards++;
         PREPROC_PROFILE_END(decodePerfStats);
         return;
     }

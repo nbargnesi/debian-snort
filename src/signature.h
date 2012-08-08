@@ -139,4 +139,12 @@ void OtnRemove(SFGHASH *, SFGHASH *, struct _OptTreeNode *);
 void OtnDeleteData(void *data);
 void OtnFree(void *data);
 
+static inline bool IsPreprocDecoderRule(char rule_type)
+{
+    if ((rule_type == SI_RULE_TYPE_DECODE)
+            || (rule_type == SI_RULE_TYPE_PREPROC))
+        return true;
+    return false;
+}
+
 #endif /* SIGNATURE */

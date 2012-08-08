@@ -37,8 +37,7 @@ typedef enum _DCE2_MemType
     DCE2_MEM_TYPE__SMB_UID,  /* SMB uid tracking */
     DCE2_MEM_TYPE__SMB_TID,  /* SMB tid tracking */
     DCE2_MEM_TYPE__SMB_FID,  /* SMB fid tracking */
-    DCE2_MEM_TYPE__SMB_UT,   /* SMB uid/tid tracking */
-    DCE2_MEM_TYPE__SMB_PM,   /* SMB pid/mid tracking */
+    DCE2_MEM_TYPE__SMB_REQ,  /* SMB request/response tracking */
     DCE2_MEM_TYPE__TCP_SSN,  /* TCP session data */
     DCE2_MEM_TYPE__CO_SEG,   /* TCP segmentation buffer */
     DCE2_MEM_TYPE__CO_FRAG,  /* TCP fragmentation data */
@@ -87,10 +86,8 @@ typedef struct _DCE2_Memory
     uint32_t smb_tid_max;   /* max amount allocated for tid tracking */
     uint32_t smb_fid;       /* amount allocated for fid tracking */
     uint32_t smb_fid_max;   /* max amount allocated for fid tracking */
-    uint32_t smb_ut;        /* amount allocated for uid/tid tracking */
-    uint32_t smb_ut_max;    /* max amount allocated for uid/tid tracking */
-    uint32_t smb_pm;        /* amount allocated for pid/mid tracking */
-    uint32_t smb_pm_max;    /* max amount allocated for pid/mid tracking */
+    uint32_t smb_req;       /* amount allocated for request tracking */
+    uint32_t smb_req_max;   /* max amount allocated for request tracking */
 
     uint32_t tcp_total;     /* total memory allocated for TCP */
     uint32_t tcp_total_max; /* max total memory allocated for TCP */
@@ -126,7 +123,13 @@ typedef struct _DCE2_Memory
 } DCE2_Memory;
 
 /********************************************************************
- *
+ * Extern variables
+ ********************************************************************/
+extern DCE2_Memory dce2_memory;
+extern DCE2_MemState dce2_mem_state;
+
+/********************************************************************
+ * Public functions
  ********************************************************************/
 void DCE2_RegMem(uint32_t, DCE2_MemType);
 void DCE2_UnRegMem(uint32_t, DCE2_MemType);

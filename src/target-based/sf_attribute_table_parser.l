@@ -163,10 +163,11 @@ comment        {commentStart}.*{commentEnd}
                             /* Store the value of the string, but not
                              * more than STD_BUF. */
                             int i;
-                            for (i=0; i < yyleng && i < STD_BUF; i++)
+                            for (i=0; i < yyleng && i < STD_BUF-1; i++)
                             {
                                 sfat_lval.stringValue[i] = yytext[i];
                             }
+
                             sfat_lval.stringValue[i] = '\0';
 #ifdef DEBUG_MSGS
                             DebugMessage(DEBUG_ATTRIBUTE,

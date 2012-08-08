@@ -26,6 +26,7 @@
 #include "dce2_utils.h"
 #include "dce2_session.h"
 #include "dce2_smb.h"
+#include "dce2_debug.h"
 #include "snort_dce2.h"
 #include "includes/dcerpc.h"
 #include "includes/smb.h"
@@ -33,8 +34,6 @@
 #ifdef ENABLE_PAF
 
 #define DCE2_SMB_PAF_SHIFT(x64, x8) { x64 <<= 8; x64 |= (uint64_t)x8; } 
-
-extern DCE2_ProtoIds dce2_proto_ids;
 
 // Enumerations for PAF states
 typedef enum _DCE2_PafSmbStates
@@ -104,19 +103,31 @@ static PAF_Status DCE2_TcpPaf(void *, void **, const uint8_t *, uint32_t, uint32
  *             Should have PKT_FROM_CLIENT or PKT_FROM_SERVER set.
  *
  * Returns:
- *  bool - true if missed packets, false if not
+ *  bool - true if we should abort PAF, false if not.
  *
  *********************************************************************/
 static inline bool DCE2_PafAbort(void *ssn, uint32_t flags)
 {
-    DCE2_SsnData *sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(ssn, PP_DCE2);
+    DCE2_SsnData *sd;
 
-    if (sd != NULL)
+    if (_dpd.streamAPI->get_session_flags(ssn) & SSNFLAG_MIDSTREAM)
     {
-        if (DCE2_SsnPafAbort(sd))
-            return true;
-        else if (!DCE2_SsnSeenClient(sd) && (flags & FLAG_FROM_SERVER))
-            return true;
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF,
+                    "Aborting PAF because of midstream pickup.\n"));
+        return true;
+    }
+    else if (!(_dpd.streamAPI->get_session_flags(ssn) & SSNFLAG_ESTABLISHED))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF,
+                    "Aborting PAF because of unestablished session.\n"));
+        return true;
+    }
+
+    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(ssn, PP_DCE2);
+    if ((sd != NULL) && DCE2_SsnNoInspect(sd))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Aborting PAF because of session data check.\n"));
+        return true;
     }
 
     return false;
@@ -203,14 +214,23 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
     uint32_t nb_hdr;
     uint32_t nb_len;
 
-    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "\nIn DCE2_SmbPaf: %u bytes of data\n", len));
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_START_MSG));
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "SMB: %u bytes of data\n", len));
 
 #ifdef DEBUG_MSGS
+    DCE2_DEBUG_CODE(DCE2_DEBUG__PAF, printf("Session pointer: %p\n",
+                _dpd.streamAPI->get_application_data(ssn, PP_DCE2));)
     if (flags & FLAG_FROM_CLIENT)
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Client\n"));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Packet from Client\n"));
     else
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Server\n"));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Packet from Server\n"));
 #endif
+
+    if (DCE2_PafAbort(ssn, flags))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
+        return PAF_ABORT;
+    }
 
     if (ss == NULL)
     {
@@ -219,26 +239,23 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
         ss = calloc(1, sizeof(DCE2_PafSmbState));
 
         if (ss == NULL)
+        {
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
             return PAF_ABORT;
+        }
 
         *user = ss;
     }
 
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Start state: %u\n", ss->state));
 
-    if (DCE2_PafAbort(ssn, flags))
-    {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Aborting PAF\n"));
-        return PAF_ABORT;
-    }
-
     while (n < len)
     {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "data[n]: 0x%02x", data[n]));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " State %d : 0x%02x", ss->state, data[n]));
 
 #ifdef DEBUG_MSGS
         if (isprint(data[n]))
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " : %c\n", data[n]));
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " '%c'\n", data[n]));
         else
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "\n"));
 #endif
@@ -246,21 +263,20 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
         switch (ss->state)
         {
             case DCE2_PAF_SMB_STATES__0:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 0\n"));
                 ss->nb_hdr = (uint64_t)data[n];
                 ss->state++;
                 break;
             case DCE2_PAF_SMB_STATES__3:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 3\n"));
                 DCE2_SMB_PAF_SHIFT(ss->nb_hdr, data[n]);
                 if (DCE2_PafSmbIsValidNetbiosHdr((uint32_t)ss->nb_hdr, false))
                 {
                     nb_hdr = htonl((uint32_t)ss->nb_hdr);
                     nb_len = NbssLen((const NbssHdr *)&nb_hdr);
                     *fp = (nb_len + sizeof(NbssHdr) + n) - ss->state;
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Setting flush "
-                                             "point for non-junk data: %u\n\n", *fp));
                     ss->state = DCE2_PAF_SMB_STATES__0;
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF,
+                                "Setting flush point: %u\n", *fp));
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
                     return PAF_FLUSH;
                 }
                 DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Invalid NetBIOS header - "
@@ -268,7 +284,6 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
                 ss->state++;
                 break;
             case DCE2_PAF_SMB_STATES__7:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 7\n"));
                 DCE2_SMB_PAF_SHIFT(ss->nb_hdr, data[n]);
 
                 if (!DCE2_PafSmbIsValidNetbiosHdr((uint32_t)(ss->nb_hdr >> 32), true))
@@ -288,12 +303,12 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
                 nb_hdr = htonl((uint32_t)(ss->nb_hdr >> 32));
                 nb_len = NbssLen((const NbssHdr *)&nb_hdr);
                 *fp = (nb_len + sizeof(NbssHdr) + n) - ss->state;
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Setting flush point "
-                                         "for junk data: %u\n\n", *fp));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF,
+                            "Setting flush point: %u\n", *fp));
                 ss->state = DCE2_PAF_SMB_STATES__0;
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
                 return PAF_FLUSH;
             default:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State %u\n", ss->state));
                 DCE2_SMB_PAF_SHIFT(ss->nb_hdr, data[n]);
                 ss->state++;
                 break;
@@ -302,6 +317,7 @@ PAF_Status DCE2_SmbPaf(void *ssn, void **user, const uint8_t *data,
         n++;
     }
 
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
     return ps;
 }
 
@@ -338,7 +354,24 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
     DCE2_SsnData *sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(ssn, PP_DCE2);
     int num_requests = 0;
 
-    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "\nIn DCE2_TcpPaf: %u bytes of data\n", len));
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_START_MSG));
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "TCP: %u bytes of data\n", len));
+
+    DCE2_DEBUG_CODE(DCE2_DEBUG__PAF, printf("Session pointer: %p\n",
+                _dpd.streamAPI->get_application_data(ssn, PP_DCE2));)
+
+#ifdef DEBUG_MSGS
+    if (flags & FLAG_FROM_CLIENT)
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Packet from Client\n"));
+    else
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Packet from Server\n"));
+#endif
+
+    if (DCE2_PafAbort(ssn, flags))
+    {
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
+        return PAF_ABORT;
+    }
 
     if (sd == NULL)
     {
@@ -379,11 +412,13 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
             {
                 DceRpcCoHdr *co_hdr = (DceRpcCoHdr *)data;
 
-                if ((DceRpcCoVersMaj(co_hdr) == DCERPC_PROTO_MAJOR_VERS__5) &&
-                    (DceRpcCoVersMin(co_hdr) == DCERPC_PROTO_MINOR_VERS__0) &&
-                    ((DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND) ||
-                     (DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND_ACK)) &&
-                    (DceRpcCoFragLen(co_hdr) >= sizeof(DceRpcCoHdr)))
+                if ((DceRpcCoVersMaj(co_hdr) == DCERPC_PROTO_MAJOR_VERS__5)
+                        && (DceRpcCoVersMin(co_hdr) == DCERPC_PROTO_MINOR_VERS__0)
+                        && (((flags & FLAG_FROM_CLIENT)
+                                && DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND)
+                            || ((flags & FLAG_FROM_SERVER)
+                                && DceRpcCoPduType(co_hdr) == DCERPC_PDU_TYPE__BIND_ACK))
+                        && (DceRpcCoFragLen(co_hdr) >= sizeof(DceRpcCoHdr)))
                 {
                     autodetected = true;
                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Autodetected!\n"));
@@ -401,6 +436,7 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
         if (!autodetected)
         {
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Couldn't autodetect - aborting\n"));
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
             return PAF_ABORT;
         }
     }
@@ -417,29 +453,16 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
         *user = ds;
     }
 
-#ifdef DEBUG_MSGS
-    if (flags & FLAG_FROM_CLIENT)
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Client\n"));
-    else
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Server\n"));
-#endif
-
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Start state: %u\n", ds->state));
     start_state = (uint8_t)ds->state;  // determines how many bytes already looked at
 
-    if (DCE2_PafAbort(ssn, flags))
-    {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Aborting PAF\n"));
-        return PAF_ABORT;
-    }
-
     while (n < len)
     {
-        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "data[n]: 0x%02x", data[n]));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " State %d : 0x%02x", ds->state, data[n]));
 
 #ifdef DEBUG_MSGS
         if (isprint(data[n]))
-            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " : %c\n", data[n]));
+            DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, " '%c'\n", data[n]));
         else
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "\n"));
 #endif
@@ -447,19 +470,17 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
         switch (ds->state)
         {
             case DCE2_PAF_TCP_STATES__4:  // Get byte order
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 4\n"));
                 ds->byte_order = DceRpcByteOrder(data[n]);
                 ds->state++;
 #ifdef DEBUG_MSGS
                 if (ds->byte_order == DCERPC_BO_FLAG__LITTLE_ENDIAN)
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Got byte order: Little endian\n"));
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Byte order: Little endian\n"));
                 else
-                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Got byte order: Big endian\n"));
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Byte order: Big endian\n"));
 #endif
                 break;
             case DCE2_PAF_TCP_STATES__8:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 8\n"));
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Getting first byte of frag length\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "First byte of fragment length\n"));
                 if (ds->byte_order == DCERPC_BO_FLAG__LITTLE_ENDIAN)
                     ds->frag_len = data[n];
                 else
@@ -467,18 +488,20 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
                 ds->state++;
                 break;
             case DCE2_PAF_TCP_STATES__9:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State 9\n"));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Second byte of fragment length\n"));
                 if (ds->byte_order == DCERPC_BO_FLAG__LITTLE_ENDIAN)
                     ds->frag_len |= data[n] << 8;
                 else
                     ds->frag_len |= data[n];
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Getting second byte of frag length\n"));
 
                 /* If we get a bad frag length abort */
                 if (ds->frag_len < sizeof(DceRpcCoHdr))
+                {
+                    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
                     return PAF_ABORT;
+                }
 
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Got frag_len: %u\n", ds->frag_len));
+                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Fragment length: %u\n", ds->frag_len));
 
                 /* Increment n here so we can continue */
                 n += ds->frag_len - (uint8_t)ds->state;
@@ -491,7 +514,6 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
                 ds->state = DCE2_PAF_TCP_STATES__0;
                 continue;  // we incremented n already
             default:
-                DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "State %u\n", ds->state));
                 ds->state++;
                 break;
         }
@@ -503,9 +525,11 @@ PAF_Status DCE2_TcpPaf(void *ssn, void **user, const uint8_t *data,
     {
         *fp = tmp_fp - start_state;
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "Setting flush point: %u\n", *fp));
+        DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
         return PAF_FLUSH;
     }
 
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__PAF, "%s\n", DCE2_DEBUG__PAF_END_MSG));
     return ps;
 }
 

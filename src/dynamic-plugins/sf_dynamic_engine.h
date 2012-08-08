@@ -83,9 +83,9 @@ typedef int (*RegisterRule)(
     int, GetDynamicContentsFunction, RuleFreeFunc,
     GetDynamicPreprocOptFpContentsFunc
 );
-typedef uint32_t (*RegisterBit)(char *, int);
-typedef void (*UnregisterBit)(char *, int);
-typedef int (*CheckFlowbit)(void *, int, uint32_t);
+typedef void *(*RegisterBit)(void *);
+typedef void (*UnregisterBit)(void *);
+typedef int (*CheckFlowbit)(void *, void *);
 typedef int (*DetectAsn1)(void *, void *, const uint8_t *);
 typedef int (*PreprocOptionEval)(void *p, const uint8_t **cursor, void *dataPtr);
 typedef int (*PreprocOptionInit)(char *, char *, void **dataPtr);
@@ -128,7 +128,7 @@ typedef void (*FreeRuleData)(void *);
  */
 #include "sf_dynamic_common.h"
 
-#define ENGINE_DATA_VERSION 7
+#define ENGINE_DATA_VERSION 8
 
 typedef void *(*PCRECompileFunc)(const char *, int, const char **, int *, const unsigned char *);
 typedef void *(*PCREStudyFunc)(const void *, int, const char **);

@@ -120,14 +120,11 @@
 #include "profiler.h"
 #include "dynamic-plugins/sp_dynamic.h"
 #include "dynamic-plugins/sf_dynamic_define.h"
+#include "dynamic-output/plugins/output.h"
 #include "sfutil/strvec.h"
 #include "detection_util.h"
 #include "sfcontrol_funcs.h"
 #include "idle_processing_funcs.h"
-
-#ifdef HAVE_LIBPRELUDE
-# include "output-plugins/spo_alert_prelude.h"
-#endif
 
 #ifdef DYNAMIC_PLUGIN
 # include "dynamic-plugins/sf_dynamic_engine.h"
@@ -389,6 +386,8 @@ static struct option long_options[] =
    {"dump-dynamic-rules", LONGOPT_ARG_OPTIONAL, NULL, DUMP_DYNAMIC_RULES},
    {"dynamic-preprocessor-lib", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_PREPROC_FILE},
    {"dynamic-preprocessor-lib-dir", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_PREPROC_DIRECTORY},
+   {"dynamic-output-lib", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_OUTPUT_FILE},
+   {"dynamic-output-lib-dir", LONGOPT_ARG_REQUIRED, NULL, DYNAMIC_OUTPUT_DIRECTORY},
 #endif
 
    {"alert-before-pass", LONGOPT_ARG_NONE, NULL, ALERT_BEFORE_PASS},
@@ -538,9 +537,9 @@ static int VerifyLibInfos(DynamicLibInfo *, DynamicLibInfo *);
 
 int InMainThread ()
 {
-    return ( 
+    return (
 #ifndef WIN32
-		pthread_equal(snort_main_thread_id, pthread_self()) 
+		pthread_equal(snort_main_thread_id, pthread_self())
 #else
 		1
 #endif
@@ -641,7 +640,12 @@ static int InlineFailOpen (void)
              * may have to refer to packet passing thread via process id
              * (linuxthreads) */
             while (snort_initializing)
-                DAQ_Acquire(1, IgnoreCallback, NULL);
+            {
+                int error = DAQ_Acquire(1, IgnoreCallback, NULL);
+
+                if (error)
+                    break;
+            }
 
             pthread_join(inline_failopen_thread_id, NULL);
             inline_failopen_thread_running = 0;
@@ -1396,7 +1400,7 @@ static int MetaCallback(
     SnortPolicy *policy = snort_conf->targeted_policies[policy_id];
     PreprocMetaEvalFuncNode *idx;
     PROFILE_VARS;
-    
+
     /* First thing we do is process a Usr signal that we caught */
     if (SignalCheck())
     {
@@ -1771,6 +1775,8 @@ static int ShowUsage(char *program_name)
     FPUTS_BOTH ("   --dump-dynamic-rules <path>     Creates stub rule files of all loaded rules libraries\n");
     FPUTS_BOTH ("   --dynamic-preprocessor-lib <file>  Load a dynamic preprocessor library\n");
     FPUTS_BOTH ("   --dynamic-preprocessor-lib-dir <path> Load all dynamic preprocessor libraries from directory\n");
+    FPUTS_BOTH ("   --dynamic-output-lib <file>  Load a dynamic output library\n");
+    FPUTS_BOTH ("   --dynamic-output-lib-dir <path> Load all dynamic output libraries from directory\n");
 #endif
     FPUTS_UNIX ("   --create-pidfile                Create PID file, even when not in Daemon mode\n");
     FPUTS_UNIX ("   --nolock-pidfile                Do not try to lock Snort PID file\n");
@@ -1872,6 +1878,15 @@ static void ParseCmdLineDynamicLibInfo(SnortConfig *sc, int type, char *path)
 
             dli = sc->dyn_engines;
             break;
+        case DYNAMIC_OUTPUT_FILE:
+            output_load_module(path);
+            return;
+            break;
+        case DYNAMIC_OUTPUT_DIRECTORY:
+            output_load(path);
+            return;
+            break;
+
 
         default:
             FatalError("%s(%d) Invalid dynamic type: %d\n", __FILE__, __LINE__, type);
@@ -1884,12 +1899,14 @@ static void ParseCmdLineDynamicLibInfo(SnortConfig *sc, int type, char *path)
         case DYNAMIC_PREPROC_FILE:
         case DYNAMIC_LIBRARY_FILE:
         case DYNAMIC_ENGINE_FILE:
+        case DYNAMIC_OUTPUT_FILE:
             dlp->ptype = PATH_TYPE__FILE;
             break;
 
         case DYNAMIC_PREPROC_DIRECTORY:
         case DYNAMIC_LIBRARY_DIRECTORY:
         case DYNAMIC_ENGINE_DIRECTORY:
+        case DYNAMIC_OUTPUT_DIRECTORY:
             dlp->ptype = PATH_TYPE__DIRECTORY;
             break;
 
@@ -2022,6 +2039,8 @@ static void ParseCmdLine(int argc, char **argv)
             case DYNAMIC_PREPROC_DIRECTORY:
             case DYNAMIC_LIBRARY_FILE:      /* Load dynamic detection lib specified */
             case DYNAMIC_LIBRARY_DIRECTORY:
+            case DYNAMIC_OUTPUT_FILE:      /* Load dynamic output lib specified */
+            case DYNAMIC_OUTPUT_DIRECTORY:
                 ParseCmdLineDynamicLibInfo(sc, ch, optarg);
                 break;
 
@@ -2083,7 +2102,7 @@ static void ParseCmdLine(int argc, char **argv)
 
 #ifdef TARGET_BASED
             case DISABLE_ATTRIBUTE_RELOAD:
-                sc->run_flags |= RUN_FLAG__DISABLE_ATTRIBUTE_RELOAD_THREAD;
+                ConfigDisableAttributeReload(sc, NULL);
                 break;
 #endif
             case DETECTION_SEARCH_METHOD:
@@ -2954,7 +2973,7 @@ void PacketLoop (void)
     {
         if ( error == DAQ_READFILE_EOF )
             error = 0;
-        else if ( error > 0 ) 
+        else if ( error > 0 )
         {
             DAQ_Abort();
             exit(1);
@@ -3215,9 +3234,6 @@ static void SnortCleanup(int exit_val)
     snort_exiting = 1;
     snort_initializing = 0;  /* just in case we cut out early */
 
-    ControlSocketCleanUp();
-    IdleProcessingCleanUp();
-
     if ( DAQ_WasStarted() )
     {
 #ifdef EXIT_CHECK
@@ -3226,6 +3242,10 @@ static void SnortCleanup(int exit_val)
 #endif
         DAQ_Stop();
     }
+
+    ControlSocketCleanUp();
+    IdleProcessingCleanUp();
+
     if ( snort_conf->dirty_pig )
     {
         DAQ_Delete();
@@ -3453,6 +3473,7 @@ static void SnortCleanup(int exit_val)
     CloseDynamicPreprocessorLibs();
     CloseDynamicDetectionLibs();
     CloseDynamicEngineLibs();
+    output_unload();
 #endif
 
     CleanupTag();
@@ -3894,7 +3915,7 @@ void SnortConfFree(SnortConfig *sc)
 
      if (sc->gtp_ports)
         free(sc->gtp_ports);
-        
+
      if(sc->cs_dir)
         free(sc->cs_dir);
     free(sc);
@@ -4293,7 +4314,7 @@ static SnortConfig * MergeSnortConfs(SnortConfig *cmd_line, SnortConfig *config_
     {
         if (config_file->cs_dir != NULL)
             free(config_file->cs_dir);
-        config_file->cs_dir = SnortStrdup(cmd_line->cs_dir);    
+        config_file->cs_dir = SnortStrdup(cmd_line->cs_dir);
     }
     if (config_file->cs_dir)
     {
@@ -4825,11 +4846,6 @@ static void SnortUnprivilegedInit(void)
     SnortStartThreads();
 #endif
 
-#ifdef HAVE_LIBPRELUDE
-    // this does all kinds of stuff
-    AlertPreludeSetupAfterSetuid();
-#endif
-
     // perfmon, for one, opens a log file for writing here
     PostConfigPreprocessors(snort_conf);
 
@@ -4914,12 +4930,12 @@ static void InitSignals(void)
     sigset_t set;
 
     sigemptyset(&set);
-#  if defined(HAVE_LIBPRELUDE) || defined(INLINE_FAILOPEN) || \
+#  if defined(INLINE_FAILOPEN) || \
       defined(TARGET_BASED) || defined(SNORT_RELOAD)
     pthread_sigmask(SIG_SETMASK, &set, NULL);
 #  else
     sigprocmask(SIG_SETMASK, &set, NULL);
-#  endif /* HAVE_LIBPRELUDE || INLINE_FAILOPEN */
+#  endif /* INLINE_FAILOPEN */
 # else
     sigsetmask(0);
 # endif /* LINUX, BSD, SOLARIS */
@@ -5198,6 +5214,7 @@ static SnortConfig * ReloadConfig(void)
     /* Preprocessors will have a reload callback */
     ConfigurePreprocessors(sc, 1);
 
+    FlowbitResetCounts();
     ParseRules(sc);
     RuleOptParseCleanup();
 

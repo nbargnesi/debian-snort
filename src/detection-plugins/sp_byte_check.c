@@ -184,7 +184,7 @@ uint32_t ByteTestHash(void *d)
         uint64_t ptr; /* Addresses are 64bits */
 
         ptr = (uint64_t) data->byte_order_func;
-        a += (ptr << 32) & 0XFFFFFFFF;
+        a += (ptr >> 32);
         b += (ptr & 0xFFFFFFFF);
     }
 #else

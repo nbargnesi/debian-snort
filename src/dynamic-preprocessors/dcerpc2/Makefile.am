@@ -7,7 +7,7 @@ libdir = ${exec_prefix}/lib/snort_dynamicpreprocessor
 
 lib_LTLIBRARIES = libsf_dce2_preproc.la
 
-libsf_dce2_preproc_la_LDFLAGS = -shared -export-dynamic -module @XCCFLAGS@
+libsf_dce2_preproc_la_LDFLAGS = -export-dynamic -module @XCCFLAGS@
 if SO_WITH_STATIC_LIB
 libsf_dce2_preproc_la_LIBADD = ../libsf_dynamic_preproc.la
 else

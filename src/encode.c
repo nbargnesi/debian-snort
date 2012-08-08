@@ -40,6 +40,7 @@
 #include "sf_iph.h"
 #include "snort.h"
 #include "stream_api.h"
+#include "checksum.h"
 
 #define GET_IP_HDR_LEN(h) (((h)->ip_verhl & 0x0f) << 2)
 #define GET_TCP_HDR_LEN(h) (((h)->th_offx2 & 0xf0) >> 2)
@@ -310,8 +311,6 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
     // cooked packet gets same policy as raw
     c->configPolicyId = p->configPolicyId;
 
-    c->policyEngineData = p->policyEngineData;
-
     if ( !c->max_dsize )
         return -1;
 
@@ -536,7 +535,10 @@ static inline uint8_t RevTTL (const EncState* enc, uint8_t ttl)
     if ( buf->end > buf->size ) \
         return ENC_OVERFLOW
 //-------------------------------------------------------------------------
-
+// BUFLEN
+// Get the buffer length for a given protocol
+#define BUFF_DIFF(buf, ho) ((uint8_t*)(buf->base+buf->end)-(uint8_t*)ho)
+    
 //-------------------------------------------------------------------------
 // ethernet
 //-------------------------------------------------------------------------
@@ -643,8 +645,7 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
     PROTO_ID next = NextEncoder(enc);
     UPDATE_BOUND(out, sizeof(*ho));
 
-    len = GET_IP_HDR_LEN(hi) - sizeof(*hi);
-
+    /* IPv4 encoded header is hardcoded 20 bytes */
     ho->ip_verhl = 0x45;
     ho->ip_off = 0;
 
@@ -680,9 +681,15 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
         ho->ip_proto = enc->proto;
         enc->proto = 0;
     }
+
     len = out->end - start;
     ho->ip_len = htons((uint16_t)len);
-    ip_checksum(ho, len);
+    
+    ho->ip_csum = 0;
+
+    /* IPv4 encoded header is hardcoded 20 bytes, we save some
+     * cycles and use the literal header size for checksum */
+    ho->ip_csum = in_chksum_ip((uint16_t *)ho, sizeof *ho);
 
     return ENC_OK;
 }
@@ -701,7 +708,10 @@ static ENC_STATUS IP4_Update (Packet* p, Layer* lyr, uint32_t* len)
     h->ip_len = htons((uint16_t)*len);
 
     if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) )
-        ip_checksum(h, *len);
+    {
+        h->ip_csum = 0;
+        h->ip_csum = in_chksum_ip((uint16_t *)h, GET_IP_HDR_LEN(h));
+    }
 
     return ENC_OK;
 }
@@ -745,6 +755,7 @@ static inline int IcmpCode (EncodeType et) {
     case ENC_UNR_NET:  return ICMP_UNREACH_NET;
     case ENC_UNR_HOST: return ICMP_UNREACH_HOST;
     case ENC_UNR_PORT: return ICMP_UNREACH_PORT;
+    case ENC_UNR_FW:   return ICMP_UNREACH_FILTER_PROHIB;
     default: break;
     }
     return ICMP_UNREACH_PORT;
@@ -777,9 +788,6 @@ static ENC_STATUS UN4_Encode (EncState* enc, Buffer* in, Buffer* out)
     ho->cksum = 0;
     ho->unused = 0;
 
-    // no need to set csum here because ip_checksum() will
-    // take care of it.  see Encode_TCP() for details.
-
     // copy original ip header
     p = out->base + out->end;
     UPDATE_BOUND(out, enc->ip_len);
@@ -789,6 +797,23 @@ static ENC_STATUS UN4_Encode (EncState* enc, Buffer* in, Buffer* out)
     p = out->base + out->end;
     UPDATE_BOUND(out, ICMP_UNREACH_DATA);
     memcpy(p, hi, ICMP_UNREACH_DATA);
+
+    ho->cksum = in_chksum_icmp((uint16_t *)ho, BUFF_DIFF(out, ho));
+
+    return ENC_OK;
+}
+
+static ENC_STATUS ICMP4_Update (Packet* p, Layer* lyr, uint32_t* len)
+{
+    IcmpHdr* h = (IcmpHdr*)(lyr->start);
+
+    *len += sizeof(*h) + p->dsize;
+
+    
+    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
+        h->cksum = 0;
+        h->cksum = in_chksum_icmp((uint16_t *)h, *len); 
+    }
 
     return ENC_OK;
 }
@@ -821,7 +846,7 @@ static ENC_STATUS UDP_Encode (EncState* enc, Buffer* in, Buffer* out)
         UDPHdr* ho = (UDPHdr*)(out->base + out->end);
         UPDATE_BOUND(out, sizeof(*ho));
 
-       if ( FORWARD(enc) )
+        if ( FORWARD(enc) )
         {
             ho->uh_sport = hi->uh_sport;
             ho->uh_dport = hi->uh_dport;
@@ -832,12 +857,34 @@ static ENC_STATUS UDP_Encode (EncState* enc, Buffer* in, Buffer* out)
             ho->uh_dport = hi->uh_sport;
         }
 
-       next = NextEncoder(enc);
-       err = encoders[next].fencode(enc, in, out);
-       if (ENC_OK != err ) return err;
-       len = out->end - start;
-       ho->uh_len = htons((uint16_t)len);
-       return ENC_OK;
+        next = NextEncoder(enc);
+        err = encoders[next].fencode(enc, in, out);
+        if (ENC_OK != err ) return err;
+        len = out->end - start;
+        ho->uh_len = htons((uint16_t)len);
+
+        ho->uh_chk = 0;
+
+        if (IP_VER((IPHdr *)enc->ip_hdr) == 4) {
+            pseudoheader ps;
+            ps.sip = ((IPHdr *)enc->ip_hdr)->ip_src.s_addr;
+            ps.dip = ((IPHdr *)enc->ip_hdr)->ip_dst.s_addr;
+            ps.zero = 0;
+            ps.protocol = IPPROTO_UDP;
+            ps.len = ho->uh_len;
+            ho->uh_chk = in_chksum_udp(&ps, (uint16_t *)ho, len);
+        }
+        else {
+            pseudoheader6 ps6;
+            memcpy(ps6.sip, ((IP6RawHdr *)enc->ip_hdr)->ip6_src.s6_addr, sizeof(ps6.sip));
+            memcpy(ps6.dip, ((IP6RawHdr *)enc->ip_hdr)->ip6_dst.s6_addr, sizeof(ps6.dip));
+            ps6.zero = 0;
+            ps6.protocol = IPPROTO_UDP;
+            ps6.len = ho->uh_len;
+            ho->uh_chk = in_chksum_udp6(&ps6, (uint16_t *)ho, len);
+        }
+
+        return ENC_OK;
     }
     if ( IP_VER((IPHdr*)enc->ip_hdr) == 4 )
         return UN4_Encode(enc, in, out);
@@ -852,8 +899,29 @@ static ENC_STATUS UDP_Update (Packet* p, Layer* lyr, uint32_t* len)
     *len += sizeof(*h) + p->dsize;
     h->uh_len = htons((uint16_t)*len);
 
-    // don't calculate the UDP checksum here;
-    // dnet's ip_checksum() will do it
+
+    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
+        h->uh_chk = 0;
+
+        if (IS_IP4(p)) {
+            pseudoheader ps;
+            ps.sip = ((IPHdr *)(lyr-1)->start)->ip_src.s_addr;
+            ps.dip = ((IPHdr *)(lyr-1)->start)->ip_dst.s_addr;
+            ps.zero = 0;
+            ps.protocol = IPPROTO_UDP;
+            ps.len = htons((uint16_t)*len);
+            h->uh_chk = in_chksum_udp(&ps, (uint16_t *)h, *len);
+        } else {
+            pseudoheader6 ps6;
+            memcpy(ps6.sip, &p->ip6h->ip_src.ip32, sizeof(ps6.sip));
+            memcpy(ps6.dip, &p->ip6h->ip_dst.ip32, sizeof(ps6.dip));
+            ps6.zero = 0;
+            ps6.protocol = IPPROTO_UDP;
+            ps6.len = htons((uint16_t)*len);
+            h->uh_chk = in_chksum_udp6(&ps6, (uint16_t *)h, *len);
+        }
+    }
+
     return ENC_OK;
 }
 
@@ -950,19 +1018,60 @@ static ENC_STATUS TCP_Encode (EncState* enc, Buffer* in, Buffer* out)
     // in case of ip6 extension headers, this gets next correct
     enc->proto = IPPROTO_TCP;
 
-    // we don't need to set th_sum here because dnet's
-    // ip_checksum() sets both IP and TCP checksums and
-    // ip6_checksum() sets the TCP checksum.
+    ho->th_sum = 0;
+
+    if (IP_VER((IPHdr *)enc->ip_hdr) == 4) {
+        pseudoheader ps;
+        int len = BUFF_DIFF(out, ho);
+
+        ps.sip = ((IPHdr *)(enc->ip_hdr))->ip_src.s_addr;
+        ps.dip = ((IPHdr *)(enc->ip_hdr))->ip_dst.s_addr;
+        ps.zero = 0;
+        ps.protocol = IPPROTO_TCP;
+        ps.len = htons((uint16_t)len);
+        ho->th_sum = in_chksum_tcp(&ps, (uint16_t *)ho, len);
+    } else {
+        pseudoheader6 ps6;
+        int len = BUFF_DIFF(out, ho);
+
+        memcpy(ps6.sip, ((IP6RawHdr *)enc->ip_hdr)->ip6_src.s6_addr, sizeof(ps6.sip));
+        memcpy(ps6.dip, ((IP6RawHdr *)enc->ip_hdr)->ip6_dst.s6_addr, sizeof(ps6.dip));
+        ps6.zero = 0;
+        ps6.protocol = IPPROTO_TCP;
+        ps6.len = htons((uint16_t)len);
+        ho->th_sum = in_chksum_tcp6(&ps6, (uint16_t *)ho, len);
+    }
+
     return ENC_OK;
 }
 
 static ENC_STATUS TCP_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     TCPHdr* h = (TCPHdr*)(lyr->start);
+
     *len += GET_TCP_HDR_LEN(h) + p->dsize;
 
-    // don't calculate the TCP checksum here;
-    // dnet's ip_checksum() will do it
+    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
+        h->th_sum = 0;
+
+        if (IS_IP4(p)) {
+            pseudoheader ps;
+            ps.sip = ((IPHdr *)(lyr-1)->start)->ip_src.s_addr;
+            ps.dip = ((IPHdr *)(lyr-1)->start)->ip_dst.s_addr;
+            ps.zero = 0;
+            ps.protocol = IPPROTO_TCP;
+            ps.len = htons((uint16_t)*len);
+            h->th_sum = in_chksum_tcp(&ps, (uint16_t *)h, *len);
+        } else {
+            pseudoheader6 ps6;
+            memcpy(ps6.sip, &p->ip6h->ip_src.ip32, sizeof(ps6.sip));
+            memcpy(ps6.dip, &p->ip6h->ip_dst.ip32, sizeof(ps6.dip));
+            ps6.zero = 0;
+            ps6.protocol = IPPROTO_TCP;
+            ps6.len = htons((uint16_t)*len);
+            h->th_sum = in_chksum_tcp6(&ps6, (uint16_t *)h, *len);
+        }
+    }
 
     return ENC_OK;
 }
@@ -1033,7 +1142,6 @@ static ENC_STATUS IP6_Encode (EncState* enc, Buffer* in, Buffer* out)
     }
     len = out->end - start;
     ho->ip6plen = htons((uint16_t)(len - sizeof(*ho)));
-    ip6_checksum(ho, len);
 
     return ENC_OK;
 }
@@ -1067,9 +1175,6 @@ static ENC_STATUS IP6_Update (Packet* p, Layer* lyr, uint32_t* len)
         // len includes header, remove for payload
         h->ip6plen = htons((uint16_t)(*len - sizeof(*h)));
     }
-
-    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) )
-        ip6_checksum(h, *len);
 
     return ENC_OK;
 }
@@ -1139,6 +1244,8 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     uint8_t* p;
     uint8_t* hi = enc->p->layers[enc->layer-1].start;
     IcmpHdr* ho = (IcmpHdr*)(out->base + out->end);
+    pseudoheader6 ps6;
+    int len;
 
 #ifdef DEBUG
     if ( enc->type < ENC_UNR_NET )
@@ -1152,9 +1259,6 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     ho->code = 4;   // port unreachable
     ho->cksum = 0;
     ho->unused = 0;
-
-    // no need to set csum here because ip6_checksum() will
-    // take care of it.  see Encode_TCP() for details.
 
     // ip + udp headers are copied separately because there
     // may be intervening extension headers which aren't copied
@@ -1172,10 +1276,41 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     UPDATE_BOUND(out, ICMP_UNREACH_DATA);
     memcpy(p, hi, ICMP_UNREACH_DATA);
 
+    len = BUFF_DIFF(out, ho);
+
+    memcpy(ps6.sip, ((IP6RawHdr *)enc->ip_hdr)->ip6_src.s6_addr, sizeof(ps6.sip));
+    memcpy(ps6.dip, ((IP6RawHdr *)enc->ip_hdr)->ip6_dst.s6_addr, sizeof(ps6.dip));
+    ps6.zero = 0;
+    ps6.protocol = IPPROTO_ICMPV6;
+    ps6.len = htons((uint16_t)(len));
+
+    ho->cksum = in_chksum_icmp6(&ps6, (uint16_t *)ho, len);
+
     return ENC_OK;
 }
 
 #ifdef SUP_IP6
+static ENC_STATUS ICMP6_Update (Packet* p, Layer* lyr, uint32_t* len)
+{
+    IcmpHdr* h = (IcmpHdr*)(lyr->start);
+
+    *len += sizeof(*h) + p->dsize;
+
+    if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
+        pseudoheader6 ps6;
+        h->cksum = 0;
+
+        memcpy(ps6.sip, &p->ip6h->ip_src.ip32, sizeof(ps6.sip));
+        memcpy(ps6.dip, &p->ip6h->ip_dst.ip32, sizeof(ps6.dip));
+        ps6.zero = 0;
+        ps6.protocol = IPPROTO_ICMPV6;
+        ps6.len = htons((uint16_t)*len);
+        h->cksum = in_chksum_icmp6(&ps6, (uint16_t *)h, *len);
+    }
+
+    return ENC_OK;
+}
+
 static void ICMP6_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 {
     // TBD handle nested icmp6 layers
@@ -1293,11 +1428,13 @@ static ENC_STATUS XXX_Encode (EncState* enc, Buffer* in, Buffer* out)
 // udp and put in Encode_Update() (then this can be eliminated and
 // xxx called instead).  (another thought is to add data as a "layer").
 
+#if 0
 static ENC_STATUS Top_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     *len += lyr->length + p->dsize;
     return ENC_OK;
 }
+#endif
 
 static ENC_STATUS XXX_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
@@ -1319,7 +1456,7 @@ static void XXX_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 static EncoderFunctions encoders[PROTO_MAX] = {
     { Eth_Encode,  Eth_Update,   Eth_Format   },
     { IP4_Encode,  IP4_Update,   IP4_Format   },
-    { UN4_Encode,  Top_Update,   ICMP4_Format },
+    { UN4_Encode,  ICMP4_Update, ICMP4_Format },
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ICMP_IP4
     { UDP_Encode,  UDP_Update,   UDP_Format   },
     { TCP_Encode,  TCP_Update,   TCP_Format   },
@@ -1327,7 +1464,7 @@ static EncoderFunctions encoders[PROTO_MAX] = {
     { IP6_Encode,  IP6_Update,   IP6_Format   },
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Hop Opts
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Dst Opts
-    { UN6_Encode,  Top_Update,   ICMP6_Format },
+    { UN6_Encode,  ICMP6_Update, ICMP6_Format },
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ICMP_IP6
 #endif
     { XXX_Encode,  XXX_Update,   VLAN_Format  },

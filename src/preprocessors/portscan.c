@@ -607,8 +607,7 @@ static int ps_tracker_lookup(PS_PKT *ps_pkt, PS_TRACKER **scanner,
         /*
         **  Get the scanned tracker.
         */
-        if(ps_tracker_get(scanned, &key))
-            return -1;
+        ps_tracker_get(scanned, &key);
     }
 
     /*
@@ -626,9 +625,11 @@ static int ps_tracker_lookup(PS_PKT *ps_pkt, PS_TRACKER **scanner,
         /*
         **  Get the scanner tracker
         */
-        if(ps_tracker_get(scanner, &key))
-            return -1;
+        ps_tracker_get(scanner, &key);
     }
+
+    if ((*scanner == NULL) && (*scanned == NULL))
+        return -1;
 
     return 0;
 }
@@ -654,9 +655,11 @@ static int ps_get_proto(PS_PKT *ps_pkt, int *proto)
 
     if (portscan_eval_config->detect_scans & PS_PROTO_TCP)
     {
-        if ((p->tcph != NULL) ||
-            ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH) &&
-             (p->icmph->code == ICMP_PORT_UNREACH) && (p->orig_tcph != NULL)))
+        if ((p->tcph != NULL)
+                || ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH)
+                    && ((p->icmph->code == ICMP_PORT_UNREACH)
+                        || (p->icmph->code == ICMP_PKT_FILTERED))
+                    && (p->orig_tcph != NULL)))
         {
             *proto = PS_PROTO_TCP;
             return 0;
@@ -665,9 +668,11 @@ static int ps_get_proto(PS_PKT *ps_pkt, int *proto)
 
     if (portscan_eval_config->detect_scans & PS_PROTO_UDP)
     {
-        if ((p->udph != NULL) ||
-            ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH) &&
-             (p->icmph->code == ICMP_PORT_UNREACH) && (p->orig_udph != NULL)))
+        if ((p->udph != NULL)
+                || ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH)
+                    && ((p->icmph->code == ICMP_PORT_UNREACH)
+                        || (p->icmph->code == ICMP_PKT_FILTERED))
+                    && (p->orig_udph != NULL)))
         {
             *proto = PS_PROTO_UDP;
             return 0;
@@ -676,9 +681,10 @@ static int ps_get_proto(PS_PKT *ps_pkt, int *proto)
 
     if (portscan_eval_config->detect_scans & PS_PROTO_IP)
     {
-        if ((IPH_IS_VALID(p) && (p->icmph == NULL)) ||
-            ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH) &&
-             (p->icmph->code == ICMP_PROT_UNREACH)))
+        if ((IPH_IS_VALID(p) && (p->icmph == NULL))
+                || ((p->icmph != NULL) && (p->icmph->type == ICMP_DEST_UNREACH)
+                    && ((p->icmph->code == ICMP_PROT_UNREACH)
+                        || (p->icmph->code == ICMP_PKT_FILTERED))))
         {
             *proto = PS_PROTO_IP;
             return 0;
@@ -1085,7 +1091,7 @@ static int ps_tracker_update_tcp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
     /*
     **  If we are an icmp unreachable, deal with it here.
     */
-    else if(p->icmph && p->orig_tcph)
+    else if(p->icmph)
     {
         if(scanned)
         {
@@ -1117,20 +1123,16 @@ static int ps_tracker_update_ip(PS_PKT *ps_pkt, PS_TRACKER *scanner,
     {
         if(p->icmph)
         {
-            if(p->icmph->type == ICMP_DEST_UNREACH &&
-               p->icmph->code == ICMP_PROT_UNREACH)
+            if(scanned)
             {
-                if(scanned)
-                {
-                    ps_proto_update(&scanned->proto,0,1,CLEARED,0,0);
-                    scanned->priority_node = 1;
-                }
+                ps_proto_update(&scanned->proto,0,1,CLEARED,0,0);
+                scanned->priority_node = 1;
+            }
 
-                if(scanner)
-                {
-                    ps_proto_update(&scanner->proto,0,1,CLEARED,0,0);
-                    scanner->priority_node = 1;
-                }
+            if(scanner)
+            {
+                ps_proto_update(&scanner->proto,0,1,CLEARED,0,0);
+                scanner->priority_node = 1;
             }
 
             return 0;
@@ -1153,20 +1155,16 @@ static int ps_tracker_update_udp(PS_PKT *ps_pkt, PS_TRACKER *scanner,
 
     if(p->icmph)
     {
-        if(p->icmph->type == ICMP_DEST_UNREACH &&
-           p->icmph->code == ICMP_PORT_UNREACH)
+        if(scanned)
         {
-            if(scanned)
-            {
-                ps_proto_update(&scanned->proto,0,1,CLEARED,0,0);
-                scanned->priority_node = 1;
-            }
+            ps_proto_update(&scanned->proto,0,1,CLEARED,0,0);
+            scanned->priority_node = 1;
+        }
 
-            if(scanner)
-            {
-                ps_proto_update(&scanner->proto,0,1,CLEARED,0,0);
-                scanner->priority_node = 1;
-            }
+        if(scanner)
+        {
+            ps_proto_update(&scanner->proto,0,1,CLEARED,0,0);
+            scanner->priority_node = 1;
         }
     }
     else if(p->udph)

@@ -105,6 +105,8 @@ typedef struct _DCE2_Queue
     struct _DCE2_QueueNode *current;
     struct _DCE2_QueueNode *head;
     struct _DCE2_QueueNode *tail;
+    struct _DCE2_QueueNode *next;
+    struct _DCE2_QueueNode *prev;
 
 } DCE2_Queue;
 
@@ -184,6 +186,7 @@ void * DCE2_QueueFirst(DCE2_Queue *);
 void * DCE2_QueueNext(DCE2_Queue *);
 void * DCE2_QueueLast(DCE2_Queue *);
 void * DCE2_QueuePrev(DCE2_Queue *);
+void DCE2_QueueRemoveCurrent(DCE2_Queue *);
 static inline int DCE2_QueueIsEmpty(DCE2_Queue *);
 void DCE2_QueueEmpty(DCE2_Queue *);
 void DCE2_QueueDestroy(DCE2_Queue *);

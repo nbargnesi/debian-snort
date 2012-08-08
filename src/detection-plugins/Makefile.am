@@ -97,7 +97,6 @@ sed_hdropts = \
 		-e "s/ICMP_ECHO_REQUEST/ICMP_ECHO/g" \
 		-e "s/icmph_union.echo.id/s_icmp_id/g" \
 		-e "s/icmph_union.echo.seq/s_icmp_seq/g" \
-        -e "/sf_snort_detection_engine.h/d" \
 	$$src_file > $$dst_file;
 
 sf_snort_plugin_hdropts.c: ../dynamic-plugins/sf_engine/sf_snort_plugin_hdropts.c

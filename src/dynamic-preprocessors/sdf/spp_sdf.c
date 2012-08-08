@@ -462,8 +462,20 @@ static void ProcessSDF(void *p, void *context)
 
         SDFSearch(config, packet, session, begin, end, buflen);
     }
+    else if (packet->flags & FLAG_REBUILT_STREAM)
+    {
+        /* SDF already requires stream to be enabled, might as well look
+         * at the rebuilt packet */
 
-    /* If this packet is HTTP, inspect the URI and Client Body while ignoring headers. */
+        begin = (char *)packet->payload;
+        buflen = packet->payload_size;
+        end = begin + buflen;
+
+        SDFSearch(config, packet, session, begin, end, buflen);
+    }
+
+    /* If this packet is HTTP, inspect the URI and Client Body while ignoring
+     * headers. */
     if (packet->flags & FLAG_HTTP_DECODE)
     {
         if (_dpd.uriBuffers[HTTP_BUFFER_URI]->uriLength > 0)
@@ -483,17 +495,6 @@ static void ProcessSDF(void *p, void *context)
             SDFSearch(config, packet, session, begin, end, buflen);
         }
     }
-    else
-    {
-        /* Only inspect raw packet payload on non-HTTP. This is done so that
-           when server_flow_depth == -1, we don't inspect anyway. */
-        begin = (char *)packet->payload;
-        buflen = packet->payload_size;
-        end = begin + buflen;
-
-        SDFSearch(config, packet, session, begin, end, buflen);
-    }
-
     /* End. */
     PREPROC_PROFILE_END(sdfPerfStats);
     return;
@@ -819,10 +820,12 @@ static inline unsigned short in_chksum_ip(  unsigned short * w, int blen )
 static void SDFPrintPseudoPacket(SDFConfig *config, SDFSessionData *session,
                                  SFSnortPacket *real_packet)
 {
-    SFSnortPacket* p = config->pseudo_packet;
+    SFSnortPacket* p;
 
     if (config == NULL || session == NULL || real_packet == NULL)
         return;
+
+    p = config->pseudo_packet;
 
     _dpd.encodeFormat(ENC_DYN_FWD|ENC_DYN_NET, real_packet, config->pseudo_packet, PSEUDO_PKT_SDF);
 

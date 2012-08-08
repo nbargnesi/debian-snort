@@ -394,24 +394,40 @@ static int SIP_ignoreChannels( SIP_DialogData *dialog, SFSnortPacket *p)
 	sip_stats.ignoreSessions++;
 	while((NULL != mdataA)&&(NULL != mdataB))
     {
-
+        void *ssn;
     	DEBUG_WRAP(DebugMessage(DEBUG_SIP, "Ignoring channels Source IP: %s Port: %u\n",
     			sfip_to_str(&mdataA->maddress), mdataA->mport););
     	DEBUG_WRAP(DebugMessage(DEBUG_SIP, "Ignoring channels Destine IP: %s Port: %u\n",
     			sfip_to_str(&mdataB->maddress), mdataB->mport););
     	/* Call into Streams to mark data channel as something to ignore. */
 #ifdef SUP_IP6
-    	_dpd.streamAPI->ignore_session(&mdataA->maddress,
-    			mdataA->mport, &mdataB->maddress,
-    			mdataB->mport, IPPROTO_UDP, p->pkt_header->ts.tv_sec,
-                PP_SIP, SSN_DIR_BOTH,
-    			0 /* Not permanent */ );
+    	if ((ssn = _dpd.streamAPI->get_session_ptr_from_ip_port(&mdataA->maddress,mdataA->mport, &mdataB->maddress,
+    	        mdataB->mport, IPPROTO_UDP, 0, 0)))
+    	{
+    	    _dpd.streamAPI->set_ignore_direction(ssn, SSN_DIR_BOTH);
+    	}
+    	else
+    	{
+    	    _dpd.streamAPI->ignore_session(&mdataA->maddress,
+    	            mdataA->mport, &mdataB->maddress,
+    	            mdataB->mport, IPPROTO_UDP, p->pkt_header->ts.tv_sec,
+    	            PP_SIP, SSN_DIR_BOTH,
+    	            0 /* Not permanent */ );
+    	}
 #else
-    	_dpd.streamAPI->ignore_session( (snort_ip_p)mdataA->maddress.ip.u6_addr32[0],
-    	    			mdataA->mport, (snort_ip_p)mdataB->maddress.ip.u6_addr32[0],
-    	    			mdataB->mport, IPPROTO_UDP, p->pkt_header->ts.tv_sec,
-                        PP_SIP, SSN_DIR_BOTH,
-    	    			0 /* Not permanent */ );
+    	if ((ssn = _dpd.streamAPI->get_session_ptr_from_ip_port((snort_ip_p)mdataA->maddress.ip.u6_addr32[0],
+    	        mdataA->mport, (snort_ip_p)mdataB->maddress.ip.u6_addr32[0], mdataB->mport, IPPROTO_UDP,0, 0)))
+    	{
+    	    _dpd.streamAPI->set_ignore_direction(ssn, SSN_DIR_BOTH);
+    	}
+    	else
+    	{
+    	    _dpd.streamAPI->ignore_session( (snort_ip_p)mdataA->maddress.ip.u6_addr32[0],
+    	            mdataA->mport, (snort_ip_p)mdataB->maddress.ip.u6_addr32[0],
+    	            mdataB->mport, IPPROTO_UDP, p->pkt_header->ts.tv_sec,
+    	            PP_SIP, SSN_DIR_BOTH,
+    	            0 /* Not permanent */ );
+    	}
 #endif
     	sip_stats.ignoreChannels++;
     	mdataA = mdataA->nextM;

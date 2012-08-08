@@ -108,7 +108,7 @@ typedef struct _SIPbodyField
 
 SIPheaderField headerFields[] =
 {
-		{"Via", 3, NULL,  &sip_parse_via},
+		{"Via", 3, "v",  &sip_parse_via},
 		{"From", 4,"f",  &sip_parse_from},
 		{"To", 2, "t",  &sip_parse_to},
 		{"Call-ID", 7, "i", &sip_parse_call_id},

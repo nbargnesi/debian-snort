@@ -216,7 +216,7 @@ static int DAQ_ValidateInstance ()
 //--------------------------------------------------------------------
 
 #if HAVE_DAQ_HUP_APPLY
-static int DAQ_PreControl(uint16_t type, const uint8_t *data, uint32_t length, void **new_config)
+static int DAQ_PreControl(uint16_t type, const uint8_t *data, uint32_t length, void **new_config, char *statusBuf, int statusBuf_len)
 {
     if (daq_mod && daq_hand)
         return daq_hup_prep(daq_mod, daq_hand, new_config);
@@ -344,6 +344,16 @@ int DAQ_CanInject (void)
 {
     return ( daq_get_capabilities(daq_mod, daq_hand) & DAQ_CAPA_INJECT );
 }
+
+int DAQ_CanWhitelist (void)
+{
+#ifdef DAQ_CAPA_WHITELIST
+    return ( daq_get_capabilities(daq_mod, daq_hand) & DAQ_CAPA_WHITELIST );
+#else
+    return 0;
+#endif
+}
+
 
 int DAQ_RawInjection (void)
 {

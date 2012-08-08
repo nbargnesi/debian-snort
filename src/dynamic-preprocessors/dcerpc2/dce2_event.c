@@ -52,11 +52,6 @@ static DCE2_EventNode dce2_events[DCE2_EVENT__MAX];
 /* Used for matching a pdu string to a pdu type */
 char *dce2_pdu_types[DCERPC_PDU_TYPE__MAX];
 
-/********************************************************************
- * Extern variables
- ********************************************************************/
-extern DCE2_Stats dce2_stats;
-
 /******************************************************************
  * Function: DCE2_EventsInit()
  *
@@ -152,12 +147,12 @@ void DCE2_EventsInit(void)
         {
             DCE2_EVENT_FLAG__SMB,
             DCE2_EVENT__SMB_DSENT_GT_TDCNT,
-            "SMB - Total data sent (%u) greater than command total data expected (%u)"
+            "SMB - Total data sent ("STDu64") greater than command total data expected (%u)"
         },
         {
             DCE2_EVENT_FLAG__SMB,
             DCE2_EVENT__SMB_BCC_LT_DSIZE,
-            "SMB - Byte count (%u) less than command data size (%u)"
+            "SMB - Byte count (%u) less than command data size ("STDu64")"
         },
         {
             DCE2_EVENT_FLAG__SMB,
@@ -319,6 +314,51 @@ void DCE2_EventsInit(void)
             DCE2_EVENT__SMB2_EXCESSIVE_COMPOUNDING,
             "SMB - Excessive command compounding (>%u)"
         },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_DCNT_ZERO,
+            "SMB - Zero data count"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_DCNT_MISMATCH,
+            "SMB - Data count mismatch %u in command / %u in format"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_MAX_REQS_EXCEEDED,
+            "SMB - Maximum number of outstanding requests exceeded: %u"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_REQS_SAME_MID,
+            "SMB - Outstanding requests with same MID",
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_DEPR_DIALECT_NEGOTIATED,
+            "SMB - Deprecated dialect negotiated"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_DEPR_COMMAND_USED,
+            "SMB - Deprecated command used: %s"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_UNUSUAL_COMMAND_USED,
+            "SMB - Unusual command used: %s"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_INVALID_SETUP_COUNT,
+            "SMB - Invalid setup count for %s/%s command: %u"
+        },
+        {
+            DCE2_EVENT_FLAG__SMB,
+            DCE2_EVENT__SMB_MULTIPLE_NEGOTIATIONS,
+            "SMB - Client attempted multiple dialect negotiations on session"
+        }
     };
 
     snprintf(gname, sizeof(gname) - 1, "(%s) ", DCE2_GNAME);
@@ -462,15 +502,28 @@ void DCE2_Alert(DCE2_SsnData *sd, DCE2_Event e, ...)
 {
     va_list ap;
 
+#ifdef DEBUG_MSGS
+    // When debugging want to see all of the alerts generated
+    va_start(ap, e);
+    vsnprintf(dce2_event_bufs[e], sizeof(dce2_event_bufs[e]) - 1, dce2_events[e].format, ap);
+    va_end(ap);
+
+    dce2_event_bufs[e][sizeof(dce2_event_bufs[e]) - 1] = '\0';
+    DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ALL, "DCE2 Alert => %s\n", dce2_event_bufs[e]));
+#endif
+
     if (sd != NULL)
     {
+        // NOTE This check needs to change if the number of preprocessor events
+        // should exceed 63
+
         /* Only log a specific alert once per session */
-        if (sd->alert_mask & (1 << e))
+        if (sd->alert_mask & ((uint64_t)1 << e))
             return;
 
         /* set bit for this alert so we don't alert on again
          * in this session */
-        sd->alert_mask |= (1 << e);
+        sd->alert_mask |= ((uint64_t)1 << e);
     }
 
     if (!DCE2_GcAlertOnEvent(dce2_events[e].eflag))
@@ -478,14 +531,14 @@ void DCE2_Alert(DCE2_SsnData *sd, DCE2_Event e, ...)
 
     dce2_stats.events++;
 
+#ifndef DEBUG_MSGS
     va_start(ap, e);
     vsnprintf(dce2_event_bufs[e], sizeof(dce2_event_bufs[e]) - 1, dce2_events[e].format, ap);
     va_end(ap);
 
-    /* Make sure it's NULL terminated */
     dce2_event_bufs[e][sizeof(dce2_event_bufs[e]) - 1] = '\0';
-
     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ALL, "DCE2 Alert => %s\n", dce2_event_bufs[e]));
+#endif
 
     _dpd.alertAdd(GENERATOR_DCE2, e, 1, 0, 3, dce2_event_bufs[e], 0);
 }

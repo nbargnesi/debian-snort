@@ -246,7 +246,7 @@ int Base64Decode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds
     }
     else if ((ds->b64_state.encode_depth) < 0)
     {
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
     else
     {
@@ -263,7 +263,7 @@ int Base64Decode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds
             (!encode_buf) || (!decode_buf))
     {
         ResetEmailDecodeState(ds);
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
 
     /*The non decoded encoded data in the previous packet is required for successful decoding
@@ -342,7 +342,7 @@ int QPDecode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds)
     }
     else if ((ds->qp_state.encode_depth) < 0)
     {
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
     else
     {
@@ -359,7 +359,7 @@ int QPDecode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds)
             (!encode_buf) || (!decode_buf))
     {
         ResetEmailDecodeState(ds);
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
 
     /*The non decoded encoded data in the previous packet is required for successful decoding
@@ -436,7 +436,7 @@ int UUDecode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds)
     else if ((ds->uu_state.encode_depth) < 0)
     {
         ds->uu_state.begin_found = 0;
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
     else
     {
@@ -454,7 +454,7 @@ int UUDecode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds)
     {
         ds->uu_state.begin_found = 0;
         ResetEmailDecodeState(ds);
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
 
     /*The non decoded encoded data in the previous packet is required for successful decoding
@@ -551,7 +551,7 @@ int BitEncExtract(const uint8_t *start, const uint8_t *end, Email_DecodeState *d
     }
     else if ((ds->bitenc_state.depth) < 0)
     {
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
     else
     {
@@ -563,7 +563,7 @@ int BitEncExtract(const uint8_t *start, const uint8_t *end, Email_DecodeState *d
     if(bytes_avail ==0)
     {
         ResetEmailDecodeState(ds);
-        return DECODE_FAIL;
+        return DECODE_EXCEEDED;
     }
 
 

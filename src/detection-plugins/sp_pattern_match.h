@@ -120,6 +120,7 @@ void PatternMatchFree(void *d);
 uint32_t PatternMatchHash(void *d);
 int PatternMatchCompare(void *l, void *r);
 void FinalizeContentUniqueness(OptTreeNode *otn);
+void ValidateFastPattern(OptTreeNode *otn);
 void make_precomp(PatternMatchData *);
 void ParsePattern(char *, OptTreeNode *, int);
 int uniSearchCI(const char *, int, PatternMatchData *);
@@ -133,7 +134,6 @@ int PatternMatchAdjustRelativeOffsets(PatternMatchData *orig_pmd, PatternMatchDa
 /* Not implemented */
 int CheckORPatternMatch(Packet *, OptTreeNode *, OptFpList *);
 #endif
-
 
 static inline int IsHttpBufFpEligible(int uri_buffer)
 {

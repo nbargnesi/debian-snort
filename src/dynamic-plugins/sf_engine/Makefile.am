@@ -7,7 +7,7 @@ lib_LTLIBRARIES = libsf_engine.la
 
 libdir = ${exec_prefix}/lib/snort_dynamicengine
 
-libsf_engine_la_LDFLAGS = -shared -export-dynamic -module @XCCFLAGS@
+libsf_engine_la_LDFLAGS = -export-dynamic -module @XCCFLAGS@
 
 BUILT_SOURCES = \
 sfhashfcn.c \

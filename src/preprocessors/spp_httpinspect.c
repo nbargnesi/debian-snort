@@ -123,7 +123,10 @@ static tSfPolicyId httpCurrentPolicy = 0;
 
 #ifdef ZLIB
 MemPool *hi_gzip_mempool = NULL;
+uint8_t decompression_buffer[65535];
 #endif
+
+uint8_t dechunk_buffer[65535];
 
 MemPool *http_mempool = NULL;
 int hex_lookup[256];
@@ -388,8 +391,7 @@ static void HttpInspectResetStats(int signal, void *data)
 static void SetMaxGzipSession(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig)
 {
     pPolicyConfig->max_gzip_sessions =
-        pPolicyConfig->max_gzip_mem / (pPolicyConfig->compr_depth + pPolicyConfig->decompr_depth);
-
+        pPolicyConfig->max_gzip_mem / sizeof(DECOMPRESS_STATE);
 }
 
 static void CheckGzipConfig(HTTPINSPECT_GLOBAL_CONF *pPolicyConfig,
@@ -1139,34 +1141,15 @@ static void HttpInspectCheckConfig(void)
             compress_depth = defaultConfig->compr_depth;
             decompress_depth = defaultConfig->decompr_depth;
 
-            /* Since the mempool data will be a combination of compress depth buffer
-             * and decompress depth buffer, make sure compress depth  and decompress_depth
-             * are 8 byte aligned */
-            if (compress_depth & 7)
-            {
-                compress_depth += (8 - (compress_depth & 7));
-                defaultConfig->compr_depth = compress_depth;
-            }
-
-            if (decompress_depth & 7)
-            {
-                decompress_depth += (8 - (decompress_depth & 7));
-                defaultConfig->decompr_depth = decompress_depth;
-            }
-
             hi_gzip_mempool = (MemPool *)SnortAlloc(sizeof(MemPool));
 
             if (mempool_init(hi_gzip_mempool, defaultConfig->max_gzip_sessions,
-                        (compress_depth + decompress_depth)) != 0)
+                        sizeof(DECOMPRESS_STATE)) != 0)
             {
                 if(defaultConfig->max_gzip_sessions)
-                {
                     FatalError("http_inspect: Error setting the \"max_gzip_mem\" \n");
-                }
                 else
-                {
                     FatalError("http_inspect:  Could not allocate gzip mempool.\n");
-                }
             }
         }
     }
@@ -1393,11 +1376,6 @@ static int HttpInspectReloadVerify(void)
                 return -1;
             }
 
-            /* This 8 byte alignment is done during initialization, so make sure
-             * we match it here so we don't bail unnecessarliy */
-            if (defaultSwapConfig->compr_depth & 7)
-                defaultSwapConfig->compr_depth += (8 - (defaultSwapConfig->compr_depth & 7));
-
             if (defaultSwapConfig->compr_depth != defaultConfig->compr_depth)
             {
                 ErrorMessage("http_inspect:  Changing compress_depth requires "
@@ -1406,9 +1384,6 @@ static int HttpInspectReloadVerify(void)
                 hi_swap_config = NULL;
                 return -1;
             }
-
-            if (defaultSwapConfig->decompr_depth & 7)
-                defaultSwapConfig->decompr_depth += (8 - (defaultSwapConfig->decompr_depth & 7));
 
             if (defaultSwapConfig->decompr_depth != defaultConfig->decompr_depth)
             {
@@ -1437,27 +1412,15 @@ static int HttpInspectReloadVerify(void)
                 compress_depth = defaultSwapConfig->compr_depth;
                 decompress_depth = defaultSwapConfig->decompr_depth;
 
-                /* Since the mempool data will be a combination of compress depth buffer
-                 * and decompress depth buffer, make sure compress depth and
-                 * decompress_depth are 8 byte aligned */
-                if (compress_depth & 7)
-                {
-                    compress_depth += (8 - (compress_depth & 7));
-                    defaultSwapConfig->compr_depth = compress_depth;
-                }
-
-                if (decompress_depth & 7)
-                {
-                    decompress_depth += (8 - (decompress_depth & 7));
-                    defaultSwapConfig->decompr_depth = decompress_depth;
-                }
-
                 hi_gzip_mempool = (MemPool *)SnortAlloc(sizeof(MemPool));
 
                 if (mempool_init(hi_gzip_mempool, defaultSwapConfig->max_gzip_sessions,
-                            (compress_depth + decompress_depth)) != 0)
+                            sizeof(DECOMPRESS_STATE)) != 0)
                 {
-                    FatalError("http_inspect:  Could not allocate gzip mempool.\n");
+                    if (defaultSwapConfig->max_gzip_sessions)
+                        FatalError("http_inspect: Error setting the \"max_gzip_mem\" \n");
+                    else
+                        FatalError("http_inspect:  Could not allocate gzip mempool.\n");
                 }
             }
         }
@@ -1481,7 +1444,7 @@ static int HttpInspectReloadVerify(void)
             return -1;
         }
     }
-    else if (defaultSwapConfig != NULL)
+    else
     {
         if (sfPolicyUserDataIterate(hi_swap_config, HttpInspectExtractUriHost) != 0)
         {

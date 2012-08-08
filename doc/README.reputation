@@ -35,7 +35,7 @@ blacklist      <list file name>     No       NULL
 whitelist      <list file name>     No       NULL
 priority      [blacklist whitelist] No       priority whitelist
 nested_ip     [inner outer both]    No       nested_ip inner
-
+white         [black trust]         No       white unblack
 
 memcap        = 1 - 4095 Mbytes
 
@@ -45,7 +45,8 @@ preprocessor reputation:\
             < blacklist  < list filename >>,\
             < whitelist < list filename >>,\
             < priority  [blacklist whitelist] >,\
-            < nested_ip  [inner outer both] >
+            < nested_ip  [inner outer both] >,\
+            < white  [unblack trust] >
 Options:
 
   < memcap number >: 
@@ -82,7 +83,15 @@ Options:
   < nested_ip >: 
            Specify which IP address to be used when there is IP encapsulation. 
 
-
+  < white >: 
+           Specify the meaning of whitelist. When white means unblack, it 
+           unblacks IPs that are in blacklists; when white means trust, the 
+           packet gets bypassed, without further detection by snort. You can 
+           only specify either unblack or trust.
+           
+           Note: when white means unblack, whitelist always has higher priority
+           than blacklist.
+           
 Configuration examples
 
   Default configuration
@@ -107,7 +116,8 @@ Configuration examples
                      memcap  200, scan_local, nested_ip both, \
                      priority whitelist, \
                      blacklist /etc/snort/default.blacklist, \
-                     whitelist /etc/snort/default.whitelist
+                     whitelist /etc/snort/default.whitelist, \
+                     white trust
   
   Variable path/file configuration
    
@@ -165,6 +175,8 @@ SID   Description
 --------------------------------------------------------------------------------
   1   Packets are blacklisted. 
   2   Packets are whitelisted.
+  3   Packets are inspected.
+
 
 Rule Options
 ================================================================================
@@ -230,9 +242,9 @@ Configuration
       Example: shared_mem  /user/reputation/iplists
       If you want to change the period of checking new IP lists, add refresh period.
       Example: shared_refresh 300
-   4) Start shared memory master(writer) with -G 1 option. Note: only one master
+   4) Start shared memory master(writer) with -G 0 option. Note: only one master
       should be enabled.
-   5) Start shared memory clients (readers) with -G  2 or other IDs. Note: for 
+   5) Start shared memory clients (readers) with -G  1 or other IDs. Note: for 
       one ID, only one snort instance should be enabled.
    6) You will see the IP lists got loaded and shared across snort instances!
  
@@ -242,7 +254,7 @@ Configuration
    2) (Optional) you can create a version file named "IPRVersion.dat" in the IP list
       directory. This file helps managing reloading IP lists, by specifying version. 
       When the version isn't changed, IP lists will not be reloaded if they are 
-      already in shared memory. 
+      already in shared memory. The version number should be a 32 bit number.
       For example: 
       VERSION=19
    3) In the ./src/tools/control directory, you will find snort_control command if 
@@ -250,4 +262,40 @@ Configuration
    4) Type the following command to reload IP lists. Before typing this command,
       make sure to update version file if you are using version file.
       The <path> is the same path in step 1).
-       <snort root>/src/tools/control  <path> 1361
+       <snort root>/src/tools/control/snort_control  <path> 1361
+ 
+ Using manifest file to manage loading (optional)
+ 
+   Using manifest file, you can control the file loading sequence, action taken,
+   and support zone based detection. You can create a manifest file named 
+   "zone.info" in the IP list directory.
+    
+   When Snort is signaled to load new lists, a manifest file is read first to 
+   determine which zones the IPs in each list are applicable to and what action 
+   to take per list (Block, White, Monitor). 
+   
+   Files listed in manifest are loaded from top to bottom. You should put files 
+   that have higher priority first. In manifest file, you can put up to 255 
+   files. Without manifest file, files will be loaded in alphabet order.
+   
+   Here's the format of the manifest file. Each line of the file has the 
+   following format:
+   
+     <filename>, <list id>,<action>[, <zone>]+
+  
+     <list id> ::= 32 bit integer
+     <action> ::= "monitor"|"block"|"white"
+     <zone>  ::= [0-1051]
+   
+   Using manifest file, you can specify a new action called "monitor", which
+   indicates a packet needs to be monitored, but does not disable detection. 
+   This is different from "block" action, which disables further detection. 
+   This new action helps users evaluate their IP lists before applying it.
+   
+   An exmple manifest file:
+   
+   #ipreputation manifest file
+   white.wlf, 111 ,white, 
+   black1.blf, 1112, black,  3, 12
+   black2.blf, 1113, black,  3, 12
+   monitor.blf,2222, monitor, 0, 2, 8

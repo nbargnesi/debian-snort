@@ -314,6 +314,8 @@ int SMTP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetMailFrom(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetRcptTo(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetEmailHdrs(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
+void SMTP_MimeMempoolInit(int, int);
+void SMTP_MempoolInit(uint32_t, uint32_t);
 
 /**************************************************************************/
 

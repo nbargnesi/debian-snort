@@ -513,7 +513,7 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
     return;
 
  syntax:
-    if(free_me) free(free_me);
+    free(free_me);
 
     FatalError("%s Line %d => unable to parse pcre regex %s\n",
                file_name, file_line, data);

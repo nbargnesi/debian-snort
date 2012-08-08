@@ -26,21 +26,16 @@
 #include "dce2_debug.h"
 #include "dce2_memory.h"
 #include "dcerpc.h"
-//#include "sf_types.h"
+#include "sf_types.h"
 #include "sf_snort_packet.h"
 #include "sf_dynamic_preprocessor.h"
-//#include "snort_debug.h"
+#include "snort_debug.h"
 #include "snort_bounds.h"
 
 /********************************************************************
  * Macros
  ********************************************************************/
 #define DCE2_SENTINEL -1
-
-#define DCE2_MOVE(data_ptr, data_len, amount) \
-    { int64_t dcexxxxxx = (amount); \
-        data_ptr = (uint8_t *)data_ptr + dcexxxxxx; \
-        data_len -= dcexxxxxx; }
 
 /********************************************************************
  * Enumerations
@@ -107,12 +102,16 @@ typedef struct _DCE2_Buffer
     uint32_t size;
     DCE2_MemType mtype;
     uint32_t min_add_size;
+    uint32_t offset;
 
 } DCE2_Buffer;
 
 /********************************************************************
  * Inline function prototypes
  ********************************************************************/
+#define DCE2_MOVE(data_ptr, data_len, amount) \
+    { data_len -= (amount); data_ptr = (uint8_t *)data_ptr + (amount); }
+
 static inline int DCE2_BufferIsEmpty(DCE2_Buffer *);
 static inline void DCE2_BufferEmpty(DCE2_Buffer *);
 static inline uint32_t DCE2_BufferSize(DCE2_Buffer *);
@@ -133,15 +132,13 @@ static inline void DCE2_CopyUuid(Uuid *, const Uuid *, const DceRpcBoFlag);
  * Public function prototypes
  ********************************************************************/
 DCE2_Buffer * DCE2_BufferNew(uint32_t, uint32_t, DCE2_MemType);
-DCE2_Ret DCE2_BufferAddData(
-    DCE2_Buffer*, const uint8_t*, uint32_t len, uint32_t offset, DCE2_BufferMinAddFlag);
+DCE2_Ret DCE2_BufferAddData(DCE2_Buffer *, const uint8_t *,
+        uint32_t, uint32_t, DCE2_BufferMinAddFlag);
 DCE2_Ret DCE2_BufferMoveData(DCE2_Buffer *, uint32_t, const uint8_t *, uint32_t);
 void DCE2_BufferDestroy(DCE2_Buffer *);
 
-uint16_t DCE2_GetWriteOffset(uint32_t total, int header);
-DCE2_Ret DCE2_HandleSegmentation(
-    DCE2_Buffer*, const uint8_t*, uint16_t len, uint32_t offset,
-    uint32_t need_len, uint16_t* copied);
+DCE2_Ret DCE2_HandleSegmentation(DCE2_Buffer *, const uint8_t *,
+        uint16_t, uint32_t, uint16_t *);
 NORETURN void DCE2_Die(const char *, ...);
 void DCE2_Log(DCE2_LogType, const char *, ...);
 const char * DCE2_UuidToStr(const Uuid *, DceRpcBoFlag);
@@ -233,6 +230,28 @@ static inline uint32_t DCE2_BufferLength(DCE2_Buffer *buf)
 }
 
 /*********************************************************************
+ * Function: DCE2_BufferOffset()
+ *
+ * Returns the offset of the data copied into the buffer.
+ *
+ * Arguments:
+ *  DCE2_Buffer *
+ *      Pointer to buffer object.
+ *
+ * Returns:
+ *  uint32_t
+ *      The length of the data copied into the buffer or zero
+ *      if buffer object is NULL.
+ *
+ *********************************************************************/
+static inline uint32_t DCE2_BufferOffset(DCE2_Buffer *buf)
+{
+    if (buf == NULL) return 0;
+    return buf->offset;
+}
+
+
+/*********************************************************************
  * Function: DCE2_BufferSetLength()
  *
  * Sets the length of the buffer up to the buffer size.
@@ -240,6 +259,8 @@ static inline uint32_t DCE2_BufferLength(DCE2_Buffer *buf)
  * Arguments:
  *  DCE2_Buffer *
  *      Pointer to buffer object.
+ *  uint32_t len
+ *      The length to set the amount of data in the buffer to
  *
  * Returns: None
  *
@@ -273,18 +294,45 @@ static inline uint8_t * DCE2_BufferData(DCE2_Buffer *buf)
     return buf->data;
 }
 
+/*********************************************************************
+ * Function: DCE2_BufferMinAllocSize()
+ *
+ * Returns the minimum allocation size for the buffer.
+ *
+ * Arguments:
+ *  DCE2_Buffer *
+ *      Pointer to buffer object.
+ *
+ * Returns:
+ *  uint32_t
+ *      The minimum allocation size.
+ *
+ *********************************************************************/
 static inline uint32_t DCE2_BufferMinAllocSize(DCE2_Buffer *buf)
 {
     if (buf == NULL) return 0;
     return buf->min_add_size;
 }
 
+/*********************************************************************
+ * Function: DCE2_BufferSetMinAllocSize()
+ *
+ * Sets the minimum allocation size for the buffer.
+ *
+ * Arguments:
+ *  DCE2_Buffer *
+ *      Pointer to buffer object.
+ *  uint32_t
+ *      Size to set the minimum allocation size to.
+ *
+ * Returns: None
+ *
+ *********************************************************************/
 static inline void DCE2_BufferSetMinAllocSize(DCE2_Buffer *buf, uint32_t size)
 {
     if (buf == NULL) return;
     buf->min_add_size = size;
 }
-
 
 /********************************************************************
  * Function: DCE2_PruneWhiteSpace()

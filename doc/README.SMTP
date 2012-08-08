@@ -114,9 +114,8 @@ This config option is used to turn off/on or set the base64 decoding depth used 
 decode the base64 encoded MIME attachments. The value ranges from -1 to 65535. 
 A value of -1 turns off the base64 decoding of MIME attachments. The value of 0 
 sets the decoding of base64 encoded MIME attachments to unlimited. A value other 
-than 0 or -1 restricts the decoding of base64 MIME attachments. A SMTP preprocessor 
-alert with sid 10 is generated (if enabled) when the decoding fails or when this 
-decode depth is exceeded.
+than 0 or -1 restricts the decoding of base64 MIME attachments, and applies per attachment. 
+A SMTP preprocessor alert with sid 10 is generated (if enabled) when the decoding fails. 
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
 is turned on the base64 encoded MIME attachments/data across multiple packets are 
@@ -138,9 +137,9 @@ This config option is used to turn off/on or set the Quoted-Printable decoding d
 used to decode the Quoted-Printable(QP) encoded MIME attachments. The value ranges 
 from -1 to 65535. A value of -1 turns off the QP decoding of MIME attachments. 
 The value of 0 sets the decoding of QP encoded MIME attachments to unlimited. A 
-value other than 0 or -1 restricts the decoding of QP MIME attachments. A SMTP 
-preprocessor alert with sid 11 is generated (if enabled) when the decoding fails 
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of QP MIME attachments, and applies 
+per attachment. A SMTP preprocessor alert with sid 11 is generated (if enabled) when 
+the decoding fails.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
 is turned on the QP encoded MIME attachments/data across multiple packets are decoded too.
@@ -152,15 +151,15 @@ In case of multiple configs, the value specified in the non-default config canno
 the value specified in the default config.
 
 * bitenc_decode_depth *
-This config option is used to turn off/on or set the 7bit/8bit/binary/text extraction 
-depth used to extract the 7bit/8bit/binary encoded or plain text MIME attachments. The 
-value ranges from -1 to 65535. A value of -1 turns off the extraction of these MIME 
-attachments. The value of 0 sets the extraction of these MIME attachments to unlimited. 
-A value other than 0 or -1 restricts the extraction of these MIME attachments. A SMTP 
-preprocessor alert with sid 12 is generated (if enabled) when this extraction depth is exceeded.
+This config option is used to turn off/on or set the non-encoded MIME extraction 
+depth used to extract the non-encoded MIME attachments. The value ranges from -1 
+to 65535. A value of -1 turns off the extraction of these MIME attachments. 
+The value of 0 sets the extraction of these MIME attachments to unlimited. 
+A value other than 0 or -1 restricts the extraction of these MIME attachments, and applies 
+per attachment.
 
 Multiple MIME attachments/data in one packet are pipelined. When stateful inspection 
-is turned on the 7bit/8bit/binary/text MIME attachments/data across multiple packets are 
+is turned on the non-encoded MIME attachments/data across multiple packets are 
 extracted too.
 
 The extracted data is available for detection using the rule option file_data. 
@@ -174,9 +173,8 @@ This config option is used to turn off/on or set the Unix-to-Unix decoding depth
 used to decode the Unix-to-Unix(UU) encoded attachments. The value ranges 
 from -1 to 65535. A value of -1 turns off the UU decoding of SMTP attachments. 
 The value of 0 sets the decoding of UU encoded SMTP attachments to unlimited. A 
-value other than 0 or -1 restricts the decoding of UU SMTP attachments. A SMTP 
-preprocessor alert with sid 13 is generated (if enabled) when the decoding fails 
-or when this decode depth is exceeded.
+value other than 0 or -1 restricts the decoding of UU SMTP attachments, and applies per 
+attachment. A SMTP preprocessor alert with sid 13 is generated (if enabled) when the decoding fails.
 
 Multiple UU Encoded attachments/data in one packet are pipelined. When stateful inspection 
 is turned on the UU encoded attachments/data across multiple packets are decoded too.
@@ -200,7 +198,7 @@ Please note, this option is deprecated. Use the option b64_decode_depth to turn 
 or on the base64 decoding instead.
 
 * max_mime_depth <int> *
-Specifies the maximum number of base64 encoded data to decode per SMTP session.
+Specifies the maximum number of base64 encoded data to decode per attachment.
 The option take values ranging from 4 to 20480 bytes. The default value for this
 in snort in 1460 bytes.
 
@@ -213,7 +211,7 @@ depth for base64 decoding instead.
 
 * max_mime_mem <int> *
 This option determines (in bytes) the maximum amount of memory the SMTP preprocessor
-will use for decoding base64 encoded/quoted-printable/7bit/8bit/binary MIME attachments/data 
+will use for decoding base64 encoded/quoted-printable/non-encoded MIME attachments/data 
 or Unix-to-Unix encoded attachments. This value can be set from 3276 bytes to 100MB. 
 
 This option along with the maximum of the decoding depths will determine the SMTP 

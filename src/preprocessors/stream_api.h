@@ -655,6 +655,31 @@ typedef struct _stream_api
 
     //Retrieve the maximum session limits for the given policy
     void (*get_max_session_limits)(tSfPolicyId, StreamSessionLimits*);
+
+    /* Set direction that data is being ignored.
+       *
+       * Parameters
+       *     Session Ptr
+       */
+    int (*set_ignore_direction)(void *, int);
+
+    /** Retrieve stream session pointer based on the lookup tuples for
+     *  cases where Snort does not have an active packet that is
+     *  relevant.
+     *
+     * Parameters
+     *     IP addr #1
+     *     Port #1 (0 for non TCP/UDP)
+     *     IP addr #2
+     *     Port #2 (0 for non TCP/UDP)
+     *     Protocol
+     *     VLAN ID
+     *     MPLS ID
+     *
+     * Returns
+     *     Stream session pointer
+     */
+      void *(*get_session_ptr_from_ip_port)(snort_ip_p, uint16_t, snort_ip_p, uint16_t, char, uint16_t, uint32_t);
 } StreamAPI;
 
 /* To be set by Stream5 */

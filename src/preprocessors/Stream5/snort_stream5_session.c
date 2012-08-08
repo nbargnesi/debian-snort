@@ -48,6 +48,7 @@
 #include "stream5_common.h"
 #include "sfhashfcn.h"
 #include "bitop_funcs.h"
+#include "sp_flowbits.h"
 
 #ifndef WIN32
 # include <sys/socket.h>
@@ -598,7 +599,7 @@ int RemoveLWSession(Stream5SessionCache *sessionCache, Stream5LWSession *ssn)
         }
     }
 
-    return sfxhash_remove(sessionCache->hashTable, &(ssn->key));
+    return sfxhash_remove(sessionCache->hashTable, ssn->key);
 }
 
 int DeleteLWSession(Stream5SessionCache *sessionCache,
@@ -936,7 +937,8 @@ Stream5LWSession *NewLWSession(Stream5SessionCache *sessionCache, Packet *p,
 #ifdef DEBUG_MSGS
         if (!hnode)
         {
-            DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "Problem, no freed nodes\n"););
+            LogMessage("%s(%d) Problem, no freed nodes\n", __FILE__,
+            __LINE__);
         }
 #endif
     }
@@ -948,13 +950,13 @@ Stream5LWSession *NewLWSession(Stream5SessionCache *sessionCache, Packet *p,
         memset(retSsn, 0, sizeof(Stream5LWSession));
 
         /* Save the session key for future use */
-        memcpy(&(retSsn->key), key, sizeof(SessionKey));
+        retSsn->key = hnode->key;
 
         retSsn->protocol = key->protocol;
         retSsn->last_data_seen = p->pkth->ts.tv_sec;
         retSsn->flowdata = mempool_alloc(&s5FlowMempool);
         flowdata = retSsn->flowdata->data;
-        boInitStaticBITOP(&(flowdata->boFlowbits), giFlowbitSize,
+        boInitStaticBITOP(&(flowdata->boFlowbits), getFlowbitSizeInBytes(),
                           flowdata->flowb);
 
         retSsn->policy = policy;

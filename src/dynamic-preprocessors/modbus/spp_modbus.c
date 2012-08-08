@@ -75,8 +75,8 @@ int16_t modbus_app_id = SFTARGET_UNKNOWN_PROTOCOL;
 
 /* Prototypes */
 static void ModbusInit(char *argp);
-static void ModbusOneTimeInit(void);
-static modbus_config_t * ModbusPerPolicyInit(tSfPolicyUserContextId);
+static inline void ModbusOneTimeInit(void);
+static inline modbus_config_t * ModbusPerPolicyInit(tSfPolicyUserContextId);
 
 static void ProcessModbus(void *, void *);
 

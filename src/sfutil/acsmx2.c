@@ -1316,7 +1316,10 @@ Conv_Full_DFA_To_SparseBands(ACSM_STRUCT2 * acsm)
       for( j=band_begin[i]; j<=band_end[i]; j++ )
       {
          if (j >= MAX_ALPHABET_SIZE)
+         {
+             AC_FREE_DFA(p, sizeof(acstate_t)*(cnt), sizeof(acstate_t));
              return -1;
+         }
 
          p[m++] = full[j];  /* some states may be state zero */
       }

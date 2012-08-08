@@ -543,29 +543,39 @@ static int ConvertPcreOption(Rule *rule, int index, OptTreeNode *otn)
 
 static int ConvertFlowbitOption(Rule *rule, int index, OptTreeNode *otn)
 {
-    FlowBitsInfo *flowBit = rule->options[index]->option_u.flowBit;
-    FLOWBITS_OP *fop = (FLOWBITS_OP *) SnortAlloc(sizeof(FLOWBITS_OP));
+    FlowBitsInfo *flowbitInfo = rule->options[index]->option_u.flowBit;
+    FLOWBITS_OP *flowbits = (FLOWBITS_OP *) SnortAlloc(sizeof(FLOWBITS_OP));
     OptFpList *fpl;
     void *idx_dup;
 
     /* Convert struct for rule option */
-    fop->name = SnortStrdup(flowBit->flowBitsName);
-    fop->type = flowBit->operation;
-    fop->id = flowBit->id;
+    if (!flowbitInfo)
+    {
+        free(flowbits);
+        return 1;
+    }
+
+    flowbits->type = flowbitInfo->operation;
+    processFlowBitsWithGroup(flowbitInfo->flowBitsName, flowbitInfo->groupName, flowbits);
 
     /* Add detection option to hash table */
     otn->ds_list[PLUGIN_FLOWBIT] = (void *)1;
-    if (add_detection_option(RULE_OPTION_TYPE_FLOWBIT, (void *)fop, &idx_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(RULE_OPTION_TYPE_FLOWBIT, (void *)flowbits, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
-        free(fop->name);
-        free(fop);
-        fop = idx_dup;
+        if (flowbits->name)
+            free(flowbits->name);
+
+        if (flowbits->ids)
+            free(flowbits->ids);
+
+        free(flowbits);
+        flowbits = idx_dup;
     }
 
     /* Add detection function to otn */
     fpl = AddOptFuncToList(FlowBitsCheck, otn);
     fpl->type = RULE_OPTION_TYPE_FLOWBIT;
-    fpl->context = (void *) fop;
+    fpl->context = (void *) flowbits;
     return 1;
 }
 

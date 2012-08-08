@@ -31,7 +31,9 @@
 #include "reputation_debug.h"
 #include "sf_ip.h"
 #include "sfrt_flat.h"
-
+#ifdef SHARED_REP
+#include "./shmem/shmem_mgmt.h"
+#endif
 #define REPUTATION_NAME  "reputation"
 
 typedef enum _NestedIP
@@ -40,6 +42,12 @@ typedef enum _NestedIP
     OUTER,
     BOTH
 }NestedIP;
+
+typedef enum _WhiteAction
+{
+    UNBLACK,
+    TRUST
+}WhiteAction;
 
 typedef struct _SharedMem
 {
@@ -51,9 +59,24 @@ typedef struct _SharedMem
 typedef enum _IPdecision
 {
     DECISION_NULL ,
+    MONITORED,
     BLACKLISTED ,
-    WHITELISTED
+    WHITELISTED_UNBLACK,
+    WHITELISTED_TRUST,
+    DECISION_MAX
 }IPdecision;
+
+
+typedef struct _ListInfo{
+    uint8_t       listIndex;
+    uint8_t       listType;
+    uint32_t      listId;
+#ifdef SHARED_REP
+    bool zones[MAX_NUM_ZONES];
+    char padding[2 + MAX_NUM_ZONES - MAX_NUM_ZONES/4*4];
+#endif
+
+} ListInfo;
 
 /*
  * Reputation preprocessor configuration.
@@ -73,6 +96,7 @@ typedef struct _reputationConfig
     uint8_t  scanlocal;
 	IPdecision priority;
 	NestedIP nestedIP;
+	WhiteAction whiteAction;
 	MEM_OFFSET local_black_ptr;
 	MEM_OFFSET local_white_ptr;
 	void *emptySegment;
@@ -82,15 +106,21 @@ typedef struct _reputationConfig
 	uint32_t memsize;
 	bool memCapReached;
 	table_flat_t *iplist;
+	ListInfo *listInfo;
 	int ref_count;
+	char *statusBuf;
+	int  statusBuf_len;
 
 } ReputationConfig;
 
 
+#define NUM_INDEX_PER_ENTRY 4
 
-typedef struct {
-    IPdecision isBlack;
-} bw_list;
+typedef struct _IPrepInfo{
+    char listIndexes[NUM_INDEX_PER_ENTRY];
+    MEM_OFFSET    next;
+} IPrepInfo;
+
 
 /********************************************************************
  * Public function prototypes
@@ -98,5 +128,6 @@ typedef struct {
 void  Reputation_FreeConfig(ReputationConfig *);
 void  ParseReputationArgs(ReputationConfig *, u_char*);
 void initShareMemory(void *config);
-
+void ReputationRepInfo(IPrepInfo *, uint8_t *, char *, int);
+DEBUG_WRAP(void ReputationPrintRepInfo(IPrepInfo * repInfo, uint8_t *base);)
 #endif

@@ -76,6 +76,7 @@
 #endif
 
 #include "sfPolicy.h"
+#include "sp_flowbits.h"
 
 #include "profiler.h"
 #ifdef PERF_PROFILING
@@ -140,9 +141,6 @@ MemPool s5FlowMempool;
 static PoolCount s_tcp_sessions = 0, s_udp_sessions = 0;
 static PoolCount s_icmp_sessions = 0, s_ip_sessions = 0;
 static int s_proto_flags = 0;
-
-/* Define this locally when Flow preprocessor has actually been removed */
-unsigned int giFlowbitSize = 128;
 
 uint32_t xtradata_func_count = 0;
 LogFunction xtradata_map[LOG_FUNC_MAX];
@@ -218,6 +216,8 @@ static int Stream5IgnoreChannel(
                     char flags);
 static int Stream5GetIgnoreDirection(
                     void *ssnptr);
+static int Stream5SetIgnoreDirection(
+                    void *ssnptr, int);
 static void Stream5ResumeInspection(
                     void *ssnptr,
                     char dir);
@@ -334,6 +334,15 @@ static void s5UnsetPortFilterStatus(
 
 static void s5GetMaxSessions(tSfPolicyId policyId, StreamSessionLimits* limits);
 
+static void *Stream5GetSessionPtrFromIpPort(
+                    snort_ip_p srcIP,
+                    uint16_t srcPort,
+                    snort_ip_p dstIP,
+                    uint16_t dstPort,
+                    char ip_protocol,
+                    uint16_t vlan,
+                    uint32_t mplsId);
+
 #ifdef ACTIVE_RESPONSE
 static void s5InitActiveResponse(Packet*, void* ssnptr);
 #endif
@@ -411,7 +420,9 @@ StreamAPI s5api = {
     Stream5RegisterXtraData,
     Stream5RegisterXtraDataLog,
     Stream5GetXtraDataMap,
-    s5GetMaxSessions
+    s5GetMaxSessions,
+    Stream5SetIgnoreDirection,
+    Stream5GetSessionPtrFromIpPort
 };
 
 void SetupStream5(void)
@@ -1299,7 +1310,7 @@ static void Stream5VerifyConfig(void)
     /* Initialize the memory pool for Flowbits Data */
     /* use giFlowbitSize - 1, since there is already 1 byte in the
      * StreamFlowData structure */
-    obj_size = sizeof(StreamFlowData) + giFlowbitSize - 1;
+    obj_size = sizeof(StreamFlowData) + getFlowbitSizeInBytes() - 1;
 
     if (obj_size % sizeof(long) != 0)
     {
@@ -1585,15 +1596,14 @@ static void *Stream5GetApplicationData(
     return data;
 }
 
-static void * Stream5GetApplicationDataFromIpPort(
+static void * Stream5GetSessionPtrFromIpPort(
                     snort_ip_p srcIP,
                     uint16_t srcPort,
                     snort_ip_p dstIP,
                     uint16_t dstPort,
                     char ip_protocol,
                     uint16_t vlan,
-                    uint32_t mplsId,
-                    uint32_t protocol)
+                    uint32_t mplsId)
 {
     SessionKey key;
     Stream5LWSession *ssn;
@@ -1616,6 +1626,24 @@ static void * Stream5GetApplicationDataFromIpPort(
         default:
             ssn = GetLWSessionFromKey(ip_lws_cache, &key);
     }
+
+    return (void*)ssn;
+}
+
+static void * Stream5GetApplicationDataFromIpPort(
+                    snort_ip_p srcIP,
+                    uint16_t srcPort,
+                    snort_ip_p dstIP,
+                    uint16_t dstPort,
+                    char ip_protocol,
+                    uint16_t vlan,
+                    uint32_t mplsId,
+                    uint32_t protocol)
+{
+    Stream5LWSession *ssn;
+
+    ssn = (Stream5LWSession *) Stream5GetSessionPtrFromIpPort(srcIP,srcPort,dstIP,dstPort,
+            ip_protocol,vlan,mplsId);
 
     return Stream5GetApplicationData(ssn, protocol);
 }
@@ -1808,6 +1836,15 @@ static int Stream5GetIgnoreDirection(void *ssnptr)
     if (!ssn)
         return SSN_DIR_NONE;
 
+    return ssn->ignore_direction;
+}
+
+static int Stream5SetIgnoreDirection(void *ssnptr, int ignore_direction)
+{
+    Stream5LWSession *ssn = (Stream5LWSession *)ssnptr;
+    if (!ssn)
+        return 0;
+    ssn->ignore_direction = ignore_direction;
     return ssn->ignore_direction;
 }
 
@@ -2659,6 +2696,7 @@ static void s5GetMaxSessions(tSfPolicyId policyId, StreamSessionLimits* limits)
         memset(limits, 0, sizeof(*limits));
 }
 
+
 #ifdef SNORT_RELOAD
 static void Stream5GlobalReload(char *args)
 {
@@ -2893,7 +2931,7 @@ static int Stream5ReloadVerifyPolicy(
         void* pData
         )
 {
-    Stream5Config *cc = (Stream5Config *)pData;
+    Stream5Config *cc = (Stream5Config *)sfPolicyUserDataGet(s5_config, policyId);
     Stream5Config *sc = (Stream5Config *)sfPolicyUserDataGet(s5_swap_config, policyId);
     int tcpNotConfigured = 0;
     int udpNotConfigured = 0;
@@ -3064,7 +3102,7 @@ static int Stream5ReloadVerify(void)
     if ((s5_swap_config == NULL) || (s5_config == NULL))
         return 0;
 
-    if (sfPolicyUserDataIterate(s5_config, Stream5ReloadVerifyPolicy) != 0)
+    if (sfPolicyUserDataIterate(s5_swap_config, Stream5ReloadVerifyPolicy) != 0)
         return -1;
 
     return 0;

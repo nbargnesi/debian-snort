@@ -708,7 +708,7 @@ int RollAlertFile(const char *filearg)
     {
         SnortSnprintf(oldname, STD_BUF, "%s", filearg);
     }
-    SnortSnprintf(newname, sizeof(newname)-1, "%s.%lu", oldname, now);
+    SnortSnprintf(newname, sizeof(newname)-1, "%s.%lu", oldname, (unsigned long)now);
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Rolling alert file: %s\n", newname););
 
     if ( rename(oldname, newname) )

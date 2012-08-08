@@ -764,7 +764,6 @@ int pmx_create_tree(void *id, void **existing_tree)
 {
     PMX              *pmx    = NULL;
     RULE_NODE        *rnNode = NULL;
-    OTNX             *otnx   = NULL;
     OptTreeNode      *otn    = NULL;
 
     if (!existing_tree)
@@ -783,8 +782,7 @@ int pmx_create_tree(void *id, void **existing_tree)
 
     pmx    = (PMX*)id;
     rnNode = (RULE_NODE*)(pmx->RuleNode);
-    otnx   = (OTNX*)(rnNode->rnRuleData);
-    otn    = otnx->otn;
+    otn    = (OptTreeNode *)rnNode->rnRuleData;
     return otn_create_tree(otn, existing_tree);
 }
 
@@ -1466,7 +1464,6 @@ static int UsePreprocOptFastPatterns(PatternMatchData *pmd, PatternMatchData *pr
 static int fpFinishPortGroupRule(PORT_GROUP *pg, PmType pm_type,
         OptTreeNode *otn, PatternMatchData *pmd_list, FastPatternConfig *fp)
 {
-    OTNX *otnx;
     PMX * pmx;
     RULE_NODE * rn;
     char *pattern;
@@ -1509,13 +1506,9 @@ static int fpFinishPortGroupRule(PORT_GROUP *pg, PmType pm_type,
         if (fpGetFinalPattern(fp, pmd, &pattern, &pattern_length) == -1)
             return -1;
 
-        otnx = (OTNX *)SnortAlloc(sizeof(OTNX));
-        otnx->otn = otn;
-        otnx->content_length = pmd->pattern_size;
-
         /* create a rule_node */
         rn = (RULE_NODE *)SnortAlloc(sizeof(RULE_NODE));
-        rn->rnRuleData = otnx;
+        rn->rnRuleData = otn;
 
         /* create pmx */
         pmx = (PMX *)SnortAlloc(sizeof(PMX));
@@ -1580,8 +1573,8 @@ static int fpFinishPortGroup(PORT_GROUP *pg, FastPatternConfig *fp)
 
         for (ruleNode = pg->pgHeadNC; ruleNode; ruleNode = ruleNode->rnNext)
         {
-            OTNX *otnx = (OTNX *)ruleNode->rnRuleData;
-            otn_create_tree(otnx->otn, &pg->pgNonContentTree);
+            OptTreeNode *otn = (OptTreeNode *)ruleNode->rnRuleData;
+            otn_create_tree(otn, &pg->pgNonContentTree);
         }
 
         finalize_detection_option_tree((detection_option_tree_root_t*)pg->pgNonContentTree);
@@ -1853,11 +1846,10 @@ static int fpAddPortGroupRule(PORT_GROUP *pg, OptTreeNode *otn, FastPatternConfi
  *          PORT_RULE_MAP -> srcPortGroup,dstPortGroup,genericPortGroup
  *          PORT_GROUP    -> pgPatData, pgPatDataUri (acsm objects), (also rule_node lists 1/rule, not neeed)
  *                           each rule content added to an acsm object has a PMX data ptr associated with it.
- *          RULE_NODE     -> iRuleNodeID (used for bitmap object index), otnx
+ *          RULE_NODE     -> iRuleNodeID (used for bitmap object index)
  *
  *          -fpcreate.h
- *          PMX   -> RULE_NODE(->otnx), PatternMatchData
- *          OTNX  -> otn,rtn,content_length
+ *          PMX   -> RULE_NODE(->otn), PatternMatchData
  *
  *  PortList model supports the same structures except:
  *
@@ -1885,11 +1877,10 @@ static int fpAddPortGroupRule(PORT_GROUP *pg, OptTreeNode *otn, FastPatternConfi
  *              {
  *                  get the gid+sid for the index
  *                  lookup up the otn
- *                  create otnx
  *                  create pmx
  *                  create RULE_NODE, set iRuleNodeID within this port-list object
  *                  get longest content for the rule
- *                  set up otnx,pmx,RULE_NODE
+ *                  set up pmx,RULE_NODE
  *                  add the content and pmx to the pattern match object
  *              }
  *              compile the pattern match object
@@ -2205,22 +2196,17 @@ void fpDynamicDataFree(void *data)
  */
 static int fpAddPortGroupPrmx(PORT_GROUP *pg, OptTreeNode *otn, int cflag)
 {
-    OTNX *otnx = (OTNX *)SnortAlloc(sizeof(OTNX));
-
-    otnx->otn = otn;
-    otnx->content_length = 0;
-
     /* Add the no content rule_node to the port group (NClist) */
     switch (cflag)
     {
         case PGCT_NOCONTENT:
-            prmxAddPortRuleNC( pg, otnx );
+            prmxAddPortRuleNC( pg, otn );
             break;
         case PGCT_CONTENT:
-            prmxAddPortRule( pg, otnx );
+            prmxAddPortRule( pg, otn );
             break;
         case PGCT_URICONTENT:
-            prmxAddPortRuleUri( pg, otnx );
+            prmxAddPortRuleUri( pg, otn );
             break;
         default:
             return -1;
@@ -2267,13 +2253,13 @@ static void fpPortGroupPrintRuleCount(PORT_GROUP *pg)
 static void fpDeletePMX(void *data)
 {
     PMX *pmx = (PMX *)data;
-    RULE_NODE *rn;
-    OTNX *otnx;
 
-    rn = (RULE_NODE *)pmx->RuleNode;
-    otnx = (OTNX *)rn->rnRuleData;
-    free(otnx);
-    free(rn);
+    if (data == NULL)
+        return;
+
+    if (pmx->RuleNode != NULL)
+        free(pmx->RuleNode);
+
     free(pmx);
 }
 
@@ -2281,15 +2267,12 @@ static void fpDeletePortGroup(void *data)
 {
     PORT_GROUP *pg = (PORT_GROUP *)data;
     RULE_NODE *rn, *tmpRn;
-    OTNX *otnx;
     PmType i;
 
     rn = pg->pgHead;
     while (rn)
     {
         tmpRn = rn->rnNext;
-        otnx = (OTNX *)rn->rnRuleData;
-        free(otnx);
         free(rn);
         rn = tmpRn;
     }
@@ -2299,8 +2282,6 @@ static void fpDeletePortGroup(void *data)
     while (rn)
     {
         tmpRn = rn->rnNext;
-        otnx = (OTNX *)rn->rnRuleData;
-        free(otnx);
         free(rn);
         rn = tmpRn;
     }
@@ -2310,8 +2291,6 @@ static void fpDeletePortGroup(void *data)
     while (rn)
     {
         tmpRn = rn->rnNext;
-        otnx = (OTNX *)rn->rnRuleData;
-        free(otnx);
         free(rn);
         rn = tmpRn;
     }

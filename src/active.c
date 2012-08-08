@@ -158,7 +158,10 @@ void Active_KillSession (Packet* p, EncodeFlags* pf)
             break;
 
         default:
-            Active_SendUnreach(p, ENC_UNR_PORT);
+            if ( Active_PacketForceDropped() )
+                Active_SendUnreach(p, ENC_UNR_FW);
+            else
+                Active_SendUnreach(p, ENC_UNR_PORT);
             break;
     }
 }
@@ -281,7 +284,7 @@ int Active_IsRSTCandidate(const Packet* p)
     **  spoofed ourselves, thus inflicting a self-induced DOS
     **  attack.
     */
-    return ( p->tcph->th_flags != TH_RST );
+    return ( !(p->tcph->th_flags & TH_RST) );
 }
 
 int Active_IsUNRCandidate(const Packet* p)
@@ -388,6 +391,9 @@ static inline int _Active_DoReset(Packet *p)
 {
 #ifdef ACTIVE_RESPONSE
     if ( !Active_IsEnabled() )
+        return 0;
+
+    if ( Active_PacketWouldBeDropped() )
         return 0;
 
     if ( !IPH_IS_VALID(p) )

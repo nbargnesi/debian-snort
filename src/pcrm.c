@@ -1177,6 +1177,25 @@ prmFindRuleGroup(
     return 1;
 }
 
+int prmFindGenericRuleGroup(PORT_RULE_MAP *p, PORT_GROUP ** gen)
+{
+    if (gen == NULL)
+    {
+        return 0;
+    }
+
+    *gen = NULL;
+    if ((p->prmGeneric != NULL) && (p->prmGeneric->pgCount > 0)) 
+    {
+        if (fpDetectSplitAnyAny(snort_conf->fast_pattern_config))
+        {
+            *gen = p->prmGeneric;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /*
 *
 */

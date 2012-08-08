@@ -65,21 +65,6 @@ struct _SnortConfig;
 #define PL_DEBUG_PRINT_RULEGROUPS_COMPILED   0x10
 #define PL_SINGLE_RULE_GROUP                 0x20
 
-/*
-**  This structure holds the RTN and OTN
-**  for a specific rule.  This way we can
-**  verify each rule and stay within the
-**  current snort rule architecture.
-*/
-typedef struct _otnx_
-{
-
-   OptTreeNode   * otn;
-   //RuleTreeNode  * rtn; 
-   unsigned int    content_length;
-
-} OTNX;
-
 typedef struct _pmx_
 {
 

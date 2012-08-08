@@ -96,8 +96,7 @@ void DCE2_RegMem(uint32_t size, DCE2_MemType mtype)
         case DCE2_MEM_TYPE__SMB_UID:
         case DCE2_MEM_TYPE__SMB_TID:
         case DCE2_MEM_TYPE__SMB_FID:
-        case DCE2_MEM_TYPE__SMB_UT:
-        case DCE2_MEM_TYPE__SMB_PM:
+        case DCE2_MEM_TYPE__SMB_REQ:
             DCE2_RegMemSmb(size, mtype);
             break;
 
@@ -209,15 +208,10 @@ static void DCE2_RegMemSmb(uint32_t size, DCE2_MemType mtype)
             if (dce2_memory.smb_fid > dce2_memory.smb_fid_max)
                 dce2_memory.smb_fid_max = dce2_memory.smb_fid;
             break;
-        case DCE2_MEM_TYPE__SMB_UT:
-            dce2_memory.smb_ut += size;
-            if (dce2_memory.smb_ut > dce2_memory.smb_ut_max)
-                dce2_memory.smb_ut_max = dce2_memory.smb_ut;
-            break;
-        case DCE2_MEM_TYPE__SMB_PM:
-            dce2_memory.smb_pm += size;
-            if (dce2_memory.smb_pm > dce2_memory.smb_pm_max)
-                dce2_memory.smb_pm_max = dce2_memory.smb_pm;
+        case DCE2_MEM_TYPE__SMB_REQ:
+            dce2_memory.smb_req += size;
+            if (dce2_memory.smb_req > dce2_memory.smb_req_max)
+                dce2_memory.smb_req_max = dce2_memory.smb_req;
             break;
         default:
             return;
@@ -345,13 +339,9 @@ void DCE2_UnRegMem(uint32_t size, DCE2_MemType mtype)
             dce2_memory.smb_total -= size;
             dce2_memory.smb_fid -= size;
             break;
-        case DCE2_MEM_TYPE__SMB_UT:
+        case DCE2_MEM_TYPE__SMB_REQ:
             dce2_memory.smb_total -= size;
-            dce2_memory.smb_ut -= size;
-            break;
-        case DCE2_MEM_TYPE__SMB_PM:
-            dce2_memory.smb_total -= size;
-            dce2_memory.smb_pm -= size;
+            dce2_memory.smb_req -= size;
             break;
         case DCE2_MEM_TYPE__TCP_SSN:
             dce2_memory.tcp_total -= size;
