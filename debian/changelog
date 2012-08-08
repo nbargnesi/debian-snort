@@ -9,6 +9,10 @@ snort (2.9.3.1-1) experimental; urgency=low
   * debian/rules: Update the configuration options to adjust to those used
     in the snort.conf script provided upstream
   * debian/patches/fix_upstream_typos: Do typo fixes to more source files
+  * debian/patches/config: Add more comments in the default configuration
+    file, enable at least one output plugin (unified2) and set some
+    configurations values as recommended in Jason Weir's "Building a
+    Debian\Snort based IDS" available in http://www.snort.org/docs
   * debian/patches/*: Refresh the patches to apply to the new upstream release
   * debian/po/*: Refresh all templates since the previous templates for
     database configuration have gone along with the snort database 'flavor'
