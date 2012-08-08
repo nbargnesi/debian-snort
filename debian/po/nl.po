@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.8.5.2-9.1\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 22:10+0200\n"
+"POT-Creation-Date: 2012-08-08 23:43+0200\n"
 "PO-Revision-Date: 2012-01-02 15:29+0100\n"
 "Last-Translator: Jeroen Schot <schot@a-eskwadraat.nl>\n"
 "Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
@@ -313,7 +313,9 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-common.templates:1001
-msgid "Deprecated configuration file"
+#, fuzzy
+#| msgid "Deprecated configuration file"
+msgid "Deprecated options in configuration file"
 msgstr "Verouderd configuratie bestand"
 
 #. Type: note
@@ -362,12 +364,52 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../snort-common.templates:2001
+#, fuzzy
+#| msgid ""
+#| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
+#| "T -c <file>'."
 msgid ""
-"To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -T -"
-"c <file>'."
+"To diagnose errors in your Snort configuration you can run (as root) the "
+"following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
 msgstr ""
 "Om een fout in een Snort configuratiebestand te analyseren, gebruik '/usr/"
 "sbin/snort -T -c <file>'."
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid "Deprecated configuration file"
+msgstr "Verouderd configuratie bestand"
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Your system has deprecated configuration files which should not be used any "
+"longer and might contain deprecated options.  If included through the "
+"standard configuration file (/etc/snort/snort.conf), the existance of these "
+"configuration files might prevent Snort from starting up properly."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Please remove these files as well as any existing references to them  in /"
+"etc/snort/snort.conf"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+#, fuzzy
+#| msgid ""
+#| "The following deprecated options were found in the configuration file: "
+#| "${DEP_CONFIG}"
+msgid "The following deprecated configuration files were found: ${DEP_FILE}"
+msgstr ""
+"De volgende verouderde opties werden in uw configuratiebestand aangetroffen: "
+"${DEP_CONFIG}"
 
 #  Type: boolean
 #  Description

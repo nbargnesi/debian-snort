@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 22:10+0200\n"
+"POT-Creation-Date: 2012-08-08 23:43+0200\n"
 "PO-Revision-Date: 2008-04-28 07:39+0200\n"
 "Last-Translator: Esko Arajärvi <edu@iki.fi>\n"
 "Language-Team: debian-l10n-finnish@lists.debian.org <Finnish>\n"
@@ -288,7 +288,9 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-common.templates:1001
-msgid "Deprecated configuration file"
+#, fuzzy
+#| msgid "Deprecated configuration file"
+msgid "Deprecated options in configuration file"
 msgstr "Vanhentunut asetustiedosto"
 
 #. Type: note
@@ -336,12 +338,52 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../snort-common.templates:2001
+#, fuzzy
+#| msgid ""
+#| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
+#| "T -c <file>'."
 msgid ""
-"To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -T -"
-"c <file>'."
+"To diagnose errors in your Snort configuration you can run (as root) the "
+"following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
 msgstr ""
 "Snortin asetustiedoston virheitä voidaan etsiä komennolla ”/usr/sbin/snort -"
 "T -c <tiedosto>”."
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid "Deprecated configuration file"
+msgstr "Vanhentunut asetustiedosto"
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Your system has deprecated configuration files which should not be used any "
+"longer and might contain deprecated options.  If included through the "
+"standard configuration file (/etc/snort/snort.conf), the existance of these "
+"configuration files might prevent Snort from starting up properly."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Please remove these files as well as any existing references to them  in /"
+"etc/snort/snort.conf"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+#, fuzzy
+#| msgid ""
+#| "The following deprecated options were found in the configuration file: "
+#| "${DEP_CONFIG}"
+msgid "The following deprecated configuration files were found: ${DEP_FILE}"
+msgstr ""
+"Asetustiedostosta löytyi seuraavat käytöstä poistetut valitsimet:\n"
+" ${DEB_CONFIG}."
 
 #~ msgid "Set up a database for snort-mysql to log to?"
 #~ msgstr "Alustetaanko tietokanta snort-mysql:n lokeja varten?"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 22:10+0200\n"
+"POT-Creation-Date: 2012-08-08 23:43+0200\n"
 "PO-Revision-Date: 2007-03-07 17:31+0530\n"
 "Last-Translator: Dr.T.Vasudevan <agnihot3@gmail.com>\n"
 "Language-Team: TAMIL <ubuntu-l10n-tam@lists.ubuntu.com>\n"
@@ -351,7 +351,7 @@ msgstr ""
 #: ../snort-common.templates:1001
 #, fuzzy
 #| msgid "This system uses an obsolete configuration file"
-msgid "Deprecated configuration file"
+msgid "Deprecated options in configuration file"
 msgstr "இந்த கணினி வழக்கொழிந்த வடிவமைப்பு கோப்பை பயன் படுத்துகிறது."
 
 #. Type: note
@@ -407,9 +407,46 @@ msgstr ""
 #. Description
 #: ../snort-common.templates:2001
 msgid ""
-"To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -T -"
-"c <file>'."
+"To diagnose errors in your Snort configuration you can run (as root) the "
+"following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
 msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+#, fuzzy
+#| msgid "This system uses an obsolete configuration file"
+msgid "Deprecated configuration file"
+msgstr "இந்த கணினி வழக்கொழிந்த வடிவமைப்பு கோப்பை பயன் படுத்துகிறது."
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Your system has deprecated configuration files which should not be used any "
+"longer and might contain deprecated options.  If included through the "
+"standard configuration file (/etc/snort/snort.conf), the existance of these "
+"configuration files might prevent Snort from starting up properly."
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+msgid ""
+"Please remove these files as well as any existing references to them  in /"
+"etc/snort/snort.conf"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../snort-common.templates:3001
+#, fuzzy
+#| msgid ""
+#| "The following deprecated options were found in your configuration file: "
+#| "${DEP_CONFIG}"
+msgid "The following deprecated configuration files were found: ${DEP_FILE}"
+msgstr ""
+"உங்கள் வடிவமைப்பு கோப்பில் பின்வரும் கைவிடப்பட்ட தேர்வுகள் காணப் பட்டன:${DEP_CONFIG}"
 
 #, fuzzy
 #~| msgid "Do you want to set up a database for snort-mysql to log to?"
