@@ -2,7 +2,6 @@ debian/README.docs
 doc/BUGS
 doc/NEWS
 doc/PROBLEMS
-doc/snort_schema_v106.pdf
 doc/snort_manual.pdf
 doc/faq.pdf
 doc/TODO
