@@ -1,8 +1,10 @@
 #!/usr/bin/make -f
 #-*- makefile -*-
+# Rules file for Snort, developed by Javier Fernandez-Sanguino
 # Made with the aid of dh_make, by Craig Small
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
+#
 
 export DH_VERBOSE=1
 
@@ -22,7 +24,18 @@ export CFLAGS
 CONFFLAGS= --prefix=/usr \
 	--bindir=\$$\{exec_prefix\}/sbin \
 	--mandir=\$$\{exec_prefix\}/share/man \
-	--enable-prelude 
+	--enable-zlib \
+	--enable-ipv6 \
+	--enable-gre \
+	--enable-mpls \
+	--enable-targetbased \
+	--enable-ppm \
+	--enable-perfprofiling \
+	--enable-active-response \
+	--enable-normalizer \
+	--enable-reload \
+	--enable-react \
+	--enable-flexresp3
 
 aclocal.m4:
 	aclocal-1.9 -I m4/
@@ -41,8 +54,8 @@ clean: clean-sources
 	dh_testroot
 # Clean all the stamps
 	rm -f build*stamp install-stamp configure-stamp
-# Clean binaries we create when building the packages
-	rm -f src/snort-inline
+# Clean all the different binaries we have created when building the packages'
+# flavors
 	rm -f src/snort-basic
 	rm -f src/snort
 # Clean documents
@@ -56,33 +69,38 @@ clean: clean-sources
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-# Standard package support
-	./configure $(CONFFLAGS) \
-		--enable-zlib \
-		--enable-ipv6
+# Standard package configuration:
+	./configure $(CONFFLAGS) 
 	touch $@
 
+# Basic 'flavor' package 
+#
+# Other 'flavors' (with different compilation flags) can be generated using
+# this as a reference
 build-basic: build-basic-stamp
 build-basic-stamp: configure-stamp
 # NOTE: We don't clean the sources on the first compilation
 	dh_testdir
-	# Basic package (no BBDD support):
 	$(MAKE) 
 	cp src/snort src/snort-basic
 	touch $@
 
-build-inline: build-inline-stamp
-build-inline-stamp:
-	dh_testdir
-	sh debian/clean_sources.sh
-	# Inline support
-	./configure $(CONFFLAGS) \
-		--enable-inline \
-		--with-libipq-includes=/usr/include/libipq/ \
-		--enable-zlib
-	$(MAKE) 
-	cp src/snort src/snort-inline
-	touch $@
+# This is an example of a 'flavor'. A flavor
+# adds support for some specific configuration flags
+# that are not used in the basic flavor
+#
+#build-flavor: build-flavor-stamp
+#build-flavor-stamp:
+#       dh_testdir
+#       sh debian/clean_sources.sh
+#       # Support for blah, blah, blah
+#       ./configure $(CONFFLAGS) \
+#               --enable-some-esoteric-option 
+#       $(MAKE)
+#       cp src/snort src/snort-flavor
+#       touch $@
+# Note: the binary generated needs to be moved to the proper 'flavor' package too
+
 
 build-arch: build-arch-stamp 
 build-arch-stamp: build-basic-stamp
@@ -123,22 +141,16 @@ install-arch:
 		sed -i -e "s,^dependency_libs=.*,dependency_libs=''," {} +
 # Snort binaries
 	install -m 755 -o root -g root src/snort-basic $(TMP)/snort/usr/sbin/snort
-#	install -m 755 -o root -g root src/snort-inline   $(TMP)/snort/usr/sbin/snort
 # Default config
 #	install -m 644 -o root -g root `pwd`/debian/snort.common.parameters $(TMP)/snort/etc/snort/snort.common.parameters
 	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort/etc/default/snort
-#	install -m 644 -o root -g root `pwd`/debian/snort.default $(TMP)/snort-inline/etc/default/snort
 #  Install init.d initscripts
 	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort/etc/init.d/snort
-#	install -m 755 -o root -g root `pwd`/debian/snort.init.d $(TMP)/snort-inline/etc/init.d/snort
 #  Install PPP initscripts
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort/etc/ppp/ip-up.d/snort
 	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort/etc/ppp/ip-down.d/snort
-#	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-up.d $(TMP)/snort-inline/etc/ppp/ip-up.d/snort
-#	install -m 755 -o root -g root `pwd`/debian/my/snort.ip-down.d $(TMP)/snort-inline/etc/ppp/ip-down.d/snort
 # Logrotate files
 	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort/etc/logrotate.d/snort
-#	install -m 644 -o root -g root `pwd`/debian/snort.logrotate $(TMP)/snort-inline/etc/logrotate.d/snort
 # Move libraries to the snort-common-libraries package
 	mv $(TMP)/snort-common/usr/lib/ $(TMP)/snort-common-libraries/usr/
 # Remove headers, as this is not a -dev package
@@ -209,7 +221,6 @@ binary-arch: build-arch install-arch
 	dh_installexamples -a
 	dh_installdebconf -a
 	dh_installman -a
-#	rm -f $(TMP)/snort-inline/usr/share/man/man8/snort-stat.*
 	rm -rf $(TMP)/snort-rules-default/usr/share/man
 	rm -f $(TMP)/snort/usr/share/man/man8/snort-stat.*
 	rm -f $(TMP)/snort-common/usr/share/man/man8/snort.*
