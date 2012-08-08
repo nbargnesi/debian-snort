@@ -6,7 +6,7 @@ Last-Update: 2012-05-05
 
 --- a/etc/snort.conf
 +++ b/etc/snort.conf
-@@ -572,15 +572,15 @@
+@@ -560,15 +560,15 @@
  include $RULE_PATH/attack-responses.rules
  include $RULE_PATH/backdoor.rules
  include $RULE_PATH/bad-traffic.rules
@@ -26,7 +26,7 @@ Last-Update: 2012-05-05
  include $RULE_PATH/finger.rules
  include $RULE_PATH/ftp.rules
  include $RULE_PATH/icmp.rules
-@@ -595,25 +595,28 @@
+@@ -583,25 +583,28 @@
  include $RULE_PATH/oracle.rules
  include $RULE_PATH/other-ids.rules
  include $RULE_PATH/p2p.rules
