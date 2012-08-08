@@ -8,51 +8,26 @@ set -e
 #        * <new-preinst> `upgrade' <old-version>
 #        * <old-preinst> `abort-upgrade' <new-version>
 
-DBCONF="/etc/snort/database.conf"
-GENCONF="/etc/snort/snort.conf"
+GENCONF="/etc/snort/snort.conf" # generic configuration file
+DBCONF="/etc/snort/database.conf" # deprecated
 
 case "$1" in
     install)
         # Do nothing
     ;;
     upgrade)
-         # earlier versions modified /etc/snort/snort.conf directly for the
-         # DB stuff, we splitt it off in a sepperate file, to ensure smooth
-         # upgrades
-         if dpkg --compare-versions "$2" eq "2.8.5.2-3" 
-         then
-         # Fix bug from previous release that resulted in an
-         # incorrect database.conf being generated
-            if [ -e "$DBCONF" -a -e "$GENCONF" ] && grep -q "http://www.snort.org" $DBCONF
-            then    
-                rm -f $DBCONF
-                touch $DBCONF
-            fi
-        fi
-
-         if dpkg --compare-versions "$2" le "2.8.5.2-3" && [ -e "$GENCONF" ] && grep -q "(#DBSTART#)" "$GENCONF" 
-         then
-             GENCONF_TEMPFILE=`mktemp`
-             DBCONF_TEMPFILE=`mktemp`
-             # Look into the generated configuration file to see if
-             # there is a database definition, if there is, transparently
-             # copy it over to its new location
-
-             cat "$GENCONF" |  perl -ne ' $output=0 if /^\# \(\#DBEND\#\)/; print if $output; $output=1 if /^\# \(\#DBSTART\#\)/; ' >$DBCONF_TEMPFILE
-             cat "$GENCONF" | perl -ne '$output=1 if /^\#/; $output=1 if /^\# \(\#DBEND\#\)/; print if $output; $output=0 if /^\# \(\#DBSTART\#\)/;' >$GENCONF_TEMPFILE
-
-             # Be on the safe side, if we do not generate a non-empty
-             # configuration abort:
-             if [ -s "$GENCONF_TEMPFILE" ] ; then
-                 mv $GENCONF_TEMPFILE $GENCONF
-                 mv $DBCONF_TEMPFILE $DBCONF
-             else
-                 echo "ERROR: Preinstallation script was unable to extract a proper configuration file for migration. Please report this as a bug in the snort-common Debian package" >&2
-                 exit 1
-             fi
-         fi
+         # versions previous to 2.9.3 created the /etc/snort/database.conf
+         # file for configuration
+         # TODO: should be removed if empty using code such as this:
+         #if dpkg --compare-versions "$2" le "2.9.3" &&  [ -e "$DBCONF" ] && ! [ -s "$DBCONF" ] 
+         #then
+         #       rm -f $DBCONF
+         #fi
+         # should a warning be shown to the user if not empty?
+         # (it will be deprecated anyway)
     ;;
     configure)
+        # Do nothing
     ;;
     abort-upgrade)
     ;;

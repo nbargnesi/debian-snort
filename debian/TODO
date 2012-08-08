@@ -2,6 +2,14 @@
 TODO things for Snort in Debian
 -------------------------------
 
+- [upgrade to 2.9.3] Detect if the snort-mysql/pgsl packages were
+  installed before and warn if there are problems in the snort.conf
+  configuration that might lead to the package not running.
+
+  This could be done by e.g. checking in the snort.conf if there are any
+  'output database' lines (introduced by a user) or an 'include database.conf'
+  (provided by the Debian packages prior to the 2.9.3 version)
+
 - Provide support to avoid specifying the address range for multiple
   interfaces (or skip this if you have more than once and substitute
   by a note telling the admin to configure this in the snort.$IFACE.conf 

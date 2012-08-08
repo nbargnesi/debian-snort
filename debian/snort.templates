@@ -103,3 +103,4 @@ _Description: Obsolete configuration file
  one. Until you do this, the initialization script will not use the new
  configuration and you will not take advantage of the benefits
  introduced in newer releases.
+

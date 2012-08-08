@@ -5,7 +5,7 @@
 # Copyright (c) 2001 Christian Hammers 
 # Copyright (c) 2001-2002 Robert van der Meulen
 # Copyright (c) 2002-2004 Sander Smeenk <ssmeenk@debian.org>
-# Copyright (c) 2004-2007 Javier Fernandez-Sanguino <jfs@debian.org>
+# Copyright (c) 2004-2012 Javier Fernandez-Sanguino <jfs@debian.org>
 #
 # This is free software; you may redistribute it and/or modify
 # it under the terms of the GNU General Public License as
@@ -116,22 +116,6 @@ case "$1" in
   start)
         check_root
 	log_daemon_msg "Starting $DESC " "$NAME"
-
-        if [ -e /etc/snort/db-pending-config ] ; then
-            # If the database config is not empty then complain
-            if [ -s /etc/snort/database.config ]  ; then
-		log_failure_msg "/etc/snort/db-pending-config file found"
-		log_failure_msg "Snort will not start as its database is not yet configured."
-		log_failure_msg "Please configure the database as described in"
-		log_failure_msg "/usr/share/doc/snort-{pgsql,mysql}/README-database.Debian"
-		log_failure_msg "and remove /etc/snort/db-pending-config"
-		exit 6
-            else
-                # We are not running Snort with database support, as the
-                # configuration file is empty, remove the semaphore and continue
-                rm -f /etc/snort/db-pending-config
-            fi
-	fi
 
         if ! check_log_dir; then
 		log_failure_msg " will not start $DESC!"

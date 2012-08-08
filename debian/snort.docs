@@ -5,7 +5,7 @@ doc/NEWS
 doc/README
 doc/README.PLUGINS
 doc/USAGE
-doc/README.database
 doc/README.csv
+RELEASE.NOTES
 debian/my/snort_rules.html
 debian/README.Maintainer

@@ -19,14 +19,7 @@ set -e
 
 case "$1" in
        purge)
-       # on installation we touch this file to ensure it's there
-       # if it's still there and it is empty, we can safely remove it
-       # if it's not empty, snort-{mysql,pgsql} have probably added content and
-       # should deal with it themselves when purge
-       if [ -e /etc/snort/database.conf ] && [ ! -s /etc/snort/database.conf ]
-       then
-          rm -f /etc/snort/database.conf
-       fi
+                # nothing
        ;;
        remove|upgrade|failed-upgrade|abort-install|abort-upgrade)
                 # nothing
