@@ -1905,7 +1905,7 @@ snort (1.8.6-5) unstable; urgency=low
     Also, haven't heard anyone else about this.
      + Closes: #130675
   * Fixed the debconf script's perl-regexp to support multiple
-    subnet-definition seperated by commas
+    subnet-definition separated by commas
      + Closes: #146945
   * Once more fixed /etc/snort/snort.conf _NOT_ to log to syslog,
     since that would stop logging to /var/log/snort/alert, and that
@@ -2071,7 +2071,7 @@ snort (1.7-6) unstable; urgency=low
   * Removed non-US dependency on libssl096 (Closes: #92748)
   * Fixed old man-page synopsis bug (Closes: #90889)
   * Added 'please restart' notice for dialup users that upgrade(Closes: #90979).
-  * Fixed 'snort.conf' indiscrepancy (comma-seperated versus
+  * Fixed 'snort.conf' indiscrepancy (comma-separated versus
     whitespace-separated)  (Closes: #93742)
   * Added '-d' option for startup (Closes: #78667)
   * Added snort FAQ (Closes: #91219) 
@@ -2303,7 +2303,7 @@ snort (1.5.1-7) frozen unstable; urgency=low
 
 snort (1.5.1-5) frozen unstable; urgency=low
 
-  * User may only enter one interface and no comma seperated list that
+  * User may only enter one interface and no comma separated list that
     confuses the postscript, too. Closes: #55567
   * Explained a debconf question. Closes: #55568
   * Fixed email address in copyright.
