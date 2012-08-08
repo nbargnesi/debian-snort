@@ -6,7 +6,7 @@
 # - Initial translation
 # 	Javier Fernandez-Sanguino Peña <jfs@debian.org>, 2004
 # - Updates
-# 	Javier Fernandez-Sanguino Peña <jfs@debian.org>, 2005-2008
+# 	Javier Fernandez-Sanguino Peña <jfs@debian.org>, 2005-2012
 #
 #
 #  Traductores, si no conoce el formato PO, merece la pena leer la 
@@ -29,10 +29,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: snort debconf 2.1.0-4.1\n"
+"Project-Id-Version: snort debconf 2.9.3.1-1\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 23:43+0200\n"
-"PO-Revision-Date: 2008-04-27 23:44+0200\n"
+"POT-Creation-Date: 2012-08-08 23:48+0200\n"
+"PO-Revision-Date: 2012-08-08 23:49+0200\n"
 "Last-Translator: Javier Fernandez-Sanguino Peña <jfs@debian.org>\n"
 "Language-Team: Debian Spanish <debian-l10n-spanish@lists.debian.org>\n"
 "Language: es\n"
@@ -157,10 +157,7 @@ msgid ""
 "Please use the CIDR form - for example, 192.168.1.0/24 for a block of 256 "
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
 "separated (without spaces)."
-msgstr ""
-"Tiene que utilizar el formato CIDR, esto es, 192.168.1.0/24 para un bloque "
-"de 256 IPs o  192.168.1.42/32 para sólo una dirección. Debe separar "
-"múltiples direcciones por «,» (comas) y sin espacios."
+msgstr "Tiene que utilizar el formato CIDR, esto es, 192.168.1.0/24 para un bloque de 256 IPs o  192.168.1.42/32 para sólo una dirección. Debe separar múltiples direcciones por «,» (comas) y sin espacios."
 
 #. Type: string
 #. Description
@@ -328,10 +325,8 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-common.templates:1001
-#, fuzzy
-#| msgid "Deprecated configuration file"
 msgid "Deprecated options in configuration file"
-msgstr "Fichero de configuración obsoleto"
+msgstr "Opciones obsolestas en el fichero de configuración"
 
 #. Type: note
 #. Description
@@ -378,16 +373,13 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../snort-common.templates:2001
-#, fuzzy
-#| msgid ""
-#| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
-#| "T -c <file>'."
 msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
 "following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
 msgstr ""
-"Puede diagnosticar los errores en el fichero de configuración utilizando «/"
-"usr/sbin/snort -T -c <fichero>»."
+"Puede diagnosticar los errores en su configuración de Snort ejecutando, como "
+"superusuario, la siguiente orden: «/usr/sbin/snort -T -c /etc/snort/snort."
+"conf»."
 
 #. Type: note
 #. Description
@@ -400,30 +392,32 @@ msgstr "Fichero de configuración obsoleto"
 #: ../snort-common.templates:3001
 msgid ""
 "Your system has deprecated configuration files which should not be used any "
-"longer and might contain deprecated options.  If included through the "
-"standard configuration file (/etc/snort/snort.conf), the existance of these "
-"configuration files might prevent Snort from starting up properly."
+"longer and might contain deprecated options. If included through the "
+"standard configuration file (/etc/snort/snort.conf), they might prevent "
+"Snort from starting up properly."
 msgstr ""
+"Su sistema tiene ficheros de configuración obsoletos que no deberían seguir "
+"utilizándose y que pueden contener opciones obsoletas. Si estos ficheros se "
+"incluyen a través del fichero de configuración estándar («/etc/snort/snort."
+"conf») pueden hacer que Snort no arranque correctamente."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:3001
 msgid ""
-"Please remove these files as well as any existing references to them  in /"
-"etc/snort/snort.conf"
+"Please remove these files as well as any existing references to them in the /"
+"etc/snort/snort.conf configuration file."
 msgstr ""
+"Debe eliminar estos ficheros así como cualquier referencia a ellos en el "
+"archivo de configuración «etc/snort/snort.conf»."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:3001
-#, fuzzy
-#| msgid ""
-#| "The following deprecated options were found in the configuration file: "
-#| "${DEP_CONFIG}"
 msgid "The following deprecated configuration files were found: ${DEP_FILE}"
 msgstr ""
-"Se encontraron las siguientes opciones obsoletas en el fichero de "
-"configuración: ${DEP_CONFIG}"
+"Se encontraron los siguientes ficheros de configuración obsoletos: "
+"${DEP_FILE}"
 
 #~ msgid "Set up a database for snort-mysql to log to?"
 #~ msgstr ""
