@@ -6,6 +6,10 @@ snort (2.9.3.1-1) experimental; urgency=low
     snort-pgsql and snort-mysql packages are no longer possible. This 
     is documented in the NEWS file. Also relevant is that support for
     Prelude is no longer available.
+  * Since this release does not include the snort database packages any
+    longer, bugs associated with them are no longer relevant
+    (Closes: #526511, #567495, #292699, #276565, #527113, #388963, #388962,
+    #321046, #369951)
   * debian/rules: Update the configuration options to adjust to those used
     in the snort.conf script provided upstream
   * debian/patches/fix_upstream_typos: Do typo fixes to more source files
@@ -13,6 +17,7 @@ snort (2.9.3.1-1) experimental; urgency=low
     file, enable at least one output plugin (unified2) and set some
     configurations values as recommended in Jason Weir's "Building a
     Debian\Snort based IDS" available in http://www.snort.org/docs
+    (Closes: #193544)
   * debian/patches/*: Refresh the patches to apply to the new upstream release
   * debian/po/*: Refresh all templates since the previous templates for
     database configuration have gone along with the snort database 'flavor'
