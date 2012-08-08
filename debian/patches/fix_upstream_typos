@@ -9,14 +9,209 @@
                                                  *(_dpd.config_file), *(_dpd.config_line),
                                                  DNS_PORTS_KEYWORD);
                  //free(argcpyp);
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -8538,7 +8538,7 @@
+ 
+ 2006-08-30 Steven Sturges <ssturges@sourcefire.com>
+     * src/sfutil/ipobj.c:
+-      Additional fix for parsing of IP lists that are not space seperated.
++      Additional fix for parsing of IP lists that are not space separated.
+     * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
+       Treat spaces as part of a filename in 'string' parameter validation.
+       Thanks Bamm Visscher for pointing out the issue.
+@@ -8781,7 +8781,7 @@
+       Update to provide links to Snort classification reference information.
+       Thanks Yoann Vandoorselaere.
+     * src/sfutil/ipobj.c:
+-      Fix parsing of IP lists that are not space seperated.
++      Fix parsing of IP lists that are not space separated.
+     * src/configure.in:
+       Update for HPUX 11.
+     * src/snort.c:
+@@ -14650,7 +14650,7 @@
+            * added bidirectional rules functionality (now Snort goes
+              both ways....)
+ 
+-    * log.c: * broke out alerting function into seperate subfunctions
++    * log.c: * broke out alerting function into separate subfunctions
+          * ditto logging functions
+          * fixed string termination code in the SMB alerter so that it
+            can now alert to more than one box at a time
+@@ -14854,7 +14854,7 @@
+     * rules.c: Moved AlertPkt() and LogPkt() to log.c
+ 
+     * log.c: Totally revamped the logging code to be more logical and 
+-                 have less duplication in the code.  There are now seperate 
++                 have less duplication in the code.  There are now separate
+                  logging functions for each of the layers of the packet.  
+                  PrintIPPkt() has been totally rewritten, PrintFragHeader has
+                  been eliminated, and two functions have been moved over from
+@@ -14940,7 +14940,7 @@
+                  mode with the "-d" command line switch if you're using Snort 
+                  as an IDS, because it's still slow enough to drop some large
+                  packets.  Packet print out has changed as well, with the 
+-                 different packet layers seperated by onto their own lines
++                 different packet layers separated by onto their own lines
+                  (well, mostly).  Fragmented packets are now recorded in a 
+                  "FRAG" file.
+ 
+@@ -14971,7 +14971,7 @@
+ 1999-01-28  mfr  <roesch@clark.net>
+ 
+         * rules.c: Rules sorting is now implemented.  There are actually three
+-                   seperate lists (Pass, Log, Alert) now, with the rules being
++                   separate lists (Pass, Log, Alert) now, with the rules being
+                    placed on to the lists in the order they're read from the 
+                    rules file.  The rule execution order was changed, now
+                    Alert rules are applied first, then Pass Rules, the Log 
+--- a/doc/README.multipleconfigs
++++ b/doc/README.multipleconfigs
+@@ -22,7 +22,7 @@
+ <path_to_snort.conf> : Refers to the absolute or relative path to the snort.conf
+ for specific configuration.
+ 
+-<vlanIdList>     : Refers to the comma seperated list of vlandIds and vlanId
++<vlanIdList>     : Refers to the comma separated list of vlandIds and vlanId
+ ranges.  The format for ranges is two vlanId separated by a "-". Spaces are 
+ allowed within ranges.  Valid vlanId is any number in 0-4095 range. Negative 
+ vland Ids and alphanumeric are not supported.
+@@ -31,7 +31,7 @@
+ or IPv4.  A maximum of 512 individual IPv4 or IPv6 addresses or CIDRs can be
+ specified.
+ 
+-<policyIdList>   : Refers to the comma seperated list of 16bit policyIds
++<policyIdList>   : Refers to the comma separated list of 16bit policyIds
+ 
+ NOTE: Vlan and Subnets can not be used in the same line. Configurations can be 
+ applied based on either Vlans or Subnets not both. 
+--- a/doc/README.sfportscan
++++ b/doc/README.sfportscan
+@@ -158,7 +158,7 @@
+ * watch_ip { <ip1|ip2/cidr[ [port1|port2-port3]]> }
+ 
+   Defines which IPs, networks, and specific ports on those hosts to watch.
+-  The list is a comma seperated list of IP addresses, IP address using CIDR
++  The list is a comma separated list of IP addresses, IP address using CIDR
+   notation.  Optionally, ports are specified after the IP address/CIDR using
+   a space and can be either a single port or a range denoted by a dash.
+   IPs or networks not falling into this range are ignored if this option
+--- a/doc/snort_manual.tex
++++ b/doc/snort_manual.tex
+@@ -12967,7 +12967,7 @@
+ \item [\texttt{path\_to\_snort.conf}] - Refers to the absolute or relative path to 
+ the snort.conf for specific configuration.
+ 
+-\item [\texttt{vlanIdList}] - Refers to the comma seperated list of vlandIds and 
++\item [\texttt{vlanIdList}] - Refers to the comma separated list of vlandIds and
+ vlanId ranges. The format for ranges is two vlanId separated by a "-". Spaces are 
+ allowed within ranges. Valid vlanId is any number in 0-4095 range. Negative vland 
+ Ids and alphanumeric are not supported.
+--- a/src/output-plugins/spo_alert_syslog.c
++++ b/src/output-plugins/spo_alert_syslog.c
+@@ -146,7 +146,7 @@
+ /*
+  * Function: ParseSyslogArgs(char *)
+  *
+- * Purpose: Process the preprocessor arguements from the rules file and
++ * Purpose: Process the preprocessor arguments from the rules file and
+  *          initialize the preprocessor's data struct.  This function doesn't
+  *          have to exist if it makes sense to parse the args in the init
+  *          function.
+--- a/src/output-plugins/spo_alert_unixsock.c
++++ b/src/output-plugins/spo_alert_unixsock.c
+@@ -143,7 +143,7 @@
+ /*
+  * Function: ParseAlertUnixSockArgs(char *)
+  *
+- * Purpose: Process the preprocessor arguements from the rules file and
++ * Purpose: Process the preprocessor arguments from the rules file and
+  *          initialize the preprocessor's data struct.  This function doesn't
+  *          have to exist if it makes sense to parse the args in the init
+  *          function.
+--- a/src/output-plugins/spo_csv.c
++++ b/src/output-plugins/spo_csv.c
+@@ -272,8 +272,8 @@
+  *
+  * Arguments:     p => packet. (could be NULL)
+  *              msg => the message to send
+- *             args => CSV output arguements
+- *          numargs => number of arguements
++ *             args => CSV output arguments
++ *          numargs => number of arguments
+  *             log => Log
+  * Returns: void function
+  *
+--- a/src/output-plugins/spo_unified2.c
++++ b/src/output-plugins/spo_unified2.c
+@@ -1261,7 +1261,7 @@
+ /*
+  * Function: Unified2ParseArgs(char *)
+  *
+- * Purpose: Process the preprocessor arguements from the rules file and
++ * Purpose: Process the preprocessor arguments from the rules file and
+  *          initialize the preprocessor's data struct.  This function doesn't
+  *          have to exist if it makes sense to parse the args in the init
+  *          function.
 --- a/src/parser.c
 +++ b/src/parser.c
-@@ -4828,7 +4828,7 @@
+@@ -4825,7 +4825,7 @@
  
      if(filespec == NULL)
      {
--        FatalError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
-+        FatalError("no argument in this file option, remove extra ':' at the end of the alert option\n");
+-        ParseError("no arguement in this file option, remove extra ':' at the end of the alert option\n");
++        ParseError("no argument in this file option, remove extra ':' at the end of the alert option\n");
      }
  
      /* look for ".." in the string and complain and exit if it is found */
+--- a/src/preprocessors/spp_perfmonitor.c
++++ b/src/preprocessors/spp_perfmonitor.c
+@@ -154,7 +154,7 @@
+ /*
+  * Function: ParsePerfMonitorArgs(char *)
+  *
+- * Purpose: Process the preprocessor arguements from the rules file and
++ * Purpose: Process the preprocessor arguments from the rules file and
+  *          initialize the preprocessor's data struct.  This function doesn't
+  *          have to exist if it makes sense to parse the args in the init
+  *          function.
+--- a/src/sfutil/sfportobject.c
++++ b/src/sfutil/sfportobject.c
+@@ -3671,7 +3671,7 @@
+     {
+     case POPERR_NO_NAME:            return "no name";
+     case POPERR_NO_ENDLIST_BRACKET: return "no end of list bracket."
+-                                           " Elements must be comma seperated,"
++                                           " Elements must be comma separated,"
+                                            " and no spaces may appear between"
+                                            " brackets.";
+     case POPERR_NOT_A_NUMBER:       return "not a number";
+@@ -3850,7 +3850,7 @@
+         //LogMessage("PortObject : '%s' \n",portlist);
+ 
+         /*
+-        This is seperate fom PortVar's since some rules may declare these inline
++        This is separate form PortVar's since some rules may declare these inline
+         */
+         po = PortObjectParseString ( pvTable, &pop, argv[i], PORTLISTS, names/* bool 0/1 - name required in parse */);
+         if( !po )
+--- a/templates/spp_template.c
++++ b/templates/spp_template.c
+@@ -13,7 +13,7 @@
+  *
+  * Arguments:
+  *   
+- * This is the list of arguements that the plugin can take at the 
++ * This is the list of arguments that the plugin can take at the
+  * "preprocessor" line in the rules file
+  *
+  * Effect:
+@@ -138,7 +138,7 @@
+ /*
+  * Function: ParseTemplateArgs(char *)
+  *
+- * Purpose: Process the preprocessor arguements from the rules file and 
++ * Purpose: Process the preprocessor arguments from the rules file and
+  *          initialize the preprocessor's data struct.  This function doesn't
+  *          have to exist if it makes sense to parse the args in the init 
+  *          function.
