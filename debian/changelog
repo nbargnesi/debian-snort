@@ -1,3 +1,20 @@
+snort (2.9.3.1-1) experimental; urgency=low
+
+  * New upstream release, target towards experimental due to the current freeze.
+  * The most relevant change in this release is that support by Snort to
+    output directly in a database has been dropped, which means that the
+    snort-pgsql and snort-mysql packages are no longer possible. This 
+    is documented in the NEWS file.
+  * debian/rules: Update the configuration options to adjust to those used
+    in the snort.conf script provided upstream
+  * debian/patches/fix_upstream_typos: Do typo fixes to more source files
+  * debian/patches/*: Refresh the patches to apply to the new upstream release
+  * debian/po/*: Refresh all templates since the previous templates for
+    database configuration have gone along with the snort database 'flavor'
+    packages.
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Wed, 08 Aug 2012 22:12:35 +0200
+
 snort (2.9.2.2-3) unstable; urgency=medium
 
   [ Upload target towards Wheezy fixing some important bugs
