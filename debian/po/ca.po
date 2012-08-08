@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort_2.0.1-2_templates\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 23:43+0200\n"
+"POT-Creation-Date: 2012-08-08 23:48+0200\n"
 "PO-Revision-Date: 2005-02-26 10:41+0100\n"
 "Last-Translator: Aleix Badia i Bosch <a.badia@callusdigital.org>\n"
 "Language-Team: Debian L10n Catalan <debian-l10n-catalan@lists.debian.org>\n"
@@ -427,17 +427,17 @@ msgstr "El sistema utilitza un fitxer de configuració obsolet"
 #: ../snort-common.templates:3001
 msgid ""
 "Your system has deprecated configuration files which should not be used any "
-"longer and might contain deprecated options.  If included through the "
-"standard configuration file (/etc/snort/snort.conf), the existance of these "
-"configuration files might prevent Snort from starting up properly."
+"longer and might contain deprecated options. If included through the "
+"standard configuration file (/etc/snort/snort.conf), they might prevent "
+"Snort from starting up properly."
 msgstr ""
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:3001
 msgid ""
-"Please remove these files as well as any existing references to them  in /"
-"etc/snort/snort.conf"
+"Please remove these files as well as any existing references to them in the /"
+"etc/snort/snort.conf configuration file."
 msgstr ""
 
 #. Type: note
