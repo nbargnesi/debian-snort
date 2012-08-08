@@ -23,12 +23,12 @@ Template: snort/deprecated_file
 Type: note
 _Description: Deprecated configuration file
  Your system has deprecated configuration files which should not be used any
- longer and might contain deprecated options.  If included through the standard
- configuration file (/etc/snort/snort.conf), the existance of these
- configuration files might prevent Snort from starting up properly.
+ longer and might contain deprecated options. If included through the standard
+ configuration file (/etc/snort/snort.conf), they might prevent Snort from
+ starting up properly.
  . 
- Please remove these files as well as any existing references to them 
- in /etc/snort/snort.conf
+ Please remove these files as well as any existing references to them in the
+ /etc/snort/snort.conf configuration file.
  .
  The following deprecated configuration files were found:
  ${DEP_FILE}
