@@ -1,5 +1,8 @@
 snort (2.9.2.2-3) unstable; urgency=medium
 
+  [ Upload target towards Wheezy fixing some important bugs
+    and substantially improving the information provided on the
+    packages to clarify user expectations ]
   * Acknowledge previous NMU
   * debian/patches/config: Update the patch to: 
      - use absolute paths instead of relative paths to point to
