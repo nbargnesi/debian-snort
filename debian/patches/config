@@ -9,15 +9,18 @@ Last-Update: 2012-08-07
 
 --- a/etc/snort.conf
 +++ b/etc/snort.conf
-@@ -46,6 +46,7 @@
+@@ -46,6 +46,10 @@
  
  # Set up the external network addresses. Leave as "any" in most situations
  ipvar EXTERNAL_NET any
++# If HOME_NET is defined as something other than "any", alternative, you can
++# use this definition if you do not want to detect attacks from your internal
++# IP addresses:
 +#ipvar EXTERNAL_NET !$HOME_NET
  
  # List of DNS servers on your network 
  ipvar DNS_SERVERS $HOME_NET
-@@ -101,17 +102,17 @@
+@@ -101,17 +105,17 @@
  # Path to your rules files (this can be a relative path)
  # Note for Windows users:  You are advised to make this an absolute path,
  # such as:  c:\snort\rules
@@ -40,7 +43,7 @@ Last-Update: 2012-08-07
  
  ###################################################
  # Step #2: Configure the decoder.  For more information, see README.decode
-@@ -244,13 +245,13 @@
+@@ -244,13 +248,13 @@
  ###################################################
  
  # path to dynamic preprocessor libraries
@@ -53,13 +56,19 @@ Last-Update: 2012-08-07
  
  # path to dynamic rules libraries
 -dynamicdetection directory /usr/local/lib/snort_dynamicrules
-+# dynamicdetection directory /usr/lib/snort_dynamicrules
++dynamicdetection directory /usr/lib/snort_dynamicrules
  
  ###################################################
  # Step #5: Configure preprocessors
-@@ -503,12 +504,17 @@
+@@ -502,13 +506,18 @@
+    memcap 262144 \
     check_crc
  
++#
++# Note to Debian users: this is disabled since it is an experimental
++# preprocessor. If you want to use it you have to create the rules files
++# referenced below in the /etc/snort/rules directory
++#
  # Reputation preprocessor. For more information see README.reputation
 -preprocessor reputation: \
 -   memcap 500, \
@@ -67,11 +76,6 @@ Last-Update: 2012-08-07
 -   nested_ip inner, \
 -   whitelist $WHITE_LIST_PATH/white_list.rules, \
 -   blacklist $BLACK_LIST_PATH/black_list.rules 
-+#
-+# Note to Debian users: this is disabled since it is an experimental
-+# preprocessor. If you want to use it you have to create the rules files
-+# referenced below in the /etc/snort/rules directory
-+#
 +#preprocessor reputation: \
 +#   memcap 500, \
 +#   priority whitelist, \
@@ -81,28 +85,7 @@ Last-Update: 2012-08-07
  
  ###################################################
  # Step #6: Configure output plugins
-@@ -527,11 +533,19 @@
- # output alert_syslog: LOG_AUTH LOG_ALERT
- 
- # pcap
--# output log_tcpdump: tcpdump.log
-+output log_tcpdump: tcpdump.log
- 
- # database
- # output database: alert, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
- # output database: log, <db_type>, user=<username> password=<password> test dbname=<name> host=<hostname>
-+#
-+# On Debian Systems, the database configuration is kept in a separate file:
-+# /etc/snort/database.conf.
-+# This file can be empty, if you are not using any database information
-+# If you are using databases, please edit that file instead of this one, to
-+# ensure smoother upgrades to future versions of this package.
-+include database.conf
-+#
- 
- # prelude
- # output alert_prelude
-@@ -548,6 +562,10 @@
+@@ -541,6 +550,10 @@
  # NOTE: All categories are enabled in this conf file
  ###################################################
  
@@ -113,24 +96,23 @@ Last-Update: 2012-08-07
  # site specific rules
  include $RULE_PATH/local.rules
  
-@@ -604,6 +622,20 @@
- include $RULE_PATH/web-iis.rules
+@@ -598,6 +611,19 @@
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
-+include $RULE_PATH/web-attacks.rules
-+include $RULE_PATH/community-sql-injection.rules
-+include $RULE_PATH/community-web-client.rules
-+include $RULE_PATH/community-web-dos.rules
-+include $RULE_PATH/community-web-iis.rules
-+include $RULE_PATH/community-web-misc.rules
-+include $RULE_PATH/community-web-php.rules
-+include $RULE_PATH/web-attacks.rules
-+include $RULE_PATH/community-sql-injection.rules
-+include $RULE_PATH/community-web-client.rules
-+include $RULE_PATH/community-web-dos.rules
-+include $RULE_PATH/community-web-iis.rules
-+include $RULE_PATH/community-web-misc.rules
-+include $RULE_PATH/community-web-php.rules
  include $RULE_PATH/x11.rules
++include $RULE_PATH/community-sql-injection.rules
++include $RULE_PATH/community-web-client.rules
++include $RULE_PATH/community-web-dos.rules
++include $RULE_PATH/community-web-iis.rules
++include $RULE_PATH/community-web-misc.rules
++include $RULE_PATH/community-web-php.rules
++include $RULE_PATH/community-sql-injection.rules
++include $RULE_PATH/community-web-client.rules
++include $RULE_PATH/community-web-dos.rules
++include $RULE_PATH/community-web-iis.rules
++include $RULE_PATH/community-web-misc.rules
++include $RULE_PATH/community-web-php.rules
++
  
  ###################################################
+ # Step #8: Customize your preprocessor and decoder alerts
