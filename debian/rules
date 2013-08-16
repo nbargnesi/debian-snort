@@ -62,8 +62,6 @@ clean: clean-sources
 	cd doc && [ ! -f Makefile ] || $(MAKE) distclean
 	rm -f doc/snort_manual.pdf doc/snort_manual.ps doc/snort_manual.aux \
 	    doc/snort_manual.log doc/snort_manual.toc
-	rm -f doc/faq.idx doc/faq.out doc/faq.log doc/faq.toc doc/faq.aux \
-	    doc/faq.pdf doc/faq.ps
 	dh_clean
 
 configure: configure-stamp
@@ -118,7 +116,7 @@ build-indep-stamp: configure-stamp
 	     -e /usr/share/texlive/texmf-dist/tex/latex/pslatex/pslatex.sty -a \
 	     -e /usr/share/texlive/texmf-dist/tex/latex/oberdiek/kvoptions.sty ] ; \
 	then \
-	    $(MAKE) -C doc snort_manual.pdf faq.pdf ; \
+	    $(MAKE) -C doc snort_manual.pdf ; \
 	else \
 	    echo >&2 'WARNING: Not building documentation, environment not available!'; \
 	fi
