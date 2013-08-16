@@ -1,3 +1,9 @@
+snort (2.9.5.3-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 16 Aug 2013 20:51:02 +0200
+
 snort (2.9.3.1-1) experimental; urgency=low
 
   * New upstream release, target towards experimental due to the current freeze.
