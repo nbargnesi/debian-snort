@@ -17,6 +17,7 @@ Build-Depends:
 Build-Depends-Indep: 
     texlive, 
     texlive-latex-base, 
+    latex2html,
     ghostscript
 Standards-Version:  3.9.2
 Homepage: http://www.snort.org/
