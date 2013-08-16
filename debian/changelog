@@ -1,6 +1,14 @@
-snort (2.9.5.3-1) UNRELEASED; urgency=low
+snort (2.9.5.3-1) unstable; urgency=low
 
   * New upstream release.
+    - Remove faq from the build since it is no longer provided upstream
+  * Lintian fix typo in debian/snort-rules-default.README.Debian
+  * debian/patches: Refresh all patches with new upstream
+     - config_disabled_rules: Disable more .rules files which are not
+       provided in the upstream sources (but might be in the VRT
+       Sourcefire)
+  * debian/control: Add latex2html to Build-Depends-Indep as the html.sty
+    file is required for building the documentation
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 16 Aug 2013 20:51:02 +0200
 
