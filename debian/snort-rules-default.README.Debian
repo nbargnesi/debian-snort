@@ -53,7 +53,7 @@ README for snort-rules-default
 
   To automatically download rules and keep their Snort system up-to-date users
   can use the 'oinkmaster' package. This program will automatically update the
-  rulesets once configured to download from an appropiate location.
+  rulesets once configured to download from an appropriate location.
 
 
   In any case, should you find any issues (such as false positives, performance
