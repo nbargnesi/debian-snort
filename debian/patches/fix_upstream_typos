@@ -1,6 +1,6 @@
 --- a/src/dynamic-preprocessors/dns/spp_dns.c
 +++ b/src/dynamic-preprocessors/dns/spp_dns.c
-@@ -279,7 +279,7 @@
+@@ -275,7 +275,7 @@
              if (( !cur_tokenp ) || ( strcmp(cur_tokenp, "{" )))
              {
                  DynamicPreprocessorFatalMessage("%s(%d) Bad value specified for %s.  Must start "
@@ -11,7 +11,7 @@
                  //free(argcpyp);
 --- a/ChangeLog
 +++ b/ChangeLog
-@@ -8538,7 +8538,7 @@
+@@ -10464,7 +10464,7 @@
  
  2006-08-30 Steven Sturges <ssturges@sourcefire.com>
      * src/sfutil/ipobj.c:
@@ -20,7 +20,7 @@
      * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
        Treat spaces as part of a filename in 'string' parameter validation.
        Thanks Bamm Visscher for pointing out the issue.
-@@ -8781,7 +8781,7 @@
+@@ -10707,7 +10707,7 @@
        Update to provide links to Snort classification reference information.
        Thanks Yoann Vandoorselaere.
      * src/sfutil/ipobj.c:
@@ -29,7 +29,7 @@
      * src/configure.in:
        Update for HPUX 11.
      * src/snort.c:
-@@ -14650,7 +14650,7 @@
+@@ -16576,7 +16576,7 @@
             * added bidirectional rules functionality (now Snort goes
               both ways....)
  
@@ -38,7 +38,7 @@
           * ditto logging functions
           * fixed string termination code in the SMB alerter so that it
             can now alert to more than one box at a time
-@@ -14854,7 +14854,7 @@
+@@ -16780,7 +16780,7 @@
      * rules.c: Moved AlertPkt() and LogPkt() to log.c
  
      * log.c: Totally revamped the logging code to be more logical and 
@@ -47,7 +47,7 @@
                   logging functions for each of the layers of the packet.  
                   PrintIPPkt() has been totally rewritten, PrintFragHeader has
                   been eliminated, and two functions have been moved over from
-@@ -14940,7 +14940,7 @@
+@@ -16866,7 +16866,7 @@
                   mode with the "-d" command line switch if you're using Snort 
                   as an IDS, because it's still slow enough to drop some large
                   packets.  Packet print out has changed as well, with the 
@@ -56,7 +56,7 @@
                   (well, mostly).  Fragmented packets are now recorded in a 
                   "FRAG" file.
  
-@@ -14971,7 +14971,7 @@
+@@ -16897,7 +16897,7 @@
  1999-01-28  mfr  <roesch@clark.net>
  
          * rules.c: Rules sorting is now implemented.  There are actually three
@@ -98,7 +98,7 @@
    IPs or networks not falling into this range are ignored if this option
 --- a/doc/snort_manual.tex
 +++ b/doc/snort_manual.tex
-@@ -12967,7 +12967,7 @@
+@@ -13091,7 +13091,7 @@
  \item [\texttt{path\_to\_snort.conf}] - Refers to the absolute or relative path to 
  the snort.conf for specific configuration.
  
@@ -111,7 +111,7 @@
 +++ b/src/output-plugins/spo_alert_syslog.c
 @@ -146,7 +146,7 @@
  /*
-  * Function: ParseSyslogArgs(char *)
+  * Function: ParseSyslogArgs(struct _SnortConfig *, char *)
   *
 - * Purpose: Process the preprocessor arguements from the rules file and
 + * Purpose: Process the preprocessor arguments from the rules file and
@@ -144,7 +144,7 @@
   *
 --- a/src/output-plugins/spo_unified2.c
 +++ b/src/output-plugins/spo_unified2.c
-@@ -1261,7 +1261,7 @@
+@@ -1242,7 +1242,7 @@
  /*
   * Function: Unified2ParseArgs(char *)
   *
@@ -155,7 +155,7 @@
   *          function.
 --- a/src/parser.c
 +++ b/src/parser.c
-@@ -4825,7 +4825,7 @@
+@@ -4513,7 +4513,7 @@
  
      if(filespec == NULL)
      {
@@ -166,9 +166,9 @@
      /* look for ".." in the string and complain and exit if it is found */
 --- a/src/preprocessors/spp_perfmonitor.c
 +++ b/src/preprocessors/spp_perfmonitor.c
-@@ -154,7 +154,7 @@
+@@ -189,7 +189,7 @@
  /*
-  * Function: ParsePerfMonitorArgs(char *)
+  * Function: ParsePerfMonitorArgs(struct _SnortConfig *, char *)
   *
 - * Purpose: Process the preprocessor arguements from the rules file and
 + * Purpose: Process the preprocessor arguments from the rules file and
@@ -177,7 +177,7 @@
   *          function.
 --- a/src/sfutil/sfportobject.c
 +++ b/src/sfutil/sfportobject.c
-@@ -3671,7 +3671,7 @@
+@@ -3673,7 +3673,7 @@
      {
      case POPERR_NO_NAME:            return "no name";
      case POPERR_NO_ENDLIST_BRACKET: return "no end of list bracket."
@@ -186,7 +186,7 @@
                                             " and no spaces may appear between"
                                             " brackets.";
      case POPERR_NOT_A_NUMBER:       return "not a number";
-@@ -3850,7 +3850,7 @@
+@@ -3852,7 +3852,7 @@
          //LogMessage("PortObject : '%s' \n",portlist);
  
          /*

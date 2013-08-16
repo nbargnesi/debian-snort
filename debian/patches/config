@@ -126,7 +126,7 @@ Last-Update: 2012-08-09
  # site specific rules
  include $RULE_PATH/local.rules
  
-@@ -598,6 +618,19 @@
+@@ -659,6 +679,19 @@
  include $RULE_PATH/web-misc.rules
  include $RULE_PATH/web-php.rules
  include $RULE_PATH/x11.rules
