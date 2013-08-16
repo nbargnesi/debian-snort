@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -100,10 +100,10 @@ typedef struct _LogTcpdumpData
 } LogTcpdumpData;
 
 /* list of function prototypes for this preprocessor */
-static void LogTcpdumpInit(char *);
+static void LogTcpdumpInit(struct _SnortConfig *, char *);
 static LogTcpdumpData *ParseTcpdumpArgs(char *);
 static void LogTcpdump(Packet *, char *, void *, Event *);
-static void TcpdumpInitLogFileFinalize(int unused, void *arg);
+static void TcpdumpInitLogFileFinalize(struct _SnortConfig *sc, int unused, void *arg);
 static void TcpdumpInitLogFile(LogTcpdumpData *, int);
 static void TcpdumpRollLogFile(LogTcpdumpData*);
 static void SpoLogTcpdumpCleanExitFunc(int, void *);
@@ -147,7 +147,7 @@ void LogTcpdumpSetup(void)
  * Returns: void function
  *
  */
-static void LogTcpdumpInit(char *args)
+static void LogTcpdumpInit(struct _SnortConfig *sc, char *args)
 {
     LogTcpdumpData *data;
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Output: Log-Tcpdump Initialized\n"););
@@ -157,12 +157,12 @@ static void LogTcpdumpInit(char *args)
     log_tcpdump_ptr = data;
 
     //TcpdumpInitLogFile(data);
-    AddFuncToPostConfigList(TcpdumpInitLogFileFinalize, data);
+    AddFuncToPostConfigList(sc, TcpdumpInitLogFileFinalize, data);
 
     snort_conf->log_tcpdump = 1;
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(LogTcpdump, OUTPUT_TYPE__LOG, data);
+    AddFuncToOutputList(sc, LogTcpdump, OUTPUT_TYPE__LOG, data);
     AddFuncToCleanExitList(SpoLogTcpdumpCleanExitFunc, data);
 }
 
@@ -348,7 +348,7 @@ static void LogTcpdumpStream(Packet *p, char *msg, void *arg, Event *event)
     }
 }
 
-static void TcpdumpInitLogFileFinalize(int unused, void *arg)
+static void TcpdumpInitLogFileFinalize(struct _SnortConfig *sc, int unused, void *arg)
 {
     TcpdumpInitLogFile((LogTcpdumpData *)arg, ScNoOutputTimestamp());
 }
@@ -463,8 +463,7 @@ static void SpoLogTcpdumpCleanup(int signal, void *arg, const char* msg)
      * if we haven't written any data, dump the output file so there aren't
      * fragments all over the disk
      */
-    if(!ScTestMode() && *data->logdir &&
-       (pc.alert_pkts == 0) && (pc.log_pkts == 0))
+    if(!ScTestMode() && *data->logdir && !pc.log_pkts && !pc.total_alert_pkts)
     {
         int ret;
 

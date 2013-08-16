@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2011-2012 Sourcefire, Inc.
+ ** Copyright (C) 2011-2013 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  **
  ** 9/7/2011 - Initial implementation ... Hui Cao <hcao@sourcefire.com>
  */
@@ -23,7 +23,6 @@
 #ifndef SFRT_DIR_FLAT_H_
 #define SFRT_DIR_FLAT_H_
 
-#include "sfrt_flat.h"
 #include "sfrt.h"
 
 typedef MEM_OFFSET SUB_TABLE_PTR;

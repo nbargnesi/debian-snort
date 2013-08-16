@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2012 Sourcefire, Inc.
+** Copyright (C) 2007-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -101,8 +101,8 @@ typedef struct _SpoAlertTestData
 
 } SpoAlertTestData;
 
-void AlertTestInit(char *);
-SpoAlertTestData *ParseAlertTestArgs(char *);
+void AlertTestInit(struct _SnortConfig *, char *);
+SpoAlertTestData *ParseAlertTestArgs(struct _SnortConfig *, char *);
 void AlertTestCleanExitFunc(int, void *);
 void AlertTest(Packet *, char *, void *, Event *);
 
@@ -141,19 +141,19 @@ void AlertTestSetup(void)
  * Returns: void function
  *
  */
-void AlertTestInit(char *args)
+void AlertTestInit(struct _SnortConfig *sc, char *args)
 {
     SpoAlertTestData *data;
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Output: AlertTest Initialized\n"););
 
     /* parse the argument list from the rules file */
-    data = ParseAlertTestArgs(args);
+    data = ParseAlertTestArgs(sc, args);
 
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"Linking AlertTest functions to call lists...\n"););
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(AlertTest, OUTPUT_TYPE__ALERT, data);
+    AddFuncToOutputList(sc, AlertTest, OUTPUT_TYPE__ALERT, data);
     AddFuncToCleanExitList(AlertTestCleanExitFunc, data);
 }
 
@@ -210,7 +210,7 @@ void AlertTest(Packet *p, char *msg, void *arg, Event *event)
  * Returns: void function
  *
  */
-SpoAlertTestData * ParseAlertTestArgs(char *args)
+SpoAlertTestData * ParseAlertTestArgs(struct _SnortConfig *sc, char *args)
 {
     char **toks;
     int num_toks;
@@ -272,7 +272,7 @@ SpoAlertTestData * ParseAlertTestArgs(char *args)
             }
             else if (num_atoks == 2)
             {
-                char *outfile = ProcessFileOption(snort_conf_for_parsing, atoks[1]);
+                char *outfile = ProcessFileOption(sc, atoks[1]);
                 data->file = OpenAlertFile(outfile);
                 free(outfile);
             }

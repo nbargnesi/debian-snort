@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -64,7 +64,7 @@
 #include "ssl.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
-
+#include "file_api.h"
 #ifdef DEBUG_MSGS
 #include "sf_types.h"
 #endif
@@ -81,6 +81,7 @@ extern int popDetectCalled;
 
 extern tSfPolicyUserContextId pop_config;
 extern POPConfig *pop_eval_config;
+extern MemPool *pop_mime_mempool;
 extern MemPool *pop_mempool;
 
 #ifdef DEBUG_MSGS
@@ -123,6 +124,7 @@ const POPToken pop_hdrs[] =
 {
     {"Content-type:", 13, HDR_CONTENT_TYPE},
     {"Content-Transfer-Encoding:", 26, HDR_CONT_TRANS_ENC},
+    {"Content-Disposition:", 20, HDR_CONT_DISP},
     {NULL,             0, 0}
 };
 
@@ -191,7 +193,7 @@ static void SetPopBuffers(POP *ssn)
 {
     if ((ssn != NULL) && (ssn->decode_state == NULL))
     {
-        MemBucket *bkt = mempool_alloc(pop_mempool);
+        MemBucket *bkt = mempool_alloc(pop_mime_mempool);
 
         if (bkt != NULL)
         {
@@ -201,12 +203,13 @@ static void SetPopBuffers(POP *ssn)
                 ssn->decode_bkt = bkt;
                 SetEmailDecodeState(ssn->decode_state, bkt->data, pop_eval_config->max_depth,
                         pop_eval_config->b64_depth, pop_eval_config->qp_depth,
-                        pop_eval_config->uu_depth, pop_eval_config->bitenc_depth);
+                        pop_eval_config->uu_depth, pop_eval_config->bitenc_depth,
+                        pop_eval_config->file_depth);
             }
             else
             {
                 /*free mempool if calloc fails*/
-                mempool_free(pop_mempool, bkt);
+                mempool_free(pop_mime_mempool, bkt);
             }
         }
         else
@@ -440,6 +443,12 @@ static POP * POP_GetNewSession(SFSnortPacket *p, tSfPolicyId policy_id)
     pop_ssn = ssn;
     ssn->prev_response = 0;
 
+    if (_dpd.fileAPI->set_log_buffers(&(pop_ssn->log_state), &(pPolicyConfig->log_config), pop_mempool) < 0)
+    {
+        free(ssn);
+        return NULL;
+    }
+
     _dpd.streamAPI->set_application_data(p->stream_session_ptr, PP_POP,
                                          ssn, &POP_SessionFree);
 
@@ -641,10 +650,14 @@ static void POP_SessionFree(void *session_data)
 
     if(pop->decode_state != NULL)
     {
-        mempool_free(pop_mempool, pop->decode_bkt);
+        mempool_free(pop_mime_mempool, pop->decode_bkt);
         free(pop->decode_state);
     }
-
+    if(pop->log_state != NULL)
+    {
+        mempool_free(pop_mempool, pop->log_state->log_hdrs_bkt);
+        free(pop->log_state);
+    }
     free(pop);
 }
 
@@ -678,7 +691,7 @@ void POP_FreeConfigs(tSfPolicyUserContextId config)
     if (config == NULL)
         return;
 
-    sfPolicyUserDataIterate (config, POP_FreeConfigsPolicy);
+    sfPolicyUserDataFreeIterate (config, POP_FreeConfigsPolicy);
     sfPolicyConfigDelete(config);
 }
 
@@ -847,14 +860,10 @@ static const uint8_t * POP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, c
 {
     const uint8_t *eol;   /* end of line */
     const uint8_t *eolm;  /* end of line marker */
-    int cmd_line_len;
     int cmd_found;
 
     /* get end of line and end of line marker */
     POP_GetEOL(ptr, end, &eol, &eolm);
-
-    /* calculate length of command line */
-    cmd_line_len = eol - ptr;
 
 
     /* TODO If the end of line marker coincides with the end of payload we can't be
@@ -922,12 +931,12 @@ static const uint8_t * POP_HandleCommand(SFSnortPacket *p, const uint8_t *ptr, c
     return eol;
 }
 
-
 static const uint8_t * POP_HandleData(SFSnortPacket *p, const uint8_t *ptr, const uint8_t *end)
 {
     const uint8_t *data_end_marker = NULL;
     const uint8_t *data_end = NULL;
     int data_end_found;
+    FilePosition position = SNORT_FILE_START;
 
     /* if we've just entered the data state, check for a dot + end of line
      * if found, no data */
@@ -1011,6 +1020,7 @@ static const uint8_t * POP_HandleData(SFSnortPacket *p, const uint8_t *ptr, cons
 
     /* now we shouldn't have to worry about copying any data to the alt buffer
      * only mime headers if we find them and only if we're ignoring data */
+    initFilePosition(&position, _dpd.fileAPI->get_file_processed_size(p->stream_session_ptr));
 
     while ((ptr != NULL) && (ptr < data_end_marker))
     {
@@ -1018,14 +1028,22 @@ static const uint8_t * POP_HandleData(SFSnortPacket *p, const uint8_t *ptr, cons
          * Pipeline the MIME decoded data.*/
         if ( pop_ssn->state_flags & POP_FLAG_MULTIPLE_EMAIL_ATTACH)
         {
-            _dpd.setFileDataPtr(pop_ssn->decode_state->decodePtr, (uint16_t)pop_ssn->decode_state->decoded_bytes);
+            int detection_size = getDetectionSize(pop_eval_config->b64_depth, pop_eval_config->qp_depth,
+                    pop_eval_config->uu_depth, pop_eval_config->bitenc_depth,pop_ssn->decode_state );
+            _dpd.setFileDataPtr(pop_ssn->decode_state->decodePtr, (uint16_t)detection_size);
+            /*Download*/
+            if (_dpd.fileAPI->file_process(p,(uint8_t *)pop_ssn->decode_state->decodePtr,
+                    (uint16_t)pop_ssn->decode_state->decoded_bytes, position, 0)
+                    && (isFileStart(position)) && pop_ssn->log_state)
+            {
+                _dpd.fileAPI->set_file_name_from_log(&(pop_ssn->log_state->file_log), p->stream_session_ptr);
+            }
+            updateFilePosition(&position, _dpd.fileAPI->get_file_processed_size(p->stream_session_ptr));
             _dpd.detect(p);
             pop_ssn->state_flags &= ~POP_FLAG_MULTIPLE_EMAIL_ATTACH;
             ResetEmailDecodeState(pop_ssn->decode_state);
             p->flags |=FLAG_ALLOW_MULTIPLE_DETECT;
             /* Reset the log count when a packet goes through detection multiple times */
-            p->xtradata_mask = 0;
-            p->per_packet_xtradata = 0;
             _dpd.DetectReset((uint8_t *)p->payload, p->payload_size);
         }
         switch (pop_ssn->data_state)
@@ -1033,6 +1051,8 @@ static const uint8_t * POP_HandleData(SFSnortPacket *p, const uint8_t *ptr, cons
             case STATE_MIME_HEADER:
                 DEBUG_WRAP(DebugMessage(DEBUG_POP, "MIME HEADER STATE ~~~~~~~~~~~~~~~~~~~~~~\n"););
                 ptr = POP_HandleHeader(p, ptr, data_end_marker);
+                _dpd.fileAPI->finalize_mime_position(p->stream_session_ptr,
+                        pop_ssn->decode_state, &position);
                 break;
             case STATE_DATA_BODY:
                 DEBUG_WRAP(DebugMessage(DEBUG_POP, "DATA BODY STATE ~~~~~~~~~~~~~~~~~~~~~~~~\n"););
@@ -1045,7 +1065,27 @@ static const uint8_t * POP_HandleData(SFSnortPacket *p, const uint8_t *ptr, cons
 
     if(pop_ssn->decode_state != NULL)
     {
-        _dpd.setFileDataPtr(pop_ssn->decode_state->decodePtr, (uint16_t)pop_ssn->decode_state->decoded_bytes);
+        if ((position == SNORT_FILE_START) || (position == SNORT_FILE_FULL))
+        {
+            int detection_size = getDetectionSize(pop_eval_config->b64_depth, pop_eval_config->qp_depth,
+                    pop_eval_config->uu_depth, pop_eval_config->bitenc_depth,pop_ssn->decode_state );
+            _dpd.setFileDataPtr(pop_ssn->decode_state->decodePtr, (uint16_t)detection_size);
+        }
+        else
+        {
+            _dpd.setFileDataPtr(pop_ssn->decode_state->decodePtr, 0);
+        }
+        if ((data_end_marker != end) || (pop_ssn->state_flags & POP_FLAG_MIME_END))
+        {
+           finalFilePosition(&position);
+        }
+        /*Download*/
+        if (_dpd.fileAPI->file_process(p,(uint8_t *)pop_ssn->decode_state->decodePtr,
+                (uint16_t)pop_ssn->decode_state->decoded_bytes, position, 0)
+                && (isFileStart(position)) && pop_ssn->log_state)
+        {
+            _dpd.fileAPI->set_file_name_from_log(&(pop_ssn->log_state->file_log), p->stream_session_ptr);
+        }
         ResetDecodedBytes(pop_ssn->decode_state);
     }
 
@@ -1077,6 +1117,7 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
     const uint8_t *colon;
     const uint8_t *content_type_ptr = NULL;
     const uint8_t *cont_trans_enc = NULL;
+    const uint8_t *cont_disp = NULL;
     int header_found;
     int ret;
     const uint8_t *start_hdr;
@@ -1090,6 +1131,9 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
 
     if (pop_ssn->state_flags & POP_FLAG_IN_CONT_TRANS_ENC)
         cont_trans_enc = ptr;
+
+    if (pop_ssn->state_flags & POP_FLAG_IN_CONT_DISP)
+        cont_disp = ptr;
 
     while (ptr < data_end_marker)
     {
@@ -1174,7 +1218,10 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
                             cont_trans_enc = ptr + pop_search_info.length;
                             pop_ssn->state_flags |= POP_FLAG_IN_CONT_TRANS_ENC;
                             break;
-
+                        case HDR_CONT_DISP:
+                            cont_disp = ptr + pop_search_info.length;
+                            pop_ssn->state_flags |= POP_FLAG_IN_CONT_DISP;
+                            break;
                         default:
                             break;
                     }
@@ -1280,6 +1327,28 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
 
             cont_trans_enc = NULL;
         }
+        else if (((pop_ssn->state_flags &
+                (POP_FLAG_IN_CONT_DISP | POP_FLAG_FOLDING)) == POP_FLAG_IN_CONT_DISP) && cont_disp)
+        {
+            bool disp_cont = (pop_ssn->state_flags & POP_FLAG_IN_CONT_DISP_CONT)? true: false;
+            if( pop_eval_config->log_config.log_filename && pop_ssn->log_state)
+            {
+                if(! _dpd.fileAPI->log_file_name(cont_disp, eolm - cont_disp,
+                        &(pop_ssn->log_state->file_log), &disp_cont) )
+                    pop_ssn->log_flags |= POP_FLAG_FILENAME_PRESENT;
+            }
+            if (disp_cont)
+            {
+                pop_ssn->state_flags |= POP_FLAG_IN_CONT_DISP_CONT;
+            }
+            else
+            {
+                pop_ssn->state_flags &= ~POP_FLAG_IN_CONT_DISP;
+                pop_ssn->state_flags &= ~POP_FLAG_IN_CONT_DISP_CONT;
+            }
+
+            cont_disp = NULL;
+        }
 
         /* if state was unknown, at this point assume we know */
         if (pop_ssn->data_state == STATE_DATA_UNKNOWN)
@@ -1296,7 +1365,7 @@ static const uint8_t * POP_HandleHeader(SFSnortPacket *p, const uint8_t *ptr,
 
 
 /*
- * Handle DATA_BODY state
+ * Handle DATA_BODY statesmtp_ssn->log_state
  *
  * @param   packet  standard Packet structure
  *
@@ -1355,6 +1424,7 @@ static const uint8_t * POP_HandleDataBody(SFSnortPacket *p, const uint8_t *ptr,
 
                     /* no more MIME */
                     pop_ssn->state_flags &= ~POP_FLAG_GOT_BOUNDARY;
+                    pop_ssn->state_flags |= POP_FLAG_MIME_END;
 
                     /* free boundary search */
                     _dpd.searchAPI->search_instance_free(pop_ssn->mime_boundary.boundary_search);
@@ -1681,4 +1751,24 @@ static void POP_DisableDetect(SFSnortPacket *p)
     _dpd.setPreprocBit(p, PP_SDF);
 }
 
+static inline POP *POP_GetSession(void *data)
+{
+    if(data)
+        return (POP *)_dpd.streamAPI->get_application_data(data, PP_POP);
 
+    return NULL;
+}
+
+/* Callback to return the MIME attachment filenames accumulated */
+int POP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
+{
+    POP *ssn = POP_GetSession(data);
+
+    if(ssn == NULL)
+        return 0;
+
+    *buf = ssn->log_state->file_log.filenames;
+    *len = ssn->log_state->file_log.file_logged;
+
+    return 1;
+}

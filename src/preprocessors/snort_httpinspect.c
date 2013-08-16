@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -49,6 +49,7 @@
 **  - 2.11.03:  Initial Development.  DJR
 **  - 2.4.05:   Added tab_uri_delimiter config option.  AJM.
 */
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -88,6 +89,8 @@
 #include "hi_cmd_lookup.h"
 #include "Unified2_common.h"
 #include "mempool.h"
+#include "file_api.h"
+#include "sf_email_attach_decode.h"
 #ifdef PERF_PROFILING
 extern PreprocStats hiDetectPerfStats;
 extern int hiDetectCalled;
@@ -656,24 +659,20 @@ static int ProcessMaxGzipMem(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
         return -1;
     }
 
-    max_gzip_mem = SnortStrtol(pcToken, &pcEnd, 10);
-    if(*pcEnd)
+    max_gzip_mem = SnortStrtolRange(pcToken, &pcEnd, 10, 0, INT_MAX);
+    if ((pcEnd == pcToken) || *pcEnd || (errno == ERANGE))
     {
         SnortSnprintf(ErrorString, ErrStrLen,
-                "Invalid argument to '%s'.", MAX_GZIP_MEM);
-
+                      "Invalid argument to '%s'.", MAX_GZIP_MEM);
         return -1;
     }
 
     if(max_gzip_mem < GZIP_MEM_MIN)
     {
         SnortSnprintf(ErrorString, ErrStrLen,
-                "Invalid argument to '%s'. This value must be equal to or greater than %d bytes."
-                , MAX_GZIP_MEM, GZIP_MEM_MIN);
-
+                      "Invalid argument to '%s'.", MAX_GZIP_MEM);
         return -1;
     }
-
     GlobalConf->max_gzip_mem = max_gzip_mem;
 
     return 0;
@@ -876,6 +875,10 @@ int ProcessGlobalConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
             iRet = ProcessHttpMemcap(GlobalConf, ErrorString, ErrStrLen);
             if(iRet)
                 return iRet;
+        }
+        else if (!file_api->parse_mime_decode_args(&(GlobalConf->decode_conf),pcToken, "HTTP"))
+        {
+            continue;
         }
         else
         {
@@ -2692,10 +2695,10 @@ static int PrintServerConf(HTTPINSPECT_CONF *ServerConf)
 
 
     memset(buf, 0, STD_BUF+1);
-#ifdef ENABLE_PAF
+
     if ( ScPafEnabled() && stream_api )
         paf = " (PAF)";
-#endif
+
     SnortSnprintf(buf, STD_BUF + 1, "      Ports%s: ", paf);
 
     /*
@@ -2949,15 +2952,6 @@ int ProcessUniqueServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
                 goto _return;
             }
 
-#ifndef SUP_IP6
-            if (Ip.family == AF_INET6)
-            {
-                SnortSnprintf(ErrorString, ErrStrLen,
-                        "Invalid IP to '%s' token.", SERVER);
-
-                goto _return;
-            }
-#endif
             if (Ip.family == AF_INET)
             {
                 Ip.ip.u6_addr32[0] = ntohl(Ip.ip.u6_addr32[0]);
@@ -3279,19 +3273,6 @@ static inline int SetSiInput(HI_SI_INPUT *SiInput, Packet *p)
 
 }
 
-static inline void InitUriBufs( void )
-{
-    int i;
-    /*UriBufs[HTTP_BUFFER_URI].decode_flags = 0;*/
-    for (i = HTTP_BUFFER_URI ; i <= HTTP_BUFFER_STAT_MSG ; i++)
-    {
-        UriBufs[i].uri = NULL;
-        UriBufs[i].length = 0;
-        UriBufs[i].encode_type = 0;
-    }
-
-}
-
 static inline void ApplyClientFlowDepth (Packet* p, int flow_depth)
 {
     switch (flow_depth)
@@ -3325,6 +3306,77 @@ static inline void ApplyClientFlowDepth (Packet* p, int flow_depth)
     }
 }
 
+static inline FilePosition getFilePoistion(Packet *p)
+{
+    FilePosition position = SNORT_FILE_POSITION_UNKNOWN;
+
+    if(ScPafEnabled())
+    {
+        if (PacketHasFullPDU(p))
+            position = SNORT_FILE_FULL;
+        else if (PacketHasStartOfPDU(p))
+            position = SNORT_FILE_START;
+        else if (p->packet_flags & PKT_PDU_TAIL)
+            position = SNORT_FILE_END;
+        else if (file_api->get_file_processed_size(p->ssnptr))
+            position = SNORT_FILE_MIDDLE;
+    }
+
+    return position;
+}
+
+// FIXTHIS extra data masks should only be updated as extra data changes state
+// eg just once when captured; this function is called on every packet and 
+// repeatedly sets the flags on session
+static inline void HttpLogFuncs(HTTPINSPECT_GLOBAL_CONF *GlobalConf, HttpSessionData *hsd, Packet *p, int iCallDetect )
+{
+    if(!hsd)
+        return;
+
+    /* for pipelined HTTP requests */
+    if ( !iCallDetect )
+        stream_api->clear_extra_data(p->ssnptr, p, 0);
+
+    if(hsd->true_ip)
+    {
+        if(!(p->packet_flags & PKT_STREAM_INSERT) && !(p->packet_flags & PKT_REBUILT_STREAM))
+            SetExtraData(p, GlobalConf->xtra_trueip_id);
+        else
+            stream_api->set_extra_data(p->ssnptr, p, GlobalConf->xtra_trueip_id);
+    }
+
+    if(hsd->log_flags & HTTP_LOG_URI)
+    {
+        stream_api->set_extra_data(p->ssnptr, p, GlobalConf->xtra_uri_id);
+    }
+
+    if(hsd->log_flags & HTTP_LOG_HOSTNAME)
+    {
+        stream_api->set_extra_data(p->ssnptr, p, GlobalConf->xtra_hname_id);
+    }
+
+#ifndef SOURCEFIRE
+    if(hsd->log_flags & HTTP_LOG_JSNORM_DATA)
+    {
+        SetExtraData(p, GlobalConf->xtra_jsnorm_id);
+    }
+#ifdef ZLIB
+    if(hsd->log_flags & HTTP_LOG_GZIP_DATA)
+    {
+        SetExtraData(p, GlobalConf->xtra_gzip_id);
+    }
+#endif
+#endif
+}
+
+static inline void setFileName(Packet *p)
+{
+    uint8_t *buf = NULL;
+    uint32_t len = 0;
+    uint32_t type = 0;
+    GetHttpUriData(p->ssnptr, &buf, &len, &type);
+    file_api->set_file_name (p->ssnptr, buf, len);
+}
 /*
 **  NAME
 **    SnortHttpInspect::
@@ -3441,7 +3493,6 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
 
     hsd = GetHttpSessionData(p);
 
-#ifdef ENABLE_PAF
     if ( ScPafEnabled() &&
         (p->packet_flags & PKT_STREAM_INSERT) &&
         !PacketHasFullPDU(p) )
@@ -3468,7 +3519,6 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         }
         // see comments on call to Detect() below
         PREPROC_PROFILE_START(hiDetectPerfStats);
-        p->http_pipeline_count++; /* Increment the count */
         Detect(p);
 #ifdef PERF_PROFILING
         hiDetectCalled = 1;
@@ -3476,7 +3526,6 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         PREPROC_PROFILE_END(hiDetectPerfStats);
         return 0;
     }
-#endif
 
     if (hsd == NULL)
         hsd = SetNewHttpSessionData(p, (void *)Session);
@@ -3507,12 +3556,23 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         **  URI, so we make sure here that this can't happen.
         */
         SetHttpDecode(0);
-        p->uri_count = 0;
-        InitUriBufs();
+        ClearHttpBuffers();
 
         iRet = hi_mi_mode_inspection(Session, iInspectMode, p, hsd);
         if (iRet)
         {
+            if (hsd)
+            {
+                if (hsd->mime_ssn)
+                {
+                    uint8_t *end = ( uint8_t *)(p->data) + p->dsize;
+                    file_api->process_mime_data(p, p->data, end, end, end, hsd->mime_ssn, 1);
+                }
+                else if (file_api->get_file_processed_size(p->ssnptr) >0)
+                {
+                    file_api->file_process(p, (uint8_t *)p->data, p->dsize, getFilePoistion(p), 1);
+                }
+            }
             LogEvents(Session, p, iInspectMode, hsd);
             return iRet;
         }
@@ -3530,134 +3590,220 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         **  Let's setup the pointers for the detection engine, and
         **  then go for it.
         */
-        if(iInspectMode == HI_SI_CLIENT_MODE)
+        if ( iInspectMode == HI_SI_CLIENT_MODE )
         {
-            p->uri_count = 0;
+            const HttpBuffer* hb;
+            ClearHttpBuffers();  // FIXTHIS needed here and right above??
 
-            if(Session->client.request.uri_norm)
+            if ( Session->client.request.uri_norm )
             {
-                UriBufs[HTTP_BUFFER_URI].uri    = Session->client.request.uri_norm;
-                UriBufs[HTTP_BUFFER_URI].length = Session->client.request.uri_norm_size;
-                UriBufs[HTTP_BUFFER_URI].encode_type = Session->client.request.uri_encode_type;
-                UriBufs[HTTP_BUFFER_RAW_URI].uri = Session->client.request.uri;
-                UriBufs[HTTP_BUFFER_RAW_URI].length = Session->client.request.uri_size;
+                SetHttpBufferEncoding(
+                    HTTP_BUFFER_URI, 
+                    Session->client.request.uri_norm,
+                    Session->client.request.uri_norm_size,
+                    Session->client.request.uri_encode_type);
+
+                SetHttpBuffer(
+                    HTTP_BUFFER_RAW_URI,
+                    Session->client.request.uri,
+                    Session->client.request.uri_size);
+
                 p->packet_flags |= PKT_HTTP_DECODE;
-                p->uri_count = HTTP_BUFFER_RAW_URI + 1;
-
             }
-            else if(Session->client.request.uri)
+            else if ( Session->client.request.uri )
             {
-                UriBufs[HTTP_BUFFER_URI].uri    = Session->client.request.uri;
-                UriBufs[HTTP_BUFFER_URI].length = Session->client.request.uri_size;
-                UriBufs[HTTP_BUFFER_URI].encode_type = Session->client.request.uri_encode_type;
-                UriBufs[HTTP_BUFFER_RAW_URI].uri = Session->client.request.uri;
-                UriBufs[HTTP_BUFFER_RAW_URI].length = Session->client.request.uri_size;
+                SetHttpBufferEncoding(
+                    HTTP_BUFFER_URI,
+                    Session->client.request.uri,
+                    Session->client.request.uri_size,
+                    Session->client.request.uri_encode_type);
+
+                SetHttpBuffer(
+                    HTTP_BUFFER_RAW_URI,
+                    Session->client.request.uri,
+                    Session->client.request.uri_size);
+
                 p->packet_flags |= PKT_HTTP_DECODE;
-                p->uri_count = HTTP_BUFFER_RAW_URI + 1;
             }
 
-            /* p->uri_count should be set by now, either by the client body post method,
-             * or its else case above. */
-
-            if (Session->client.request.header_norm || Session->client.request.header_raw)
+            if ( Session->client.request.header_norm || 
+                 Session->client.request.header_raw )
             {
-                /* If we get here, uri_count should be 1 */
-                if(Session->client.request.header_norm)
+                if ( Session->client.request.header_norm )
                 {
-                    UriBufs[HTTP_BUFFER_HEADER].uri    = Session->client.request.header_norm;
-                    UriBufs[HTTP_BUFFER_HEADER].length = Session->client.request.header_norm_size;
-                    UriBufs[HTTP_BUFFER_HEADER].encode_type = Session->client.request.header_encode_type;
-                    UriBufs[HTTP_BUFFER_RAW_HEADER].uri    = Session->client.request.header_raw;
-                    UriBufs[HTTP_BUFFER_RAW_HEADER].length = Session->client.request.header_raw_size;
+                    SetHttpBufferEncoding(
+                        HTTP_BUFFER_HEADER,
+                        Session->client.request.header_norm,
+                        Session->client.request.header_norm_size,
+                        Session->client.request.header_encode_type);
+
+                    SetHttpBuffer(
+                        HTTP_BUFFER_RAW_HEADER,
+                        Session->client.request.header_raw,
+                        Session->client.request.header_raw_size);
+
                     p->packet_flags |= PKT_HTTP_DECODE;
+#ifdef DEBUG
+                    hi_stats.req_header_len += Session->client.request.header_norm_size;
+#endif
                 }
                 else
                 {
-                    UriBufs[HTTP_BUFFER_HEADER].uri    = Session->client.request.header_raw;
-                    UriBufs[HTTP_BUFFER_HEADER].length = Session->client.request.header_raw_size;
-                    UriBufs[HTTP_BUFFER_HEADER].encode_type = Session->client.request.header_encode_type;
-                    UriBufs[HTTP_BUFFER_RAW_HEADER].uri    = Session->client.request.header_raw;
-                    UriBufs[HTTP_BUFFER_RAW_HEADER].length = Session->client.request.header_raw_size;
+                    SetHttpBufferEncoding(
+                        HTTP_BUFFER_HEADER,
+                        Session->client.request.header_raw,
+                        Session->client.request.header_raw_size,
+                        Session->client.request.header_encode_type);
+
+                    SetHttpBuffer(
+                        HTTP_BUFFER_RAW_HEADER,
+                        Session->client.request.header_raw,
+                        Session->client.request.header_raw_size);
+
                     p->packet_flags |= PKT_HTTP_DECODE;
                 }
-#ifdef DEBUG
-                hi_stats.req_header_len += UriBufs[HTTP_BUFFER_HEADER].length;
-#endif
-                p->uri_count = HTTP_BUFFER_RAW_HEADER + 1;
             }
 
             if(Session->client.request.method & (HI_POST_METHOD | HI_GET_METHOD))
             {
                 if(Session->client.request.post_raw)
                 {
-                    UriBufs[HTTP_BUFFER_CLIENT_BODY].uri =
-                                Session->client.request.post_raw;
-                    UriBufs[HTTP_BUFFER_CLIENT_BODY].length =
-                                Session->client.request.post_raw_size;
-                    UriBufs[HTTP_BUFFER_CLIENT_BODY].encode_type =
-                                Session->client.request.post_encode_type;
+                    uint8_t *start = (uint8_t *)(Session->client.request.content_type);
 
-                    p->packet_flags |= PKT_HTTP_DECODE;
-                    p->uri_count = HTTP_BUFFER_CLIENT_BODY + 1;
+                    if ( hsd && start )
+                    {
+                        /* mime parsing
+                         * mime boundary should be processed before this
+                         */
+                        uint8_t *end;
+
+                        if (!hsd->mime_ssn)
+                        {
+                            hsd->mime_ssn = (MimeState *)SnortAlloc(sizeof(MimeState));
+                            if (!hsd->mime_ssn)
+                                return 0;
+                            hsd->mime_ssn->log_config = &(GlobalConf->mime_conf);
+                            hsd->mime_ssn->decode_conf = &(GlobalConf->decode_conf);
+                            hsd->mime_ssn->mime_mempool = mime_decode_mempool;
+                            hsd->mime_ssn->log_mempool = mime_log_mempool;
+                            /*Set log buffers per session*/
+                            if (file_api->set_log_buffers(&(hsd->mime_ssn->log_state),
+                                    hsd->mime_ssn->log_config, hsd->mime_ssn->log_mempool) < 0)
+                            {
+                                return 0;
+                            }
+                        }
+
+                        end = (uint8_t *)(Session->client.request.post_raw + Session->client.request.post_raw_size);
+                        file_api->process_mime_data(p, start, end, end, end, hsd->mime_ssn, 1);
+                    }
+                    else
+                    {
+                        if (file_api->file_process(p,(uint8_t *)Session->client.request.post_raw,
+                                (uint16_t)Session->client.request.post_raw_size,
+                                getFilePoistion(p), 1))
+                        {
+                            setFileName(p);
+                        }
+                    }
+
+                    if(Session->server_conf->post_depth > -1)
+                    {
+                        if(Session->server_conf->post_depth &&
+                                ((int)Session->client.request.post_raw_size > Session->server_conf->post_depth))
+                        {
+                            Session->client.request.post_raw_size = Session->server_conf->post_depth;
+                        }
+                        SetHttpBufferEncoding(
+                            HTTP_BUFFER_CLIENT_BODY,
+                            Session->client.request.post_raw,
+                            Session->client.request.post_raw_size,
+                            Session->client.request.post_encode_type);
+
+                        p->packet_flags |= PKT_HTTP_DECODE;
+                    }
+
+                }
+            }
+            else if (hsd)
+            {
+                if(hsd->mime_ssn)
+                {
+                    uint8_t *end = ( uint8_t *)(p->data) + p->dsize;
+                    file_api->process_mime_data(p, p->data, end, end, end, hsd->mime_ssn, 1);
+                }
+                else if (file_api->get_file_processed_size(p->ssnptr) >0)
+                {
+                    file_api->file_process(p, (uint8_t *)p->data, p->dsize, getFilePoistion(p), 1);
                 }
             }
 
-            if (Session->client.request.method_raw)
+            if ( Session->client.request.method_raw )
             {
-                UriBufs[HTTP_BUFFER_METHOD].uri = Session->client.request.method_raw;
-                UriBufs[HTTP_BUFFER_METHOD].length = Session->client.request.method_size;
+                SetHttpBuffer(
+                    HTTP_BUFFER_METHOD,
+                    Session->client.request.method_raw,
+                    Session->client.request.method_size);
+
                 p->packet_flags |= PKT_HTTP_DECODE;
-                p->uri_count = HTTP_BUFFER_METHOD + 1;
             }
 
-
-            if (Session->client.request.cookie_norm || Session->client.request.cookie.cookie)
+            if ( Session->client.request.cookie_norm || 
+                 Session->client.request.cookie.cookie )
             {
-
-                /* If we get here, uri_count should be 4 */
-                if(Session->client.request.cookie_norm)
+                if ( Session->client.request.cookie_norm )
                 {
-                    UriBufs[HTTP_BUFFER_COOKIE].uri    = Session->client.request.cookie_norm;
-                    UriBufs[HTTP_BUFFER_COOKIE].length = Session->client.request.cookie_norm_size;
-                    UriBufs[HTTP_BUFFER_COOKIE].encode_type = Session->client.request.cookie_encode_type;
-                    UriBufs[HTTP_BUFFER_RAW_COOKIE].uri = Session->client.request.cookie.cookie;
-                    UriBufs[HTTP_BUFFER_RAW_COOKIE].length =
-                        Session->client.request.cookie.cookie_end - Session->client.request.cookie.cookie;
+                    SetHttpBufferEncoding(
+                        HTTP_BUFFER_COOKIE,
+                        Session->client.request.cookie_norm,
+                        Session->client.request.cookie_norm_size,
+                        Session->client.request.cookie_encode_type);
+
+                    SetHttpBuffer(
+                        HTTP_BUFFER_RAW_COOKIE,
+                        Session->client.request.cookie.cookie,
+                        Session->client.request.cookie.cookie_end - 
+                            Session->client.request.cookie.cookie);
+
                     p->packet_flags |= PKT_HTTP_DECODE;
                 }
                 else
                 {
-                    UriBufs[HTTP_BUFFER_COOKIE].uri    = Session->client.request.cookie.cookie;
-                    UriBufs[HTTP_BUFFER_COOKIE].length =
-                        Session->client.request.cookie.cookie_end - Session->client.request.cookie.cookie;
-                    UriBufs[HTTP_BUFFER_COOKIE].encode_type = Session->client.request.cookie_encode_type;
-                    UriBufs[HTTP_BUFFER_RAW_COOKIE].uri = Session->client.request.cookie.cookie;
-                    UriBufs[HTTP_BUFFER_RAW_COOKIE].length =
-                        Session->client.request.cookie.cookie_end - Session->client.request.cookie.cookie;
+                    SetHttpBufferEncoding(
+                        HTTP_BUFFER_COOKIE,
+                        Session->client.request.cookie.cookie,
+                        Session->client.request.cookie.cookie_end - 
+                            Session->client.request.cookie.cookie,
+                        Session->client.request.cookie_encode_type);
+
+                    SetHttpBuffer(
+                        HTTP_BUFFER_RAW_COOKIE,
+                        Session->client.request.cookie.cookie,
+                        Session->client.request.cookie.cookie_end - 
+                            Session->client.request.cookie.cookie);
+
                     p->packet_flags |= PKT_HTTP_DECODE;
                 }
-#ifdef DEBUG
-                hi_stats.req_cookie_len += UriBufs[HTTP_BUFFER_COOKIE].length;
-#endif
-                p->uri_count = HTTP_BUFFER_RAW_COOKIE + 1;
             }
-            else if(!Session->server_conf->enable_cookie && UriBufs[HTTP_BUFFER_HEADER].uri)
+            else if ( !Session->server_conf->enable_cookie && 
+                (hb = GetHttpBuffer(HTTP_BUFFER_HEADER)) )
             {
-                UriBufs[HTTP_BUFFER_COOKIE].uri  = UriBufs[HTTP_BUFFER_HEADER].uri;
-                UriBufs[HTTP_BUFFER_COOKIE].length = UriBufs[HTTP_BUFFER_HEADER].length;
-                UriBufs[HTTP_BUFFER_COOKIE].encode_type = UriBufs[HTTP_BUFFER_HEADER].encode_type;
-                UriBufs[HTTP_BUFFER_RAW_COOKIE].uri = UriBufs[HTTP_BUFFER_RAW_HEADER].uri;
-                UriBufs[HTTP_BUFFER_RAW_COOKIE].length = UriBufs[HTTP_BUFFER_RAW_HEADER].length;
-                p->packet_flags |= PKT_HTTP_DECODE;
+                SetHttpBufferEncoding(
+                    HTTP_BUFFER_COOKIE, hb->buf, hb->length, hb->encode_type);
 
-                p->uri_count = HTTP_BUFFER_RAW_COOKIE + 1;
+                hb = GetHttpBuffer(HTTP_BUFFER_RAW_HEADER);
+                assert(hb);
+
+                SetHttpBuffer(HTTP_BUFFER_RAW_COOKIE, hb->buf, hb->length);
+
+                p->packet_flags |= PKT_HTTP_DECODE;
             }
 
-            if(IsLimitedDetect(p))
+            if ( IsLimitedDetect(p) )
             {
                 ApplyClientFlowDepth(p, Session->server_conf->client_flow_depth);
 
-                if( (p->uri_count == 0) && (p->alt_dsize == 0)  )
+                if( !GetHttpBufferMask() && (p->alt_dsize == 0)  )
                 {
                     DisableDetect(p);
                     SetAllPreprocBits(p);
@@ -3668,15 +3814,16 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         }
         else   /* Server mode */
         {
+            const HttpBuffer* hb;
+
             /*
             **  We check here to see whether this was a server response
             **  header or not.  If the header size is 0 then, we know that this
             **  is not the header and don't do any detection.
             */
-            if(!(Session->server_conf->inspect_response) &&
-                    IsLimitedDetect(p) && !p->alt_dsize)
+            if( !(Session->server_conf->inspect_response) &&
+                IsLimitedDetect(p) && !p->alt_dsize )
             {
-
                 DisableDetect(p);
 
                 SetAllPreprocBits(p);
@@ -3686,97 +3833,127 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
                 }
                 return 0;
             }
-            p->uri_count =  0;
+            ClearHttpBuffers();
 
-             if (Session->server.response.header_norm || Session->server.response.header_raw)
+             if ( Session->server.response.header_norm || 
+                  Session->server.response.header_raw )
              {
-                 if(Session->server.response.header_norm)
+                 if ( Session->server.response.header_norm )
                  {
-                     UriBufs[HTTP_BUFFER_HEADER].uri    = Session->server.response.header_norm;
-                     UriBufs[HTTP_BUFFER_HEADER].length = Session->server.response.header_norm_size;
-                     UriBufs[HTTP_BUFFER_HEADER].encode_type = Session->server.response.header_encode_type;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].uri    = Session->server.response.header_raw;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].length = Session->server.response.header_raw_size;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].encode_type = 0;
+                     SetHttpBufferEncoding(
+                         HTTP_BUFFER_HEADER,
+                         Session->server.response.header_norm,
+                         Session->server.response.header_norm_size,
+                         Session->server.response.header_encode_type);
+
+                     SetHttpBuffer(
+                         HTTP_BUFFER_RAW_HEADER,
+                         Session->server.response.header_raw,
+                         Session->server.response.header_raw_size);
                  }
                  else
                  {
-                     UriBufs[HTTP_BUFFER_HEADER].uri    = Session->server.response.header_raw;
-                     UriBufs[HTTP_BUFFER_HEADER].length = Session->server.response.header_raw_size;
-                     UriBufs[HTTP_BUFFER_HEADER].encode_type = 0;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].uri    = Session->server.response.header_raw;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].length = Session->server.response.header_raw_size;
-                     UriBufs[HTTP_BUFFER_RAW_HEADER].encode_type = 0;
-                 }
-                 p->uri_count = HTTP_BUFFER_RAW_HEADER + 1 ;
-#ifdef DEBUG
-                 hi_stats.resp_header_len += UriBufs[HTTP_BUFFER_HEADER].length;
-#endif
+                     SetHttpBuffer(
+                         HTTP_BUFFER_HEADER,
+                         Session->server.response.header_raw,
+                         Session->server.response.header_raw_size);
 
+                     SetHttpBuffer(
+                         HTTP_BUFFER_RAW_HEADER,
+                         Session->server.response.header_raw,
+                         Session->server.response.header_raw_size);
+                 }
              }
 
-             if (Session->server.response.cookie_norm || Session->server.response.cookie.cookie )
+             if ( Session->server.response.cookie_norm || 
+                  Session->server.response.cookie.cookie )
              {
                  if(Session->server.response.cookie_norm )
                  {
-                     UriBufs[HTTP_BUFFER_COOKIE].uri    = Session->server.response.cookie_norm;
-                     UriBufs[HTTP_BUFFER_COOKIE].length = Session->server.response.cookie_norm_size;
-                     UriBufs[HTTP_BUFFER_COOKIE].encode_type = Session->server.response.cookie_encode_type;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].uri    = Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].length =
-                         Session->server.response.cookie.cookie_end-Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].encode_type = 0;
+                     SetHttpBufferEncoding(
+                         HTTP_BUFFER_COOKIE,
+                         Session->server.response.cookie_norm,
+                         Session->server.response.cookie_norm_size,
+                         Session->server.response.cookie_encode_type);
+
+                     SetHttpBuffer(
+                         HTTP_BUFFER_RAW_COOKIE,
+                         Session->server.response.cookie.cookie,
+                         Session->server.response.cookie.cookie_end -
+                             Session->server.response.cookie.cookie);
                  }
                  else
                  {
-                     UriBufs[HTTP_BUFFER_COOKIE].uri    = Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_COOKIE].length    =
-                         Session->server.response.cookie.cookie_end - Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_COOKIE].encode_type = 0;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].uri    = Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].length =
-                         Session->server.response.cookie.cookie_end-Session->server.response.cookie.cookie;
-                     UriBufs[HTTP_BUFFER_RAW_COOKIE].encode_type = 0;
+                     SetHttpBuffer(
+                         HTTP_BUFFER_COOKIE,
+                         Session->server.response.cookie.cookie,
+                         Session->server.response.cookie.cookie_end - 
+                             Session->server.response.cookie.cookie);
 
+                     SetHttpBuffer(
+                         HTTP_BUFFER_RAW_COOKIE,
+                         Session->server.response.cookie.cookie,
+                         Session->server.response.cookie.cookie_end -
+                             Session->server.response.cookie.cookie);
                  }
-                 p->uri_count = HTTP_BUFFER_RAW_COOKIE + 1 ;
-#ifdef DEBUG
-                 hi_stats.resp_cookie_len += UriBufs[HTTP_BUFFER_COOKIE].length;
-#endif
              }
-             else if(!Session->server_conf->enable_cookie && UriBufs[HTTP_BUFFER_HEADER].uri)
+             else if ( !Session->server_conf->enable_cookie && 
+                 (hb = GetHttpBuffer(HTTP_BUFFER_HEADER)) )
              {
-                 UriBufs[HTTP_BUFFER_COOKIE].uri  = UriBufs[HTTP_BUFFER_HEADER].uri;
-                 UriBufs[HTTP_BUFFER_COOKIE].length = UriBufs[HTTP_BUFFER_HEADER].length;
-                 UriBufs[HTTP_BUFFER_COOKIE].encode_type = UriBufs[HTTP_BUFFER_HEADER].encode_type;
-                 UriBufs[HTTP_BUFFER_RAW_COOKIE].uri = UriBufs[HTTP_BUFFER_RAW_HEADER].uri;
-                 UriBufs[HTTP_BUFFER_RAW_COOKIE].length = UriBufs[HTTP_BUFFER_RAW_HEADER].length;
-                 p->uri_count = HTTP_BUFFER_RAW_COOKIE + 1;
+                 SetHttpBufferEncoding(
+                     HTTP_BUFFER_COOKIE, hb->buf, hb->length, hb->encode_type);
+
+                 hb = GetHttpBuffer(HTTP_BUFFER_RAW_HEADER);
+                 assert(hb);
+
+                 SetHttpBuffer(HTTP_BUFFER_RAW_COOKIE, hb->buf, hb->length);
              }
 
              if(Session->server.response.status_code)
              {
-                 UriBufs[HTTP_BUFFER_STAT_CODE].uri    = Session->server.response.status_code;
-                 UriBufs[HTTP_BUFFER_STAT_CODE].length = Session->server.response.status_code_size;
-                 UriBufs[HTTP_BUFFER_STAT_CODE].encode_type = 0;
-                 p->uri_count = HTTP_BUFFER_STAT_CODE + 1;
+                 SetHttpBuffer(
+                     HTTP_BUFFER_STAT_CODE,
+                     Session->server.response.status_code,
+                     Session->server.response.status_code_size);
              }
 
              if(Session->server.response.status_msg)
              {
-                 UriBufs[HTTP_BUFFER_STAT_MSG].uri    = Session->server.response.status_msg;
-                 UriBufs[HTTP_BUFFER_STAT_MSG].length = Session->server.response.status_msg_size;
-                 UriBufs[HTTP_BUFFER_STAT_MSG].encode_type = 0;
-                 p->uri_count = HTTP_BUFFER_STAT_MSG + 1;
+                 SetHttpBuffer(
+                     HTTP_BUFFER_STAT_MSG,
+                     Session->server.response.status_msg,
+                     Session->server.response.status_msg_size);
              }
 
              if(Session->server.response.body_size > 0)
              {
-                 setFileDataPtr((uint8_t *)Session->server.response.body, (uint16_t)Session->server.response.body_size);
+                 int detect_data_size = (int)Session->server.response.body_size;
+
+                 /*body_size is included in the data_extracted*/
+                 if((Session->server_conf->server_flow_depth > 0) &&
+                         (hsd->resp_state.data_extracted  < (Session->server_conf->server_flow_depth + (int)Session->server.response.body_size)))
+                 {
+                     /*flow_depth is smaller than data_extracted, need to subtract*/
+                     if(Session->server_conf->server_flow_depth < hsd->resp_state.data_extracted)
+                         detect_data_size -= hsd->resp_state.data_extracted - Session->server_conf->server_flow_depth;
+                 }
+                 else if (Session->server_conf->server_flow_depth)
+                 {
+                     detect_data_size = 0;
+                 }
+
+                 setFileDataPtr((uint8_t *)Session->server.response.body, (uint16_t)detect_data_size);
+
+                 if (ScPafEnabled() && PacketHasPAFPayload(p)
+                         && file_api->file_process(p,(uint8_t *)Session->server.response.body, (uint16_t)Session->server.response.body_size,
+                         getFilePoistion(p), 0))
+                 {
+                     setFileName(p);
+                 }
              }
 
              if( IsLimitedDetect(p) &&
-                 (p->uri_count == 0) && (p->alt_dsize == 0)  )
+                 !GetHttpBufferMask() && (p->alt_dsize == 0)  )
              {
                  DisableDetect(p);
 
@@ -3802,7 +3979,6 @@ int SnortHttpInspect(HTTPINSPECT_GLOBAL_CONF *GlobalConf, Packet *p)
         **  main detection engine for each protocol field.
         */
         PREPROC_PROFILE_START(hiDetectPerfStats);
-        p->http_pipeline_count++; /* Increment the count */
         Detect(p);
 #ifdef PERF_PROFILING
         hiDetectCalled = 1;
@@ -3872,6 +4048,9 @@ int HttpInspectInitializeGlobalConfig(HTTPINSPECT_GLOBAL_CONF *config,
         return -1;
     }
 
+    file_api->set_mime_decode_config_defauts(&(config->decode_conf));
+    file_api->set_mime_log_config_defauts(&(config->mime_conf));
+
     return 0;
 }
 
@@ -3915,6 +4094,8 @@ void FreeHttpSessionData(void *data)
     if(hsd->true_ip)
         sfip_free(hsd->true_ip);
 
+    file_api->free_mime_session(hsd->mime_ssn);
+
     free(hsd);
 }
 
@@ -3926,7 +4107,6 @@ int GetHttpTrueIP(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
     if(!true_ip)
         return 0;
 
-#ifdef SUP_IP6
     if(true_ip->family == AF_INET6)
     {
         *type = EVENT_INFO_XFF_IPV6;
@@ -3934,7 +4114,6 @@ int GetHttpTrueIP(void *data, uint8_t **buf, uint32_t *len, uint32_t *type)
 
     }
     else
-#endif
     {
         *type = EVENT_INFO_XFF_IPV4;
         *len = sizeof(struct in_addr); /*ipv4 address size in bytes*/

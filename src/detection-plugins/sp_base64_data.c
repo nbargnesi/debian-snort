@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2012 Sourcefire, Inc.
+ ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* sp_base64_data
@@ -60,7 +60,7 @@ extern char *file_name;  /* this is the file name from rules.c, generally used
 extern int file_line;    /* this is the file line number from rules.c that is
                             used to indicate file lines for error messages */
 
-static void Base64DataInit(char *, OptTreeNode *, int);
+static void Base64DataInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void Base64DataParse(char *, OptTreeNode *);
 int  Base64DataEval(void *option_data, Packet *p);
 
@@ -89,7 +89,7 @@ void SetupBase64Data(void)
 
 /****************************************************************************
  *
- * Function: Base64DataInit(char *, OptTreeNode *, int protocol)
+ * Function: Base64DataInit(struct _SnortConfig *, char *, OptTreeNode *, int protocol)
  *
  * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -102,7 +102,7 @@ void SetupBase64Data(void)
  * Returns: void function
  *
  ****************************************************************************/
-static void Base64DataInit(char *data, OptTreeNode *otn, int protocol)
+static void Base64DataInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
     if(otn->ds_list[PLUGIN_BASE64_DECODE] == NULL )

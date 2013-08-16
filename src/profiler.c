@@ -3,7 +3,7 @@
 **
 **  profiler.c
 **
-**  Copyright (C) 2005-2012 Sourcefire, Inc.
+**  Copyright (C) 2005-2013 Sourcefire, Inc.
 **  Steven Sturges <ssturges@sourcefire.com>
 **
 **  This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 **
 **  You should have received a copy of the GNU General Public License
 **  along with this program; if not, write to the Free Software
-**  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+**  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 */
 
@@ -370,7 +370,6 @@ void PrintWorstRules(int numToPrint)
 
 void CollectRTNProfile(void)
 {
-    RuleTreeNode *rtn;
     OptTreeNode *otn;
     OTN_WorstPerformer *new, *node, *last = NULL;
     char got_position;
@@ -390,8 +389,6 @@ void CollectRTNProfile(void)
               policyId < otn->proto_node_num;
               policyId++ )
         {
-            rtn = getRtnFromOtn(otn, policyId);
-
             /* Only log info if OTN has actually been eval'd */
             if (otn->checks > 0 && otn->ticks > 0)
             {

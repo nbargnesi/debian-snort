@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2002-2012 Sourcefire, Inc.
+ ** Copyright (C) 2002-2013 Sourcefire, Inc.
  ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,26 +39,27 @@ const uint8_t *doe_ptr;
 uint8_t doe_buf_flags;
 uint16_t detect_flags;
 
-HttpUri UriBufs[HTTP_BUFFER_MAX];
+uint32_t http_mask;
+HttpBuffer http_buffer[HTTP_BUFFER_MAX];
+
 DataPointer DetectBuffer;
 DataPointer file_data_ptr;
 DataBuffer DecodeBuffer;
 
-#ifdef DEBUG
-const char* uri_buffer_name[HTTP_BUFFER_MAX] =
+const char* http_buffer_name[HTTP_BUFFER_MAX] =
 {
+    "error/unset",
     "http_uri",
-    "http_raw_uri",
     "http_header",
-    "http_raw_header",
     "http_client_body",
     "http_method",
     "http_cookie",
-    "http_raw_cookie",
     "http_stat_code",
     "http_stat_msg"
+    "http_raw_uri",
+    "http_raw_header",
+    "http_raw_cookie",
 };
-#endif
 
 static const char* rule_type[RULE_TYPE__MAX] = {
     "none", "activate", "alert", "drop", "dynamic",
@@ -128,10 +129,8 @@ void EventTrace_Log (const Packet* p, OptTreeNode* otn, int action)
         (unsigned)p->proto_bits, (unsigned)p->error_flags
     );
     TextLog_Print(tlog,
-        "Pkt Cnts: Dsz=%u, Alt=%u, Bytes2Insp=%d"
-        ", NUri=%u, NHttp=%u\n",
-        (unsigned)p->dsize, (unsigned)p->alt_dsize, p->bytes_to_inspect,
-        (unsigned)p->uri_count, p->http_pipeline_count
+        "Pkt Cnts: Dsz=%u, Alt=%u, Uri=0x%X\n",
+        (unsigned)p->dsize, (unsigned)p->alt_dsize, http_mask
     );
     TextLog_Print(tlog, "Detect: DoeFlags=0x%X, DetectFlags=0x%X, DetBuf=%u, B64=%u\n",
         doe_buf_flags, detect_flags, DetectBuffer.len, base64_decode_size
@@ -145,13 +144,15 @@ void EventTrace_Log (const Packet* p, OptTreeNode* otn, int action)
 
     for ( i = 0; i < HTTP_BUFFER_MAX; i++ )
     {
-        if ( 0 == UriBufs[i].length )
+        const HttpBuffer* hb = GetHttpBuffer(i);
+
+        if ( !hb )
             continue;
 
         TextLog_Print(tlog, "%s[%u] = 0x%X\n",
-            uri_buffer_name[i], UriBufs[i].length, UriBufs[i].encode_type);
+            http_buffer_name[i], hb->length, hb->encode_type);
 
-        LogBuffer(uri_buffer_name[i], UriBufs[i].uri, UriBufs[i].length);
+        LogBuffer(http_buffer_name[i], hb->buf, hb->length);
     }
     nEvents++;
 }

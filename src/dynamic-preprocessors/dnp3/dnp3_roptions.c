@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -77,7 +77,7 @@ typedef struct _dnp3_option_data_t
 } dnp3_option_data_t;
 
 /* Parsing functions */
-int DNP3FuncInit(char *name, char *params, void **data)
+int DNP3FuncInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *endptr;
     dnp3_option_data_t *dnp3_data;
@@ -142,7 +142,7 @@ NORETURN static inline void DNP3ObjError(void)
         *_dpd.config_file, *_dpd.config_line);
 }
 
-int DNP3ObjInit(char *name, char *params, void **data)
+int DNP3ObjInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *endptr, *token, *saveptr;
     dnp3_option_data_t *dnp3_data;
@@ -195,7 +195,7 @@ int DNP3ObjInit(char *name, char *params, void **data)
     return 1;
 }
 
-int DNP3IndInit(char *name, char *params, void **data)
+int DNP3IndInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     dnp3_option_data_t *dnp3_data;
     char *token, *saveptr;
@@ -250,7 +250,7 @@ int DNP3IndInit(char *name, char *params, void **data)
     return 1;
 }
 
-int DNP3DataInit(char *name, char *params, void **data)
+int DNP3DataInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     dnp3_option_data_t *dnp3_data;
 

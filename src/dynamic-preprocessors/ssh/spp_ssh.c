@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
-** Copyright (C) 2005-2012 Sourcefire, Inc.
+** Copyright (C) 2005-2013 Sourcefire, Inc.
 **
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
@@ -48,6 +48,7 @@
 #include "spp_ssh.h"
 #include "sf_preproc_info.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
@@ -68,11 +69,7 @@ PreprocStats sshPerfStats;
 const int MAJOR_VERSION = 1;
 const int MINOR_VERSION = 1;
 const int BUILD_VERSION = 3;
-#ifdef SUP_IP6
-const char *PREPROC_NAME = "SF_SSH (IPV6)";
-#else
 const char *PREPROC_NAME = "SF_SSH";
-#endif
 
 #define SetupSSH DYNAMIC_PREPROC_SETUP
 
@@ -90,7 +87,7 @@ int16_t ssh_app_id = SFTARGET_UNKNOWN_PROTOCOL;
  * Function prototype(s)
  */
 SSHData * SSHGetNewSession(SFSnortPacket *, tSfPolicyId);
-static void SSHInit( char* );
+static void SSHInit( struct _SnortConfig *, char* );
 static void DisplaySSHConfig(SSHConfig *);
 static void FreeSSHData( void* );
 static void  ParseSSHArgs(SSHConfig *, u_char*);
@@ -100,12 +97,12 @@ static int ProcessSSHProtocolVersionExchange( SSHData*, SFSnortPacket*,
 		uint8_t, uint8_t );
 static int ProcessSSHKeyExchange( SSHData*, SFSnortPacket*, uint8_t );
 static int ProcessSSHKeyInitExchange( SSHData*, SFSnortPacket*, uint8_t );
-static void _addPortsToStream5Filter(SSHConfig *, tSfPolicyId);
+static void _addPortsToStream5Filter(struct _SnortConfig *, SSHConfig *, tSfPolicyId);
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId);
+static void _addServicesToStream5Filter(struct _SnortConfig *, tSfPolicyId);
 #endif
 static void SSHFreeConfig(tSfPolicyUserContextId config);
-static void SSHCheckConfig(void);
+static int SSHCheckConfig(struct _SnortConfig *);
 static void SSHCleanExit(int, void *);
 
 /* Ultimately calls SnortEventqAdd */
@@ -124,10 +121,9 @@ static tSfPolicyUserContextId ssh_config = NULL;
 static SSHConfig *ssh_eval_config = NULL;
 
 #ifdef SNORT_RELOAD
-static tSfPolicyUserContextId ssh_swap_config = NULL;
-static void SSHReload(char *);
-static int SSHReloadVerify(void);
-static void * SSHReloadSwap(void);
+static void SSHReload(struct _SnortConfig *, char *, void **);
+static int SSHReloadVerify(struct _SnortConfig *, void *);
+static void * SSHReloadSwap(struct _SnortConfig *, void *);
 static void SSHReloadSwapFree(void *);
 #endif
 
@@ -147,7 +143,7 @@ void SetupSSH(void)
 	_dpd.registerPreproc( "ssh", SSHInit );
 #else
 	_dpd.registerPreproc("ssh", SSHInit, SSHReload,
-                         SSHReloadSwap, SSHReloadSwapFree);
+                         SSHReloadVerify, SSHReloadSwap, SSHReloadSwapFree);
 #endif
 }
 
@@ -161,9 +157,9 @@ void SetupSSH(void)
  *
  * RETURNS:     Nothing.
  */
-static void SSHInit(char *argp)
+static void SSHInit(struct _SnortConfig *sc, char *argp)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     SSHConfig *pPolicyConfig = NULL;
 
     if (ssh_config == NULL)
@@ -181,7 +177,7 @@ static void SSHInit(char *argp)
             DynamicPreprocessorFatalMessage("SetupSSH(): The Stream preprocessor must be enabled.\n");
         }
 
-        _dpd.addPreprocConfCheck(SSHCheckConfig);
+        _dpd.addPreprocConfCheck(sc, SSHCheckConfig);
         _dpd.addPreprocExit(SSHCleanExit, NULL, PRIORITY_LAST, PP_SSH);
 
 #ifdef PERF_PROFILING
@@ -215,12 +211,12 @@ static void SSHInit(char *argp)
 
 	ParseSSHArgs(pPolicyConfig, (u_char *)argp);
 
-    _dpd.addPreproc( ProcessSSH, PRIORITY_APPLICATION, PP_SSH, PROTO_BIT__TCP );
+    _dpd.addPreproc( sc, ProcessSSH, PRIORITY_APPLICATION, PP_SSH, PROTO_BIT__TCP );
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 }
 
@@ -528,20 +524,17 @@ ProcessSSH( void* ipacketp, void* contextp )
     tSfPolicyId policy_id = _dpd.getRuntimePolicy();
     PROFILE_VARS;
 
-	packetp = (SFSnortPacket*) ipacketp;
+    packetp = (SFSnortPacket*) ipacketp;
     sfPolicyUserPolicySet (ssh_config, policy_id);
 
-	/* Make sure this preprocessor should run. */
-	if (( !packetp ) ||
-	    ( !packetp->payload ) ||
-	    ( !packetp->payload_size ) ||
-        ( !IPH_IS_VALID(packetp) ) ||
-	    ( !packetp->tcp_header ) ||
-        /* check if we're waiting on stream reassembly */
-        ( packetp->flags & FLAG_STREAM_INSERT))
-	{
- 		return;
-	}
+    // preconditions - what we registered for
+    assert(packetp->payload && packetp->payload_size &&
+        IPH_IS_VALID(packetp) && packetp->tcp_header);
+
+    /* Make sure this preprocessor should run. */
+    /* check if we're waiting on stream reassembly */
+    if ( packetp->flags & FLAG_STREAM_INSERT )
+        return;
 
     PREPROC_PROFILE_START(sshPerfStats);
 
@@ -832,7 +825,7 @@ static void SSHFreeConfig(tSfPolicyUserContextId config)
     if (config == NULL)
         return;
 
-    sfPolicyUserDataIterate (config, SshFreeConfigPolicy);
+    sfPolicyUserDataFreeIterate (config, SshFreeConfigPolicy);
     sfPolicyConfigDelete(config);
 }
 
@@ -1318,7 +1311,7 @@ ProcessSSHKeyExchange( SSHData* sessionp, SFSnortPacket* packetp,
 	return SSH_SUCCESS;
 }
 
-static void _addPortsToStream5Filter(SSHConfig *config, tSfPolicyId policy_id)
+static void _addPortsToStream5Filter(struct _SnortConfig *sc, SSHConfig *config, tSfPolicyId policy_id)
 {
     if (config == NULL)
         return;
@@ -1333,35 +1326,42 @@ static void _addPortsToStream5Filter(SSHConfig *config, tSfPolicyId policy_id)
             {
                 //Add port the port
                 _dpd.streamAPI->set_port_filter_status(
-                    IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
+                    sc, IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
             }
         }
     }
 }
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId policy_id)
+static void _addServicesToStream5Filter(struct _SnortConfig *sc, tSfPolicyId policy_id)
 {
-    _dpd.streamAPI->set_service_filter_status(ssh_app_id, PORT_MONITOR_SESSION, policy_id, 1);
+    _dpd.streamAPI->set_service_filter_status(sc, ssh_app_id, PORT_MONITOR_SESSION, policy_id, 1);
 }
 #endif
 
 static int SSHCheckPolicyConfig(
+        struct _SnortConfig *sc,
         tSfPolicyUserContextId config,
         tSfPolicyId policyId,
         void* pData
         )
 {
-    _dpd.setParserPolicy(policyId);
+    _dpd.setParserPolicy(sc, policyId);
 
-    if (!_dpd.isPreprocEnabled(PP_STREAM5))
+    if (!_dpd.isPreprocEnabled(sc, PP_STREAM5))
     {
-        DynamicPreprocessorFatalMessage("SSHCheckPolicyConfig(): The Stream preprocessor must be enabled.\n");
+        _dpd.errMsg("SSHCheckPolicyConfig(): The Stream preprocessor must be enabled.\n");
+        return -1;
     }
     return 0;
 }
-static void SSHCheckConfig(void)
+static int SSHCheckConfig(struct _SnortConfig *sc)
 {
-    sfPolicyUserDataIterate (ssh_config, SSHCheckPolicyConfig);
+    int rval;
+
+    if ((rval = sfPolicyUserDataIterate (sc, ssh_config, SSHCheckPolicyConfig)))
+        return rval;
+
+    return 0;
 }
 
 static void SSHCleanExit(int signal, void *data)
@@ -1374,9 +1374,10 @@ static void SSHCleanExit(int signal, void *data)
 }
 
 #ifdef SNORT_RELOAD
-static void SSHReload(char *args)
+static void SSHReload(struct _SnortConfig *sc, char *args, void **new_config)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyUserContextId ssh_swap_config = (tSfPolicyUserContextId)*new_config;
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     SSHConfig * pPolicyConfig = NULL;
 
     if (ssh_swap_config == NULL)
@@ -1393,6 +1394,7 @@ static void SSHReload(char *args)
         {
             DynamicPreprocessorFatalMessage("SetupSSH(): The Stream preprocessor must be enabled.\n");
         }
+        *new_config = (void *)ssh_swap_config;
     }
 
     sfPolicyUserPolicySet (ssh_swap_config, policy_id);
@@ -1413,21 +1415,21 @@ static void SSHReload(char *args)
 
 	ParseSSHArgs(pPolicyConfig, (u_char *)args);
 
-	_dpd.addPreproc( ProcessSSH, PRIORITY_APPLICATION, PP_SSH, PROTO_BIT__TCP );
-    _dpd.addPreprocReloadVerify(SSHReloadVerify);
+	_dpd.addPreproc( sc, ProcessSSH, PRIORITY_APPLICATION, PP_SSH, PROTO_BIT__TCP );
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 }
 
-static int SSHReloadVerify(void)
+static int SSHReloadVerify(struct _SnortConfig *sc, void *swap_config)
 {
-    if (!_dpd.isPreprocEnabled(PP_STREAM5))
+    if (!_dpd.isPreprocEnabled(sc, PP_STREAM5))
     {
-        DynamicPreprocessorFatalMessage("SetupSSH(): The Stream preprocessor must be enabled.\n");
+        _dpd.errMsg("SetupSSH(): The Stream preprocessor must be enabled.\n");
+        return -1;
     }
 
     return 0;
@@ -1449,17 +1451,17 @@ static int SshFreeUnusedConfigPolicy(
     return 0;
 }
 
-static void * SSHReloadSwap(void)
+static void * SSHReloadSwap(struct _SnortConfig *sc, void *swap_config)
 {
+    tSfPolicyUserContextId ssh_swap_config = (tSfPolicyUserContextId)swap_config;
     tSfPolicyUserContextId old_config = ssh_config;
 
     if (ssh_swap_config == NULL)
         return NULL;
 
     ssh_config = ssh_swap_config;
-    ssh_swap_config = NULL;
 
-    sfPolicyUserDataIterate (old_config, SshFreeUnusedConfigPolicy);
+    sfPolicyUserDataFreeIterate (old_config, SshFreeUnusedConfigPolicy);
 
     if (sfPolicyUserPolicyGetActive(old_config) == 0)
     {

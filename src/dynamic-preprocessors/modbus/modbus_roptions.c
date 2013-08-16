@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -55,7 +55,7 @@ static modbus_func_map_t func_map[] =
     {"encapsulated_interface_transport", 43}
 };
 
-int ModbusFuncInit(char *name, char *params, void **data)
+int ModbusFuncInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *endptr;
     modbus_option_data_t *modbus_data;
@@ -124,7 +124,7 @@ int ModbusFuncInit(char *name, char *params, void **data)
     return 1;
 }
 
-int ModbusUnitInit(char *name, char *params, void **data)
+int ModbusUnitInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *endptr;
     modbus_option_data_t *modbus_data;
@@ -167,7 +167,7 @@ int ModbusUnitInit(char *name, char *params, void **data)
     return 1;
 }
 
-int ModbusDataInit(char *name, char *params, void **data)
+int ModbusDataInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     modbus_option_data_t *modbus_data;
 

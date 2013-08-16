@@ -14,9 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -29,11 +29,12 @@
 #define SF_SNORT_DETECTION_ENGINE__H
 
 int BoyerContentSetup(Rule *rule, ContentInfo *content);
-int PCRESetup(Rule *rule, PCREInfo *pcreInfo);
+int PCRESetup(struct _SnortConfig *sc, Rule *rule, PCREInfo *pcreInfo);
 int ValidateHeaderCheck(Rule *rule, HdrOptCheck *optData);
 void ContentSetup(void);
 int ByteExtractInitialize(Rule *rule, ByteExtract *extractData);
-int LoopInfoInitialize(Rule *rule, LoopInfo *loopInfo);
+struct _SnortConfig;
+int LoopInfoInitialize(struct _SnortConfig *sc, Rule *rule, LoopInfo *loopInfo);
 int ByteDataInitialize(Rule *rule, ByteData *byte);
 int CursorInfoInitialize(Rule *rule, CursorInfo *cursor);
 

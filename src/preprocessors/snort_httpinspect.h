@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -36,6 +36,8 @@
 #endif
 
 extern MemPool *http_mempool;
+extern MemPool *mime_decode_mempool;
+extern MemPool *mime_log_mempool;
 
 extern DataBuffer HttpDecodeBuf;
 
@@ -107,7 +109,7 @@ typedef struct s_HTTP_RESP_STATE
     uint8_t last_pkt_chunked;
     uint32_t next_seq;
     uint32_t chunk_remainder;
-    int flow_depth_read;
+    int data_extracted;
     uint32_t max_seq;
     bool flow_depth_excd;
 }HTTP_RESP_STATE;
@@ -134,6 +136,7 @@ typedef struct _HttpSessionData
     uint8_t log_flags;
     uint8_t cli_small_chunk_count;
     uint8_t srv_small_chunk_count;
+    MimeState *mime_ssn;
 } HttpSessionData;
 
 typedef struct _HISearch
@@ -229,45 +232,6 @@ static inline sfip_t *GetTrueIPForSession(void *data)
 
 }
 
-static inline void HttpLogFuncs(HTTPINSPECT_GLOBAL_CONF *GlobalConf, HttpSessionData *hsd, Packet *p, int iCallDetect )
-{
-    if(!hsd)
-        return;
-
-    /* for pipelined HTTP requests */
-    if(!iCallDetect)
-        p->xtradata_mask = 0;
-
-    if(hsd->true_ip)
-    {
-        SetLogFuncs(p, GlobalConf->xtra_trueip_id, 0);
-    }
-
-    if(hsd->log_flags & HTTP_LOG_URI)
-    {
-        SetLogFuncs(p, GlobalConf->xtra_uri_id, 0);
-    }
-
-    if(hsd->log_flags & HTTP_LOG_HOSTNAME)
-    {
-        SetLogFuncs(p, GlobalConf->xtra_hname_id, 0);
-    }
-
-#ifndef SOURCEFIRE
-    if(hsd->log_flags & HTTP_LOG_JSNORM_DATA)
-    {
-        SetLogFuncs(p, GlobalConf->xtra_jsnorm_id, 1);
-    }
-#ifdef ZLIB
-    if(hsd->log_flags & HTTP_LOG_GZIP_DATA)
-    {
-        SetLogFuncs(p, GlobalConf->xtra_gzip_id, 1);
-    }
-#endif
-#endif
-}
-
-
 #ifdef ZLIB
 static inline void ResetGzipState(DECOMPRESS_STATE *ds)
 {
@@ -294,7 +258,7 @@ static inline void ResetRespState(HTTP_RESP_STATE *ds)
     ds->inspect_reassembled = 0;
     ds->next_seq = 0;
     ds->chunk_remainder = 0;
-    ds->flow_depth_read = 0;
+    ds->data_extracted = 0;
     ds->max_seq = 0;
 }
 

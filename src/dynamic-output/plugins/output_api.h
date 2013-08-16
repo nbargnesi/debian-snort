@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2012 Sourcefire, Inc.
+** Copyright (C) 2012-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 ** Date: 01-27-2012
 ** Author: Hui Cao <hcao@sourcefire.com>
@@ -55,26 +55,26 @@ typedef struct _output_module
     /* The name of the default log file */
     const char *default_file;
     /* load output module*/
-    void (*load) (char *arg);
+    void (*load) (struct _SnortConfig *, char *arg);
     /* Parse the output device configuration --required*/
     int (*parse_args) (void **config, char *arg, const char *default_output_file);
     /* Post configuration*/
-    void (*postconfig)(int unused, void *data);
+    void (*postconfig)(struct _SnortConfig *, int unused, void *data);
     /* Alert function */
     void (*alert_output) (void *packet, char *msg, void *arg, void *event);
     /* Log function */
     void (*log_output) (void *packet, char *msg, void *arg, void *event);
     /* Restart/rotate the device */
-    void (*rotate) (int signal, void *arg);
+    void (*rotate) (struct _SnortConfig *, int signal, void *arg);
     /* Close the device and clean up --required */
     void (*shutdown) (int signal, void *arg);
     void  *next;
 
 } Output_Module_t;
 
-void init_output_module(Output_Module_t *, char *);
+void init_output_module(struct _SnortConfig *, Output_Module_t *, char *);
 
-#define OUTPUT_API_MAJOR_VERSION    0x00010000
+#define OUTPUT_API_MAJOR_VERSION    0x00020000
 #define OUTPUT_API_MINOR_VERSION    0x00000001
 
 #endif /* _OUTPUT_API_H */

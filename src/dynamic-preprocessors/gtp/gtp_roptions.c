@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  * This processes the rule options for this preprocessor
@@ -58,11 +58,11 @@
 /********************************************************************
  * Private function prototypes
  ********************************************************************/
-static int GTP_TypeInit(char *, char *, void **);
+static int GTP_TypeInit(struct _SnortConfig *, char *, char *, void **);
 static int GTP_TypeEval(void *, const uint8_t **, void *);
-static int GTP_IEInit(char *, char *, void **);
+static int GTP_IEInit(struct _SnortConfig *, char *, char *, void **);
 static int GTP_IEEval(void *, const uint8_t **, void *);
-static int GTP_VersionInit(char *, char *, void **);
+static int GTP_VersionInit(struct _SnortConfig *, char *, char *, void **);
 static int GTP_VersionEval(void *, const uint8_t **, void *);
 
 static inline int GTP_RoptDoEval(SFSnortPacket *p)
@@ -131,7 +131,7 @@ static bool GTP_AddTypeByKeword(GTP_TypeRuleOptData *sdata, char *name)
 }
 
 /* Parsing for the rule option */
-static int GTP_TypeInit(char *name, char *params, void **data)
+static int GTP_TypeInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *nextPara = NULL;
     char *tok;
@@ -289,7 +289,7 @@ static bool GTP_AddInfoElementByKeyword(GTP_InfoRuleOptData *sdata, char *name)
 }
 
 /* Parsing for the rule option */
-static int GTP_IEInit(char *name, char *params, void **data)
+static int GTP_IEInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *nextPara = NULL;
     char *tok;
@@ -413,7 +413,7 @@ static int GTP_IEEval(void *pkt, const uint8_t **cursor, void *data)
 }
 
 /* Parsing for the rule option */
-static int GTP_VersionInit(char *name, char *params, void **data)
+static int GTP_VersionInit(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     char *end = NULL;
     char *nextPara = NULL;
@@ -528,13 +528,13 @@ static int GTP_VersionEval(void *pkt, const uint8_t **cursor, void *data)
  * Returns: void
  *
  ********************************************************************/
-void GTP_RegRuleOptions(void)
+void GTP_RegRuleOptions(struct _SnortConfig *sc)
 {
-    _dpd.preprocOptRegister(GTP_ROPT__TYPE, GTP_TypeInit, GTP_TypeEval,
+    _dpd.preprocOptRegister(sc, GTP_ROPT__TYPE, GTP_TypeInit, GTP_TypeEval,
             free, NULL, NULL, NULL, NULL);
-    _dpd.preprocOptRegister(GTP_ROPT__IE, GTP_IEInit, GTP_IEEval,
+    _dpd.preprocOptRegister(sc, GTP_ROPT__IE, GTP_IEInit, GTP_IEEval,
             free, NULL, NULL, NULL, NULL);
-    _dpd.preprocOptRegister(GTP_ROPT__VERSION, GTP_VersionInit, GTP_VersionEval,
+    _dpd.preprocOptRegister(sc, GTP_ROPT__VERSION, GTP_VersionInit, GTP_VersionEval,
             free, NULL, NULL, NULL, NULL);
 }
 

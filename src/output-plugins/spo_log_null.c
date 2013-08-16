@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 /* $Id$ */
 
@@ -56,7 +56,7 @@
 #include "snort.h"
 
 /* list of function prototypes for this output plugin */
-static void LogNullInit(char *);
+static void LogNullInit(struct _SnortConfig *, char *);
 static void LogNull(Packet *, char *, void *, Event *);
 static void LogNullCleanExitFunc(int, void *);
 
@@ -70,12 +70,12 @@ void LogNullSetup(void)
 }
 
 
-static void LogNullInit(char *args)
+static void LogNullInit(struct _SnortConfig *sc, char *args)
 {
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Output: LogNull Initialized\n"););
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(LogNull, OUTPUT_TYPE__LOG, NULL);
+    AddFuncToOutputList(sc, LogNull, OUTPUT_TYPE__LOG, NULL);
     AddFuncToCleanExitList(LogNullCleanExitFunc, NULL);
 }
 

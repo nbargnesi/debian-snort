@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2012 Sourcefire, Inc.
+** Copyright (C) 2012-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 ** Date: 01-27-2012
 ** Author: Hui Cao <hcao@sourcefire.com>
@@ -35,6 +35,11 @@ typedef struct {
     uint32_t version;   /* Module version */
     uint32_t type;      /* Module capabilities */
 } Output_Module_Info_t;
+
+/* Iterate through each of the output modules */
+void * GetNextOutputModule(void *);
+const char * GetOutputModuleName(void *);
+uint32_t GetOutputModuleVersion(void *);
 
 /* Functions for loading, handling, and unloading output modules. */
 

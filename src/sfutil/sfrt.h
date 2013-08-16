@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2006-2012 Sourcefire, Inc.
+ * Copyright (C) 2006-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -102,11 +102,7 @@
 #include "snort_debug.h"
 #include "ipv6_port.h"
 
-#ifdef SUP_IP6
 typedef sfip_t *IP;
-#else
-typedef uint32_t IP;
-#endif
 typedef void* GENERIC;   /* To be replaced with a pointer to a policy */
 typedef struct
 {
@@ -133,12 +129,10 @@ enum types
    DIR_8x4,
    DIR_4x8,
    DIR_2x16,
-#ifdef SUP_IP6
    DIR_16_4x4_16x5_4x4,
    DIR_16x7_4x4,
    DIR_16x8,
    DIR_8x16,
-#endif
    IPv4,
    IPv6
 };
@@ -176,16 +170,14 @@ typedef struct
     GENERIC *data;      /* data table. Each IP points to an entry here */
     uint32_t num_ent;  /* Number of entries in the policy table */
     uint32_t max_size; /* Max size of policies array */
-    uint32_t lastAllocatedIndex; /* Index allocated last. Search for unused index 
+    uint32_t lastAllocatedIndex; /* Index allocated last. Search for unused index
                                     starts from this value and then wraps around at max_size.*/
     char ip_type;       /* Only IPs of this family will be used */
     char table_type;
     uint32_t allocated;
 
     void *rt;            /* Actual "routing" table */
-#ifdef SUP_IP6
     void *rt6;            /* Actual "routing" table */
-#endif
 
     tuple_t (*lookup)(IP ip, GENERIC tbl);
     int (*insert)(IP ip, int len, word index, int behavior, GENERIC tbl);
@@ -202,10 +194,15 @@ void      sfrt_free(table_t *table);
 GENERIC sfrt_lookup(void *adr, table_t* table);
 GENERIC sfrt_search(void *adr, unsigned char len, table_t *table);
 typedef void (*sfrt_iterator_callback)(void *);
+struct _SnortConfig;
+typedef void (*sfrt_sc_iterator_callback)(struct _SnortConfig *, void *);
+typedef int (*sfrt_sc_iterator_callback3)(struct _SnortConfig *, void *);
 typedef void (*sfrt_iterator_callback2)(void *, void *);
 typedef int  (*sfrt_iterator_callback3)(void *);
 void    sfrt_iterate(table_t* table, sfrt_iterator_callback userfunc);
+void    sfrt_iterate_with_snort_config(struct _SnortConfig *sc, table_t* table, sfrt_sc_iterator_callback userfunc);
 int     sfrt_iterate2(table_t* table, sfrt_iterator_callback3 userfunc);
+int     sfrt_iterate2_with_snort_config(struct _SnortConfig *sc, table_t* table, sfrt_sc_iterator_callback3 userfunc);
 void    sfrt_cleanup(table_t* table, sfrt_iterator_callback userfunc);
 void    sfrt_cleanup2(table_t*, sfrt_iterator_callback2, void *);
 int     sfrt_insert(void *adr, unsigned char len, GENERIC ptr,
@@ -223,15 +220,10 @@ static inline GENERIC sfrt_dir8x_lookup(void *adr, table_t* table)
 {
     dir_sub_table_t *subtable;
     int i;
-#ifdef SUP_IP6
     sfip_t *ip;
-#else
-    uint8_t *ip;
-#endif
     void *rt = NULL;
     int index;
 
-#ifdef SUP_IP6
     ip = adr;
     if (ip->family == AF_INET)
     {
@@ -260,7 +252,7 @@ static inline GENERIC sfrt_dir8x_lookup(void *adr, table_t* table)
             return table->data[subtable->entries[index]];
         }
         subtable = (dir_sub_table_t *) subtable->entries[index];
-        
+
         /* 4 bits */
         index = ip->ip8[3] & 0xF;
         if( !subtable->entries[index] || subtable->lengths[index] )
@@ -283,25 +275,6 @@ static inline GENERIC sfrt_dir8x_lookup(void *adr, table_t* table)
             subtable = (dir_sub_table_t *) subtable->entries[index];
         }
     }
-#else
-    /* IPv6 not yet supported */
-    if(table->ip_type == IPv6)
-    {
-        return NULL;
-    }
-    ip = (uint8_t*)adr;
-    rt = table->rt;
-    subtable = ((dir_table_t *)rt)->sub_table;
-    for (i = 0; i < 4; i++)
-    {
-        index = ip[i];
-        if( !subtable->entries[index] || subtable->lengths[index] )
-        {
-            return table->data[subtable->entries[index]];
-        }
-        subtable = (dir_sub_table_t *) subtable->entries[index];
-    }
-#endif
     return NULL;
 
 }

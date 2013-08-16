@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -49,6 +49,7 @@
 #include "sfghash.h"
 #include "sfxhash.h"
 
+#include "snort.h"
 #include "sfthd.h"
 #include "util.h"
 #include "sfPolicy.h"
@@ -176,9 +177,6 @@ static void sfthd_node_free(void *node)
     if (sfthd_node->ip_address != NULL)
     {
         IpAddrSetDestroy(sfthd_node->ip_address);
-#ifndef SUP_IP6
-        free(sfthd_node->ip_address);
-#endif
     }
 
     free(sfthd_node);
@@ -205,9 +203,19 @@ void sfthd_objs_free(ThresholdObjects *thd_objs)
 
         if (thd_objs->sfthd_garray[policyId][0] != NULL)
         {
-            /* GID of 0 means all of the nodes are pointers to one allocated
-             * THD_NODE */
             sfthd_node_free((void *)thd_objs->sfthd_garray[policyId][0]);
+
+            /* Free any individuals */
+            for (i = 0; i < THD_MAX_GENID; i++)
+            {
+                if (thd_objs->sfthd_garray[policyId][i] !=
+                    thd_objs->sfthd_garray[policyId][0])
+                {
+                    sfthd_node_free(
+                        (void *)thd_objs->sfthd_garray[policyId][i]);
+                }
+            }
+
         }
         else
         {
@@ -300,7 +308,7 @@ the current event should be logged or dropped.
 @retval !0 failed
 
 */
-static int sfthd_create_threshold_local(ThresholdObjects *thd_objs,
+static int sfthd_create_threshold_local(SnortConfig *sc, ThresholdObjects *thd_objs,
                                         THD_NODE* config)
 {
     SFGHASH  * sfthd_hash;
@@ -309,7 +317,7 @@ static int sfthd_create_threshold_local(ThresholdObjects *thd_objs,
     tThdItemKey key;
     int nrows;
     int hstatus;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
 
     if (thd_objs == NULL )
         return -1;
@@ -508,11 +516,11 @@ static int sfthd_create_threshold_local(ThresholdObjects *thd_objs,
 
 /*
  */
-static int sfthd_create_threshold_global(ThresholdObjects *thd_objs,
+static int sfthd_create_threshold_global(SnortConfig *sc, ThresholdObjects *thd_objs,
                                          THD_NODE* config)
 {
     THD_NODE *sfthd_node;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
 
     if (thd_objs == NULL)
         return -1;
@@ -526,24 +534,20 @@ static int sfthd_create_threshold_global(ThresholdObjects *thd_objs,
         }
     }
 
-    /*
-     * check for duplicates, we only allow
-     * a single gid=0/sid=0 rule,
-     * or multiple gid!=0/sid=0 rules
-     */
-    if (config->gen_id == 0)
+    if ((config->gen_id == 0) &&
+        (thd_objs->sfthd_garray[policy_id][config->gen_id] != NULL))
     {
-       int i;
-
-       for (i = 0; i < THD_MAX_GENID; i++)
-       {
-           if (thd_objs->sfthd_garray[policy_id][i] != NULL)
-               return THD_TOO_MANY_THDOBJ;
-       }
+        return THD_TOO_MANY_THDOBJ;
     }
-    else if (thd_objs->sfthd_garray[policy_id][config->gen_id])
+    /* Reset the current threshold */
+    if (thd_objs->sfthd_garray[policy_id][config->gen_id] ==
+        thd_objs->sfthd_garray[policy_id][0])
     {
-       return THD_TOO_MANY_THDOBJ;
+        thd_objs->sfthd_garray[policy_id][config->gen_id] = NULL;
+    }
+    else if(thd_objs->sfthd_garray[policy_id][config->gen_id])
+    {
+        return THD_TOO_MANY_THDOBJ;
     }
 
     sfthd_node = (THD_NODE*)calloc(1,sizeof(THD_NODE));
@@ -572,7 +576,13 @@ static int sfthd_create_threshold_global(ThresholdObjects *thd_objs,
         int i;
 
         for (i = 0; i < THD_MAX_GENID; i++)
-            thd_objs->sfthd_garray[policy_id][i] = sfthd_node;
+        {
+            /* only assign if there wasn't a value */
+            if (thd_objs->sfthd_garray[policy_id][i] == NULL)
+            {
+                thd_objs->sfthd_garray[policy_id][i] = sfthd_node;
+            }
+        }
     }
     else
     {
@@ -617,7 +627,8 @@ the current event should be logged or dropped.
  --- Local and Global Thresholding is setup here  ---
 
 */
-int sfthd_create_threshold(ThresholdObjects *thd_objs,
+int sfthd_create_threshold(SnortConfig *sc,
+                           ThresholdObjects *thd_objs,
                            unsigned gen_id,
                            unsigned sig_id,
                            int tracking,
@@ -628,7 +639,7 @@ int sfthd_create_threshold(ThresholdObjects *thd_objs,
                            IpAddrSet* ip_address)
 {
     //allocate memory fpr sfthd_array if needed.
-    tSfPolicyId policyId = getParserPolicy();
+    tSfPolicyId policyId = getParserPolicy(sc);
     THD_NODE sfthd_node;
     memset(&sfthd_node, 0, sizeof(sfthd_node));
 
@@ -656,13 +667,13 @@ int sfthd_create_threshold(ThresholdObjects *thd_objs,
 
     if( sig_id == 0 )
     {
-        return sfthd_create_threshold_global(thd_objs, &sfthd_node);
+        return sfthd_create_threshold_global(sc, thd_objs, &sfthd_node);
     }
 
     if( gen_id == 0 )
         return -1;
 
-    return sfthd_create_threshold_local(thd_objs, &sfthd_node);
+    return sfthd_create_threshold_local(sc, thd_objs, &sfthd_node);
 }
 
 #ifdef THD_DEBUG
@@ -691,16 +702,8 @@ static inline int sfthd_test_suppress (
     THD_NODE* sfthd_node,
     snort_ip_p ip)
 {
-#ifndef SUP_IP6
-    struct in_addr addr;
-    addr.s_addr = ip;
-
-    if ( !sfthd_node->ip_address ||
-         IpAddrSetContains(sfthd_node->ip_address, addr) )
-#else
     if ( !sfthd_node->ip_address ||
          IpAddrSetContains(sfthd_node->ip_address, ip) )
-#endif
     {
 #ifdef THD_DEBUG
         printf("THD_DEBUG: SUPPRESS NODE, do not log events with this IP\n");
@@ -997,6 +1000,16 @@ static inline int sfthd_test_global(
     printf("THD_DEBUG:        PKT  DIP=%s\n",printIP((unsigned)dip) );
     fflush(stdout);
 #endif
+
+    /* -1 means don't do any limit or thresholding */
+    if ( sfthd_node->count == THD_NO_THRESHOLD)
+    {
+#ifdef THD_DEBUG
+        printf("\n...No Threshold applied for this object\n");
+        fflush(stdout);
+#endif
+        return 0;
+    }
 
     /* Get The correct IP */
     if (sfthd_node->tracking == THD_TRK_SRC)
@@ -1296,15 +1309,10 @@ int sfthd_show_objects(ThresholdObjects *thd_objs)
 
                 if( sfthd_node->type == THD_TYPE_SUPPRESS )
                 {
-#ifdef SUP_IP6
                     printf(".........ip      =%s\n",
                            sfip_to_str(&sfthd_node->ip_address));
                     printf(".........mask    =%d\n",
                            sfip_bits(&sfthd_node->ip_address));
-#else
-                    printf(".........ip      =%d\n",sfthd_node->ip_address);
-                    printf(".........mask    =%d\n",sfthd_node->ip_mask);
-#endif
                     printf(".........not_flag=%d\n",sfthd_node->ip_mask);
                 }
                 else

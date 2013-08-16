@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 /*
@@ -36,14 +36,9 @@
 #define _DETECTION_LIB_META_H_
 
 /* Version for this rule library */
-#define DETECTION_LIB_MAJOR 1
+#define DETECTION_LIB_MAJOR 2
 #define DETECTION_LIB_MINOR 0
 #define DETECTION_LIB_BUILD 1
 #define DETECTION_LIB_NAME "Snort_Dynamic_Rule_Example"
-
-/* Required version and name of the engine */
-#define REQ_ENGINE_LIB_MAJOR 1
-#define REQ_ENGINE_LIB_MINOR 0
-#define REQ_ENGINE_LIB_NAME "SF_SNORT_DETECTION_ENGINE"
 
 #endif /* _DETECTION_LIB_META_H_ */

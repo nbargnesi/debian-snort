@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2012 Sourcefire, Inc.
+** Copyright (C) 2007-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* spo_unified2.c
@@ -37,9 +37,6 @@
 #endif
 #include <errno.h>
 #include <time.h>
-#ifdef HAVE_UUID_UUID_H
-#include <uuid/uuid.h>
-#endif
 
 #include "sfutil/Unified2_common.h"
 #include "spo_unified2.h"
@@ -144,12 +141,12 @@ static char io_buffer[sizeof(write_pkt_buffer_v2)];
 static Unified2Config * Unified2ParseArgs(char *, char *);
 static void Unified2CleanExit(int, void *);
 #ifdef SNORT_RELOAD
-static void Unified2Reload(int, void *);
+static void Unified2Reload(struct _SnortConfig *, int, void *);
 #endif
 
 /* Unified2 Output functions */
-static void Unified2Init(char *);
-static void Unified2PostConfig(int, void *);
+static void Unified2Init(struct _SnortConfig *, char *);
+static void Unified2PostConfig(struct _SnortConfig *, int, void *);
 static void Unified2InitFile(Unified2Config *);
 static inline void Unified2RotateFile(Unified2Config *);
 static void Unified2LogAlert(Packet *, char *, void *, Event *);
@@ -165,16 +162,15 @@ static void _AlertIP4_v2(Packet *, char *, Unified2Config *, Event *);
 static void _AlertIP6_v2(Packet *, char *, Unified2Config *, Event *);
 
 /* Unified2 Alert functions (deprecated) */
-static void Unified2AlertInit(char *);
+static void Unified2AlertInit(struct _SnortConfig *, char *);
 
 /* Unified2 Packet Log functions (deprecated) */
-static void Unified2LogInit(char *);
+static void Unified2LogInit(struct _SnortConfig *, char *);
 
 static ObRet Unified2LogObfuscationCallback(const DAQ_PktHdr_t *pkth,
         const uint8_t *packet_data, ob_size_t length, ob_char_t ob_char, void *userdata);
 
-void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second);
-void AlertExtraDataPerPacket(void *ssnptr, void *data, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second);
+static void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second);
 
 #define U2_PACKET_FLAG 1
 /* Obsolete flag as UI wont check the impact_flag field anymore.*/
@@ -218,7 +214,7 @@ void Unified2Setup(void)
  * Returns: void function
  *
  */
-static void Unified2Init(char *args)
+static void Unified2Init(struct _SnortConfig *sc, char *args)
 {
     Unified2Config *config;
 
@@ -226,17 +222,17 @@ static void Unified2Init(char *args)
     config = Unified2ParseArgs(args, "snort-unified");
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
-    AddFuncToOutputList(Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
+    AddFuncToOutputList(sc, Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
+    AddFuncToOutputList(sc, Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
 
     AddFuncToCleanExitList(Unified2CleanExit, config);
 #ifdef SNORT_RELOAD
     AddFuncToReloadList(Unified2Reload, config);
 #endif
-    AddFuncToPostConfigList(Unified2PostConfig, config);
+    AddFuncToPostConfigList(sc, Unified2PostConfig, config);
 }
 
-static void Unified2PostConfig(int unused, void *data)
+static void Unified2PostConfig(struct _SnortConfig *sc, int unused, void *data)
 {
     Unified2Config *config = (Unified2Config *)data;
     int status;
@@ -258,7 +254,7 @@ static void Unified2PostConfig(int unused, void *data)
 #endif
     {
         status = SnortSnprintf(config->filepath, sizeof(config->filepath),
-                               "%s/%s", snort_conf->log_dir, config->base_filename);
+                               "%s/%s", sc->log_dir, config->base_filename);
     }
 
     if (status != SNORT_SNPRINTF_SUCCESS)
@@ -394,14 +390,14 @@ static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event
         {
             alertdata.ip_source = p->iph->ip_src.s_addr;
             alertdata.ip_destination = p->iph->ip_dst.s_addr;
-            alertdata.protocol = GET_IPH_PROTO(p);
+            alertdata.protocol = GetEventProto(p);
 
             if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else if (alertdata.protocol != 255)
+            else if (!IsPortscanPacket(p))
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
@@ -476,14 +472,14 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
         {
             alertdata.ip_source = p->iph->ip_src.s_addr;
             alertdata.ip_destination = p->iph->ip_dst.s_addr;
-            alertdata.protocol = GET_IPH_PROTO(p);
+            alertdata.protocol = GetEventProto(p);
 
             if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else if (alertdata.protocol != 255)
+            else if (!IsPortscanPacket(p))
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
@@ -536,7 +532,6 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
 
 static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
-#ifdef SUP_IP6
     Serial_Unified2_Header hdr;
     Serial_Unified2IDSEventIPv6_legacy alertdata;
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Serial_Unified2IDSEventIPv6_legacy);
@@ -582,14 +577,14 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
             ip = GET_DST_IP(p);
             alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
 
-            alertdata.protocol = GET_IPH_PROTO(p);
+            alertdata.protocol = GetEventProto(p);
 
             if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else if (alertdata.protocol != 255)
+            else if (!IsPortscanPacket(p))
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
@@ -621,12 +616,10 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
     }
 
     Unified2Write(write_pkt_buffer, write_len, config);
-#endif
 }
 
 static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
-#ifdef SUP_IP6
     Serial_Unified2_Header hdr;
     Unified2IDSEventIPv6 alertdata;
     uint32_t write_len = sizeof(Serial_Unified2_Header) + sizeof(Unified2IDSEventIPv6);
@@ -672,14 +665,14 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
             ip = GET_DST_IP(p);
             alertdata.ip_destination = *(struct in6_addr*)ip->ip32;
 
-            alertdata.protocol = GET_IPH_PROTO(p);
+            alertdata.protocol = GetEventProto(p);
 
             if ((alertdata.protocol == IPPROTO_ICMP) && p->icmph)
             {
                 alertdata.sport_itype = htons(p->icmph->type);
                 alertdata.dport_icode = htons(p->icmph->code);
             }
-            else if (alertdata.protocol != 255)
+            else if (!IsPortscanPacket(p))
             {
                 alertdata.sport_itype = htons(p->sp);
                 alertdata.dport_icode = htons(p->dp);
@@ -727,16 +720,6 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     }
 
     Unified2Write(write_pkt_buffer_v2, write_len, config);
-#endif
-}
-
-static inline void UUIDPack(uint8_t *policy_uuid, char *str, int size)
-{
-#ifdef HAVE_LIBUUID
-        uuid_parse(str, policy_uuid);
-#else
-        strncpy((char *)policy_uuid, str, size);
-#endif
 }
 
 void _WriteExtraData(Unified2Config *config, uint32_t event_id, uint32_t event_second, uint8_t *buffer, uint32_t len, uint32_t type )
@@ -821,43 +804,33 @@ void _WriteExtraData(Unified2Config *config, uint32_t event_id, uint32_t event_s
     Unified2Write(write_buffer, write_len, config);
 }
 
-void AlertExtraDataPerPacket(void *ssnptr, void *data, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second)
-{
-    LogFunction *log_funcs;
-    uint32_t max_count;
-
-    max_count = stream_api->get_xtra_data_map(&log_funcs);
-
-    if(max_count > 0)
-    {
-        AlertExtraData(ssnptr, data, log_funcs, max_count, xtradata_mask, event_id, event_second);
-    }
-}
-
-void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uint32_t max_count, uint32_t xtradata_mask, uint32_t event_id, uint32_t event_second)
+static void AlertExtraData(
+    void *ssnptr, void *data,
+    LogFunction *log_funcs, uint32_t max_count,
+    uint32_t xtradata_mask,
+    uint32_t event_id, uint32_t event_second)
 {
     Unified2Config *config = (Unified2Config *)data;
-    uint32_t type = 0;
-    uint32_t len = 0;
-    uint8_t *write_buffer;
-    uint32_t i = 0;
+    uint32_t xid;
 
     if((config == NULL) || !xtradata_mask || !event_second)
         return;
 
-    while( i < max_count )
-    {
-        if( xtradata_mask & (1 << i) )
-        {
-            if((*(log_funcs[i]))(ssnptr, &write_buffer,&len,&type))
-            {
-                if(len > 0)
-                    _WriteExtraData(config, event_id, event_second, write_buffer, len, type);
-            }
-        }
-        i++;
-    }
+    xid = ffs(xtradata_mask);
 
+    while ( xid && (xid <= max_count) )
+    {
+        uint32_t len = 0;
+        uint32_t type = 0;
+        uint8_t *write_buffer;
+
+        if ( log_funcs[xid-1](ssnptr, &write_buffer, &len, &type) && (len > 0) )
+        {
+            _WriteExtraData(config, event_id, event_second, write_buffer, len, type);
+        }
+        xtradata_mask ^= BIT(xid);
+        xid = ffs(xtradata_mask);
+    }
 }
 
 static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
@@ -895,7 +868,6 @@ static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
         else
             _AlertIP6(p, msg, config, event);
 
-#ifdef SUP_IP6
         if(ScLogIPv6Extra() && IS_IP6(p))
         {
             snort_ip_p ip = GET_SRC_IP(p);
@@ -905,17 +877,23 @@ static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
             _WriteExtraData(config, event->event_id, event->ref_time.tv_sec,
                 &ip->ip8[0], sizeof(struct in6_addr),  EVENT_INFO_IPV6_DST);
         }
-#endif
     }
 
-    if(p->ssnptr)
+    if ( p->ssnptr )
+        stream_api->update_session_alert(
+            p->ssnptr, p, event->sig_generator, event->sig_id,
+            event->event_id, event->ref_time.tv_sec);
+
+    if ( p->xtradata_mask )
     {
-        stream_api->log_session_extra_data(p->ssnptr, p, event->sig_generator, event->sig_id, event->event_id, event->ref_time.tv_sec);
+        LogFunction *log_funcs;
+        uint32_t max_count = stream_api->get_xtra_data_map(&log_funcs);
 
-        if(p->per_packet_xtradata)
-            AlertExtraDataPerPacket(p->ssnptr, config, p->per_packet_xtradata, event->event_id, event->ref_time.tv_sec);
+        if ( max_count > 0 )
+            AlertExtraData(
+                p->ssnptr, config, log_funcs, max_count, p->xtradata_mask,
+                event->event_id, event->ref_time.tv_sec);
     }
-
 
     return;
 }
@@ -1255,6 +1233,9 @@ static void _Unified2LogStreamAlert(Packet *p, char *msg, Unified2Config *config
         unifiedData.num_bytes = 0;
     }
 
+    if (!p)
+        return;
+
     stream_api->traverse_reassembled(p, Unified2LogStreamCallback, &unifiedData);
 }
 
@@ -1410,7 +1391,7 @@ static void Unified2CleanExit(int signal, void *arg)
  *
  * Returns: void function
  */
-static void Unified2Reload(int signal, void *arg)
+static void Unified2Reload(struct _SnortConfig *sc, int signal, void *arg)
 {
     Unified2Config *config = (Unified2Config *)arg;
 
@@ -1421,7 +1402,7 @@ static void Unified2Reload(int signal, void *arg)
 #endif
 
 /* Unified2 Alert functions (deprecated) */
-static void Unified2AlertInit(char *args)
+static void Unified2AlertInit(struct _SnortConfig *sc, char *args)
 {
     Unified2Config *config;
     int signal = 0;
@@ -1445,16 +1426,16 @@ static void Unified2AlertInit(char *args)
     }
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
+    AddFuncToOutputList(sc, Unified2LogAlert, OUTPUT_TYPE__ALERT, config);
     AddFuncToCleanExitList(Unified2CleanExit, config);
 #ifdef SNORT_RELOAD
     AddFuncToReloadList(Unified2Reload, config);
 #endif
-    AddFuncToPostConfigList(Unified2PostConfig, config);
+    AddFuncToPostConfigList(sc, Unified2PostConfig, config);
 }
 
 /* Unified2 Packet Log functions (deprecated) */
-static void Unified2LogInit(char *args)
+static void Unified2LogInit(struct _SnortConfig *sc, char *args)
 {
     Unified2Config *config;
     int signal = 0;
@@ -1480,12 +1461,12 @@ static void Unified2LogInit(char *args)
     //LogMessage("Unified2LogFilename = %s\n", Unified2Info->filename);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToOutputList(Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
+    AddFuncToOutputList(sc, Unified2LogPacketAlert, OUTPUT_TYPE__LOG, config);
     AddFuncToCleanExitList(Unified2CleanExit, config);
 #ifdef SNORT_RELOAD
     AddFuncToReloadList(Unified2Reload, config);
 #endif
-    AddFuncToPostConfigList(Unified2PostConfig, config);
+    AddFuncToPostConfigList(sc, Unified2PostConfig, config);
 }
 
 /******************************************************************************

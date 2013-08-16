@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -29,6 +29,7 @@
 #include "decode.h"
 
 extern Packet *encode_pkt;
+extern uint64_t total_rebuilt_pkts;
 
 void Encode_Init(void);
 void Encode_Term(void);
@@ -71,6 +72,17 @@ void Encode_Delete(Packet*);
 // orig is the wire pkt; clone was obtained with New()
 int Encode_Format(EncodeFlags, const Packet* orig, Packet* clone, PseudoPacketType);
 
+#ifdef HAVE_DAQ_ADDRESS_SPACE_ID
+int Encode_Format_With_DAQ_Info (
+    EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type,
+    const DAQ_PktHdr_t*, uint32_t opaque);
+
+#elif defined(HAVE_DAQ_ACQUIRE_WITH_META)
+int Encode_Format_With_DAQ_Info (
+    EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type,
+    uint32_t opaque);
+#endif
+
 // update length and checksum fields in layers and caplen, etc.
 void Encode_Update(Packet*);
 
@@ -91,6 +103,18 @@ static inline void Encode_Reset(void)
 {
     Encode_SetPkt(NULL);
 }
+
+static inline void UpdateRebuiltPktCount(void)
+{
+    total_rebuilt_pkts++;
+}
+
+static inline uint64_t GetRebuiltPktCount(void)
+{
+    return total_rebuilt_pkts;
+}
+
+
 
 
 #endif // __ENCODE_H__

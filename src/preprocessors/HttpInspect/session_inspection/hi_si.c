@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -134,7 +134,6 @@ static int InitServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
     sip = SiInput->sip;
     dip = SiInput->dip;
 
-#ifdef SUP_IP6
     if (sip.family == AF_INET)
     {
         sip.ip.u6_addr32[0] = ntohl(sip.ip.u6_addr32[0]);
@@ -143,10 +142,6 @@ static int InitServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
     {
         dip.ip.u6_addr32[0] = ntohl(dip.ip.u6_addr32[0]);
     }
-#else
-    sip = ntohl(sip);
-    dip = ntohl(dip);
-#endif
 
     /*
     **  We find the server configurations for both the source and dest. IPs.
@@ -155,11 +150,7 @@ static int InitServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
     **  assume the global server configuration.
     */
     ServerConfDip = hi_ui_server_lookup_find(GlobalConf->server_lookup,
-#ifdef SUP_IP6
             &dip,
-#else
-            dip,
-#endif
             &iErr);
 
     if(!ServerConfDip)
@@ -168,11 +159,7 @@ static int InitServerConf(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
     }
 
     ServerConfSip = hi_ui_server_lookup_find(GlobalConf->server_lookup,
-#ifdef SUP_IP6
             &sip,
-#else
-            sip,
-#endif
            &iErr);
 
     if(!ServerConfSip)
@@ -312,53 +299,12 @@ static int StatefulSessionInspection(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
 */
 static inline int ResetSession(HI_SESSION *Session)
 {
-
     Session->client.event_list.stack_count      = 0;
     Session->server.event_list.stack_count      = 0;
     Session->anom_server.event_list.stack_count = 0;
 
-    Session->client.request.uri                 = NULL;
-    Session->client.request.uri_norm            = NULL;
-    Session->client.request.uri_size            = 0;
-    Session->client.request.uri_norm_size       = 0;
-
-    Session->client.request.header_norm         = NULL;
-    Session->client.request.header_norm_size    = 0;
-    Session->client.request.header_raw          = NULL;
-    Session->client.request.header_raw_size     = 0;
-    Session->client.request.cookie.cookie       = NULL;
-    Session->client.request.cookie.cookie_end   = NULL;
-    Session->client.request.cookie_norm         = NULL;
-    Session->client.request.cookie_norm_size    = 0;
-
-    Session->client.request.post_raw            = NULL;
-    Session->client.request.post_raw_size       = 0;
-    Session->client.request.post_norm           = NULL;
-    Session->client.request.post_norm_size      = 0;
-
-    Session->client.request.pipeline_req        = NULL;
-
-    Session->client.request.uri_encode_type     = 0;
-    Session->client.request.header_encode_type  = 0;
-    Session->client.request.cookie_encode_type  = 0;
-
-    Session->server.response.status_code         = NULL;
-    Session->server.response.status_msg          = NULL;
-    Session->server.response.header_raw          = NULL;
-    Session->server.response.header_norm         = NULL;
-    Session->server.response.cookie.cookie       = NULL;
-    Session->server.response.cookie.cookie_end   = NULL;
-    Session->server.response.cookie_norm         = NULL;
-    Session->server.response.cookie_norm_size    = 0;
-    Session->server.response.body                = NULL;
-    Session->server.response.body_size           = 0;
-    Session->server.response.status_code_size    = 0;
-    Session->server.response.status_msg_size     = 0;
-    Session->server.response.header_raw_size     = 0;
-    Session->server.response.header_norm_size    = 0;
-    Session->server.response.cookie_norm_size    = 0;
-    Session->server.response.header_encode_type  = 0;
-    Session->server.response.cookie_encode_type  = 0;
+    memset(&Session->client.request, 0, sizeof(Session->client.request));
+    memset(&Session->server.response, 0, sizeof(Session->server.response));
 
     return HI_SUCCESS;
 }

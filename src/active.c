@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -51,6 +51,9 @@ tActiveDrop active_drop_pkt = ACTIVE_ALLOW;
 int active_drop_ssn = 0;
 // TBD consider performance of replacing active_drop_pkt/ssn
 // with a active_verdict.  change over if it is a wash or better.
+
+int active_tunnel_bypass = 0;
+int active_suspend = 0;
 
 #ifdef ACTIVE_RESPONSE
 int active_have_rsp = 0;
@@ -88,6 +91,9 @@ static inline PROTO_ID GetInnerProto (const Packet* p)
 
 int Active_QueueReject (void)
 {
+    if ( Active_Suspended() )
+        return 0;
+
     if ( !s_rejFunc )
     {
         s_rejFunc = (Active_ResponseFunc)Active_KillSession;
@@ -99,6 +105,9 @@ int Active_QueueReject (void)
 
 int Active_QueueResponse (Active_ResponseFunc f, void* pv)
 {
+    if ( Active_Suspended() )
+        return 0;
+
     if ( !s_rspFunc )
     {
         s_rspFunc = f;
@@ -148,6 +157,9 @@ int Active_SendResponses (Packet* p)
 void Active_KillSession (Packet* p, EncodeFlags* pf)
 {
     EncodeFlags flags = pf ? *pf : ENC_FLAG_FWD;
+
+    if ( !IsIP(p) )
+        return;
 
     switch ( GET_IPH_PROTO(p) )
     {
@@ -200,7 +212,11 @@ int Active_Term (void)
 
 int Active_IsEnabled (void) { return s_enabled; }
 
-void Active_SetEnabled (int on_off) { s_enabled = on_off; }
+void Active_SetEnabled (int on_off)
+{ 
+    if ( !on_off || on_off > s_enabled )
+        s_enabled = on_off;
+}
 
 static inline uint32_t GetFlags (void)
 {
@@ -294,9 +310,7 @@ int Active_IsUNRCandidate(const Packet* p)
     case PROTO_UDP:
     case PROTO_TCP:
     case PROTO_ICMP4:
-#ifdef SUP_IP6
     case PROTO_ICMP6:
-#endif
         return 1;
 
     default:
@@ -350,17 +364,22 @@ static uint32_t Strafe (int i, uint32_t flags, const Packet* p)
 //--------------------------------------------------------------------
 // support for decoder and rule actions
 
+static inline void _Active_ForceIgnoreSession(Packet *p)
+{
+    if (p->ssnptr && stream_api)
+    {
+        stream_api->drop_packet(p);
+    }
+
+    //drop this and all following fragments
+    frag3DropAllFragments(p);
+}
+
 static inline void _Active_DoIgnoreSession(Packet *p)
 {
     if ( ScInlineMode() || ScTreatDropAsIgnore() )
     {
-        if (p->ssnptr && stream_api)
-        {
-            stream_api->drop_packet(p);
-        }
-
-        //drop this and all following fragments
-        frag3DropAllFragments(p);
+        _Active_ForceIgnoreSession(p);
     }
 }
 
@@ -375,6 +394,9 @@ int Active_IgnoreSession (Packet* p)
 
 int Active_ForceDropAction(Packet *p)
 {
+    if ( !IsIP(p) )
+        return 0;
+
     // explicitly drop packet
     Active_ForceDropPacket();
 
@@ -382,7 +404,8 @@ int Active_ForceDropAction(Packet *p)
     {
         case IPPROTO_TCP:
         case IPPROTO_UDP:
-            _Active_DoIgnoreSession(p);
+            Active_DropSession();
+            _Active_ForceIgnoreSession(p);
     }
     return 0;
 }
@@ -423,13 +446,16 @@ int Active_DropAction (Packet* p)
 {
     Active_IgnoreSession(p);
 
+    if ( s_enabled < 2 )
+        return 0;
+
     return _Active_DoReset(p);
 }
 
 int Active_ForceDropResetAction(Packet *p)
 {
     Active_ForceDropAction(p);
-    
+
     return _Active_DoReset(p);
 }
 

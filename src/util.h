@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
@@ -25,20 +25,25 @@
 
 #define TIMEBUF_SIZE 26
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #ifndef WIN32
 # include <sys/time.h>
 # include <sys/types.h>
+# ifdef LINUX
+#  include <sys/syscall.h>
+# endif
 #endif
-#include<stdlib.h>
-#include<errno.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
 #include <string.h>
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 #include "sf_types.h"
 #include "sflsq.h"
@@ -96,28 +101,6 @@ extern uint32_t *netmasks;
 
 /* Data types *****************************************************************/
 
-/* Self preservation memory control struct */
-typedef struct _SPMemControl
-{
-    unsigned long memcap;
-    unsigned long mem_usage;
-    void *control;
-    int (*sp_func)(struct _SPMemControl *);
-
-    unsigned long fault_count;
-
-} SPMemControl;
-
-typedef struct _PcapPktStats
-{
-    uint64_t recv;
-    uint64_t drop;
-    uint32_t wrap_recv;
-    uint32_t wrap_drop;
-
-} PcapPktStats;
-
-
 typedef struct _IntervalStats
 {
     uint64_t recv, recv_total;
@@ -174,15 +157,13 @@ typedef struct _IntervalStats
 
 
 /* Public function prototypes *************************************************/
+void StoreSnortInfoStrings(void);
 int DisplayBanner(void);
-void GetTime(char *);
 int gmt2local(time_t);
 void ts_print(register const struct timeval *, char *);
 char *copy_argv(char **);
 void strip(char *);
 double CalcPct(uint64_t, uint64_t);
-void ReadPacketsFromFile(void);
-void InitBinFrag(void);
 void GoDaemon(void);
 void SignalWaitingParent(void);
 void CheckLogDir(void);
@@ -194,7 +175,6 @@ void SetUidGid(int, int);
 void InitGroups(int, int);
 void SetChroot(char *, char **);
 void DropStats(int);
-void *SPAlloc(unsigned long, struct _SPMemControl *);
 void TimeStart(void);
 void TimeStop(void);
 
@@ -214,6 +194,7 @@ typedef struct _ThrottleInfo
 void ErrorMessageThrottled(ThrottleInfo*,const char *, ...) __attribute__((format (printf, 2, 3)));
 
 NORETURN void FatalError(const char *, ...) __attribute__((format (printf, 1, 2)));
+NORETURN void SnortFatalExit(void);
 int SnortSnprintf(char *, size_t, const char *, ...) __attribute__((format (printf, 3, 4)));
 int SnortSnprintfAppend(char *, size_t, const char *, ...) __attribute__((format (printf, 3, 4)));
 
@@ -224,30 +205,21 @@ int SnortStrnlen(const char *, int);
 const char *SnortStrnPbrk(const char *s, int slen, const char *accept);
 const char *SnortStrnStr(const char *s, int slen, const char *searchstr);
 const char *SnortStrcasestr(const char *s, int slen, const char *substr);
-void *SnortAlloc(unsigned long);
+int CheckValueInRange(const char *value_str, char *option,
+        unsigned long lo, unsigned long hi, unsigned long *value);
+
 void *SnortAlloc2(size_t, const char *, ...);
 char *CurrentWorkingDir(void);
 char *GetAbsolutePath(char *dir);
 char *StripPrefixDir(char *prefix, char *dir);
 void PrintPacketData(const uint8_t *, const uint32_t);
 
-#ifndef SUP_IP6
-char * ObfuscateIpToText(const struct in_addr);
-#else
 char * ObfuscateIpToText(sfip_t *);
-#endif
-
-void TimeStats(void);
 
 #ifndef WIN32
 SF_LIST * SortDirectory(const char *);
 int GetFilesUnderDir(const char *, SF_QUEUE *, const char *);
 #endif
-
-char *GetUniqueName(char *);
-char *GetIP(char *);
-char *GetHostname(void);
-int GetLocalTimezone(void);
 
 /***********************************************************
  If you use any of the functions in this section, you need
@@ -255,15 +227,23 @@ int GetLocalTimezone(void);
  done using it. Otherwise, you will have created a memory
  leak.
 ***********************************************************/
-char *GetTimestamp(register const struct timeval *, int);
-char *GetCurrentTimestamp(void);
-char *base64(const u_char *, int);
-char *ascii(const u_char *, int);
 char *hex(const u_char *, int);
 char *fasthex(const u_char *, int);
 long int xatol(const char *, const char *);
 unsigned long int xatou(const char *, const char *);
 unsigned long int xatoup(const char *, const char *); // return > 0
+
+static inline void* SnortAlloc (unsigned long size)
+{
+    void* pv = calloc(size, sizeof(char));
+
+    if ( pv )
+        return pv;
+
+    FatalError("Unable to allocate memory!  (%lu requested)\n", size);
+
+    return NULL;
+}
 
 static inline long SnortStrtol(const char *nptr, char **endptr, int base)
 {
@@ -378,5 +358,13 @@ static inline int IsEmptyStr(const char *str)
     return 0;
 }
 
+static inline pid_t gettid(void)
+{
+#if defined(LINUX) && defined(SYS_gettid)
+    return syscall(SYS_gettid);
+#else
+    return getpid();
+#endif
+}
 
 #endif /*__UTIL_H__*/

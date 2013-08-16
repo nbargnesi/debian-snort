@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005-2012 Sourcefire, Inc.
+** Copyright (C) 2005-2013 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* stream_expect.h
@@ -49,9 +49,9 @@ int StreamExpectAddChannel(snort_ip_p cliIP, uint16_t cliPort,
                            void *appData, void (*appDataFreeFn)(void*));
 
 int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node);
-char SteamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expected_hash_node);
-char SteamExpectCheck(Packet *, Stream5LWSession *);
-void StreamExpectInit(void);
+char StreamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expected_hash_node);
+char StreamExpectCheck(Packet *, Stream5LWSession *);
+void StreamExpectInit(uint32_t maxExpectations);
 void StreamExpectCleanup(void);
 
 #endif /* STREAM_EXPECT_H_ */

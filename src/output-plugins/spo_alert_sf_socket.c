@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2003-2012 Sourcefire, Inc.
+** Copyright (C) 2003-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -80,9 +80,9 @@ typedef struct _AlertSFSocketGidSid
 } AlertSFSocketGidSid;
 static AlertSFSocketGidSid *sid_list = NULL;
 
-static void AlertSFSocket_Init(char *args);
-static void AlertSFSocketSid_Init(char *args);
-void AlertSFSocketSid_InitFinalize(int unused, void *also_unused);
+static void AlertSFSocket_Init(struct _SnortConfig *, char *args);
+static void AlertSFSocketSid_Init(struct _SnortConfig *, char *args);
+void AlertSFSocketSid_InitFinalize(struct _SnortConfig *sc, int unused, void *also_unused);
 void AlertSFSocket(Packet *packet, char *msg, void *arg, Event *event);
 
 static int AlertSFSocket_Connect(void);
@@ -109,7 +109,7 @@ void AlertSFSocket_Setup(void)
 #define UNIX_PATH_MAX 108
 #endif
 
-static void AlertSFSocket_Init(char *args)
+static void AlertSFSocket_Init(struct _SnortConfig *sc, char *args)
 {
     /* process argument */
     char *sockname;
@@ -214,7 +214,7 @@ int GidSid2UInt(char * args, uint32_t * sidValue, uint32_t * gidValue)
     return SNORT_SUCCESS;
 }
 
-static void AlertSFSocketSid_Init(char *args)
+static void AlertSFSocketSid_Init(struct _SnortConfig *sc, char *args)
 {
     uint32_t sidValue;
     uint32_t gidValue;
@@ -240,12 +240,12 @@ static void AlertSFSocketSid_Init(char *args)
     }
     else
     {
-        AddFuncToPostConfigList(AlertSFSocketSid_InitFinalize, NULL);
+        AddFuncToPostConfigList(sc, AlertSFSocketSid_InitFinalize, NULL);
     }
     sid_list = new_sid;
 }
 
-void AlertSFSocketSid_InitFinalize(int unused, void *also_unused)
+void AlertSFSocketSid_InitFinalize(struct _SnortConfig *sc, int unused, void *also_unused)
 {
     AlertSFSocketGidSid *new_sid = sid_list;
     AlertSFSocketGidSid *next_sid;
@@ -340,13 +340,8 @@ void AlertSFSocket(Packet *packet, char *msg, void *arg, Event *event)
     //   can be determined by reading 1 byte
     // * addresses could be moved to end of struct in uint8_t[32]
     //   and only 1st 8 used for ip4
-#ifdef SUP_IP6
     sar.src_ip =  ntohl(GET_SRC_IP(packet)->ip32[0]);
     sar.dest_ip = ntohl(GET_DST_IP(packet)->ip32[0]);
-#else
-    sar.src_ip = ntohl(packet->iph->ip_src.s_addr);
-    sar.dest_ip = ntohl(packet->iph->ip_dst.s_addr);
-#endif
     sar.protocol = GET_IPH_PROTO(packet);
 
     if(sar.protocol == IPPROTO_UDP || sar.protocol == IPPROTO_TCP)

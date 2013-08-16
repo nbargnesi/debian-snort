@@ -14,9 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -52,6 +52,10 @@
 typedef int (*LogFunction)(void *ssnptr, uint8_t **buf, uint32_t *len, uint32_t *type);
 
 typedef DAQ_PktHdr_t SFDAQ_PktHdr_t;
+
+#define VTH_PRIORITY(vh)  ((ntohs((vh)->vth_pri_cfi_vlan) & 0xe000) >> 13)
+#define VTH_CFI(vh)       ((ntohs((vh)->vth_pri_cfi_vlan) & 0x1000) >> 12)
+#define VTH_VLAN(vh)      ((uint16_t)(ntohs((vh)->vth_pri_cfi_vlan) & 0x0FFF))
 
 typedef struct _VlanHeader
 {
@@ -341,6 +345,12 @@ typedef struct _IP6RawHdr
     struct in6_addr dst_addr;
 } IP6RawHdr;
 
+#define ip6_vcl          vcl
+#define ip6_payload_len  payload_len
+#define ip6_next_header  next_header
+#define ip6_hop_limit    hop_limit
+#define ip6_hops         hop_limit
+
 typedef struct _IPv6Hdr
 {
     uint32_t vcl;      /* version, class, and label */
@@ -381,52 +391,6 @@ typedef struct _ICMP6
 
 struct _SFSnortPacket;
 
-
-/* IPHeader access calls */
-sfip_t *    ip4_ret_src(const struct _SFSnortPacket *);
-sfip_t *    ip4_ret_dst(const struct _SFSnortPacket *);
-uint16_t   ip4_ret_tos(const struct _SFSnortPacket *);
-uint8_t    ip4_ret_ttl(const struct _SFSnortPacket *);
-uint16_t   ip4_ret_len(const struct _SFSnortPacket *);
-uint32_t   ip4_ret_id(const struct _SFSnortPacket *);
-uint8_t    ip4_ret_proto(const struct _SFSnortPacket *);
-uint16_t   ip4_ret_off(const struct _SFSnortPacket *);
-uint8_t    ip4_ret_ver(const struct _SFSnortPacket *);
-uint8_t    ip4_ret_hlen(const struct _SFSnortPacket *);
-
-sfip_t *    orig_ip4_ret_src(const struct _SFSnortPacket *);
-sfip_t *    orig_ip4_ret_dst(const struct _SFSnortPacket *);
-uint16_t   orig_ip4_ret_tos(const struct _SFSnortPacket *);
-uint8_t    orig_ip4_ret_ttl(const struct _SFSnortPacket *);
-uint16_t   orig_ip4_ret_len(const struct _SFSnortPacket *);
-uint32_t   orig_ip4_ret_id(const struct _SFSnortPacket *);
-uint8_t    orig_ip4_ret_proto(const struct _SFSnortPacket *);
-uint16_t   orig_ip4_ret_off(const struct _SFSnortPacket *);
-uint8_t    orig_ip4_ret_ver(const struct _SFSnortPacket *);
-uint8_t    orig_ip4_ret_hlen(const struct _SFSnortPacket *);
-
-sfip_t *    ip6_ret_src(const struct _SFSnortPacket *);
-sfip_t *    ip6_ret_dst(const struct _SFSnortPacket *);
-uint16_t   ip6_ret_toc(const struct _SFSnortPacket *);
-uint8_t    ip6_ret_hops(const struct _SFSnortPacket *);
-uint16_t   ip6_ret_len(const struct _SFSnortPacket *);
-uint32_t   ip6_ret_id(const struct _SFSnortPacket *);
-uint8_t    ip6_ret_next(const struct _SFSnortPacket *);
-uint16_t   ip6_ret_off(const struct _SFSnortPacket *);
-uint8_t    ip6_ret_ver(const struct _SFSnortPacket *);
-uint8_t    ip6_ret_hlen(const struct _SFSnortPacket *);
-
-sfip_t *    orig_ip6_ret_src(const struct _SFSnortPacket *);
-sfip_t *    orig_ip6_ret_dst(const struct _SFSnortPacket *);
-uint16_t   orig_ip6_ret_toc(const struct _SFSnortPacket *);
-uint8_t    orig_ip6_ret_hops(const struct _SFSnortPacket *);
-uint16_t   orig_ip6_ret_len(const struct _SFSnortPacket *);
-uint32_t   orig_ip6_ret_id(const struct _SFSnortPacket *);
-uint8_t    orig_ip6_ret_next(const struct _SFSnortPacket *);
-uint16_t   orig_ip6_ret_off(const struct _SFSnortPacket *);
-uint8_t    orig_ip6_ret_ver(const struct _SFSnortPacket *);
-uint8_t    orig_ip6_ret_hlen(const struct _SFSnortPacket *);
-
 typedef struct _IPH_API
 {
     sfip_t *    (*iph_ret_src)(const struct _SFSnortPacket *);
@@ -445,7 +409,7 @@ typedef struct _IPH_API
     uint16_t   (*orig_iph_ret_tos)(const struct _SFSnortPacket *);
     uint8_t    (*orig_iph_ret_ttl)(const struct _SFSnortPacket *);
     uint16_t   (*orig_iph_ret_len)(const struct _SFSnortPacket *);
-    uint16_t   (*orig_iph_ret_id)(const struct _SFSnortPacket *);
+    uint32_t   (*orig_iph_ret_id)(const struct _SFSnortPacket *);
     uint8_t    (*orig_iph_ret_proto)(const struct _SFSnortPacket *);
     uint16_t   (*orig_iph_ret_off)(const struct _SFSnortPacket *);
     uint8_t    (*orig_iph_ret_ver)(const struct _SFSnortPacket *);
@@ -466,8 +430,6 @@ typedef enum {
     PSEUDO_PKT_MAX
 } PseudoPacketType;
 
-#ifdef SUP_IP6
-
 #include "ipv6_port.h"
 
 #define IP6_HEADER_LEN  40
@@ -483,7 +445,6 @@ extern IPH_API ip6;
 #define NO_IP 0
 
 #define IP6_HDR_LEN     40
-#endif
 
 typedef struct _MplsHdr
 {
@@ -527,13 +488,9 @@ typedef struct _SFSnortPacket
     const uint8_t *payload;
     const uint8_t *ip_payload;
     const uint8_t *outer_ip_payload;
-    const uint8_t *ip_frag_start;
-    const uint8_t *ip4_options_data;
-    const uint8_t *tcp_options_data;
 
     void *stream_session_ptr;
     void *fragmentation_tracking_ptr;
-    void *flow_ptr;
 
     IP4Hdr *ip4h, *orig_ip4h;
     IP6Hdr *ip6h, *orig_ip6h;
@@ -544,29 +501,16 @@ typedef struct _SFSnortPacket
     IPH_API* outer_iph_api;
     IPH_API* outer_orig_iph_api;
 
-    IP4Hdr inner_ip4h, inner_orig_ip4h;
-    IP6Hdr inner_ip6h, inner_orig_ip6h;
-    IP4Hdr outer_ip4h, outer_orig_ip4h;
-    IP6Hdr outer_ip6h, outer_orig_ip6h;
-
-    MplsHdr   mplsHdr;
-
     int family;
     int orig_family;
     int outer_family;
-    int number_bytes_to_check;
-
-    //int ip_payload_length;
-    //int ip_payload_offset;
 
     uint32_t preprocessor_bit_mask;
     uint32_t preproc_reassembly_pkt_bit_mask;
 
-    uint32_t http_pipeline_count;
     uint32_t flags;
 
     uint32_t xtradata_mask;
-    uint32_t per_packet_xtradata;
 
     uint16_t proto_bits;
 
@@ -593,19 +537,14 @@ typedef struct _SFSnortPacket
     uint8_t ip_dont_fragment;
     uint8_t ip_reserved;
 
-    uint8_t num_uris;
-    uint8_t invalid_flags;
-    uint8_t encapsulated;
-    uint8_t GTPencapsulated;
-
     uint8_t num_ip_options;
     uint8_t num_tcp_options;
     uint8_t num_ip6_extensions;
     uint8_t ip6_frag_extension;
 
-    u_char ip_last_option_invalid_flag;
-    u_char tcp_last_option_invalid_flag;
-
+    uint8_t invalid_flags;
+    uint8_t encapsulated;
+    uint8_t GTPencapsulated;
     uint8_t next_layer_index;
 
 #ifndef NO_NON_ETHER_DECODER
@@ -640,12 +579,22 @@ typedef struct _SFSnortPacket
     TCPOptions tcp_options[MAX_TCP_OPTIONS];
     IP6Extension ip6_extensions[MAX_IP6_EXTENSIONS];
 
+    const uint8_t *ip_frag_start;
+    const uint8_t *ip4_options_data;
+    const uint8_t *tcp_options_data;
+
     const IP6RawHdr* raw_ip6_header;
     ProtoLayer proto_layers[MAX_PROTO_LAYERS];
 
+    IP4Hdr inner_ip4h, inner_orig_ip4h;
+    IP6Hdr inner_ip6h, inner_orig_ip6h;
+    IP4Hdr outer_ip4h, outer_orig_ip4h;
+    IP6Hdr outer_ip6h, outer_orig_ip6h;
+
+    MplsHdr mplsHdr;
+
     PseudoPacketType pseudo_type;
     uint16_t max_payload;
-
 
     /**policyId provided in configuration file. Used for correlating configuration
      * with event output
@@ -655,6 +604,7 @@ typedef struct _SFSnortPacket
     uint32_t iplist_id;
     unsigned char iprep_layer;
 
+    uint8_t ps_proto;  // Used for portscan and unified2 logging
 
 } SFSnortPacket;
 
@@ -672,9 +622,9 @@ typedef struct _SFSnortPacket
 #define PROTO_BIT__ALL      0xffff
 
 #define IsIP(p) (IPH_IS_VALID(p))
-#define IsTCP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_TCP))
-#define IsUDP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_UDP))
-#define IsICMP(p) (IsIP(p) && (GET_IPH_PROTO(p) == IPPROTO_ICMP))
+#define IsTCP(p) (IsIP(p) && p->tcp_header)
+#define IsUDP(p) (IsIP(p) && p->udp_header)
+#define IsICMP(p) (IsIP(p) && p->icmp_header)
 
 #define SET_IP4_VER(ip_header, value) \
     ((ip_header)->version_headerlength = \
@@ -737,7 +687,8 @@ typedef struct _SFSnortPacket
 
 #define FLAG_IPREP_SOURCE_TRIGGERED  0x08000000
 #define FLAG_IPREP_DATA_SET          0x10000000
-// 0x20000000 are available
+#define FLAG_FILE_EVENT_SET          0x20000000
+// 0x40000000 are available
 
 #define FLAG_PDU_FULL (FLAG_PDU_HEAD | FLAG_PDU_TAIL)
 
@@ -750,17 +701,18 @@ static inline int PacketWasCooked(const SFSnortPacket* p)
     return ( p->flags & FLAG_PSEUDO ) != 0;
 }
 
-static inline void SetLogFuncs(SFSnortPacket *p, uint32_t id, uint8_t per_packet)
+static inline int IsPortscanPacket(const SFSnortPacket *p)
 {
-    if(!id)
-        return;
-    if(per_packet)
-        p->per_packet_xtradata |= BIT(id);
-    else
-        p->xtradata_mask |= BIT(id);
+    return ((p->flags & FLAG_PSEUDO) && (p->pseudo_type == PSEUDO_PKT_PS));
 }
 
-#ifdef ENABLE_PAF
+static inline uint8_t GetEventProto(const SFSnortPacket *p)
+{
+    if (IsPortscanPacket(p))
+        return p->ps_proto;
+    return IPH_IS_VALID(p) ? GET_IPH_PROTO(p) : 0;
+}
+
 static inline int PacketHasFullPDU (const SFSnortPacket* p)
 {
     return ( (p->flags & FLAG_PDU_FULL) == FLAG_PDU_FULL );
@@ -775,7 +727,11 @@ static inline int PacketHasPAFPayload (const SFSnortPacket* p)
 {
     return ( (p->flags & FLAG_REBUILT_STREAM) || PacketHasFullPDU(p) );
 }
-#endif
+
+static inline void SetExtraData (SFSnortPacket* p, uint32_t xid)
+{
+    p->xtradata_mask |= BIT(xid);
+}
 
 #endif /* _SF_SNORT_PACKET_H_ */
 

@@ -3,7 +3,7 @@
 **
 ** perf-base.h
 **
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Dan Roelker (droelker@sourcefire.com)
 ** Marc Norton (mnorton@sourcefire.com)
 ** Chris Green (stream4 instrumentation)
@@ -22,7 +22,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 ** 9.1.04  : Added SFBASE iReset (MAN)
 **	     This is set by perfmonitor 'accrure' and 'reset' commands
@@ -37,11 +37,10 @@
 #include "sfprocpidstats.h"
 #include "sf_types.h"
 #include "snort_debug.h"
+#include "decode.h"
 
 #include <time.h>
 #include <stdio.h>
-
-#define MAX_PERF_STATS 1
 
 typedef struct _PKTSTATS
 {
@@ -58,11 +57,9 @@ typedef enum {
     PERF_COUNT_IP4_TTL,
     PERF_COUNT_IP4_OPTS,
     PERF_COUNT_ICMP4_ECHO,
-#ifdef SUP_IP6
     PERF_COUNT_IP6_TTL,
     PERF_COUNT_IP6_OPTS,
     PERF_COUNT_ICMP6_ECHO,
-#endif
     PERF_COUNT_TCP_SYN_OPT,
     PERF_COUNT_TCP_OPT,
     PERF_COUNT_TCP_PAD,
@@ -169,6 +166,7 @@ typedef struct _SFBASE
 
     uint64_t   frag3_mem_in_use;
     uint64_t   stream5_mem_in_use;
+    uint64_t   total_iAlerts;
 }  SFBASE;
 
 typedef struct _SYSTIMES {
@@ -274,11 +272,12 @@ typedef struct _SFBASE_STATS {
 
     uint64_t   frag3_mem_in_use;
     uint64_t   stream5_mem_in_use;
+    double     total_alerts_per_second;
 }  SFBASE_STATS;
 
 int InitBaseStats(SFBASE *sfBase);
-int UpdateBaseStats(SFBASE *sfBase, uint32_t len, int iRebuiltPkt);
-int ProcessBaseStats(SFBASE *sfBase,int console, int file, FILE * fh);
+void UpdateBaseStats(SFBASE *, Packet *, bool);
+void ProcessBaseStats(SFBASE *, FILE *, int, int);
 int AddStreamSession(SFBASE *sfBase, uint32_t flags);
 #define SESSION_CLOSED_NORMALLY 0x01
 #define SESSION_CLOSED_TIMEDOUT 0x02
@@ -293,6 +292,7 @@ void UpdateWireStats(SFBASE *sfBase, int len, int dropped, int injected);
 void UpdateMPLSStats(SFBASE *sfBase, int len, int dropped);
 void UpdateIPFragStats(SFBASE *sfBase, int len);
 void UpdateIPReassStats(SFBASE *sfBase, int len);
+void UpdateStreamReassStats(SFBASE *sfBase, int len);
 void UpdateFilteredPacketStats(SFBASE *sfBase, unsigned int proto);
 
 void LogBasePerfHeader(FILE*);

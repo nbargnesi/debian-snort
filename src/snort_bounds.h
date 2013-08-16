@@ -1,7 +1,7 @@
 #ifndef _BOUNDS_H
 #define _BOUNDS_H
 /*
-** Copyright (C) 2003-2012 Sourcefire, Inc.
+** Copyright (C) 2003-2013 Sourcefire, Inc.
 **               Chris Green <cmg@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 */
 
@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <stdarg.h>
 #ifdef DEBUG
 #include <assert.h>
 #endif
@@ -217,5 +218,28 @@ static inline int SafeRead(uint8_t *start, uint8_t *end, uint8_t *src, uint8_t *
     *read = *start;
     return 1;
 }
+
+/* An wrapper around snprintf to make it safe.
+ *
+ * This wrapper of snprintf returns the number of bytes written to the buffer.
+ */
+static inline size_t SafeSnprintf(char *str, size_t size, const char *format, ...)
+{
+    va_list ap;
+    int ret;
+
+    if (size == 0) return 0;
+
+    va_start(ap, format);
+    ret = vsnprintf(str, size, format, ap);
+    va_end(ap);
+
+    if (ret < 0 || (size_t)ret > size)
+        return 0;
+
+    return (size_t)ret;
+}
+
+
 
 #endif /* _BOUNDS_H */

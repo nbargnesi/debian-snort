@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -35,18 +35,17 @@ typedef enum {
     PROTO_TCP,        // DecodeTCP
                       // DecodeTCPOptions - handled with TCP
 
-#ifdef SUP_IP6
     PROTO_IP6,        // DecodeIPV6
                       // DecodeIPV6Extensions - nothing to do here, calls below
     PROTO_IP6_HOP_OPTS,  // DecodeIPV6Options - ip6 hop, dst, rte, and frag exts
     PROTO_IP6_DST_OPTS,
     PROTO_ICMP6,      // DecodeICMP6
     PROTO_ICMP_IP6,   // DecodeICMPEmbeddedIP6
-#endif
     PROTO_VLAN,       // DecodeVlan
 #ifdef GRE
     PROTO_GRE,        // DecodeGRE
                       // DecodeTransBridging - basically same as DecodeEthPkt
+    PROTO_ERSPAN,     // DecodeERSPANType2 and DecodeERSPANType3
 #endif
     PROTO_PPPOE,      // DecodePPPoEPkt
     PROTO_PPP_ENCAP,  // DecodePppPktEncapsulated
@@ -54,6 +53,7 @@ typedef enum {
                       // DecodeEthOverMPLS - basically same as straight eth
     PROTO_ARP,        // DecodeARP
     PROTO_GTP,        // DecodeGTP
+    PROTO_AH,         // DecodeAH - Authentication Header (IPSec stuff)
 
 #ifndef NO_NON_ETHER_DECODER
     PROTO_TR,         // DecodeTRPkt

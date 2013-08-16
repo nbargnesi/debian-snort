@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2007-2012 Sourcefire, Inc.
+** Copyright (C) 2007-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /*
@@ -38,6 +38,7 @@
 #include "spp_ssl.h"
 #include "sf_preproc_info.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
@@ -56,11 +57,7 @@
 const int MAJOR_VERSION = 1;
 const int MINOR_VERSION = 1;
 const int BUILD_VERSION = 4;
-#ifdef SUP_IP6
-const char *PREPROC_NAME = "SF_SSLPP (IPV6)";
-#else
 const char *PREPROC_NAME = "SF_SSLPP";
-#endif
 
 #define SetupSSLPP DYNAMIC_PREPROC_SETUP
 
@@ -84,10 +81,9 @@ static tSfPolicyUserContextId ssl_config = NULL;
 static SSLPP_counters_t counts;
 
 #ifdef SNORT_RELOAD
-static tSfPolicyUserContextId ssl_swap_config = NULL;
-static void SSLReload(char *);
-static int SSLReloadVerify(void);
-static void * SSLReloadSwap(void);
+static void SSLReload(struct _SnortConfig *, char *, void **);
+static int SSLReloadVerify(struct _SnortConfig *, void *);
+static void * SSLReloadSwap(struct _SnortConfig *, void *);
 static void SSLReloadSwapFree(void *);
 #endif
 
@@ -100,11 +96,11 @@ static void SSL_PrintFlags(uint32_t);
 static void SSLFreeConfig(tSfPolicyUserContextId config);
 static void SSLCleanExit(int, void *);
 static void SSLResetStats(int, void *);
-static void SSLPP_CheckConfig(void);
+static int SSLPP_CheckConfig(struct _SnortConfig *);
 
-static void _addPortsToStream5Filter(SSLPP_config_t *, tSfPolicyId);
+static void _addPortsToStream5Filter(struct _SnortConfig *, SSLPP_config_t *, tSfPolicyId);
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId);
+static void _addServicesToStream5Filter(struct _SnortConfig *, tSfPolicyId);
 #endif
 
 typedef struct _SslRuleOptData
@@ -303,20 +299,18 @@ static void SSLPP_process(void *raw_packet, void *context)
     if (config == NULL)
         return;
 
-
     DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL Start ================================\n"););
 
     packet = (SFSnortPacket*)raw_packet;
 
-    if(!packet || !packet->payload || !packet->payload_size ||
-            !packet->tcp_header || !packet->stream_session_ptr)
+    // preconditions - what we registered for
+    assert(IsTCP(packet));
+
+    // FIXTHIS need a new class to only run when data ahead of applications?
+    if (!packet->payload || !packet->payload_size ||
+        !packet->stream_session_ptr)
     {
 #ifdef DEBUG_MSGS
-        if (packet == NULL)
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet is NULL\n"););
-        }
-
         if (packet->payload == NULL)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet payload is NULL\n"););
@@ -325,11 +319,6 @@ static void SSLPP_process(void *raw_packet, void *context)
         if (packet->payload_size == 0)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet payload size is 0\n"););
-        }
-
-        if (packet->tcp_header == NULL)
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_SSL, "SSL - Packet is not TCP\n"););
         }
 
         if (packet->stream_session_ptr == NULL)
@@ -459,6 +448,13 @@ static void SSLPP_process(void *raw_packet, void *context)
 
     new_flags = SSL_decode(packet->payload, (int)packet->payload_size, packet->flags);
 
+    // If the client used an SSLv2 ClientHello with an SSLv3/TLS version and
+    // the server replied with an SSLv3/TLS ServerHello, remove the backward
+    // compatibility flag and the SSLv2 flag since this session will continue
+    // as SSLv3/TLS.
+    if ((ssn_flags & SSL_V3_BACK_COMPAT_V2) && SSL_V3_SERVER_HELLO(new_flags))
+        ssn_flags &= ~(SSL_VER_SSLV2_FLAG|SSL_V3_BACK_COMPAT_V2);
+
     if( SSL_IS_CHELLO(new_flags) && SSL_IS_CHELLO(ssn_flags) && SSL_IS_SHELLO(ssn_flags) )
     {
         ALERT(SSL_INVALID_CLIENT_HELLO, SSL_INVALID_CLIENT_HELLO_STR);
@@ -566,7 +562,7 @@ static void SSL_UpdateCounts(const uint32_t new_flags)
 }
 
 /* Parsing for the ssl_state rule option */
-static int SSLPP_state_init(char *name, char *params, void **data)
+static int SSLPP_state_init(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     int flags = 0, mask = 0;
     char *end = NULL;
@@ -643,7 +639,7 @@ static int SSLPP_state_init(char *name, char *params, void **data)
 }
 
 /* Parsing for the ssl_version rule option */
-static int SSLPP_ver_init(char *name, char *params, void **data)
+static int SSLPP_ver_init(struct _SnortConfig *sc, char *name, char *params, void **data)
 {
     int flags = 0, mask = 0;
     char *end = NULL;
@@ -909,9 +905,9 @@ static void SSLPP_drop_stats(int exiting)
     _dpd.logMsg("    Detection disabled: " FMTu64("-10") "\n", counts.disabled);
 }
 
-static void SSLPP_init(char *args)
+static void SSLPP_init(struct _SnortConfig *sc, char *args)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     SSLPP_config_t *pPolicyConfig = NULL;
 
     if (ssl_config == NULL)
@@ -934,7 +930,7 @@ static void SSLPP_init(char *args)
         memset(&counts, 0, sizeof(counts));
 
         _dpd.registerPreprocStats("ssl", SSLPP_drop_stats);
-        _dpd.addPreprocConfCheck(SSLPP_CheckConfig);
+        _dpd.addPreprocConfCheck(sc, SSLPP_CheckConfig);
         _dpd.addPreprocExit(SSLCleanExit, NULL, PRIORITY_LAST, PP_SSL);
         _dpd.addPreprocResetStats(SSLResetStats, NULL, PRIORITY_LAST, PP_SSL);
 
@@ -972,17 +968,17 @@ static void SSLPP_init(char *args)
 	SSLPP_config(pPolicyConfig, args);
     SSLPP_print_config(pPolicyConfig);
 
-    _dpd.preprocOptRegister("ssl_state", SSLPP_state_init, SSLPP_rule_eval,
+    _dpd.preprocOptRegister(sc, "ssl_state", SSLPP_state_init, SSLPP_rule_eval,
             free, NULL, NULL, NULL, NULL);
-    _dpd.preprocOptRegister("ssl_version", SSLPP_ver_init, SSLPP_rule_eval,
+    _dpd.preprocOptRegister(sc, "ssl_version", SSLPP_ver_init, SSLPP_rule_eval,
             free, NULL, NULL, NULL, NULL);
 
-	_dpd.addPreproc( SSLPP_process, PRIORITY_TUNNEL, PP_SSL, PROTO_BIT__TCP );
+	_dpd.addPreproc( sc, SSLPP_process, PRIORITY_TUNNEL, PP_SSL, PROTO_BIT__TCP );
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 }
 
@@ -992,7 +988,7 @@ void SetupSSLPP(void)
 	_dpd.registerPreproc( "ssl", SSLPP_init);
 #else
 	_dpd.registerPreproc("ssl", SSLPP_init, SSLReload,
-                         SSLReloadSwap, SSLReloadSwapFree);
+                         SSLReloadVerify, SSLReloadSwap, SSLReloadSwapFree);
 #endif
 }
 
@@ -1168,7 +1164,7 @@ SSL_STATEFLAGS (SSL_CUR_CLIENT_HELLO_FLAG | SSL_CUR_SERVER_HELLO_FLAG | \
 }
 #endif
 
-static void _addPortsToStream5Filter(SSLPP_config_t *config, tSfPolicyId policy_id)
+static void _addPortsToStream5Filter(struct _SnortConfig *sc, SSLPP_config_t *config, tSfPolicyId policy_id)
 {
     unsigned int portNum;
 
@@ -1181,15 +1177,15 @@ static void _addPortsToStream5Filter(SSLPP_config_t *config, tSfPolicyId policy_
         {
             //Add port the port
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
+                (sc, IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
         }
     }
 }
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId policy_id)
+static void _addServicesToStream5Filter(struct _SnortConfig *sc, tSfPolicyId policy_id)
 {
     _dpd.streamAPI->set_service_filter_status
-        (ssl_app_id, PORT_MONITOR_SESSION, policy_id, 1);
+        (sc, ssl_app_id, PORT_MONITOR_SESSION, policy_id, 1);
 }
 #endif
 
@@ -1213,7 +1209,7 @@ static void SSLFreeConfig(tSfPolicyUserContextId config)
     if (config == NULL)
         return;
 
-    sfPolicyUserDataIterate (config, SSLFreeConfigPolicy);
+    sfPolicyUserDataFreeIterate (config, SSLFreeConfigPolicy);
     sfPolicyConfigDelete(config);
 }
 
@@ -1232,30 +1228,38 @@ static void SSLResetStats(int signal, void *data)
 }
 
 static int SSLPP_CheckPolicyConfig(
+        struct _SnortConfig *sc,
         tSfPolicyUserContextId config,
         tSfPolicyId policyId,
         void* pData
         )
 {
-    _dpd.setParserPolicy(policyId);
+    _dpd.setParserPolicy(sc, policyId);
 
-    if (!_dpd.isPreprocEnabled(PP_STREAM5))
+    if (!_dpd.isPreprocEnabled(sc, PP_STREAM5))
     {
-        DynamicPreprocessorFatalMessage(
+        _dpd.errMsg(
             "SSLPP_CheckPolicyConfig(): The Stream preprocessor must be enabled.\n");
+        return -1;
     }
     return 0;
 }
 
-static void SSLPP_CheckConfig(void)
+static int SSLPP_CheckConfig(struct _SnortConfig *sc)
 {
-    sfPolicyUserDataIterate (ssl_config, SSLPP_CheckPolicyConfig);
+    int rval;
+
+    if ((rval = sfPolicyUserDataIterate (sc, ssl_config, SSLPP_CheckPolicyConfig)))
+        return rval;
+
+    return 0;
 }
 
 #ifdef SNORT_RELOAD
-static void SSLReload(char *args)
+static void SSLReload(struct _SnortConfig *sc, char *args, void **new_config)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyUserContextId ssl_swap_config = (tSfPolicyUserContextId)*new_config;
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     SSLPP_config_t * pPolicyConfig = NULL;
 
     if (ssl_swap_config == NULL)
@@ -1274,6 +1278,7 @@ static void SSLReload(char *args)
             DynamicPreprocessorFatalMessage(
                                             "SSLPP_init(): The Stream preprocessor must be enabled.\n");
         }
+        *new_config = (void *)ssl_swap_config;
     }
 
     sfPolicyUserPolicySet (ssl_swap_config, policy_id);
@@ -1297,42 +1302,41 @@ static void SSLReload(char *args)
 	SSLPP_config(pPolicyConfig, args);
     SSLPP_print_config(pPolicyConfig);
 
-    _dpd.preprocOptRegister("ssl_state", SSLPP_state_init, SSLPP_rule_eval,
+    _dpd.preprocOptRegister(sc, "ssl_state", SSLPP_state_init, SSLPP_rule_eval,
             free, NULL, NULL, NULL, NULL);
-    _dpd.preprocOptRegister("ssl_version", SSLPP_ver_init, SSLPP_rule_eval,
+    _dpd.preprocOptRegister(sc, "ssl_version", SSLPP_ver_init, SSLPP_rule_eval,
             free, NULL, NULL, NULL, NULL);
 
-	_dpd.addPreproc(SSLPP_process, PRIORITY_TUNNEL, PP_SSL, PROTO_BIT__TCP);
-    _dpd.addPreprocReloadVerify(SSLReloadVerify);
+	_dpd.addPreproc(sc, SSLPP_process, PRIORITY_TUNNEL, PP_SSL, PROTO_BIT__TCP);
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 }
 
-static int SSLReloadVerify(void)
+static int SSLReloadVerify(struct _SnortConfig *sc, void *swap_config)
 {
-    if (!_dpd.isPreprocEnabled(PP_STREAM5))
+    if (!_dpd.isPreprocEnabled(sc, PP_STREAM5))
     {
-        DynamicPreprocessorFatalMessage(
-            "SSLPP_init(): The Stream preprocessor must be enabled.\n");
+        _dpd.errMsg("SSLPP_init(): The Stream preprocessor must be enabled.\n");
+        return -1;
     }
 
     return 0;
 }
 
 
-static void * SSLReloadSwap(void)
+static void * SSLReloadSwap(struct _SnortConfig *sc, void *swap_config)
 {
+    tSfPolicyUserContextId ssl_swap_config = (tSfPolicyUserContextId)swap_config;
     tSfPolicyUserContextId old_config = ssl_config;
 
     if (ssl_swap_config == NULL)
         return NULL;
 
     ssl_config = ssl_swap_config;
-    ssl_swap_config = NULL;
 
     return (void *)old_config;
 }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -29,14 +29,19 @@
 
 typedef void(*Stream5SessionCleanup)(Stream5LWSession *ssn);
 
+#define SESSION_CACHE_FLAG_PURGING  0x01
+#define SESSION_CACHE_FLAG_PRUNING  0x02
+
 typedef struct _Stream5SessionCache
 {
     SFXHASH *hashTable;
+    SFXHASH_NODE *nextTimeoutEvalNode;
     uint32_t timeoutAggressive;
     uint32_t timeoutNominal;
     uint32_t max_sessions;
     uint32_t cleanup_sessions;
     uint32_t prunes;
+    uint32_t flags;
     Stream5SessionCleanup cleanup_fcn;
 } Stream5SessionCache;
 
@@ -67,9 +72,10 @@ int GetLWSessionKeyFromIpPort(
                     char proto,
                     uint16_t vlan,
                     uint32_t mplsId,
+                    uint16_t addressSpaceId,
                     SessionKey *key);
-Stream5LWSession *GetLWSessionFromKey(Stream5SessionCache *, SessionKey *);
-Stream5LWSession *NewLWSession(Stream5SessionCache *, Packet *, SessionKey *, void *);
+Stream5LWSession *GetLWSessionFromKey(Stream5SessionCache *, const SessionKey *);
+Stream5LWSession *NewLWSession(Stream5SessionCache *, Packet *, const SessionKey *, void *);
 int DeleteLWSession(Stream5SessionCache *, Stream5LWSession *, char *reason);
 void PrintLWSessionCache(Stream5SessionCache *);
 int DeleteLWSessionCache(Stream5SessionCache *sessionCache);
@@ -82,6 +88,7 @@ int GetLWSessionCount(Stream5SessionCache *);
 void GetLWPacketDirection(Packet *p, Stream5LWSession *ssn);
 void FreeLWApplicationData(Stream5LWSession *ssn);
 void setPortFilterList(
+        struct _SnortConfig *,
         uint16_t *portList,
         int isUdp,
         int ignoreAnyAnyRules,

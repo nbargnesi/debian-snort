@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2009-2012 Sourcefire, Inc.
+ * Copyright (C) 2009-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -42,12 +42,14 @@
 #include "config.h"
 #endif
 
+#include "snort.h"
 #include "parser/IpAddrSet.h"
 #include "generators.h"
 #include "rules.h"
 #include "treenodes.h"
 #include "sfrf.h"
 #include "util.h"
+#include "sfPolicyData.h"
 #include "sfPolicyUserData.h"
 
 // Number of hash rows for gid 1 (rules)
@@ -196,9 +198,6 @@ static void SFRF_ConfigNodeFree(void *item)
     if (node->applyTo != NULL)
     {
         IpAddrSetDestroy(node->applyTo);
-#ifndef SUP_IP6
-        free(node->applyTo);
-#endif
     }
 
     free(node);
@@ -230,7 +229,7 @@ static void SFRF_SidNodeFree(void* item)
  *
  * @return @retval  0 successfully added the thresholding object, !0 otherwise
 */
-int SFRF_ConfigAdd(RateFilterConfig *rf_config, tSFRFConfigNode *cfgNode)
+int SFRF_ConfigAdd(SnortConfig *sc, RateFilterConfig *rf_config, tSFRFConfigNode *cfgNode)
 {
     SFGHASH* genHash;
     int nrows;
@@ -238,7 +237,7 @@ int SFRF_ConfigAdd(RateFilterConfig *rf_config, tSFRFConfigNode *cfgNode)
     tSFRFSidNode* pSidNode;
     tSFRFConfigNode* pNewConfigNode;
     tSFRFGenHashKey key = {0,0};
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
 
     // Auto init - memcap must be set 1st, which is not really a problem
     if ( rf_hash == NULL )
@@ -291,9 +290,6 @@ int SFRF_ConfigAdd(RateFilterConfig *rf_config, tSFRFConfigNode *cfgNode)
 
         rf_config->genHash[cfgNode->gid] = genHash;
     }
-
-    if ( !genHash )
-        return -2;
 
     key.sid = cfgNode->sid;
     key.policyId = policy_id;
@@ -366,21 +362,11 @@ int SFRF_ConfigAdd(RateFilterConfig *rf_config, tSFRFConfigNode *cfgNode)
 
 
 #ifdef SFRF_DEBUG
-#ifdef SUP_IP6
 static char* get_netip(snort_ip_p ip)
 {
     return sfip_ntoa(ip);
 }
 
-#else
-static char* get_netip(unsigned long ip)
-{
-    struct in_addr addr;
-
-    addr.s_addr= ip;
-    return inet_ntoa(addr);
-}
-#endif
 #endif // SFRF_DEBUG
 
 /*
@@ -467,14 +453,7 @@ static int SFRF_TestObject(
 
 static inline int SFRF_AppliesTo(tSFRFConfigNode* pCfg, snort_ip_p ip)
 {
-#ifndef SUP_IP6
-    struct in_addr addr;
-    addr.s_addr = ip;
-
-    return ( !pCfg->applyTo || IpAddrSetContains(pCfg->applyTo, addr) );
-#else
     return ( !pCfg->applyTo || IpAddrSetContains(pCfg->applyTo, ip) );
-#endif
 }
 
 /* Test a an event against the threshold database. Events without thresholding

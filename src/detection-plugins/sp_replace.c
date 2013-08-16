@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -42,11 +42,10 @@ extern int lastType;
 
 static PatternMatchData* Replace_Parse(char*, OptTreeNode*);
 
-void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
+void PayloadReplaceInit(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     static int warned = 0;
     PatternMatchData *idx;
-    PatternMatchData *test_idx;
 
     if( !ScInlineMode() )
         return;
@@ -79,7 +78,7 @@ void PayloadReplaceInit(char *data, OptTreeNode * otn, int protocol)
                    file_name, file_line);
     }
 
-    test_idx = Replace_Parse(data, otn);
+    Replace_Parse(data, otn);
 
 }
 
@@ -101,7 +100,6 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
     int pending = 0;
     int cnt = 0;
     int literal = 0;
-    int exception_flag = 0;
     PatternMatchData *ds_idx;
     int ret;
 
@@ -115,11 +113,6 @@ static PatternMatchData * Replace_Parse(char *rule, OptTreeNode * otn)
 
     while(isspace((int)*rule))
         rule++;
-
-    if(*rule == '!')
-    {
-        exception_flag = 1;
-    }
 
     /* find the start of the data */
     start_ptr = index(rule, '"');

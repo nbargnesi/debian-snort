@@ -3,7 +3,7 @@
 **
 ** Copyright(C) 2002,2003,2004 Marc Norton
 ** Copyright(C) 2003,2004 Daniel Roelker
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -18,7 +18,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 **
 **   acsmx2.c
 **
@@ -1820,6 +1820,46 @@ static int acsmBuildMatchStateTrees2( ACSM_STRUCT2 * acsm,
     return cnt;
 }
 
+static int acsmBuildMatchStateTrees2WithSnortConf( struct _SnortConfig *sc, ACSM_STRUCT2 * acsm,
+                                                   int (*build_tree)(struct _SnortConfig *, void * id, void **existing_tree),
+                                                   int (*neg_list_func)(void *id, void **list) )
+{
+    int i, cnt = 0;
+    ACSM_PATTERN2  ** MatchList = acsm->acsmMatchList;
+    ACSM_PATTERN2 * mlist;
+
+    /* Find the states that have a MatchList */
+    for (i = 0; i < acsm->acsmNumStates; i++)
+    {
+        for ( mlist=MatchList[i];
+              mlist!=NULL;
+              mlist=mlist->next )
+        {
+            if (mlist->udata)
+            {
+                if (mlist->negative)
+                {
+                    neg_list_func(mlist->udata, &MatchList[i]->neg_list);
+                }
+                else
+                {
+                    build_tree(sc, mlist->udata, &MatchList[i]->rule_option_tree);
+                }
+            }
+
+            cnt++;
+        }
+
+        if (MatchList[i])
+        {
+            /* Last call to finalize the tree */
+            build_tree(sc, NULL, &MatchList[i]->rule_option_tree);
+        }
+    }
+
+    return cnt;
+}
+
 void acsmCompressStates(
         ACSM_STRUCT2 *acsm,
         int flag
@@ -1833,11 +1873,9 @@ void acsmCompressStates(
 /*
 *   Compile State Machine - NFA or DFA and Full or Banded or Sparse or SparseBands
 */
-int
-acsmCompile2(
-        ACSM_STRUCT2* acsm,
-        int (*build_tree)(void* id, void** existing_tree),
-        int (*neg_list_func)(void* id, void** list)
+static inline int
+_acsmCompile2(
+        ACSM_STRUCT2* acsm
         )
 {
     ACSM_PATTERN2* plist;
@@ -2061,9 +2099,45 @@ acsmCompile2(
 
     memcpy(&summary.acsm, acsm, sizeof(ACSM_STRUCT2));
 
+    return 0;
+}
+
+int
+acsmCompile2(
+        ACSM_STRUCT2* acsm,
+        int (*build_tree)(void* id, void** existing_tree),
+        int (*neg_list_func)(void* id, void** list)
+        )
+{
+    int rval;
+
+    if ((rval = _acsmCompile2(acsm)))
+        return rval;
+
     if (build_tree && neg_list_func)
     {
         acsmBuildMatchStateTrees2(acsm, build_tree, neg_list_func);
+    }
+
+    return 0;
+}
+
+int
+acsmCompile2WithSnortConf(
+        struct _SnortConfig *sc,
+        ACSM_STRUCT2* acsm,
+        int (*build_tree)(struct _SnortConfig *, void* id, void** existing_tree),
+        int (*neg_list_func)(void* id, void** list)
+        )
+{
+    int rval;
+
+    if ((rval = _acsmCompile2(acsm)))
+        return rval;
+
+    if (build_tree && neg_list_func)
+    {
+        acsmBuildMatchStateTrees2WithSnortConf(sc, acsm, build_tree, neg_list_func);
     }
 
     return 0;

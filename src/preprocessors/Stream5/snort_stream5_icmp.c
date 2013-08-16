@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -187,11 +187,11 @@ void IcmpSessionCleanup(Stream5LWSession *ssn)
 {
     IcmpSession *icmpssn = NULL;
 
-    if (ssn->session_flags & SSNFLAG_PRUNED)
+    if (ssn->ha_state.session_flags & SSNFLAG_PRUNED)
     {
         CloseStreamSession(&sfBase, SESSION_CLOSED_PRUNED);
     }
-    else if (ssn->session_flags & SSNFLAG_TIMEDOUT)
+    else if (ssn->ha_state.session_flags & SSNFLAG_TIMEDOUT)
     {
         CloseStreamSession(&sfBase, SESSION_CLOSED_TIMEDOUT);
     }
@@ -272,21 +272,26 @@ int Stream5VerifyIcmpConfig(Stream5IcmpConfig *config, tSfPolicyId policy_id)
 
 int Stream5ProcessIcmp(Packet *p)
 {
+    int status;
+
     switch (p->icmph->type)
     {
     case ICMP_DEST_UNREACH:
-        return ProcessIcmpUnreach(p);
+        status = ProcessIcmpUnreach(p);
         break;
+
     case ICMP_ECHO:
     case ICMP_ECHOREPLY:
-        return ProcessIcmpEcho(p);
+        status = ProcessIcmpEcho(p);
         break;
+
     default:
         /* We only handle the above ICMP messages with stream5 */
+        status = 0;
         break;
     }
 
-    return 0;
+    return status;
 }
 
 static int ProcessIcmpUnreach(Packet *p)
@@ -296,10 +301,8 @@ static int ProcessIcmpUnreach(Packet *p)
     Stream5LWSession *ssn = NULL;
     uint16_t sport;
     uint16_t dport;
-#ifdef SUP_IP6
     sfip_t *src;
     sfip_t *dst;
-#endif
 
     /* No "orig" IP Header */
     if (!p->orig_iph)
@@ -313,7 +316,6 @@ static int ProcessIcmpUnreach(Packet *p)
     sport = p->orig_sp;
     dport = p->orig_dp;
 
-#ifdef SUP_IP6
     src = GET_ORIG_SRC(p);
     dst = GET_ORIG_DST(p);
 
@@ -339,39 +341,10 @@ static int ProcessIcmpUnreach(Packet *p)
             skey.port_h = sport;
         }
     }
-#else
-    if (p->orig_iph->ip_src.s_addr < p->orig_iph->ip_dst.s_addr)
-    {
-        skey.ip_l = p->orig_iph->ip_src.s_addr;
-        skey.port_l = sport;
-        skey.ip_h = p->orig_iph->ip_dst.s_addr;
-        skey.port_h = dport;
-    }
-    else if (p->orig_iph->ip_dst.s_addr == p->orig_iph->ip_src.s_addr)
-    {
-        skey.ip_l = p->orig_iph->ip_src.s_addr;
-        skey.ip_h = skey.ip_l;
-        if (sport < dport)
-        {
-            skey.port_l = sport;
-            skey.port_h = dport;
-        }
-        else
-        {
-            skey.port_l = dport;
-            skey.port_h = sport;
-        }
-    }
-#endif
     else
     {
-#ifdef SUP_IP6
         COPY4(skey.ip_l, dst->ip32);
         COPY4(skey.ip_h, src->ip32);
-#else
-        skey.ip_l = p->orig_iph->ip_dst.s_addr;
-        skey.ip_h = p->orig_iph->ip_src.s_addr;
-#endif
         skey.port_l = dport;
         skey.port_h = sport;
     }
@@ -402,8 +375,8 @@ static int ProcessIcmpUnreach(Packet *p)
         /* Mark this session as dead. */
         DEBUG_WRAP(DebugMessage(DEBUG_STREAM_STATE,
             "Marking session as dead, per ICMP Unreachable!\n"););
-        ssn->session_flags |= SSNFLAG_DROP_CLIENT;
-        ssn->session_flags |= SSNFLAG_DROP_SERVER;
+        ssn->ha_state.session_flags |= SSNFLAG_DROP_CLIENT;
+        ssn->ha_state.session_flags |= SSNFLAG_DROP_SERVER;
         ssn->session_state |= STREAM5_STATE_UNREACH;
     }
 
@@ -430,10 +403,9 @@ void IcmpUpdateDirection(Stream5LWSession *ssn, char dir,
         return;
     }
 
-#ifdef SUP_IP6
     if (IP_EQUALITY(&icmpssn->icmp_sender_ip, ip))
     {
-        if ((dir == SSN_DIR_SENDER) && (ssn->direction == SSN_DIR_SENDER))
+        if ((dir == SSN_DIR_SENDER) && (ssn->ha_state.direction == SSN_DIR_SENDER))
         {
             /* Direction already set as SENDER */
             return;
@@ -441,32 +413,14 @@ void IcmpUpdateDirection(Stream5LWSession *ssn, char dir,
     }
     else if (IP_EQUALITY(&icmpssn->icmp_responder_ip, ip))
     {
-        if ((dir == SSN_DIR_RESPONDER) && (ssn->direction == SSN_DIR_RESPONDER))
+        if ((dir == SSN_DIR_RESPONDER) && (ssn->ha_state.direction == SSN_DIR_RESPONDER))
         {
             /* Direction already set as RESPONDER */
             return;
         }
     }
-#else
-    if (IP_EQUALITY(icmpssn->icmp_sender_ip, ip))
-    {
-        if ((dir == SSN_DIR_SENDER) && (ssn->direction == SSN_DIR_SENDER))
-        {
-            /* Direction already set as SENDER */
-            return;
-        }
-    }
-    else if (IP_EQUALITY(icmpssn->icmp_responder_ip, ip))
-    {
-        if ((dir == SSN_DIR_RESPONDER) && (ssn->direction == SSN_DIR_RESPONDER))
-        {
-            /* Direction already set as RESPONDER */
-            return;
-        }
-    }
-#endif
 
-    /* Swap them -- leave ssn->direction the same */
+    /* Swap them -- leave ssn->ha_state.direction the same */
     tmpIp = icmpssn->icmp_sender_ip;
     icmpssn->icmp_sender_ip = icmpssn->icmp_responder_ip;
     icmpssn->icmp_responder_ip = tmpIp;

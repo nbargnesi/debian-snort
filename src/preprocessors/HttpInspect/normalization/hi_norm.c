@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -747,9 +747,7 @@ static int DoubleDecode(HI_SESSION *Session, const u_char *start,
     HTTPINSPECT_CONF *ServerConf = Session->server_conf;
     int iByte;
     int iNorm;
-    const u_char *orig_ptr;
 
-    orig_ptr = *ptr;
     *encodeType |= HTTP_ENCODE_TYPE__DOUBLE_ENCODE;
 
     /*

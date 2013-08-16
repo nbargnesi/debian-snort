@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -124,34 +124,15 @@
 #define STREAM5_STATE_MIDSTREAM             0x0040
 #define STREAM5_STATE_TIMEDOUT              0x0080
 #define STREAM5_STATE_UNREACH               0x0100
-#define STREAM5_STATE_SENDER_SEEN           0x0200
-#define STREAM5_STATE_RECEIVER_SEEN         0x0400
 #define STREAM5_STATE_CLOSED                0x0800
 
 #define TCP_HZ          100
 
+/* Control Socket types */
+#define CS_TYPE_DEBUG_S5_HA     ((PP_STREAM5 << 7) + 0)     // 0x680 / 1664
+
 /*  D A T A   S T R U C T U R E S  **********************************/
-typedef struct _SessionKey
-{
-/* XXX If this data structure changes size, HashKeyCmp must be updated! */
-#ifdef SUP_IP6
-    uint32_t   ip_l[4]; /* Low IP */
-    uint32_t   ip_h[4]; /* High IP */
-#else
-    uint32_t   ip_l; /* Low IP */
-    uint32_t   ip_h; /* High IP */
-#endif
-    uint16_t   port_l; /* Low Port - 0 if ICMP */
-    uint16_t   port_h; /* High Port - 0 if ICMP */
-    uint16_t   vlan_tag;
-    uint8_t    protocol;
-    char        pad;
-#ifdef MPLS
-    uint32_t   mplsLabel; /* MPLS label */
-    uint32_t   mplsPad;
-#endif
-/* XXX If this data structure changes size, HashKeyCmp must be updated! */
-} SessionKey;
+typedef StreamSessionKey SessionKey;
 
 typedef struct _Stream5AppData
 {
@@ -162,14 +143,24 @@ typedef struct _Stream5AppData
     StreamAppDataFree freeFunc;
 } Stream5AppData;
 
+typedef struct _Stream5HAState
+{
+    uint32_t   session_flags;
+
+#ifdef TARGET_BASED
+    int16_t    ipprotocol;
+    int16_t    application_protocol;
+#endif
+
+    char       direction;
+    char       ignore_direction; /* flag to ignore traffic on this session */
+
+} Stream5HAState;
 
 // this struct is organized by member size for compactness
 typedef struct _Stream5LWSession
 {
     SessionKey *key;
-
-    snort_ip   client_ip;
-    snort_ip   server_ip;
 
     MemBucket  *proto_specific_data;
     Stream5AppData *appDataList;
@@ -184,28 +175,31 @@ typedef struct _Stream5LWSession
     tSfPolicyUserContextId config;
     tSfPolicyId policy_id;
 
-    uint32_t   session_flags;
+    Stream5HAState ha_state;
 
-    uint16_t   session_state;
+    uint16_t    session_state;
+    uint8_t     handler[SE_MAX];
 
-    uint16_t   client_port;
-    uint16_t   server_port;
+    snort_ip    client_ip; // FIXTHIS family and bits should be changed to uint16_t
+    snort_ip    server_ip; // or uint8_t to reduce sizeof from 24 to 20
 
-#ifdef TARGET_BASED
-    int16_t    ipprotocol;
-    int16_t    application_protocol;
-#endif
+    uint16_t    client_port;
+    uint16_t    server_port;
 
-    uint8_t    protocol;
-    char       direction;
-    char       ignore_direction; /* flag to ignore traffic on this session */
+    uint8_t     protocol;
 
 #ifdef ACTIVE_RESPONSE
-    uint8_t    response_count;
+    uint8_t     response_count;
 #endif
 
-    uint8_t    inner_client_ttl, inner_server_ttl;
-    uint8_t    outer_client_ttl, outer_server_ttl;
+    uint8_t     inner_client_ttl, inner_server_ttl;
+    uint8_t     outer_client_ttl, outer_server_ttl;
+
+#ifdef ENABLE_HA
+    struct timeval  ha_next_update;
+    uint8_t         ha_pending_mask;
+    uint8_t         ha_flags;
+#endif
 
 } Stream5LWSession;
 
@@ -216,10 +210,17 @@ typedef struct _Stream5GlobalConfig
     char       track_udp_sessions;
     char       track_icmp_sessions;
     char       track_ip_sessions;
+#ifdef ENABLE_HA
+    char       enable_ha;
+#endif
     uint32_t   max_tcp_sessions;
     uint32_t   max_udp_sessions;
     uint32_t   max_icmp_sessions;
     uint32_t   max_ip_sessions;
+    uint16_t   tcp_cache_pruning_timeout;
+    uint16_t   tcp_cache_nominal_timeout;
+    uint16_t   udp_cache_pruning_timeout;
+    uint16_t   udp_cache_nominal_timeout;
     uint32_t   memcap;
     uint32_t   prune_log_max;
     uint32_t   flags;
@@ -359,6 +360,20 @@ typedef struct _Stream5IpConfig
 
 } Stream5IpConfig;
 
+#ifdef ENABLE_HA
+typedef struct _Stream5HAConfig
+{
+    struct timeval min_session_lifetime;
+    struct timeval min_sync_interval;
+    char *startup_input_file;
+    char *runtime_output_file;
+    char *shutdown_output_file;
+# ifdef SIDE_CHANNEL
+    uint8_t use_side_channel;
+# endif
+} Stream5HAConfig;
+#endif
+
 typedef struct _Stream5Config
 {
     Stream5GlobalConfig *global_config;
@@ -366,6 +381,9 @@ typedef struct _Stream5Config
     Stream5UdpConfig *udp_config;
     Stream5IcmpConfig *icmp_config;
     Stream5IpConfig *ip_config;
+#ifdef ENABLE_HA
+    Stream5HAConfig *ha_config;
+#endif
 
 #ifdef TARGET_BASED
     uint8_t service_filter[MAX_PROTOCOL_ORDINAL];
@@ -439,6 +457,7 @@ typedef enum {
 
 void Stream5DisableInspection(Stream5LWSession *lwssn, Packet *p);
 
+int Stream5ExpireSession(Stream5LWSession *lwssn);
 int Stream5Expire(Packet *p, Stream5LWSession *ssn);
 void Stream5SetExpire(Packet *p, Stream5LWSession *ssn, uint32_t timeout);
 
@@ -458,6 +477,8 @@ void Stream5SetApplicationProtocolIdFromHostEntry(Stream5LWSession *lwssn,
 void Stream5FreeConfig(Stream5Config *);
 void Stream5FreeConfigs(tSfPolicyUserContextId);
 
+void Stream5CallHandler(Packet*, unsigned id);
+
 int isPacketFilterDiscard(
         Packet *p,
         int ignore_any_rules
@@ -473,6 +494,13 @@ static inline void Stream5ResetFlowBits(Stream5LWSession *lwssn)
     flowdata = (StreamFlowData *)lwssn->flowdata->data;
     boResetBITOP(&(flowdata->boFlowbits));
 }
+
+#ifdef ENABLE_HA
+static inline void Stream5SetHABit(Stream5LWSession *lwssn, unsigned int ha_func_idx)
+{
+    lwssn->ha_pending_mask |= (1 << ha_func_idx);
+}
+#endif
 
 void checkLWSessionTimeout(
         uint32_t flowCount,
@@ -492,9 +520,5 @@ extern Stream5IcmpConfig *s5_icmp_eval_config;
 extern Stream5IpConfig *s5_ip_eval_config;
 extern tSfPolicyUserContextId s5_config;
 extern tSfActionQueueId decoderActionQ;
-
-#ifdef SNORT_RELOAD
-extern tSfPolicyUserContextId s5_swap_config;
-#endif
 
 #endif /* STREAM5_COMMON_H_ */
