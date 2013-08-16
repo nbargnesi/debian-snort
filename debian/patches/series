@@ -1,6 +1,5 @@
 config
 documentation
-fix_ftbfs_in_faq.tex
 fix_ftbfs_in_manual.tex
 fix_upstream_typos
 rules
