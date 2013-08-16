@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2012 Sourcefire, Inc.
+ * Copyright (C) 2002-2013 Sourcefire, Inc.
  * Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  * Author: Adam Keeton
  *
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 
@@ -143,6 +143,7 @@ u2iterator *new_iterator(char *filename) {
 
     if(!ret) {
         printf("new_iterator: Failed to malloc %lu bytes.\n", (unsigned long)sizeof(u2iterator));
+        fclose(f);
         return NULL;
     }
 
@@ -151,7 +152,7 @@ u2iterator *new_iterator(char *filename) {
     return ret;
 }
 
-void free_iterator(u2iterator *it) {
+inline void free_iterator(u2iterator *it) {
     if(it->file) fclose(it->file);
     if(it->filename) free(it->filename);
     if(it) free(it);
@@ -159,6 +160,7 @@ void free_iterator(u2iterator *it) {
 
 int get_record(u2iterator *it, u2record *record) {
     uint32_t bytes_read;
+    uint8_t *tmp;
 
     if(!it || !it->file) return FAILURE;
 
@@ -195,11 +197,21 @@ int get_record(u2iterator *it, u2record *record) {
 
     s_pos = ftell(it->file);
 
-    record->data = (uint8_t *)realloc(record->data, record->length);
+    tmp = (uint8_t *)realloc(record->data, record->length);
+    
+    if (!tmp)
+    {
+        puts("get_record: (2) Failed to allocate memory.");
+        free(record->data);
+        return FAILURE;
+    }
+
+    record->data = tmp;
+
     bytes_read = fread(record->data, 1, record->length, it->file);
 
     if(bytes_read != record->length) {
-        puts("get_record: (2) Failed to read all of record data.");
+        puts("get_record: (3) Failed to read all of record data.");
         printf("\tRead %u of %u bytes\n", bytes_read, record->length);
 
         if ( record->type != UNIFIED2_PACKET || 

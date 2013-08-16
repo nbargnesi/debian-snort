@@ -15,9 +15,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steven Sturges
  *
@@ -43,8 +43,6 @@
  *
  *
  */
-#ifdef DYNAMIC_PLUGIN
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -90,11 +88,10 @@ extern PreprocStats ruleOTNEvalPerfStats;
 extern SFGHASH *flowbits_hash;
 extern SF_QUEUE *flowbits_bit_queue;
 extern uint32_t flowbits_count;
-extern volatile int snort_initializing;
 extern DynamicRuleNode *dynamic_rules;
 
 
-void DynamicInit(char *, OptTreeNode *, int);
+void DynamicInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void DynamicParse(char *, OptTreeNode *);
 int DynamicCheck(void *option_data, Packet *p);
 
@@ -194,7 +191,7 @@ void SetupDynamic(void)
 
 /****************************************************************************
  *
- * Function: DynamicInit(char *, OptTreeNode *)
+ * Function: DynamicInit(struct _SnortConfig *, char *, OptTreeNode *)
  *
  * Purpose: Configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -207,7 +204,7 @@ void SetupDynamic(void)
  * Returns: void function
  *
  ****************************************************************************/
-void DynamicInit(char *data, OptTreeNode *otn, int protocol)
+void DynamicInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
     DynamicData *dynData;
@@ -222,7 +219,7 @@ void DynamicInit(char *data, OptTreeNode *otn, int protocol)
      */
     fpl->context = (void *) dynData;
 
-    if (add_detection_option(RULE_OPTION_TYPE_DYNAMIC, (void *)dynData, &option_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_DYNAMIC, (void *)dynData, &option_dup) == DETECTION_OPTION_EQUAL)
     {
         free(dynData);
         fpl->context = dynData = option_dup;
@@ -288,7 +285,8 @@ void DynamicRuleListFree(DynamicRuleNode *head)
 
 /****************************************************************************
  *
- * Function: RegisterDynamicRule(uint32_t, uint32_t, char *, void *,
+ * Function: RegisterDynamicRule(Snortconfig *, uint32_t, uint32_t, char *,
+ *                               void *,
  *                               OTNCheckFunction, int, GetFPContentFunction)
  *
  * Purpose: A dynamically loaded detection engine library can use this
@@ -309,6 +307,7 @@ void DynamicRuleListFree(DynamicRuleNode *head)
  *
  ****************************************************************************/
 int RegisterDynamicRule(
+    SnortConfig *sc,
     uint32_t sid,
     uint32_t gid,
     void *info,
@@ -326,7 +325,6 @@ int RegisterDynamicRule(
     OptFpList *fpl;
     char done_once = 0;
     void *option_dup;
-    SnortConfig *sc = snort_conf_for_parsing;
     DynamicRuleNode *node = NULL;
 
     if (sc == NULL)
@@ -335,7 +333,7 @@ int RegisterDynamicRule(
                    __FILE__, __LINE__);
     }
 
-    if (snort_initializing)
+    if ( SnortIsInitializing() )
     {
         node = (DynamicRuleNode *)SnortAlloc(sizeof(DynamicRuleNode));
 
@@ -383,7 +381,7 @@ int RegisterDynamicRule(
 
     /* If this dynamic rule can be expressed as a regular rule, break it down
      * and convert it to use the rule option tree. */
-    if (ConvertDynamicRule((Rule *)info, otn) > 0)
+    if (ConvertDynamicRule(sc, (Rule *)info, otn) > 0)
     {
         if (node != NULL)
             node->converted = 1;
@@ -414,7 +412,7 @@ int RegisterDynamicRule(
 
         if (done_once == 0)
         {
-            if (add_detection_option(RULE_OPTION_TYPE_DYNAMIC,
+            if (add_detection_option(sc, RULE_OPTION_TYPE_DYNAMIC,
                                      (void *)dynData, &option_dup) == DETECTION_OPTION_EQUAL)
             {
                 free(dynData);
@@ -466,8 +464,6 @@ int ReloadDynamicRules(SnortConfig *sc)
 {
     DynamicRuleNode *node = dynamic_rules;
 
-    snort_conf_for_parsing = sc;
-
     for (; node != NULL; node = node->next)
     {
         int i;
@@ -494,7 +490,7 @@ int ReloadDynamicRules(SnortConfig *sc)
             }
         }
 
-        if (RegisterDynamicRule(node->rule->info.sigID, node->rule->info.genID,
+        if (RegisterDynamicRule(sc, node->rule->info.sigID, node->rule->info.genID,
                     (void *)node->rule, node->chkFunc, node->hasFunc,
                     node->contentFlags, node->contentsFunc,
                     node->freeFunc, node->preprocFpContentsFunc) == -1)
@@ -519,13 +515,11 @@ int ReloadDynamicRules(SnortConfig *sc)
         }
     }
 
-    snort_conf_for_parsing = NULL;
-
     return 0;
 }
 #endif
 
-int DynamicPreprocRuleOptInit(void *opt)
+int DynamicPreprocRuleOptInit(struct _SnortConfig *sc, void *opt)
 {
     PreprocessorOption *preprocOpt = (PreprocessorOption *)opt;
     PreprocOptionInit optionInit;
@@ -541,7 +535,7 @@ int DynamicPreprocRuleOptInit(void *opt)
     if (preprocOpt->optionName == NULL)
         return -1;
 
-    result = GetPreprocessorRuleOptionFuncs((char *)preprocOpt->optionName,
+    result = GetPreprocessorRuleOptionFuncs(sc, (char *)preprocOpt->optionName,
                                      &preprocOpt->optionInit,
                                      &preprocOpt->optionEval,
                                      &otnHandler,
@@ -567,7 +561,7 @@ int DynamicPreprocRuleOptInit(void *opt)
     if (preprocOpt->optionParameters != NULL)
         option_params = SnortStrdup(preprocOpt->optionParameters);
 
-    result = optionInit(option_name, option_params, &preprocOpt->dataPtr);
+    result = optionInit(sc, option_name, option_params, &preprocOpt->dataPtr);
 
     free(option_name);
     if (option_params != NULL) free(option_params);
@@ -765,6 +759,3 @@ int DynamicHasPCRE(OptTreeNode *otn)
 {
     return DynamicHasOption(otn, OPTION_TYPE_PCRE, 0);
 }
-
-#endif /* DYNAMIC_PLUGIN */
-

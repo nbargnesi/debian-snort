@@ -1,7 +1,7 @@
 /* $Id */
 
 /*
- ** Copyright (C) 2011-2012 Sourcefire, Inc.
+ ** Copyright (C) 2011-2013 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 
@@ -67,19 +67,15 @@ const int MAJOR_VERSION = 1;
 const int MINOR_VERSION = 1;
 const int BUILD_VERSION = 1;
 
-#ifdef SUP_IP6
-const char *PREPROC_NAME = "SF_REPUTATION (IPV6)";
-#else
 const char *PREPROC_NAME = "SF_REPUTATION";
-#endif
 
 #define SetupReputation DYNAMIC_PREPROC_SETUP
 
 /*
  * Function prototype(s)
  */
-static void ReputationInit( char* );
-static void ReputationCheckConfig(void);
+static void ReputationInit( struct _SnortConfig *, char* );
+static int ReputationCheckConfig(struct _SnortConfig *);
 static inline void ReputationProcess(SFSnortPacket *);
 static void ReputationMain( void*, void* );
 static void ReputationFreeConfig(tSfPolicyUserContextId);
@@ -103,20 +99,19 @@ tSfPolicyUserContextId reputation_config;
 ReputationConfig *pDefaultPolicyConfig = NULL;
 
 #ifdef SNORT_RELOAD
-static tSfPolicyUserContextId reputation_swap_config = NULL;
-static void ReputationReload(char *);
-static void * ReputationReloadSwap(void);
+static void ReputationReload(struct _SnortConfig *, char *, void **);
+static void * ReputationReloadSwap(struct _SnortConfig *, void *);
 static void ReputationReloadSwapFree(void *);
-static int ReputationReloadVerify(void);
+static int ReputationReloadVerify(struct _SnortConfig *, void *);
 #endif
 
 
 /* Called at preprocessor setup time. Links preprocessor keyword
  * to corresponding preprocessor initialization function.
  *
- * PARAMETERS:	None.
+ * PARAMETERS:  None.
  *
- * RETURNS:	Nothing.
+ * RETURNS:     Nothing.
  *
  */
 void SetupReputation(void)
@@ -127,7 +122,8 @@ void SetupReputation(void)
     _dpd.registerPreproc( "reputation", ReputationInit );
 #else
     _dpd.registerPreproc("reputation", ReputationInit, ReputationReload,
-            ReputationReloadSwap, ReputationReloadSwapFree);
+            ReputationReloadVerify, ReputationReloadSwap,
+            ReputationReloadSwapFree);
 #endif
 }
 #ifdef SHARED_REP
@@ -145,19 +141,28 @@ static int Reputation_Lookup(uint16_t type, const uint8_t *data, uint32_t length
     snort_ip addr;
     IPrepInfo *repInfo = NULL;
     char *tokstr, *save, *data_copy;
+    CSMessageDataHeader *msg_hdr = (CSMessageDataHeader *)data;
 
     statusBuf[0] = 0;
 
-    if (!length)
+    if (length <= sizeof(*msg_hdr))
+    {
+        return -1;
+    }
+    length -= sizeof(*msg_hdr);
+    if (length != (uint32_t)ntohs(msg_hdr->length))
     {
         return -1;
     }
 
-    data_copy = strdup((const char *)data);
+    data += sizeof(*msg_hdr);
+    data_copy = malloc(length + 1);
     if (data_copy == NULL)
     {
         return -1;
     }
+    memcpy(data_copy, data, length);
+    data_copy[length] = 0;
 
     tokstr = strtok_r(data_copy, " \t\n", &save);
     if (tokstr == NULL)
@@ -167,11 +172,7 @@ static int Reputation_Lookup(uint16_t type, const uint8_t *data, uint32_t length
     }
 
     /* Convert tokstr to sfip type */
-#ifndef SUP_IP6
-    if (inet_pton(AF_INET, tokstr, &addr) <= 0)
-#else
     if (sfip_pton(tokstr, IP_ARG(addr)))
-#endif
     {
         free(data_copy);
         return -1;
@@ -186,7 +187,7 @@ static int Reputation_Lookup(uint16_t type, const uint8_t *data, uint32_t length
         free(data_copy);
         return -1;
     }
-    
+
     /* Are we looking to obtain the decision? */
     tokstr = strtok_r(NULL, " \t\n", &save);
     if (tokstr)
@@ -227,7 +228,7 @@ static int Reputation_Lookup(uint16_t type, const uint8_t *data, uint32_t length
             case WHITELISTED_TRUST:
             decision = "WHITELISTED TRUST";
             break;
-            
+
             default:
             decision = "UNKNOWN";
             break;
@@ -294,10 +295,10 @@ static int Reputation_PreControl(uint16_t type, const uint8_t *data, uint32_t le
     {
         *new_config = nextConfig;
         nextConfig->segment_version = available_segment;
-        _dpd.logMsg("    Repuation Preprocessor: Received segment %d\n",
+        _dpd.logMsg("    Reputation Preprocessor: Received segment %d\n",
                 available_segment);
         if (!statusBuf[0])
-            snprintf(statusBuf,statusBufLen, "Repuation Preprocessor: Received segment %d successful", available_segment);
+            snprintf(statusBuf,statusBufLen, "Reputation Preprocessor: Received segment %d successful", available_segment);
     }
     else
     {
@@ -324,7 +325,7 @@ static int Reputation_Control(uint16_t type, void *new_config, void **old_config
     return -1;
 }
 
-static void Reputation_PostControl(uint16_t type, void *old_config)
+static void Reputation_PostControl(uint16_t type, void *old_config, struct _THREAD_ELEMENT *te, ControlDataSendFunc f)
 {
     ReputationConfig *config = (ReputationConfig *) old_config;
     ReputationConfig *pDefaultPolicyConfig = NULL;
@@ -361,7 +362,7 @@ static void ReputationMaintenanceCheck(int signal, void *data)
         if ((SWITCHED == switch_state) && reputation_eval_config &&
                 (reputation_eval_config->iplist == (table_flat_t *)*IPtables))
         {
-            _dpd.logMsg("    Repuation Preprocessor: Instance %d switched to segment_version %d\n",
+            _dpd.logMsg("    Reputation Preprocessor: Instance %d switched to segment_version %d\n",
                     _dpd.getSnortInstance(), available_segment);
             UnmapInactiveSegments();
             switch_state = NO_SWITCH;
@@ -380,17 +381,30 @@ static void ReputationMaintenanceCheck(int signal, void *data)
         else if ((SWITCHED == switch_state) && reputation_eval_config &&
                 (reputation_eval_config->iplist == (table_flat_t *)*IPtables))
         {
-            _dpd.logMsg("    Repuation Preprocessor: Instance %d switched to segment_version %d\n",
+            _dpd.logMsg("    Reputation Preprocessor: Instance %d switched to segment_version %d\n",
                     _dpd.getSnortInstance(), available_segment);
             UnmapInactiveSegments();
             switch_state = NO_SWITCH;
         }
     }
 }
+
+/*Switch for idle*/
+static void ReputationShmemSwitch(void)
+{
+    if (switch_state == NO_SWITCH)
+        return;
+
+    reputation_eval_config = sfPolicyUserDataGetDefault(reputation_config);
+
+    if (reputation_eval_config)
+        reputation_eval_config->iplist = (table_flat_t *)*IPtables;
+}
+
 void SetupReputationUpdate(uint32_t updateInterval)
 {
     _dpd.addPeriodicCheck(ReputationMaintenanceCheck,NULL, PRIORITY_FIRST, PP_REPUTATION, updateInterval);
-
+    _dpd.registerIdleHandler(ReputationShmemSwitch);
     /*Only writer or server has control channel*/
     if (SHMEM_SERVER_ID == _dpd.getSnortInstance())
     {
@@ -414,9 +428,9 @@ void SetupReputationUpdate(uint32_t updateInterval)
  *
  * RETURNS:  Nothing.
  */
-static void ReputationInit(char *argp)
+static void ReputationInit(struct _SnortConfig *sc, char *argp)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     ReputationConfig *pDefaultPolicyConfig = NULL;
     ReputationConfig *pPolicyConfig = NULL;
 
@@ -431,7 +445,7 @@ static void ReputationInit(char *argp)
                     "for Reputation config.\n");
         }
 
-        _dpd.addPreprocConfCheck(ReputationCheckConfig);
+        _dpd.addPreprocConfCheck(sc, ReputationCheckConfig);
         _dpd.registerPreprocStats(REPUTATION_NAME, ReputationPrintStats);
         _dpd.addPreprocExit(ReputationCleanExit, NULL, PRIORITY_LAST, PP_REPUTATION);
 
@@ -480,10 +494,10 @@ static void ReputationInit(char *argp)
     if (!pPolicyConfig->sharedMem.path && pPolicyConfig->localSegment)
         IPtables = &pPolicyConfig->localSegment;
 
-    _dpd.addPreproc( ReputationMain, PRIORITY_FIRST, PP_REPUTATION, PROTO_BIT__IP );
+    _dpd.addPreproc( sc, ReputationMain, PRIORITY_FIRST, PP_REPUTATION, PROTO_BIT__IP );
 #ifdef SHARED_REP
     if (pPolicyConfig->sharedMem.path)
-        _dpd.addPostConfigFunc(initShareMemory, pPolicyConfig);
+        _dpd.addPostConfigFunc(sc, initShareMemory, pPolicyConfig);
 #endif
 
 }
@@ -513,7 +527,7 @@ static inline void createZones(uint32_t *ingressZone, uint32_t *egressZone, SFSn
 static inline IPdecision GetReputation(  IPrepInfo * repInfo,
         SFSnortPacket *p, uint32_t *listid)
 {
-    char decision = DECISION_NULL;
+    IPdecision decision = DECISION_NULL;
     uint8_t *base ;
     ListInfo *listInfo;
 #ifdef SHARED_REP
@@ -523,7 +537,11 @@ static inline IPdecision GetReputation(  IPrepInfo * repInfo,
     if (p->pkt_header)
     {
         ingressZone = p->pkt_header->ingress_group;
-        egressZone = p->pkt_header->egress_group;
+        if (p->pkt_header->egress_index < 0)
+            egressZone = ingressZone;
+        else
+            egressZone = p->pkt_header->egress_group;
+
 #ifdef REG_TEST
         createZones(&ingressZone,&egressZone,p);
 #endif
@@ -592,11 +610,7 @@ static inline IPrepInfo*  ReputationLookup(snort_ip_p ip)
     IPrepInfo * result;
 
 
-#ifdef SUP_IP6
     DEBUG_WRAP( DebugMessage(DEBUG_REPUTATION, "Lookup address: %s \n",sfip_to_str(ip) ););
-#else
-    DEBUG_WRAP( DebugMessage(DEBUG_REPUTATION, "Lookup address: %lx \n", ip););
-#endif
     if (!reputation_eval_config->scanlocal)
     {
         if (sfip_is_private(ip) )
@@ -606,15 +620,9 @@ static inline IPrepInfo*  ReputationLookup(snort_ip_p ip)
         }
     }
 
-#ifdef SUP_IP6
 
     result = (IPrepInfo *) sfrt_flat_dir8x_lookup((void *)ip, reputation_eval_config->iplist );
 
-#else
-
-    result = (IPrepInfo *) sfrt_flat_dir8x_lookup((void *)&ip, reputation_eval_config->iplist);
-
-#endif
 
     return (result);
 
@@ -735,6 +743,9 @@ static inline void ReputationProcess(SFSnortPacket *p)
     else if (BLACKLISTED == decision)
     {
         ALERT(REPUTATION_EVENT_BLACKLIST,REPUTATION_EVENT_BLACKLIST_STR);
+#ifdef POLICY_BY_ID_ONLY
+        _dpd.inlineForceDropPacket(p);
+#endif
         _dpd.disableAllDetect(p);
         _dpd.setPreprocBit(p, PP_PERFMONITOR);
         reputation_stats.blacklisted++;
@@ -768,48 +779,47 @@ static inline void ReputationProcess(SFSnortPacket *p)
  */
 static void ReputationMain( void* ipacketp, void* contextp )
 {
-
     PROFILE_VARS;
-
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "%s\n", REPUTATION_DEBUG__START_MSG));
 
-    if (!IsIP((SFSnortPacket*) ipacketp)
-            ||( ((SFSnortPacket*)ipacketp)->flags & FLAG_REBUILT_FRAG)
-            ||( ((SFSnortPacket*)ipacketp)->flags & FLAG_REBUILT_STREAM))
+    // preconditions - what we registered for
+    assert(IsIP((SFSnortPacket*)ipacketp));
+
+    if (
+        ((SFSnortPacket*)ipacketp)->flags & FLAG_REBUILT_FRAG ||
+        ((SFSnortPacket*)ipacketp)->flags & FLAG_REBUILT_STREAM )
     {
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,"   -> spp_reputation: Not IP or Is a rebuilt packet\n"););
         DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "%s\n", REPUTATION_DEBUG__END_MSG));
         return;
     }
 
-
-    sfPolicyUserPolicySet (reputation_config, runtimePolicyId);
-
-    reputation_eval_config = sfPolicyUserDataGetCurrent(reputation_config);
+    reputation_eval_config = sfPolicyUserDataGetDefault(reputation_config);
 
     PREPROC_PROFILE_START(reputationPerfStats);
-    /*
-     * Start process
-     */
-
     ReputationProcess((SFSnortPacket*) ipacketp);
-
     DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION, "%s\n", REPUTATION_DEBUG__END_MSG));
-    PREPROC_PROFILE_END(reputationPerfStats);
 
+    PREPROC_PROFILE_END(reputationPerfStats);
 }
 
-static int ReputationCheckPolicyConfig(tSfPolicyUserContextId config, tSfPolicyId policyId, void* pData)
+static int ReputationCheckPolicyConfig(
+    struct _SnortConfig *sc, tSfPolicyUserContextId config, tSfPolicyId policyId, void* pData)
 {
-    _dpd.setParserPolicy(policyId);
+    _dpd.setParserPolicy(sc, policyId);
 
     return 0;
 }
-void ReputationCheckConfig(void)
-{
-    sfPolicyUserDataIterate (reputation_config, ReputationCheckPolicyConfig);
-}
 
+int ReputationCheckConfig(struct _SnortConfig *sc)
+{
+    int rval;
+
+    if ((rval = sfPolicyUserDataIterate (sc, reputation_config, ReputationCheckPolicyConfig)))
+        return rval;
+
+    return 0;
+}
 
 static void ReputationCleanExit(int signal, void *data)
 {
@@ -827,6 +837,7 @@ static void ReputationCleanExit(int signal, void *data)
 #endif
     }
 }
+
 static int ReputationFreeConfigPolicy(
         tSfPolicyUserContextId config,
         tSfPolicyId policyId,
@@ -848,7 +859,7 @@ void ReputationFreeConfig(tSfPolicyUserContextId config)
     if (config == NULL)
         return;
 
-    sfPolicyUserDataIterate (config, ReputationFreeConfigPolicy);
+    sfPolicyUserDataFreeIterate (config, ReputationFreeConfigPolicy);
     sfPolicyConfigDelete(config);
 }
 /******************************************************************
@@ -877,9 +888,10 @@ static void ReputationPrintStats(int exiting)
 }
 
 #ifdef SNORT_RELOAD
-static void ReputationReload(char *args)
+static void ReputationReload(struct _SnortConfig *sc, char *args, void **new_config)
 {
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyUserContextId reputation_swap_config = (tSfPolicyUserContextId)*new_config;
+    tSfPolicyId policy_id = _dpd.getParserPolicy(sc);
     ReputationConfig * pPolicyConfig = NULL;
     ReputationConfig *pDefaultPolicyConfig = NULL;
 
@@ -892,7 +904,7 @@ static void ReputationReload(char *args)
             DynamicPreprocessorFatalMessage("Failed to allocate memory "
                     "for Reputation config.\n");
         }
-
+        *new_config = (void *)reputation_swap_config;
     }
 
     sfPolicyUserPolicySet (reputation_swap_config, policy_id);
@@ -929,12 +941,12 @@ static void ReputationReload(char *args)
     if ((policy_id != 0) &&(pDefaultPolicyConfig))
         pPolicyConfig->memcap = pDefaultPolicyConfig->memcap;
 
-    _dpd.addPreproc( ReputationMain, PRIORITY_FIRST, PP_REPUTATION, PROTO_BIT__IP );
-    _dpd.addPreprocReloadVerify(ReputationReloadVerify);
+    _dpd.addPreproc( sc, ReputationMain, PRIORITY_FIRST, PP_REPUTATION, PROTO_BIT__IP );
 }
 
-static int ReputationReloadVerify(void)
+static int ReputationReloadVerify(struct _SnortConfig *sc, void *swap_config)
 {
+    tSfPolicyUserContextId reputation_swap_config = (tSfPolicyUserContextId)swap_config;
     ReputationConfig * pPolicyConfig = NULL;
     ReputationConfig * pCurrentConfig = NULL;
 
@@ -958,8 +970,6 @@ static int ReputationReloadVerify(void)
     if (pPolicyConfig->memcap != pCurrentConfig->memcap)
     {
         _dpd.errMsg("Reputation reload: Changing memcap settings requires a restart.\n");
-        ReputationFreeConfig(reputation_swap_config);
-        reputation_swap_config = NULL;
         return -1;
     }
 
@@ -973,8 +983,6 @@ static int ReputationReloadVerify(void)
                 ||(pPolicyConfig->sharedMem.updateInterval != pCurrentConfig->sharedMem.updateInterval))
         {
             _dpd.errMsg("Reputation reload: Changing memory settings requires a restart.\n");
-            ReputationFreeConfig(reputation_swap_config);
-            reputation_swap_config = NULL;
             return -1;
         }
 
@@ -1000,8 +1008,9 @@ static int ReputationFreeUnusedConfigPolicy(
     return 0;
 }
 
-static void * ReputationReloadSwap(void)
+static void * ReputationReloadSwap(struct _SnortConfig *sc, void *swap_config)
 {
+    tSfPolicyUserContextId reputation_swap_config = (tSfPolicyUserContextId)swap_config;
     tSfPolicyUserContextId old_config = reputation_config;
     ReputationConfig *pDefaultPolicyConfig = NULL;
 
@@ -1009,13 +1018,12 @@ static void * ReputationReloadSwap(void)
         return NULL;
 
     reputation_config = reputation_swap_config;
-    reputation_swap_config = NULL;
 
     pDefaultPolicyConfig = (ReputationConfig *)sfPolicyUserDataGetDefault(reputation_config);
     if (pDefaultPolicyConfig->localSegment)
         IPtables = &pDefaultPolicyConfig->localSegment;
 
-    sfPolicyUserDataIterate (old_config, ReputationFreeUnusedConfigPolicy);
+    sfPolicyUserDataFreeIterate (old_config, ReputationFreeUnusedConfigPolicy);
 
     if (sfPolicyUserPolicyGetActive(old_config) == 0)
     {

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -80,6 +80,11 @@
 #define HEADER_LENGTH__HOSTNAME 4
 #define HEADER_NAME__TRANSFER_ENCODING "Transfer-encoding"
 #define HEADER_LENGTH__TRANSFER_ENCODING 17
+#define HEADER_NAME__CONTENT_TYPE "Content-Type"
+#define HEADER_LENGTH__CONTENT_TYPE 12
+
+const u_char *proxy_start = NULL;
+const u_char *proxy_end = NULL;
 
 /**  This makes passing function arguments much more readable and easier
 **  to follow.
@@ -1098,6 +1103,12 @@ int SetSlashNorm(HI_SESSION *Session, const u_char *start,
     HTTPINSPECT_CONF *ServerConf = Session->server_conf;
 
     CheckLongDir(Session, uri_ptr, *ptr);
+    if( proxy_start)
+    {
+        // This is the first dir after http://
+        if(!uri_ptr->ident && !uri_ptr->last_dir)
+            proxy_end = *ptr;
+    }
     uri_ptr->last_dir = *ptr;
 
     if(!uri_ptr->norm && !uri_ptr->ident)
@@ -1319,14 +1330,17 @@ int SetProxy(HI_SESSION *Session, const u_char *start,
 
     if(!uri_ptr->ident && !uri_ptr->last_dir)
     {
-        if(Session->global_conf->proxy_alert && !ServerConf->allow_proxy)
+        if(hi_util_in_bounds(start, end, ((*ptr)+2)))
         {
-            if(hi_util_in_bounds(start, end, ((*ptr)+2)))
+            if(*((*ptr)+1) == '/' && *((*ptr)+2) == '/')
             {
-                if(*((*ptr)+1) == '/' && *((*ptr)+2) == '/')
-                {
+                if(Session->global_conf->proxy_alert && !ServerConf->allow_proxy)
                     uri_ptr->proxy = *ptr;
-                }
+                //If we found :// check to see if it is preceeded by http. If so, this is a proxy
+                proxy_start = (u_char *)SnortStrcasestr((const char *)uri_ptr->uri, (*ptr - uri_ptr->uri), "http");
+                proxy_end = end;
+                (*ptr) = (*ptr) + 3;
+                return HI_SUCCESS;
             }
         }
     }
@@ -1783,6 +1797,7 @@ const u_char *extract_http_xff(HI_SESSION *Session, const u_char *p, const u_cha
     uint8_t unfold_buf[DECODE_BLEN];
     uint32_t unfold_size =0;
     const u_char *start_ptr, *end_ptr, *cur_ptr;
+    const u_char *port;
     HEADER_PTR *header_ptr;
     sfip_t **true_ip;
 
@@ -1841,29 +1856,45 @@ const u_char *extract_http_xff(HI_SESSION *Session, const u_char *p, const u_cha
         }
 
         if(cur_ptr - start_ptr)
+        {
             ipAddr = SnortStrndup((const char *)start_ptr, cur_ptr - start_ptr );
+        }
         if(ipAddr)
         {
             if( (tmp = sfip_alloc(ipAddr, &status)) == NULL )
             {
-                if((status != SFIP_ARG_ERR) && (status !=SFIP_ALLOC_ERR))
+                port = (u_char *)SnortStrnStr((const char *)start_ptr, (cur_ptr - start_ptr), ":");
+                if(port)
+                {
+                    free(ipAddr);
+                    ipAddr = SnortStrndup((const char *)start_ptr, port - start_ptr );
+                    if( !ipAddr)
+                    {
+                        return p;
+                    }
+                    if( (tmp = sfip_alloc(ipAddr, &status)) == NULL )
+                    {
+                        if((status != SFIP_ARG_ERR) && (status !=SFIP_ALLOC_ERR))
+                        {
+                            if(hi_eo_generate_event(Session, HI_EO_CLIENT_INVALID_TRUEIP))
+                            {
+                                hi_eo_client_event_log(Session, HI_EO_CLIENT_INVALID_TRUEIP, NULL, NULL);
+                            }
+                            free(ipAddr);
+                            return p;
+                        }
+                    }
+                }
+                else if((status != SFIP_ARG_ERR) && (status !=SFIP_ALLOC_ERR))
                 {
                     if(hi_eo_generate_event(Session, HI_EO_CLIENT_INVALID_TRUEIP))
                     {
                         hi_eo_client_event_log(Session, HI_EO_CLIENT_INVALID_TRUEIP, NULL, NULL);
                     }
+                    free(ipAddr);
+                    return p;
                 }
-                free(ipAddr);
-                return p;
             }
-#ifndef SUP_IP6
-            if (tmp->family == AF_INET6)
-            {
-                sfip_free(tmp);
-                free(ipAddr);
-                return p;
-            }
-#endif
             if(*true_ip)
             {
                 if(!IP_EQUALITY(*true_ip, tmp))
@@ -2125,7 +2156,6 @@ const u_char *extract_http_content_length(HI_SESSION *Session,
                                 }
                             }
                         }
-                        p++;
                     }
                 }
                 else
@@ -2194,7 +2224,11 @@ static inline const u_char *extractHeaderFieldValues(HI_SESSION *Session,
         else if ( IsHeaderFieldName(p, end, HEADER_NAME__CONTENT_LENGTH, HEADER_LENGTH__CONTENT_LENGTH) )
         {
             p = extract_http_content_length(Session, ServerConf, p, start,
-                                            end, hdrs_args->hdr_ptr, hdrs_args->hdr_field_ptr );
+                    end, hdrs_args->hdr_ptr, hdrs_args->hdr_field_ptr );
+        }
+        else if ( IsHeaderFieldName(p, end, HEADER_NAME__CONTENT_TYPE, HEADER_LENGTH__CONTENT_TYPE) )
+        {
+            Session->client.request.content_type = p;
         }
     }
     else if (((p - offset) == 0) && ((*p == 'x') || (*p == 'X') || (*p == 't') || (*p == 'T')))
@@ -2288,6 +2322,7 @@ static inline const u_char *hi_client_extract_header(
     int iRet = HI_SUCCESS;
     const u_char *p;
     const u_char *offset;
+    const u_char *crlf;
     URI_PTR version_string;
     HEADER_FIELD_PTR header_field_ptr ;
     HI_CLIENT_HDR_ARGS hdrs_args;
@@ -2324,6 +2359,8 @@ static inline const u_char *hi_client_extract_header(
     hdrs_args.strm_ins = stream_ins;
     hdrs_args.hst_name_hdr = 0;
     hdrs_args.true_clnt_xff = 0;
+
+    SkipBlankSpace(start,end,&p);
 
     /* This is to skip past the HTTP/1.0 (or 1.1) version string */
     if (IsHttpVersion(&p, end))
@@ -2382,6 +2419,28 @@ static inline const u_char *hi_client_extract_header(
         {
             header_ptr->header.uri = version_string.uri_end + 1;
             offset = (u_char *)p;
+        }
+        else
+        {
+            return p;
+        }
+    }
+    else
+    {
+        if(hi_eo_generate_event(Session, HI_EO_CLIENT_UNESCAPED_SPACE_URI))
+        {
+            hi_eo_client_event_log(Session, HI_EO_CLIENT_UNESCAPED_SPACE_URI,
+                           NULL, NULL);
+        }
+        if(p < end)
+        {
+            crlf = (u_char *)SnortStrnStr((const char *)p, end - p, "\n");
+            if(crlf)
+            {
+                p = crlf;
+            }
+            else
+                return p;
         }
         else
         {
@@ -2560,8 +2619,7 @@ static inline const u_char *hi_client_extract_header(
 **  @retval HI_SUCCESS      URI detected and Session pointers updated
 */
 
-int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
-        int dsize, HttpSessionData *hsd, int stream_ins)
+int StatelessInspection(Packet *p, HI_SESSION *Session, HttpSessionData *hsd, int stream_ins)
 {
     HTTPINSPECT_CONF *ServerConf;
     HTTPINSPECT_CONF *ClientConf;
@@ -2577,13 +2635,14 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     const u_char *method_end = NULL;
     int method_len;
     int iRet=0;
-    int len;
-    char non_ascii_mthd = 0;
     char sans_uri = 0;
+    const unsigned char *data = p->data;
+    int dsize = p->dsize;
 
-    if(!Session || !data || dsize < 1)
+    if ( ScPafEnabled() )
     {
-        return HI_INVALID_ARG;
+        if ( stream_ins && (p->packet_flags & PKT_STREAM_INSERT) )
+            return HI_INVALID_ARG;
     }
 
     ServerConf = Session->server_conf;
@@ -2613,6 +2672,7 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     if(Client->request.pipeline_req)
     {
         start = Client->request.pipeline_req;
+        p->packet_flags |= PKT_ALLOW_MULTIPLE_DETECT;
     }
     else
     {
@@ -2622,15 +2682,7 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     Client->request.pipeline_req = NULL;
 
     end = data + dsize;
-
     ptr = start;
-#ifdef ENABLE_PAF
-    if ( ScPafEnabled() )
-    {
-        if(stream_ins)
-            return HI_INVALID_ARG;
-    }
-#endif
 
     /*
     **  Apache and IIS strike again . . . Thanks Kanatoko
@@ -2658,8 +2710,6 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
         break;
     }
 
-    len = end - ptr;
-
     mthd = method_ptr.uri = ptr;
 
     while(hi_util_in_bounds(start, end, mthd))
@@ -2669,22 +2719,16 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
             method_end = mthd++;
             break;
         }
-#ifdef ENABLE_PAF
         if ( !ScPafEnabled() )
         {
-#endif
             /* isascii returns non-zero if it is ascii */
             if (isascii((int)*mthd) == 0)
             {
                 /* Possible post data or something else strange... */
                 method_end = mthd++;
-                non_ascii_mthd = 1;
                 break;
             }
-#ifdef ENABLE_PAF
         }
-#endif
-
         mthd++;
     }
     if (method_end)
@@ -2727,7 +2771,6 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     }
     else
     {
-#ifdef ENABLE_PAF
         if( ScPafEnabled() )
         {
             /* Might have gotten non-ascii characters, hence no method, but if
@@ -2739,7 +2782,6 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
             Client->request.method = HI_UNKNOWN_METHOD;
         }
         else
-#endif
         {
             if (!stream_ins && hi_eo_generate_event(Session, HI_EO_CLIENT_UNKNOWN_METHOD))
                 hi_eo_client_event_log(Session, HI_EO_CLIENT_UNKNOWN_METHOD, NULL, NULL);
@@ -2845,11 +2887,11 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
                 if ( ptr < end )
                     Client->request.pipeline_req = ptr;
 
-                if(Client->request.post_raw && (ServerConf->post_depth > -1))
+                if(Client->request.post_raw && (ServerConf->post_extract_size > -1))
                 {
-                    if(ServerConf->post_depth && ((int)Client->request.post_raw_size > ServerConf->post_depth))
+                    if(ServerConf->post_extract_size && ((int)Client->request.post_raw_size > ServerConf->post_extract_size))
                     {
-                        Client->request.post_raw_size = ServerConf->post_depth;
+                        Client->request.post_raw_size = (unsigned int)ServerConf->post_extract_size;
                     }
                 }
                 else
@@ -2949,14 +2991,14 @@ int StatelessInspection(HI_SESSION *Session, const unsigned char *data,
     return HI_SUCCESS;
 }
 
-int hi_client_inspection(void *S, const unsigned char *data, int dsize, HttpSessionData *hsd, int stream_ins)
+int hi_client_inspection(Packet *p, void *S, HttpSessionData *hsd, int stream_ins)
 {
     HTTPINSPECT_GLOBAL_CONF *GlobalConf;
     HI_SESSION *Session;
 
     int iRet;
 
-    if(!S || !data || dsize < 1)
+    if(!S || !(p->data) || (p->dsize < 1))
     {
         return HI_INVALID_ARG;
     }
@@ -2986,7 +3028,7 @@ int hi_client_inspection(void *S, const unsigned char *data, int dsize, HttpSess
         /*
         **  Otherwise we assume stateless inspection
         */
-        iRet = StatelessInspection(Session, data, dsize, hsd, stream_ins);
+        iRet = StatelessInspection(p, Session, hsd, stream_ins);
         if (iRet)
         {
             return iRet;

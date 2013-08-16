@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
@@ -45,6 +45,7 @@
 #include <pcap.h>
 #include <timersub.h>
 #include <pthread.h>
+#include <string.h>
 
 #ifndef WIN32
 #include <grp.h>
@@ -83,6 +84,10 @@
 #include "sftarget_reader.h"
 #endif
 
+#ifdef SIDE_CHANNEL
+#include "sidechannel.h"
+#endif
+
 #ifdef WIN32
 #include "win32/WIN32-Code/name.h"
 #endif
@@ -97,22 +102,27 @@
 
 extern PreprocStatsFuncNode *preproc_stats_funcs;
 
-/*
- * you may need to adjust this on the systems which don't have standard
- * paths defined
- */
+// You may need to adjust this on the systems which don't have standard paths
+// defined.
 #ifndef _PATH_VARRUN
 static char _PATH_VARRUN[STD_BUF];
 #endif
 
+/****************************************************************************
+ * Store interesting data in memory that would not otherwise be visible
+ * in a CORE(5) file
+ ***************************************************************************/
+#define SNORT_VERSION_STRING ("### Snort Version "VERSION" Build "BUILD"\n")
+#define SNORT_VERSION_STRLEN sizeof(SNORT_VERSION_STRING)
+char __snort_version_string[SNORT_VERSION_STRLEN];
 
-#ifdef NAME_MAX
-#define NAME_MAX_UTIL NAME_MAX
-#else
-#define NAME_MAX_UTIL 256
-#endif /* NAME_MAX */
-
-#define FILE_MAX_UTIL  (PATH_MAX_UTIL + NAME_MAX_UTIL)
+void StoreSnortInfoStrings( void )
+{
+    strncpy(__snort_version_string, SNORT_VERSION_STRING,
+            sizeof(__snort_version_string));
+}
+#undef SNORT_VERSION_STRING
+#undef SNORT_VERSION_STRLEN
 
 /****************************************************************************
  *
@@ -177,13 +187,8 @@ int DisplayBanner(void)
 
     LogMessage("\n");
     LogMessage("   ,,_     -*> Snort! <*-\n");
-    LogMessage("  o\"  )~   Version %s%s%s (Build %s) %s\n",
+    LogMessage("  o\"  )~   Version %s%s (Build %s) %s\n",
                VERSION,
-#ifdef SUP_IP6
-               " IPv6",
-#else
-               "",
-#endif
 #ifdef GRE
                " GRE",
 #else
@@ -192,7 +197,7 @@ int DisplayBanner(void)
                BUILD,
                info);
     LogMessage("   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/snort/snort-team\n");
-    LogMessage("           Copyright (C) 1998-2012 Sourcefire, Inc., et al.\n");
+    LogMessage("           Copyright (C) 1998-2013 Sourcefire, Inc., et al.\n");
 #ifdef HAVE_PCAP_LIB_VERSION
     LogMessage("           Using %s\n", pcap_lib_version());
 #endif
@@ -453,7 +458,7 @@ void ErrorMessage(const char *format,...)
  *
  * Purpose: Print a message to stderr, and throttle when
  *          too many messages are printed.
- * 
+ *
  * Arguments: throttleInfo => point to the saved throttle state information
  *            format => the formatted error string to print out
  *            ... => format commands/fillers
@@ -465,7 +470,7 @@ void ErrorMessageThrottled(ThrottleInfo *throttleInfo, const char *format,...)
 {
     char buf[STD_BUF+1];
     va_list ap;
-    time_t current_time = packet_timeofday();
+    time_t current_time = packet_time();
 
     if ((snort_conf == NULL)||(!throttleInfo))
         return;
@@ -473,8 +478,8 @@ void ErrorMessageThrottled(ThrottleInfo *throttleInfo, const char *format,...)
     throttleInfo->count++;
     DEBUG_WRAP(DebugMessage(DEBUG_INIT,"current_time: %d, throttle (%p): count "STDu64", last update: %d\n",
             (int)current_time, throttleInfo, throttleInfo->count, (int)throttleInfo->lastUpdate );)
-    /*Note: we only output the first error message, 
-     * and the statistics after at least duration_to_log seconds 
+    /*Note: we only output the first error message,
+     * and the statistics after at least duration_to_log seconds
      * when the same type of error message is printed out again */
     if (current_time - (time_t)throttleInfo->duration_to_log > throttleInfo->lastUpdate)
     {
@@ -616,6 +621,44 @@ void CreateApplicationEventLogEntry(const char *msg)
 #endif  /* WIN32 && ENABLE_WIN32_SERVICE */
 
 
+static int already_fatal = 0;
+
+/*
+ * Function: SnortFatalExit(void)
+ *
+ * Purpose: When a fatal error occurs, this function cleanly
+ *          shuts down the program
+ *
+ * Arguments: none
+ *
+ * Returns: void function
+ */
+NORETURN void SnortFatalExit(void)
+{
+    // -----------------------------
+    // bail now if we are reentering
+    if ( already_fatal )
+        exit(1);
+    else
+        already_fatal = 1;
+
+    if (!snort_conf || (!ScDaemonMode() && !ScLogSyslog()))
+        fprintf(stderr,"Fatal Error, Quitting..\n");
+
+    if ( InMainThread() || SnortIsInitializing() )
+    {
+        DAQ_Abort();
+        exit(1);
+    }
+    else
+    {
+        DAQ_BreakLoop(1);
+#ifndef WIN32
+        pthread_exit(NULL);
+#endif
+    }
+}
+
 /*
  * Function: FatalError(const char *, ...)
  *
@@ -634,12 +677,10 @@ NORETURN void FatalError(const char *format,...)
 
     // -----------------------------
     // bail now if we are reentering
-    static uint8_t fatal = 0;
-
-    if ( fatal )
+    if ( already_fatal )
         exit(1);
     else
-        fatal = 1;
+        already_fatal = 1;
     // -----------------------------
 
     va_start(ap, format);
@@ -661,7 +702,7 @@ NORETURN void FatalError(const char *format,...)
 #endif
     }
 
-    if ( InMainThread() )
+    if ( InMainThread() || SnortIsInitializing() )
     {
         DAQ_Abort();
         exit(1);
@@ -1070,6 +1111,11 @@ void DropStats(int exiting)
         LogStat("Filtered", pkt_stats->packets_filtered, pkts_recv);
         LogStat("Outstanding", pkts_out, pkts_recv);
         LogCount("Injected", pkts_inj);
+
+#ifdef REG_TEST
+        if ( snort_conf->pkt_skip )
+            LogCount("Skipped", snort_conf->pkt_skip);
+#endif
     }
 
     LogMessage("%s\n", STATS_SEPARATOR);
@@ -1151,7 +1197,7 @@ void DropStats(int exiting)
         LogMessage("%s\n", STATS_SEPARATOR);
         LogMessage("Action Stats:\n");
 
-        LogStat("Alerts", pc.alert_pkts, total);
+        LogStat("Alerts", pc.total_alert_pkts, total);
         LogStat("Logged", pc.log_pkts, total);
         LogStat("Passed", pc.pass_pkts, total);
 
@@ -1171,9 +1217,14 @@ void DropStats(int exiting)
             const char* s = Verdicts[i];
             LogStat(s, pkt_stats->verdicts[i], pkts_recv);
         }
+        if ( pc.internal_blacklist > 0 )
+            LogStat("Int Blklst", pc.internal_blacklist, pkts_recv);
+
+        if ( pc.internal_whitelist > 0 )
+            LogStat("Int Whtlst", pc.internal_whitelist, pkts_recv);
     }
 #ifdef TARGET_BASED
-    if (ScIdsMode() && IsAdaptiveConfigured(getDefaultPolicy(), 0))
+    if (ScIdsMode() && IsAdaptiveConfigured(getDefaultPolicy()))
     {
         LogMessage("%s\n", STATS_SEPARATOR);
         LogMessage("Attribute Table Stats:\n");
@@ -1205,6 +1256,11 @@ void DropStats(int exiting)
         LogMessage("%s\n", STATS_SEPARATOR);
         idx->func(exiting ? 1 : 0);
     }
+
+#ifdef SIDE_CHANNEL
+    SideChannelStats(exiting, STATS_SEPARATOR);
+#endif /* SIDE_CHANNEL */
+
     LogMessage("%s\n", STATS_SEPARATOR);
 }
 
@@ -1471,51 +1527,6 @@ void SignalWaitingParent(void)
         LogMessage("Daemon initialized, signaled parent pid: %d\n", ppid);
     }
 #endif
-}
-
-/* This function has been moved into mstring.c, since that
-*  is where the allocation actually occurs.  It has been
-*  renamed to mSplitFree().
-*
-void FreeToks(char **toks, int num_toks)
-{
-    if (toks)
-    {
-        if (num_toks > 0)
-        {
-            do
-            {
-                num_toks--;
-                free(toks[num_toks]);
-            } while(num_toks);
-        }
-        free(toks);
-    }
-}
-*/
-
-
-/* Self preserving memory allocator */
-void *SPAlloc(unsigned long size, struct _SPMemControl *spmc)
-{
-    void *tmp;
-
-    spmc->mem_usage += size;
-
-    if(spmc->mem_usage > spmc->memcap)
-    {
-        spmc->sp_func(spmc);
-    }
-
-    tmp = (void *) calloc(size, sizeof(char));
-
-    if(tmp == NULL)
-    {
-        FatalError("Unable to allocate memory!  (%lu requested, %lu in use)\n",
-                size, spmc->mem_usage);
-    }
-
-    return tmp;
 }
 
 /* Guaranteed to be '\0' terminated even if truncation occurs.
@@ -1799,20 +1810,6 @@ const char *SnortStrcasestr(const char *s, int slen, const char *substr)
         s--;
     }
     return s;
-}
-
-void *SnortAlloc(unsigned long size)
-{
-    void *tmp;
-
-    tmp = (void *) calloc(size, sizeof(char));
-
-    if(tmp == NULL)
-    {
-        FatalError("Unable to allocate memory!  (%lu requested)\n", size);
-    }
-
-    return tmp;
 }
 
 void * SnortAlloc2(size_t size, const char *format, ...)
@@ -2186,405 +2183,6 @@ int GetFilesUnderDir(const char *path, SF_QUEUE *dir_queue, const char *filter)
 
 /****************************************************************************
  *
- * Function: GetUniqueName(char * iface)
- *
- * Purpose: To return a string that has a high probability of being unique
- *          for a given sensor.
- *
- * Arguments: char * iface - The network interface you are sniffing
- *
- * Returns: A char * -- its a static char * so you should not free it
- *
- ***************************************************************************/
-char *GetUniqueName(char * iface)
-{
-    char * rptr;
-    static char uniq_name[256];
-
-    if (iface == NULL) LogMessage("Interface is NULL. Name may not be unique for the host\n");
-#ifndef WIN32
-    rptr = GetIP(iface);
-    if(rptr == NULL || !strcmp(rptr, "unknown"))
-#endif
-    {
-        SnortSnprintf(uniq_name, 255, "%s:%s\n",GetHostname(),iface);
-        rptr = uniq_name;
-    }
-    if (ScLogVerbose()) LogMessage("Node unique name is: %s\n", rptr);
-    return rptr;
-}
-
-/****************************************************************************
- *
- * Function: GetIP(char * iface)
- *
- * Purpose: To return a string representing the IP address for an interface
- *
- * Arguments: char * iface - The network interface you want to find an IP
- *            address for.
- *
- * Returns: A char * -- make sure you call free on this when you are done
- *          with it.
- *
- ***************************************************************************/
-char *GetIP(char * iface)
-{
-    struct ifreq ifr;
-    struct sockaddr_in *addr;
-    int s;
-#ifdef SUP_IP6
-    sfip_t ret;
-#endif
-
-    if(iface)
-    {
-        /* Set up a dummy socket just so we can use ioctl to find the
-           ip address of the interface */
-        s = socket(PF_INET, SOCK_DGRAM, 0);
-        if(s == -1)
-        {
-            FatalError("Problem establishing socket to find IP address for interface: %s\n", iface);
-        }
-
-        SnortStrncpy(ifr.ifr_name, iface, strlen(iface) + 1);
-
-#ifndef WIN32
-        if(ioctl(s, SIOCGIFADDR, &ifr) < 0) return NULL;
-        else
-#endif
-        {
-            addr = (struct sockaddr_in *) &ifr.ifr_broadaddr;
-        }
-        close(s);
-
-#ifdef SUP_IP6
-// XXX-IPv6 uses ioctl to populate a sockaddr_in structure ... but what if the interface only has an IPv6 address?
-        sfip_set_raw(&ret, addr, AF_INET);
-        return SnortStrdup(sfip_ntoa(&ret));
-#else
-        return SnortStrdup(inet_ntoa(addr->sin_addr));
-#endif
-    }
-    else
-    {
-        return "unknown";
-    }
-}
-
-/****************************************************************************
- *
- * Function: GetHostname()
- *
- * Purpose: To return a string representing the hostname
- *
- * Arguments: None
- *
- * Returns: A static char * representing the hostname.
- *
- ***************************************************************************/
-char *GetHostname(void)
-{
-#ifdef WIN32
-    DWORD bufflen = 256;
-    static char buff[256];
-    GetComputerName(buff, &bufflen);
-    return buff;
-#else
-    char * error = "unknown";
-    if(getenv("HOSTNAME")) return getenv("HOSTNAME");
-    else if(getenv("HOST")) return getenv("HOST");
-    else return error;
-#endif
-}
-
-/****************************************************************************
- *
- * Function: GetTimestamp(register const struct timeval *tvp, int tz)
- *
- * Purpose: Get an ISO-8601 formatted timestamp for tvp within the tz
- *          timezone.
- *
- * Arguments: tvp is a timeval pointer. tz is a timezone.
- *
- * Returns: char * -- You must free this char * when you are done with it.
- *
- ***************************************************************************/
-char *GetTimestamp(register const struct timeval *tvp, int tz)
-{
-    struct tm *lt;  /* localtime */
-    char * buf;
-    int msec;
-
-    buf = (char *)SnortAlloc(SMALLBUFFER * sizeof(char));
-
-    msec = tvp->tv_usec / 1000;
-
-    if (ScOutputUseUtc())
-    {
-        lt = gmtime((time_t *)&tvp->tv_sec);
-        SnortSnprintf(buf, SMALLBUFFER, "%04i-%02i-%02i %02i:%02i:%02i.%03i",
-                1900 + lt->tm_year, lt->tm_mon + 1, lt->tm_mday,
-                lt->tm_hour, lt->tm_min, lt->tm_sec, msec);
-    }
-    else
-    {
-        lt = localtime((time_t *)&tvp->tv_sec);
-        SnortSnprintf(buf, SMALLBUFFER,
-                "%04i-%02i-%02i %02i:%02i:%02i.%03i+%03i",
-                1900 + lt->tm_year, lt->tm_mon + 1, lt->tm_mday,
-                lt->tm_hour, lt->tm_min, lt->tm_sec, msec, tz);
-    }
-
-    return buf;
-}
-
-/****************************************************************************
- *
- * Function: GetLocalTimezone()
- *
- * Purpose: Find the offset from GMT for current host
- *
- * Arguments: none
- *
- * Returns: int representing the offset from GMT
- *
- ***************************************************************************/
-int GetLocalTimezone(void)
-{
-    time_t      ut;
-    struct tm * ltm;
-    long        seconds_away_from_utc;
-
-    time(&ut);
-    ltm = localtime(&ut);
-
-#if defined(WIN32) || defined(SOLARIS) || defined(AIX) || defined(HPUX)
-    /* localtime() sets the global timezone variable,
-       which is defined in <time.h> */
-    seconds_away_from_utc = timezone;
-#else
-    seconds_away_from_utc = ltm->tm_gmtoff;
-#endif
-
-    return  seconds_away_from_utc/3600;
-}
-
-/****************************************************************************
- *
- * Function: GetCurrentTimestamp()
- *
- * Purpose: Generate an ISO-8601 formatted timestamp for the current time.
- *
- * Arguments: none
- *
- * Returns: char * -- You must free this char * when you are done with it.
- *
- ***************************************************************************/
-char *GetCurrentTimestamp(void)
-{
-    struct tm *lt;
-    struct timezone tz;
-    struct timeval tv;
-    struct timeval *tvp;
-    char * buf;
-    int tzone;
-    int msec;
-
-    buf = (char *)SnortAlloc(SMALLBUFFER * sizeof(char));
-
-    bzero((char *)&tz,sizeof(tz));
-    gettimeofday(&tv,&tz);
-    tvp = &tv;
-
-    msec = tvp->tv_usec/1000;
-
-    if (ScOutputUseUtc())
-    {
-        lt = gmtime((time_t *)&tvp->tv_sec);
-        SnortSnprintf(buf, SMALLBUFFER, "%04i-%02i-%02i %02i:%02i:%02i.%03i",
-                1900 + lt->tm_year, lt->tm_mon + 1, lt->tm_mday,
-                lt->tm_hour, lt->tm_min, lt->tm_sec, msec);
-    }
-    else
-    {
-        lt = localtime((time_t *)&tvp->tv_sec);
-
-        tzone = GetLocalTimezone();
-
-        SnortSnprintf(buf, SMALLBUFFER,
-                "%04i-%02i-%02i %02i:%02i:%02i.%03i+%03i",
-                1900 + lt->tm_year, lt->tm_mon + 1, lt->tm_mday,
-                lt->tm_hour, lt->tm_min, lt->tm_sec, msec, tzone);
-    }
-
-    return buf;
-}
-
-/****************************************************************************
- * Function: base64(char * xdata, int length)
- *
- * Purpose: Insert data into the database
- *
- * Arguments: xdata  => pointer to data to base64 encode
- *            length => how much data to encode
- *
- * Make sure you allocate memory for the output before you pass
- * the output pointer into this function. You should allocate
- * (1.5 * length) bytes to be safe.
- *
- * Returns: data base64 encoded as a char *
- *
- ***************************************************************************/
-char * base64(const u_char * xdata, int length)
-{
-    int count, cols, bits, c, char_count;
-    unsigned char alpha[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";  /* 64 bytes */
-    char * payloadptr;
-    char * output;
-    char_count = 0;
-    bits = 0;
-    cols = 0;
-
-    output = (char *)SnortAlloc( ((unsigned int) (length * 1.5 + 4)) * sizeof(char) );
-
-    payloadptr = output;
-
-    for(count = 0; count < length; count++)
-    {
-        c = xdata[count];
-
-        if(c > 255)
-        {
-            ErrorMessage("plugbase.c->base64(): encountered char > 255 (decimal %d)\n If you see this error message a char is more than one byte on your machine\n This means your base64 results can not be trusted", c);
-        }
-
-        bits += c;
-        char_count++;
-
-        if(char_count == 3)
-        {
-            *output = alpha[bits >> 18]; output++;
-            *output = alpha[(bits >> 12) & 0x3f]; output++;
-            *output = alpha[(bits >> 6) & 0x3f]; output++;
-            *output = alpha[bits & 0x3f]; output++;
-            cols += 4;
-            if(cols == 72)
-            {
-                *output = '\n'; output++;
-                cols = 0;
-            }
-            bits = 0;
-            char_count = 0;
-        }
-        else
-        {
-            bits <<= 8;
-        }
-    }
-
-    if(char_count != 0)
-    {
-        bits <<= 16 - (8 * char_count);
-        *output = alpha[bits >> 18]; output++;
-        *output = alpha[(bits >> 12) & 0x3f]; output++;
-        if(char_count == 1)
-        {
-            *output = '='; output++;
-            *output = '='; output++;
-        }
-        else
-        {
-            *output = alpha[(bits >> 6) & 0x3f];
-            output++; *output = '=';
-            output++;
-        }
-    }
-    *output = '\0';
-    return payloadptr;
-}
-
-/****************************************************************************
- *
- * Function: ascii(u_char *xdata, int length)
- *
- * Purpose: This function takes takes a buffer "xdata" and its length then
- *          returns a string of only the printable ASCII characters.
- *
- * Arguments: xdata is the buffer, length is the length of the buffer in
- *            bytes
- *
- * Returns: char * -- You must free this char * when you are done with it.
- *
- ***************************************************************************/
-char *ascii(const u_char *xdata, int length)
-{
-     char *d_ptr, *ret_val;
-     int i,count = 0;
-     int size;
-
-     if(xdata == NULL)
-     {
-         return NULL;
-     }
-
-     for(i=0;i<length;i++)
-     {
-         if(xdata[i] == '<')
-             count+=4;              /* &lt; */
-         else if(xdata[i] == '&')
-             count+=5;              /* &amp; */
-         else if(xdata[i] == '>')   /* &gt;  */
-             count += 4;
-     }
-
-     size = length + count + 1;
-     ret_val = (char *) calloc(1,size);
-
-     if(ret_val == NULL)
-     {
-         LogMessage("plugbase.c: ascii(): Out of memory, can't log anything!\n");
-         return NULL;
-     }
-
-     d_ptr = ret_val;
-
-     for(i=0;i<length;i++)
-     {
-         if((xdata[i] > 0x1F) && (xdata[i] < 0x7F))
-         {
-             if(xdata[i] == '<')
-             {
-                 SnortStrncpy(d_ptr, "&lt;", size - (d_ptr - ret_val));
-                 d_ptr+=4;
-             }
-             else if(xdata[i] == '&')
-             {
-                 SnortStrncpy(d_ptr, "&amp;", size - (d_ptr - ret_val));
-                 d_ptr += 5;
-             }
-             else if(xdata[i] == '>')
-             {
-                 SnortStrncpy(d_ptr, "&gt;", size - (d_ptr - ret_val));
-                 d_ptr += 4;
-             }
-             else
-             {
-                 *d_ptr++ = xdata[i];
-             }
-         }
-         else
-         {
-             *d_ptr++ = '.';
-         }
-     }
-
-     *d_ptr++ = '\0';
-
-     return ret_val;
-}
-
-/****************************************************************************
- *
  * Function: hex(u_char *xdata, int length)
  *
  * Purpose: This function takes takes a buffer "xdata" and its length then
@@ -2623,8 +2221,19 @@ char *hex(const u_char *xdata, int length)
     return rval;
 }
 
-
-
+/****************************************************************************
+ *
+ * Function: fasthex(u_char *xdata, int length)
+ *
+ * Purpose: Outputs a purdy fugly hex output, only used by mstring with
+ * DEBUG_MSGS enabled.
+ *
+ * Arguments: xdata is the buffer, length is the length of the buffer in
+ *            bytes
+ *
+ * Returns: char * -- You must free this char * when you are done with it.
+ *
+ ***************************************************************************/
 char *fasthex(const u_char *xdata, int length)
 {
     char conv[] = "0123456789ABCDEF";
@@ -2733,20 +2342,13 @@ unsigned long int xatoup(const char *s , const char *etext)
     return val;
 }
 
-#ifndef SUP_IP6
-char * ObfuscateIpToText(const struct in_addr ip_addr)
-#else
 char * ObfuscateIpToText(sfip_t *ip)
-#endif
 {
     static char ip_buf1[INET6_ADDRSTRLEN];
     static char ip_buf2[INET6_ADDRSTRLEN];
     static int buf_num = 0;
     int buf_size = INET6_ADDRSTRLEN;
     char *ip_buf;
-#ifndef SUP_IP6
-    uint32_t ip = ip_addr.s_addr;
-#endif
 
     if (buf_num)
         ip_buf = ip_buf2;
@@ -2756,31 +2358,6 @@ char * ObfuscateIpToText(sfip_t *ip)
     buf_num ^= 1;
     ip_buf[0] = 0;
 
-#ifndef SUP_IP6
-    if (ip == 0)
-        return ip_buf;
-
-    if (snort_conf->obfuscation_net == 0)
-    {
-        /* Fully obfuscate - just use 'x' */
-        SnortSnprintf(ip_buf, buf_size, "xxx.xxx.xxx.xxx");
-    }
-    else
-    {
-        if (snort_conf->homenet != 0)
-        {
-            if ((ip & snort_conf->netmask) == snort_conf->homenet)
-                ip = snort_conf->obfuscation_net | (ip & snort_conf->obfuscation_mask);
-        }
-        else
-        {
-            ip = snort_conf->obfuscation_net | (ip & snort_conf->obfuscation_mask);
-        }
-
-        SnortSnprintf(ip_buf, buf_size, "%s", inet_ntoa(*((struct in_addr *)&ip)));
-    }
-
-#else
     if (ip == NULL)
         return ip_buf;
 
@@ -2811,7 +2388,6 @@ char * ObfuscateIpToText(sfip_t *ip)
         tmp_buf = sfip_to_str(&tmp);
         SnortSnprintf(ip_buf, buf_size, "%s", tmp_buf);
     }
-#endif
 
     return ip_buf;
 }
@@ -2889,5 +2465,42 @@ void PrintPacketData(const uint8_t *data, const uint32_t len)
     }
 
     LogMessage("\n");
+}
+
+int CheckValueInRange(const char *value_str, char *option,
+        unsigned long lo, unsigned long hi, unsigned long *value)
+{
+    char *endptr;
+    uint32_t val;
+
+    if ( value_str == NULL )
+    {
+        ParseError("Invalid format for %s.", option);
+        return -1;
+    }
+
+    if (SnortStrToU32(value_str, &endptr, &val, 10))
+    {
+        ParseError("Invalid format for %s.", option);
+        return -1;
+    }
+
+    if(*endptr)
+    {
+        ParseError("Invalid format for %s.", option);
+        return -1;
+    }
+
+    *value = val;
+
+    if ( (errno == ERANGE) || (*value) < lo || (*value) > hi)
+    {
+        ParseError("Invalid value for %s."
+                "It should range between %u and %u.", option,
+                lo, hi);
+        return -1;
+    }
+
+    return 0;
 }
 

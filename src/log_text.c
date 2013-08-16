@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 // @file    log_text.c
@@ -57,9 +57,7 @@
 #include "obfuscation.h"
 #include "detection_util.h"
 
-#ifdef SUP_IP6
 #include "sfutil/sf_ip.h"
-#endif
 
 extern OptTreeNode *otn_tmp;    /* global ptr to current rule data */
 
@@ -703,10 +701,12 @@ static void LogTcpOptions(TextLog*  log, Packet * p)
     int i;
     int j;
     u_char tmp[5];
+#if 0
     u_long init_offset;
     u_long print_offset;
 
     init_offset = TextLog_Tell(log);
+#endif
 
     TextLog_Print(log, "TCP Options (%d) => ", p->tcp_option_count);
 
@@ -715,14 +715,15 @@ static void LogTcpOptions(TextLog*  log, Packet * p)
 
     for(i = 0; i < (int) p->tcp_option_count; i++)
     {
+#if 0
         print_offset = TextLog_Tell(log);
-        /**
+
         if((print_offset - init_offset) > 60)
         {
             TextLog_Puts(log, "\nTCP Options => ");
             init_offset = TextLog_Tell(log);
         }
-        **/
+#endif
         switch(p->tcp_options[i].code)
         {
             case TCPOPT_MAXSEG:
@@ -946,11 +947,7 @@ static void LogEmbeddedICMPHeader(TextLog* log, const ICMPHdr *icmph)
             break;
 
         case ICMP_REDIRECT:
-#ifdef SUP_IP6
 // XXX-IPv6 "NOT YET IMPLEMENTED - ICMP printing"
-#else
-            TextLog_Print(log, "  New Gwy: %s", inet_ntoa(icmph->s_icmp_gwaddr));
-#endif
             break;
 
         case ICMP_ECHO:
@@ -1010,12 +1007,10 @@ static void LogICMPEmbeddedIP(TextLog* log, Packet *p)
     orig_p->sp = p->orig_sp;
     orig_p->dp = p->orig_dp;
     orig_p->icmph = p->orig_icmph;
-#ifdef SUP_IP6
     orig_p->iph_api = p->orig_iph_api;
     orig_p->ip4h = p->orig_ip4h;
     orig_p->ip6h = p->orig_ip6h;
     orig_p->family = p->orig_family;
-#endif
 
     if(orig_p->iph != NULL)
     {
@@ -1076,10 +1071,8 @@ static void LogICMPEmbeddedIP(TextLog* log, Packet *p)
  */
 void LogICMPHeader(TextLog*  log, Packet * p)
 {
-#ifdef SUP_IP6
     /* 32 digits plus 7 colons and a NULL byte */
     char buf[8*4 + 7 + 1];
-#endif
 
     if(p->icmph == NULL)
     {
@@ -1206,7 +1199,6 @@ void LogICMPHeader(TextLog*  log, Packet * p)
                     break;
             }
 
-#ifdef SUP_IP6
 /* written this way since inet_ntoa was typedef'ed to use sfip_ntoa
  * which requires sfip_t instead of inaddr's.  This call to inet_ntoa
  * is a rare case that doesn't use sfip_t's. */
@@ -1217,9 +1209,6 @@ void LogICMPHeader(TextLog*  log, Packet * p)
             sfip_raw_ntop(AF_INET, (const void *)(&p->icmph->s_icmp_gwaddr.s_addr),
                           buf, sizeof(buf));
             TextLog_Print(log, " NEW GW: %s", buf);
-#else
-            TextLog_Print(log, " NEW GW: %s", inet_ntoa(p->icmph->s_icmp_gwaddr));
-#endif
 
             LogICMPEmbeddedIP(log, p);
 
@@ -1494,9 +1483,7 @@ static void LogNetData (TextLog* log, const u_char* data, const int len, Packet 
         for ( i = 0; i < next_layer; i++ )
         {
             if ( p->layers[i].proto == PROTO_IP4
-#ifdef SUP_IP6
                   || p->layers[i].proto == PROTO_IP6
-#endif
                 )
             {
                 if(p->layers[i].length && p->layers[i].start)
@@ -1627,17 +1614,10 @@ static int LogObfuscatedData(TextLog* log, Packet *p)
  *--------------------------------------------------------------------
  */
 
-#ifdef SUP_IP6
 #define DATA_PTR(p) \
     ((u_char*)p->iph + (GET_IPH_HLEN(p) << 2))
 #define DATA_LEN(p) \
     (p->actual_ip_len - (GET_IPH_HLEN(p) << 2))
-#else
-#define DATA_PTR(p) \
-    ((u_char *)p->iph + (IP_HLEN(p->iph) << 2))
-#define DATA_LEN(p) \
-    (p->actual_ip_len - (IP_HLEN(p->iph) << 2))
-#endif
 
 void LogIPPkt(TextLog* log, int type, Packet * p)
 {
@@ -1767,140 +1747,10 @@ void LogIPPkt(TextLog* log, int type, Packet * p)
  *--------------------------------------------------------------------
  */
 
-#ifndef SUP_IP6
-static unsigned char ezero[6];  /* crap for ARP */
-#endif
 
 void LogArpHeader(TextLog* log, Packet * p)
 {
-#ifdef SUP_IP6
 // XXX-IPv6 "NOT YET IMPLEMENTED - printing ARP header"
-#else
-    struct in_addr ip_addr;
-    const uint8_t *mac_src = NULL;
-    const uint8_t *mac_dst = NULL;
-
-    memset((struct in_addr *) &ip_addr, 0, sizeof(struct in_addr));
-
-    /* determine what to use as MAC src and dst */
-    if (p->eh != NULL)
-    {
-        mac_src = p->eh->ether_src;
-        mac_dst = p->eh->ether_dst;
-    } /* per table 4, 802.11 section 7.2.2 */
-    else if (p->wifih != NULL &&
-             (p->wifih->frame_control & WLAN_FLAG_FROMDS))
-    {
-        mac_src = p->wifih->addr3;
-        mac_dst = p->wifih->addr2;
-    }
-    else if (p->wifih != NULL &&
-             (p->wifih->frame_control & WLAN_FLAG_TODS))
-    {
-        mac_src = p->wifih->addr2;
-        mac_dst = p->wifih->addr3;
-    }
-    else if (p->wifih != NULL)
-    {
-        mac_src = p->wifih->addr2;
-        mac_dst = p->wifih->addr1;
-    }
-
-    /*
-     * if these are null this function will break, exit until
-     * someone writes a function for it...
-     */
-    if(mac_src == NULL || mac_dst == NULL)
-    {
-        return;
-    }
-
-    /* dump the timestamp */
-    LogTimeStamp(log, p);
-
-    if(ntohs(p->ah->ea_hdr.ar_pro) != ETHERNET_TYPE_IP)
-    {
-        TextLog_Print(log, "ARP #%d for protocol #%.4X (%d) hardware #%d (%d)\n",
-                ntohs(p->ah->ea_hdr.ar_op), ntohs(p->ah->ea_hdr.ar_pro),
-                p->ah->ea_hdr.ar_pln, ntohs(p->ah->ea_hdr.ar_hrd),
-                p->ah->ea_hdr.ar_hln);
-
-        return;
-    }
-
-    switch(ntohs(p->ah->ea_hdr.ar_op))
-    {
-        case ARPOP_REQUEST:
-            bcopy((void *)p->ah->arp_tpa, (void *) &ip_addr, sizeof(ip_addr));
-            TextLog_Print(log, "ARP who-has %s", inet_ntoa(ip_addr));
-
-            if(memcmp((char *) ezero, (char *) p->ah->arp_tha, 6) != 0)
-            {
-                TextLog_Print(log, " (%X:%X:%X:%X:%X:%X)", p->ah->arp_tha[0],
-                        p->ah->arp_tha[1], p->ah->arp_tha[2], p->ah->arp_tha[3],
-                        p->ah->arp_tha[4], p->ah->arp_tha[5]);
-            }
-            bcopy((void *)p->ah->arp_spa, (void *) &ip_addr, sizeof(ip_addr));
-
-            TextLog_Print(log, " tell %s", inet_ntoa(ip_addr));
-
-            if(memcmp((char *) mac_src, (char *) p->ah->arp_sha, 6) != 0)
-            {
-                TextLog_Print(log, " (%X:%X:%X:%X:%X:%X)", p->ah->arp_sha[0],
-                        p->ah->arp_sha[1], p->ah->arp_sha[2], p->ah->arp_sha[3],
-                        p->ah->arp_sha[4], p->ah->arp_sha[5]);
-            }
-            break;
-
-        case ARPOP_REPLY:
-            bcopy((void *)p->ah->arp_spa, (void *) &ip_addr, sizeof(ip_addr));
-            TextLog_Print(log, "ARP reply %s", inet_ntoa(ip_addr));
-
-            /* print out the originating request if we're on a weirder
-             * wireless protocol */
-            if(memcmp((char *) mac_src, (char *) p->ah->arp_sha, 6) != 0)
-            {
-                TextLog_Print(log, " (%X:%X:%X:%X:%X:%X)", mac_src[0],
-                        mac_src[1], mac_src[2], mac_src[3],
-                        mac_src[4], mac_src[5]);
-            }
-            TextLog_Print(log, " is-at %X:%X:%X:%X:%X:%X", p->ah->arp_sha[0],
-                    p->ah->arp_sha[1], p->ah->arp_sha[2], p->ah->arp_sha[3],
-                    p->ah->arp_sha[4], p->ah->arp_sha[5]);
-
-            if(memcmp((char *) mac_dst, (char *) p->ah->arp_tha, 6) != 0)
-            {
-                TextLog_Print(log, " (%X:%X:%X:%X:%X:%X)", p->ah->arp_tha[0],
-                        p->ah->arp_tha[1], p->ah->arp_tha[2], p->ah->arp_tha[3],
-                        p->ah->arp_tha[4], p->ah->arp_tha[5]);
-            }
-            break;
-
-        case ARPOP_RREQUEST:
-            TextLog_Print(log, "RARP who-is %X:%X:%X:%X:%X:%X tell %X:%X:%X:%X:%X:%X",
-                    p->ah->arp_tha[0], p->ah->arp_tha[1], p->ah->arp_tha[2],
-                    p->ah->arp_tha[3], p->ah->arp_tha[4], p->ah->arp_tha[5],
-                    p->ah->arp_sha[0], p->ah->arp_sha[1], p->ah->arp_sha[2],
-                    p->ah->arp_sha[3], p->ah->arp_sha[4], p->ah->arp_sha[5]);
-
-            break;
-
-        case ARPOP_RREPLY:
-            bcopy((void *)p->ah->arp_tpa, (void *) &ip_addr, sizeof(ip_addr));
-            TextLog_Print(log, "RARP reply %X:%X:%X:%X:%X:%X at %s",
-                    p->ah->arp_tha[0], p->ah->arp_tha[1], p->ah->arp_tha[2],
-                    p->ah->arp_tha[3], p->ah->arp_tha[4], p->ah->arp_tha[5],
-                    inet_ntoa(ip_addr));
-
-            break;
-
-        default:
-            TextLog_Print(log, "Unknown operation: %d", ntohs(p->ah->ea_hdr.ar_op));
-            break;
-    }
-
-    TextLog_Puts(log, "\n\n");
-#endif
 }
 #endif  // NO_NON_ETHER_DECODER
 

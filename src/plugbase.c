@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #ifdef HAVE_CONFIG_H
@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -111,7 +110,6 @@
 #include "output-plugins/spo_alert_full.h"
 #include "output-plugins/spo_alert_unixsock.h"
 #include "output-plugins/spo_csv.h"
-#include "output-plugins/spo_unified.h"
 #include "output-plugins/spo_log_null.h"
 #include "output-plugins/spo_log_ascii.h"
 #include "output-plugins/spo_unified2.h"
@@ -137,7 +135,7 @@ extern PreprocStatsFuncNode *preproc_stats_funcs;
 extern PluginSignalFuncNode *plugin_shutdown_funcs;
 extern PluginSignalFuncNode *plugin_clean_exit_funcs;
 #ifdef SNORT_RELOAD
-extern PluginSignalFuncNode *plugin_reload_funcs;
+extern PostConfigFuncNode *plugin_reload_funcs;
 #endif
 extern OutputFuncNode *AlertList;
 extern OutputFuncNode *LogList;
@@ -478,11 +476,11 @@ void AddRspFuncToList(ResponseFunc resp_func, OptTreeNode *otn, void *params)
     rsp->params = params;
 }
 
-void PostConfigInitPlugins(PluginSignalFuncNode *post_config_funcs)
+void PostConfigInitPlugins(struct _SnortConfig *sc, PostConfigFuncNode *post_config_funcs)
 {
     while (post_config_funcs != NULL)
     {
-        post_config_funcs->func(0, post_config_funcs->arg);
+        post_config_funcs->func(sc, 0, post_config_funcs->arg);
         post_config_funcs = post_config_funcs->next;
     }
 }
@@ -547,14 +545,27 @@ void FreePluginSigFuncs(PluginSignalFuncNode *head)
     }
 }
 
+void FreePluginPostConfigFuncs(PostConfigFuncNode *head)
+{
+    while (head != NULL)
+    {
+        PostConfigFuncNode *tmp = head;
+
+        head = head->next;
+
+        /* don't free sig->arg, that's free'd by the CleanExit func */
+        free(tmp);
+    }
+}
+
 /************************** Non Rule Detection Plugin API *********************/
-DetectionEvalFuncNode * AddFuncToDetectionList(DetectionEvalFunc detect_eval_func,
+DetectionEvalFuncNode * AddFuncToDetectionList(SnortConfig *sc,
+                                            DetectionEvalFunc detect_eval_func,
                                             uint16_t priority, uint32_t detect_id,
                                             uint32_t proto_mask)
 {
     DetectionEvalFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
     SnortPolicy *p;
 
     if (sc == NULL)
@@ -680,8 +691,8 @@ void RegisterPreprocessors(void)
 void RegisterPreprocessor(const char *keyword, PreprocConfigFunc pp_config_func)
 #else
 void RegisterPreprocessor(const char *keyword, PreprocConfigFunc pp_config_func,
-                          PreprocReloadFunc rfunc, PreprocReloadSwapFunc sfunc,
-                          PreprocReloadSwapFreeFunc ffunc)
+                          PreprocReloadFunc rfunc, PreprocReloadVerifyFunc rvfunc,
+                          PreprocReloadSwapFunc sfunc, PreprocReloadSwapFreeFunc ffunc)
 #endif
 {
     PreprocConfigFuncNode *node =
@@ -719,10 +730,32 @@ void RegisterPreprocessor(const char *keyword, PreprocConfigFunc pp_config_func,
 
 #ifdef SNORT_RELOAD
     node->reload_func = rfunc;
+    node->reload_verify_func = rvfunc;
     node->reload_swap_func = sfunc;
     node->reload_swap_free_func = ffunc;
 #endif
 }
+
+#ifdef SNORT_RELOAD
+void *GetRelatedReloadData(SnortConfig *sc, const char *keyword)
+{
+    PreprocessorSwapData *swapData;
+    for (swapData = sc->preprocSwapData; swapData; swapData = swapData->next)
+    {
+        if (swapData->preprocNode && swapData->preprocNode->keyword &&
+            strcasecmp(swapData->preprocNode->keyword, keyword) == 0)
+        {
+            return swapData->data;
+        }
+    }
+    return NULL;
+}
+
+void *GetReloadStreamConfig(SnortConfig *sc)
+{
+    return sc->streamReloadConfig;
+}
+#endif
 
 PreprocConfigFuncNode * GetPreprocConfig(char *keyword)
 {
@@ -839,11 +872,10 @@ void DumpPreprocessors(void)
     LogMessage("-------------------------------------------------\n\n");
 }
 
-int IsPreprocEnabled(uint32_t preproc_id)
+int IsPreprocEnabled(SnortConfig *sc, uint32_t preproc_id)
 {
     PreprocEvalFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
     SnortPolicy *p;
 
     if (sc == NULL)
@@ -865,12 +897,11 @@ int IsPreprocEnabled(uint32_t preproc_id)
     return 0;
 }
 
-PreprocEvalFuncNode * AddFuncToPreprocList(PreprocEvalFunc pp_eval_func, uint16_t priority,
+PreprocEvalFuncNode * AddFuncToPreprocList(SnortConfig *sc, PreprocEvalFunc pp_eval_func, uint16_t priority,
                                            uint32_t preproc_id, uint32_t proto_mask)
 {
     PreprocEvalFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
     SnortPolicy *p;
 
     if (sc == NULL)
@@ -944,13 +975,13 @@ PreprocEvalFuncNode * AddFuncToPreprocList(PreprocEvalFunc pp_eval_func, uint16_
 }
 
 PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(
+    SnortConfig *sc,
     PreprocMetaEvalFunc pp_meta_eval_func,
     uint16_t priority,
     uint32_t preproc_id)
 {
     PreprocMetaEvalFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
     SnortPolicy *p;
 
     if (sc == NULL)
@@ -1027,10 +1058,10 @@ PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(
     return node;
 }
 
-void AddFuncToPreprocPostConfigList(PreprocPostConfigFunc pp_post_config_func, void *data)
+void AddFuncToPreprocPostConfigList(SnortConfig *sc, PreprocPostConfigFunc pp_post_config_func,
+                                    void *data)
 {
     PreprocPostConfigFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
 
     if (sc == NULL)
     {
@@ -1068,92 +1099,88 @@ void PostConfigPreprocessors(SnortConfig *sc)
                    __FILE__, __LINE__);
     }
 
-    snort_conf_for_parsing = sc;
-
     list = sc->preproc_post_config_funcs;
 
     for (; list != NULL; list = list->next)
     {
         if (list->func != NULL)
-            list->func(list->data);
-    }
-
-    snort_conf_for_parsing = NULL;
-}
-
-#ifdef SNORT_RELOAD
-void SwapPreprocConfigurations(void)
-{
-    PreprocConfigFuncNode *node = preproc_config_funcs;
-
-    for (; node != NULL; node = node->next)
-    {
-        if (node->reload_swap_func != NULL)
-            node->swap_free_data = node->reload_swap_func();
+            list->func(sc, list->data);
     }
 }
 
-void FreeSwappedPreprocConfigurations(void)
+void FilterConfigPreprocessors(SnortConfig *sc)
 {
-    PreprocConfigFuncNode *node = preproc_config_funcs;
+    tSfPolicyId policy_id;
+    SnortPolicy *p;
+    PreprocEvalFuncNode *node;
+    PreprocEvalFuncNode **list;
+    PreprocEvalFuncNode **free_list;
 
-    for (; node != NULL; node = node->next)
+    if (sc == NULL)
     {
-        if ((node->reload_swap_free_func != NULL) &&
-            (node->swap_free_data != NULL))
+        ParseError("%s(%d) Snort config is NULL.\n",
+                   __FILE__, __LINE__);
+    }
+
+    if (!sc->disable_all_policies)
+        return;
+
+    policy_id = getParserPolicy(sc);
+    p = sc->targeted_policies[policy_id];
+    if (p == NULL)
+        return;
+
+    list = &p->preproc_eval_funcs;
+    free_list = &p->unused_preproc_eval_funcs;
+
+    while ((node = *list) != NULL)
+    {
+        if (node->preproc_bit & sc->reenabled_preprocessor_bits)
         {
-            node->reload_swap_free_func(node->swap_free_data);
-            node->swap_free_data = NULL;
+            list = &node->next;
+        }
+        else
+        {
+            *list = node->next;
+            node->next = NULL;
+            *free_list = node;
+            free_list = &node->next;
         }
     }
 }
 
-void AddFuncToPreprocReloadVerifyList(PreprocReloadVerifyFunc pp_reload_func)
+#ifdef SNORT_RELOAD
+void SwapPreprocConfigurations(SnortConfig *sc)
 {
-    PreprocReloadVerifyFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
+    PreprocessorSwapData *node;
+    PreprocConfigFuncNode *preproc;
 
-    if (sc == NULL)
+    for (node = sc->preprocSwapData; node != NULL; node = node->next)
     {
-        FatalError("%s(%d) Snort config for parsing is NULL.\n",
-                   __FILE__, __LINE__);
+        if ((preproc = node->preprocNode) && preproc->reload_swap_func)
+            node->data = preproc->reload_swap_func(sc, node->data);
     }
-
-    node = (PreprocReloadVerifyFuncNode *)SnortAlloc(sizeof(PreprocReloadVerifyFuncNode));
-
-    if (sc->preproc_reload_verify_funcs == NULL)
-    {
-        sc->preproc_reload_verify_funcs = node;
-    }
-    else
-    {
-        PreprocReloadVerifyFuncNode *tmp = sc->preproc_reload_verify_funcs;
-
-        while (tmp->next != NULL)
-            tmp = tmp->next;
-
-        tmp->next = node;
-    }
-
-    node->func = pp_reload_func;
 }
 
-void FreePreprocReloadVerifyFuncList(PreprocReloadVerifyFuncNode *head)
+void FreeSwappedPreprocConfigurations(struct _SnortConfig *sc)
 {
-    while (head != NULL)
-    {
-        PreprocReloadVerifyFuncNode *tmp = head;
+    PreprocessorSwapData *node;
+    PreprocConfigFuncNode *preproc;
 
-        head = head->next;
-        free(tmp);
+    for (node = sc->preprocSwapData; node != NULL; node = node->next)
+    {
+        if (node->data && (preproc = node->preprocNode) && preproc->reload_swap_free_func)
+        {
+            preproc->reload_swap_free_func(node->data);
+            node->data = NULL;
+        }
     }
 }
 #endif
 
-void AddFuncToConfigCheckList(PreprocCheckConfigFunc pp_chk_config_func)
+void AddFuncToConfigCheckList(SnortConfig *sc, PreprocCheckConfigFunc pp_chk_config_func)
 {
     PreprocCheckConfigFuncNode *node;
-    SnortConfig *sc = snort_conf_for_parsing;
 
     if (sc == NULL)
     {
@@ -1416,17 +1443,16 @@ void FreePeriodicFuncs(PeriodicCheckFuncNode *head)
     }
 }
 
-void CheckPreprocessorsConfig(SnortConfig *sc)
+int CheckPreprocessorsConfig(SnortConfig *sc)
 {
     PreprocCheckConfigFuncNode *idx;
+    int rval;
 
     if (sc == NULL)
     {
         FatalError("%s(%d) Snort config is NULL.\n",
                    __FILE__, __LINE__);
     }
-
-    snort_conf_for_parsing = sc;
 
     idx = sc->preproc_config_check_funcs;
 
@@ -1434,44 +1460,63 @@ void CheckPreprocessorsConfig(SnortConfig *sc)
 
     while(idx != NULL)
     {
-        idx->func();
+        if ((rval = idx->func(sc)))
+            return rval;
         idx = idx->next;
     }
-
-    snort_conf_for_parsing = NULL;
+    return 0;
 }
 
 #ifdef SNORT_RELOAD
 int VerifyReloadedPreprocessors(SnortConfig *sc)
 {
-    PreprocReloadVerifyFuncNode *node;
+    int rval;
+    PreprocessorSwapData *node;
+    PreprocConfigFuncNode *preproc;
 
-    if (sc == NULL)
+    for (node = sc->preprocSwapData; node != NULL; node = node->next)
     {
-        FatalError("%s(%d) Snort config is NULL.\n",
-                   __FILE__, __LINE__);
-    }
-
-    snort_conf_for_parsing = sc;
-
-    node = sc->preproc_reload_verify_funcs;
-    while (node != NULL)
-    {
-        if (node->func != NULL)
+        if (node->data && (preproc = node->preprocNode) && preproc->reload_verify_func &&
+            (rval = preproc->reload_verify_func(sc, node->data)))
         {
-            if (node->func() == -1)
-                return -1;
+            return rval;
         }
-
-        node = node->next;
     }
-
-    snort_conf_for_parsing = NULL;
 
     return 0;
 }
+
+void FreePreprocessorReloadData(SnortConfig *sc)
+{
+    PreprocessorSwapData *node;
+    PreprocConfigFuncNode *preproc;
+
+    while ((node = sc->preprocSwapData))
+    {
+        sc->preprocSwapData = node->next;
+        if (node->data && (preproc = node->preprocNode) && preproc->reload_swap_free_func)
+            preproc->reload_swap_free_func(node->data);
+        free(node);
+    }
+}
 #endif
 
+void DisableAllPolicies(SnortConfig *sc)
+{
+    if (!sc->disable_all_policies)
+    {
+        sc->disable_all_policies = 1;
+        sc->reenabled_preprocessor_bits = (1 << PP_FRAG3);
+        sc->reenabled_preprocessor_bits |= (1 << PP_STREAM5);
+        sc->reenabled_preprocessor_bits |= (1 << PP_PERFMONITOR);
+    }
+}
+
+int ReenablePreprocBit(SnortConfig *sc, unsigned int preproc_id)
+{
+    sc->reenabled_preprocessor_bits |= (1 << preproc_id);
+    return 0;
+}
 
 /***************************** Output Plugin API  *****************************/
 extern OutputConfigFuncNode *output_config_funcs;
@@ -1492,7 +1537,6 @@ void RegisterOutputPlugins(void)
 #endif /* !WIN32 */
     AlertCSVSetup();
     LogNullSetup();
-    UnifiedSetup();
     Unified2Setup();
     LogAsciiSetup();
 
@@ -1678,21 +1722,21 @@ void DumpOutputPlugins(void)
     LogMessage("-------------------------------------------------\n\n");
 }
 
-void AddFuncToOutputList(OutputFunc o_func, OutputType type, void *arg)
+void AddFuncToOutputList(SnortConfig *sc, OutputFunc o_func, OutputType type, void *arg)
 {
     switch (type)
     {
         case OUTPUT_TYPE__ALERT:
-            if (head_tmp != NULL)
-                AppendOutputFuncList(o_func, arg, &head_tmp->AlertList);
+            if (sc->head_tmp != NULL)
+                AppendOutputFuncList(o_func, arg, &sc->head_tmp->AlertList);
             else
                 AppendOutputFuncList(o_func, arg, &AlertList);
 
             break;
 
         case OUTPUT_TYPE__LOG:
-            if (head_tmp != NULL)
-                AppendOutputFuncList(o_func, arg, &head_tmp->LogList);
+            if (sc->head_tmp != NULL)
+                AppendOutputFuncList(o_func, arg, &sc->head_tmp->LogList);
             else
                 AppendOutputFuncList(o_func, arg, &LogList);
 
@@ -1737,10 +1781,34 @@ void AppendOutputFuncList(OutputFunc o_func, void *arg, OutputFuncNode **list)
 
 /* functions to aid in cleaning up after plugins
  * Used for both rule options and output.  Preprocessors have their own */
-#ifdef SNORT_RELOAD
-void AddFuncToReloadList(PluginSignalFunc pl_sig_func, void *arg)
+static inline void _AddFuncToPostConfigList(PostConfigFunc pl_post_func, void *arg, PostConfigFuncNode **list)
 {
-    AddFuncToSignalList(pl_sig_func, arg, &plugin_reload_funcs);
+    PostConfigFuncNode *node;
+
+    node = (PostConfigFuncNode *)SnortAlloc(sizeof(PostConfigFuncNode));
+
+    if (*list == NULL)
+    {
+        *list = node;
+    }
+    else
+    {
+        PostConfigFuncNode *tmp = *list;
+
+        while (tmp->next != NULL)
+            tmp = tmp->next;
+
+        tmp->next = node;
+    }
+
+    node->func = pl_post_func;
+    node->arg = arg;
+}
+
+#ifdef SNORT_RELOAD
+void AddFuncToReloadList(PostConfigFunc pl_post_func, void *arg)
+{
+    _AddFuncToPostConfigList(pl_post_func, arg, &plugin_reload_funcs);
 }
 #endif
 
@@ -1754,17 +1822,9 @@ void AddFuncToShutdownList(PluginSignalFunc pl_sig_func, void *arg)
     AddFuncToSignalList(pl_sig_func, arg, &plugin_shutdown_funcs);
 }
 
-void AddFuncToPostConfigList(PluginSignalFunc pl_sig_func, void *arg)
+void AddFuncToPostConfigList(SnortConfig *sc, PostConfigFunc pl_post_func, void *arg)
 {
-    SnortConfig *sc = snort_conf_for_parsing;
-
-    if (sc == NULL)
-    {
-        FatalError("%s(%d) Snort config for parsing is NULL.\n",
-                   __FILE__, __LINE__);
-    }
-
-    AddFuncToSignalList(pl_sig_func, arg, &sc->plugin_post_config_funcs);
+    _AddFuncToPostConfigList(pl_post_func, arg, &sc->plugin_post_config_funcs);
 }
 
 void AddFuncToSignalList(PluginSignalFunc pl_sig_func, void *arg, PluginSignalFuncNode **list)

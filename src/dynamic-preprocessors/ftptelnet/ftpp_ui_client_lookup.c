@@ -1,7 +1,7 @@
 /*
  * ftpp_ui_client_lookup.c
  *
- * Copyright (C) 2004-2012 Sourcefire, Inc.
+ * Copyright (C) 2004-2013 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
  * Marc A. Norton <mnorton@sourcefire.com>
@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * Description:
  *
@@ -68,11 +68,7 @@ static void clientConfFree(void *pData);
 #define FTPP_UI_CONFIG_MAX_CLIENTS 20
 int ftpp_ui_client_lookup_init(CLIENT_LOOKUP **ClientLookup)
 {
-#ifdef SUP_IP6
     *ClientLookup =  sfrt_new(DIR_16_4x4_16x5_4x4, IPv6, FTPP_UI_CONFIG_MAX_CLIENTS, 20);
-#else
-    *ClientLookup =  sfrt_new(DIR_16x2, IPv4, FTPP_UI_CONFIG_MAX_CLIENTS, 20);
-#endif
 
     if(*ClientLookup == NULL)
     {
@@ -108,7 +104,7 @@ int ftpp_ui_client_lookup_cleanup(CLIENT_LOOKUP **ClientLookup)
 
 /*
  * Function: ftpp_ui_client_lookup_add(CLIENT_LOOKUP *ClientLookup,
- *                                 char *ip, int len,
+ *                                 sfip_t* Ip, 
  *                                 FTP_CLIENT_PROTO_CONF *ClientConf)
  *
  * Purpose: Add a client configuration to the list.
@@ -120,7 +116,6 @@ int ftpp_ui_client_lookup_cleanup(CLIENT_LOOKUP **ClientLookup)
  *
  * Arguments: ClientLookup => a pointer to the lookup structure
  *            IP           => the ftp client address
- *            len          => Length of the address
  *            ClientConf   => a pointer to the client configuration structure
  *
  * Returns: int => return code indicating error or success
@@ -128,8 +123,7 @@ int ftpp_ui_client_lookup_cleanup(CLIENT_LOOKUP **ClientLookup)
  */
 int ftpp_ui_client_lookup_add(
     CLIENT_LOOKUP *ClientLookup,
-    sfip_t* Ip, FTP_CLIENT_PROTO_CONF *ClientConf
-)
+    sfip_t* Ip, FTP_CLIENT_PROTO_CONF *ClientConf)
 {
     int iRet;
 
@@ -138,16 +132,8 @@ int ftpp_ui_client_lookup_add(
         return FTPP_INVALID_ARG;
     }
 
-#ifdef SUP_IP6
-    iRet = sfrt_insert((void *)Ip, (unsigned char)Ip->bits, (void *)ClientConf, RT_FAVOR_SPECIFIC, ClientLookup);
-#else
-    iRet = sfrt_insert((void *)&(Ip->ip.u6_addr32[0]), (unsigned char)Ip->bits, (void *)ClientConf, RT_FAVOR_SPECIFIC, ClientLookup);
-#endif
-
-    if (iRet)
-    {
-        return FTPP_MEM_ALLOC_FAIL;
-    }
+    iRet = sfrt_insert((void *)Ip, (unsigned char)Ip->bits,
+        (void *)ClientConf, RT_FAVOR_SPECIFIC, ClientLookup);
 
     if (iRet)
     {
@@ -204,11 +190,7 @@ FTP_CLIENT_PROTO_CONF *ftpp_ui_client_lookup_find(CLIENT_LOOKUP *ClientLookup,
 
     *iError = FTPP_SUCCESS;
 
-#ifdef SUP_IP6
     ClientConf = (FTP_CLIENT_PROTO_CONF *)sfrt_lookup((void *)Ip, ClientLookup);
-#else
-    ClientConf = (FTP_CLIENT_PROTO_CONF *)sfrt_lookup((void *)&Ip, ClientLookup);
-#endif
     if (!ClientConf)
     {
         *iError = FTPP_NOT_FOUND;

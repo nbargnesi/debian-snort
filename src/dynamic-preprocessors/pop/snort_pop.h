@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * **************************************************************************/
 
@@ -45,6 +45,7 @@
 #include "sfPolicyUserData.h"
 #include "mempool.h"
 #include "sf_email_attach_decode.h"
+#include "file_api.h"
 
 #ifdef DEBUG
 #include "sf_types.h"
@@ -87,6 +88,12 @@
 #define POP_FLAG_IN_CONT_TRANS_ENC          0x00000010
 #define POP_FLAG_EMAIL_ATTACH               0x00000020
 #define POP_FLAG_MULTIPLE_EMAIL_ATTACH      0x00000040
+#define POP_FLAG_IN_CONT_DISP               0x00000200
+#define POP_FLAG_IN_CONT_DISP_CONT          0x00000400
+#define POP_FLAG_MIME_END                   0x00000800
+
+/* log flags */
+#define POP_FLAG_FILENAME_PRESENT          0x00000004
 
 /* session flags */
 #define POP_FLAG_NEXT_STATE_UNKNOWN         0x00000004
@@ -100,7 +107,7 @@
 /* Maximum length of header chars before colon, based on Exim 4.32 exploit */
 #define MAX_HEADER_NAME_LEN 64
 
-#define POP_PROTO_REF_STR  "pop"
+#define POP_PROTO_REF_STR  "pop3"
 
 /**************************************************************************/
 
@@ -140,6 +147,7 @@ typedef enum _POPHdrEnum
 {
     HDR_CONTENT_TYPE = 0,
     HDR_CONT_TRANS_ENC,
+    HDR_CONT_DISP,
     HDR_LAST
 
 } POPHdrEnum;
@@ -183,6 +191,7 @@ typedef struct _POP
     int prev_response;
     int data_state;
     int state_flags;
+    int log_flags;
     int session_flags;
     int alert_mask;
     int reassembling;
@@ -193,6 +202,7 @@ typedef struct _POP
     MemBucket *decode_bkt;
     POPMimeBoundary  mime_boundary;
     Email_DecodeState *decode_state;
+    MAIL_LogState *log_state;
 
     tSfPolicyId policy_id;
     tSfPolicyUserContextId config;
@@ -212,7 +222,7 @@ void SnortPOP(SFSnortPacket *);
 int  POP_IsServer(uint16_t);
 void POP_FreeConfig(POPConfig *);
 void POP_FreeConfigs(tSfPolicyUserContextId);
-
+int  POP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 /**************************************************************************/
 
 #endif  /* __POP_H__ */

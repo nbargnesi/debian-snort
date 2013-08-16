@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2007-2012 Sourcefire, Inc.
+ * Copyright (C) 2007-2013 Sourcefire, Inc.
  *
  * Author: Russ Combs
  *
@@ -96,16 +96,15 @@ typedef enum {
 
 /* Parameters are rule info pointer, int to indicate URI or NORM,
  * and list pointer */
-/* These need to match HTTP_SEARCH_xxx defined in sp_pattern_match.h
- * for proper fast pattern match pattern selection */
-#define CONTENT_HTTP_URI          0x01
-#define CONTENT_HTTP_HEADER       0x04
-#define CONTENT_HTTP_CLIENT_BODY  0x10
-#define CONTENT_HTTP_METHOD       0x20
+// low nibble must be HTTP_BUFFER_* (see sf_dynamic_common.h)
+// FIXTHIS eliminate these redefines
+#define CONTENT_HTTP_URI          0x00000001
+#define CONTENT_HTTP_HEADER       0x00000002
+#define CONTENT_HTTP_CLIENT_BODY  0x00000003
+#define CONTENT_HTTP_METHOD       0x00000004
 
-#define CONTENT_NORMAL            0x400
-#define CONTENT_HTTP (CONTENT_HTTP_URI|CONTENT_HTTP_HEADER|\
-                        CONTENT_HTTP_CLIENT_BODY|CONTENT_HTTP_METHOD)
+#define CONTENT_NORMAL            0x00010000
+#define CONTENT_HTTP              0x00000007
 
 #endif /* _SF_DYNAMIC_DEFINE_H_ */
 

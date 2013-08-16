@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2012 Sourcefire, Inc.
+** Copyright (C) 2005-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -126,13 +126,13 @@
 #define LOG_TCPDUMP         0x00000002
 #define LOG_UNIFIED2         0x0000004
 
-#ifndef SIGNAL_SNORT_RELOAD         
+#ifndef SIGNAL_SNORT_RELOAD
 #define SIGNAL_SNORT_RELOAD         SIGHUP
 #endif
-#ifndef SIGNAL_SNORT_DUMP_STATS     
+#ifndef SIGNAL_SNORT_DUMP_STATS
 #define SIGNAL_SNORT_DUMP_STATS     SIGUSR1
 #endif
-#ifndef SIGNAL_SNORT_ROTATE_STATS   
+#ifndef SIGNAL_SNORT_ROTATE_STATS
 #define SIGNAL_SNORT_ROTATE_STATS   SIGUSR2
 #endif
 
@@ -181,11 +181,9 @@
 #define RULE_STATE_DISABLED 0
 #define RULE_STATE_ENABLED 1
 
-#ifdef DYNAMIC_PLUGIN
-# define MAX_DYNAMIC_ENGINES         16
-# define MAX_DYNAMIC_DETECTION_LIBS  16
-# define MAX_DYNAMIC_PREPROC_LIBS    16
-#endif
+#define MAX_DYNAMIC_ENGINES         16
+#define MAX_DYNAMIC_DETECTION_LIBS  16
+#define MAX_DYNAMIC_PREPROC_LIBS    16
 
 #ifdef TARGET_BASED
 # define ATTRIBUTE_TABLE_RELOAD_FLAG          0x01
@@ -194,9 +192,12 @@
 # define ATTRIBUTE_TABLE_TAKEN_FLAG           0x08
 # define ATTRIBUTE_TABLE_PARSE_FAILED_FLAG    0x10
 # define DEFAULT_MAX_ATTRIBUTE_HOSTS   10000
+# define DEFAULT_MAX_ATTRIBUTE_SERVICES_PER_HOST 100
 # define DEFAULT_MAX_METADATA_SERVICES     8
 # define MAX_MAX_ATTRIBUTE_HOSTS   (512 * 1024)
 # define MIN_MAX_ATTRIBUTE_HOSTS    32
+# define MAX_MAX_ATTRIBUTE_SERVICES_PER_HOST   65535
+# define MIN_MAX_ATTRIBUTE_SERVICES_PER_HOST       1
 # define MAX_MAX_METADATA_SERVICES 256
 # define MIN_MAX_METADATA_SERVICES 1
 #endif
@@ -219,7 +220,6 @@ typedef enum _GetOptLongIds
 {
     PID_PATH = 1,
 
-#ifdef DYNAMIC_PLUGIN
     DYNAMIC_LIBRARY_DIRECTORY,
     DYNAMIC_LIBRARY_FILE,
     DYNAMIC_PREPROC_DIRECTORY,
@@ -229,7 +229,6 @@ typedef enum _GetOptLongIds
     DUMP_DYNAMIC_RULES,
     DYNAMIC_OUTPUT_DIRECTORY,
     DYNAMIC_OUTPUT_FILE,
-#endif
 
     CREATE_PID_FILE,
     TREAT_DROP_AS_ALERT,
@@ -250,6 +249,7 @@ typedef enum _GetOptLongIds
     PCAP_DIR,
     PCAP_FILTER,
     PCAP_NO_FILTER,
+    PCAP_RELOAD,
     PCAP_RESET,
     PCAP_SHOW,
 
@@ -284,6 +284,9 @@ typedef enum _GetOptLongIds
     ENABLE_INLINE_TEST,
 
     ARG_CS_DIR,
+    ARG_HA_PEER,
+    ARG_HA_OUT,
+    ARG_HA_IN,
 
     GET_OPT_LONG_IDS_MAX
 
@@ -316,11 +319,30 @@ typedef struct _OutputConfig
 
 } OutputConfig;
 
+#ifdef SIDE_CHANNEL
+typedef struct _SideChannelModuleConfig
+{
+    char *keyword;
+    char *opts;
+    char *file_name;
+    int file_line;
+    struct _SideChannelModuleConfig *next;
+} SideChannelModuleConfig;
+
+typedef struct _SideChannelConfig
+{
+    bool enabled;
+    char *opts;
+    SideChannelModuleConfig *module_configs;
+} SideChannelConfig;
+#endif
+
 typedef enum _DynamicType
 {
     DYNAMIC_TYPE__ENGINE,
     DYNAMIC_TYPE__DETECTION,
     DYNAMIC_TYPE__PREPROCESSOR,
+    DYNAMIC_TYPE__SIDE_CHANNEL,
     DYNAMIC_TYPE__MAX
 
 } DynamicType;
@@ -356,10 +378,8 @@ typedef enum _RunMode
     /* -V */
     RUN_MODE__VERSION = 1,
 
-#ifdef DYNAMIC_PLUGIN
     /* --dump-dynamic-rules */
     RUN_MODE__RULE_DUMP,
-#endif
 
     /* neither of the above and snort.conf presence (-c or implicit) */
     RUN_MODE__IDS,
@@ -381,10 +401,8 @@ typedef enum _RunModeFlag
     /* -V */
     RUN_MODE_FLAG__VERSION      = 0x00000001,
 
-#ifdef DYNAMIC_PLUGIN
     /* --dump-dynamic-rules */
     RUN_MODE_FLAG__RULE_DUMP    = 0x00000002,
-#endif
 
     /* neither of the above and snort.conf presence (-c or implicit) */
     RUN_MODE_FLAG__IDS          = 0x00000004,
@@ -450,6 +468,9 @@ typedef enum _RunFlag
 #endif
 
    ,RUN_FLAG__TREAT_DROP_AS_IGNORE= 0x10000000      /* --treat-drop-as-ignore */
+#if defined(SNORT_RELOAD) && !defined(WIN32)
+   ,RUN_FLAG__PCAP_RELOAD         = 0x20000000      /* --pcap-reload */
+#endif
 
 } RunFlag;
 
@@ -528,6 +549,13 @@ typedef enum _DecodeEventFlag
 
 } DecodeEventFlag;
 
+typedef enum {
+    TUNNEL_GTP    = 0x01,
+    TUNNEL_TEREDO = 0x02,
+    TUNNEL_6IN4   = 0x04,
+    TUNNEL_4IN6   = 0x08
+} TunnelFlags;
+
 typedef struct _VarNode
 {
     char *name;
@@ -556,15 +584,14 @@ typedef struct _SnortPolicy
 
     VarEntry *var_table;
     uint32_t var_id;
-#ifdef SUP_IP6
     vartable_t *ip_vartable;
-#endif  /* SUP_IP6 */
 
     /* The portobjects in these are attached to rtns and used during runtime */
     PortVarTable *portVarTable;     /* named entries, uses a hash table */
     PortTable *nonamePortVarTable;  /* un-named entries */
 
     PreprocEvalFuncNode *preproc_eval_funcs;
+    PreprocEvalFuncNode *unused_preproc_eval_funcs;
     PreprocMetaEvalFuncNode *preproc_meta_eval_funcs;
 
     int preproc_proto_mask;
@@ -609,6 +636,9 @@ typedef struct _SnortPolicy
     int decoder_drop_flags_saved;
 } SnortPolicy;
 
+#ifdef INTEL_SOFT_CPM
+struct _IntelPmHandles;
+#endif
 typedef struct _SnortConfig
 {
     RunMode run_mode;
@@ -630,11 +660,13 @@ typedef struct _SnortConfig
 
     uint32_t event_log_id;      /* -G */
     int pkt_snaplen;
-    int64_t pkt_cnt;            /* -n */
+    uint64_t pkt_cnt;           /* -n */
+#ifdef REG_TEST
+    uint64_t pkt_skip;
+#endif
 
     char *dynamic_rules_path;   /* --dump-dynamic-rules */
 
-#ifdef DYNAMIC_PLUGIN
     /* --dynamic-engine-lib
      * --dynamic-engine-lib-dir
      * --dynamic-detection-lib
@@ -647,6 +679,8 @@ typedef struct _SnortConfig
     DynamicLibInfo *dyn_engines;
     DynamicLibInfo *dyn_rules;
     DynamicLibInfo *dyn_preprocs;
+#ifdef SIDE_CHANNEL
+    DynamicLibInfo *dyn_side_channels;
 #endif
 
     char pid_path[STD_BUF];  /* --pid-path or config pidpath */
@@ -656,15 +690,8 @@ typedef struct _SnortConfig
 #endif
 
     /* -h and -B */
-#ifdef SUP_IP6
     sfip_t homenet;
     sfip_t obfuscation_net;
-#else
-    uint32_t homenet;
-    uint32_t netmask;
-    uint32_t obfuscation_net;
-    uint32_t obfuscation_mask;
-#endif
 
     /* config disable_decode_alerts
      * config enable_decode_oversized_alerts
@@ -709,7 +736,6 @@ typedef struct _SnortConfig
     char *alert_file;
     char *perf_file;         /* -Z */
     char *bpf_filter;        /* last command line arguments */
-    char *pcap_file;         /* config read_bin_file */
     char* daq_type;          /* --daq or config daq */
     char* daq_mode;          /* --daq-mode or config daq_mode */
     void* daq_vars;          /* --daq-var or config daq_var */
@@ -763,6 +789,7 @@ typedef struct _SnortConfig
 
 #ifdef TARGET_BASED
     uint32_t max_attribute_hosts;    /* config max_attribute_hosts */
+    uint32_t max_attribute_services_per_host;    /* config max_attribute_services_per_host */
     uint32_t max_metadata_services;  /* config max_metadata_services */
 #endif
 
@@ -784,9 +811,6 @@ typedef struct _SnortConfig
 
     PreprocPostConfigFuncNode *preproc_post_config_funcs;
     PreprocCheckConfigFuncNode *preproc_config_check_funcs;
-#ifdef SNORT_RELOAD
-    PreprocReloadVerifyFuncNode *preproc_reload_verify_funcs;
-#endif
 
     /* XXX XXX policy specific? */
     ThresholdConfig *threshold_config;
@@ -811,7 +835,7 @@ typedef struct _SnortConfig
     ListHead SDrop;
     ListHead Reject;
 
-    PluginSignalFuncNode *plugin_post_config_funcs;
+    PostConfigFuncNode *plugin_post_config_funcs;
 
     OTNX_MATCH_DATA *omd;
 
@@ -862,12 +886,40 @@ typedef struct _SnortConfig
     char *gtp_ports;
     uint8_t enable_esp;
     uint8_t vlan_agnostic; /* config vlan_agnostic */
+    uint8_t addressspace_agnostic; /* config addressspace_agnostic */
     uint8_t log_ipv6_extra; /* config log_ipv6_extra_data */
+    uint8_t tunnel_mask;
 
     uint32_t so_rule_memcap;
     uint32_t paf_max;          /* config paf_max */
     char *cs_dir;
+    bool ha_peer;
+    char *ha_out;
+    char *ha_in;
     char *output_dir;
+    void *file_config;
+    int disable_all_policies;
+    uint32_t reenabled_preprocessor_bits; /* flags for preprocessors to check, if all policies are disabled */
+#ifdef SIDE_CHANNEL
+    SideChannelConfig side_channel_config;
+#endif
+#ifdef SNORT_RELOAD
+    int reloadPolicyFlag;
+    PreprocessorSwapData *preprocSwapData;
+    void *streamReloadConfig;
+#endif
+    tSfPolicyId parserPolicyId;
+
+/* Used when a user defines a new rule type (ruletype keyword)
+ * It points to the new rule type's ListHead and is used for accessing the
+ * rule type's AlertList and LogList.
+ * The output plugins used for the rule type need to be attached to the new
+ * rule type's list head's AlertList or LogList.  It's set before calling
+ * the output plugin's initialization routine, because in that routine,
+ * AddFuncToOutputList is called (plugbase.c) and there, the output function
+ * is attached to the new rule type's appropriate list.
+ * NOTE:  This variable MUST NOT be used during runtime */
+    ListHead *head_tmp;
 } SnortConfig;
 
 /* struct to collect packet statistics */
@@ -933,6 +985,7 @@ typedef struct _PacketCount
 
     uint64_t discards;
     uint64_t alert_pkts;
+    uint64_t total_alert_pkts;
     uint64_t log_pkts;
     uint64_t pass_pkts;
 
@@ -998,6 +1051,9 @@ typedef struct _PacketCount
     uint64_t mpls;
 #endif
 
+    uint64_t internal_blacklist;
+    uint64_t internal_whitelist;
+
 } PacketCount;
 
 typedef struct _PcapReadObject
@@ -1015,6 +1071,8 @@ typedef void (*grinder_t)(Packet *, const DAQ_PktHdr_t*, const uint8_t *);
 /*  E X T E R N S  ************************************************************/
 extern SnortConfig *snort_conf;
 
+#include "sfutil/sfPolicyData.h"
+
 /* Specifically for logging the IPv6 fragmented ICMP BSD vulnerability */
 extern Packet *BsdPseudoPacket;
 
@@ -1022,13 +1080,17 @@ extern PacketCount pc;        /* packet count information */
 extern char **protocol_names;
 extern grinder_t grinder;
 
+#ifdef SIDE_CHANNEL
+extern pthread_mutex_t snort_process_lock;
+#endif
+
 
 /*  P R O T O T Y P E S  ******************************************************/
 int SnortMain(int argc, char *argv[]);
 DAQ_Verdict ProcessPacket(Packet*, const DAQ_PktHdr_t*, const uint8_t*, void*);
 void SetupMetadataCallback(void);
 int InMainThread(void);
-
+bool SnortIsInitializing(void);
 void SigCantHupHandler(int signal);
 void print_packet_count(void);
 int SignalCheck(void);
@@ -1047,12 +1109,10 @@ static inline int ScTestMode(void)
     return snort_conf->run_mode == RUN_MODE__TEST;
 }
 
-#ifdef DYNAMIC_PLUGIN
 static inline int ScRuleDumpMode(void)
 {
     return snort_conf->run_mode == RUN_MODE__RULE_DUMP;
 }
-#endif
 
 static inline int ScVersionMode(void)
 {
@@ -1494,6 +1554,11 @@ static inline uint32_t ScMaxAttrHosts(void)
     return snort_conf->max_attribute_hosts;
 }
 
+static inline uint32_t ScMaxAttrServicesPerHost(void)
+{
+    return snort_conf->max_attribute_services_per_host;
+}
+
 static inline int ScDisableAttrReload(void)
 {
     return snort_conf->run_flags & RUN_FLAG__DISABLE_ATTRIBUTE_RELOAD_THREAD;
@@ -1562,6 +1627,13 @@ static inline char * ScPcapLogFile(void)
     return snort_conf->pcap_log_file;
 }
 
+#ifdef SIDE_CHANNEL
+static inline int ScSideChannelEnabled(void)
+{
+    return snort_conf->side_channel_config.enabled;
+}
+#endif
+
 // use of macro avoids depending on generators.h
 #define EventIsInternal(gid) (gid == GENERATOR_INTERNAL)
 
@@ -1623,6 +1695,11 @@ static inline int ScVlanAgnostic(void)
     return snort_conf->vlan_agnostic;
 }
 
+static inline int ScAddressSpaceAgnostic(void)
+{
+    return snort_conf->addressspace_agnostic;
+}
+
 static inline int ScLogIPv6Extra(void)
 {
     return snort_conf->log_ipv6_extra;
@@ -1631,6 +1708,11 @@ static inline int ScLogIPv6Extra(void)
 static inline uint32_t ScSoRuleMemcap(void)
 {
     return snort_conf->so_rule_memcap;
+}
+
+static inline bool ScTunnelBypassEnabled (uint8_t proto)
+{
+    return !(snort_conf->tunnel_mask & proto);
 }
 
 #endif  /* __SNORT_H__ */

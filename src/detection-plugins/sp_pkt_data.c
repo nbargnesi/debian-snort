@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2012 Sourcefire, Inc.
+ ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* sp_pkt_data
@@ -60,7 +60,7 @@ extern char *file_name;  /* this is the file name from rules.c, generally used
 extern int file_line;    /* this is the file line number from rules.c that is
                             used to indicate file lines for error messages */
 
-static void PktDataInit(char *, OptTreeNode *, int);
+static void PktDataInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void PktDataParse(char *, OptTreeNode *);
 int  PktDataEval(void *option_data, Packet *p);
 
@@ -89,7 +89,7 @@ void SetupPktData(void)
 
 /****************************************************************************
  *
- * Function: PktDataInit(char *, OptTreeNode *, int protocol)
+ * Function: PktDataInit(struct _SnortConfig *, char *, OptTreeNode *, int protocol)
  *
  * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -102,7 +102,7 @@ void SetupPktData(void)
  * Returns: void function
  *
  ****************************************************************************/
-static void PktDataInit(char *data, OptTreeNode *otn, int protocol)
+static void PktDataInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
 

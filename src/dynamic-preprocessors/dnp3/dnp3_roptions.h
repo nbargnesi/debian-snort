@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -34,10 +34,10 @@
 #define DNP3_DATA_NAME "dnp3_data"
 
 /* Rule registration functions */
-int DNP3FuncInit(char *name, char *params, void **data);
-int DNP3ObjInit(char *name, char *params, void **data);
-int DNP3IndInit(char *name, char *params, void **data);
-int DNP3DataInit(char *name, char *params, void **data);
+int DNP3FuncInit(struct _SnortConfig *sc, char *name, char *params, void **data);
+int DNP3ObjInit(struct _SnortConfig *sc, char *name, char *params, void **data);
+int DNP3IndInit(struct _SnortConfig *sc, char *name, char *params, void **data);
+int DNP3DataInit(struct _SnortConfig *sc, char *name, char *params, void **data);
 
 /* Rule evaluation functions */
 int DNP3FuncEval(void *raw_packet, const uint8_t **cursor, void *data);

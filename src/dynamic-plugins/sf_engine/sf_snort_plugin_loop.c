@@ -14,9 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy Mullican
@@ -41,7 +41,7 @@
 /* From sf_snort_plugin_api.c -- not exported from shared lib,
  * but available to other code within the shared lib.
  */
-extern int RegisterOneRule(Rule *rule, int registerRule);
+extern int RegisterOneRule(struct _SnortConfig *sc, Rule *rule, int registerRule);
 extern int ruleMatchInternal(SFSnortPacket *p, Rule* rule, uint32_t optIndex, const uint8_t **cursor);
 
 /* Initialize a byteExtract structure. */
@@ -127,7 +127,7 @@ int DynamicElementInitialize(Rule *rule, DynamicElement *element)
     return 0;
 }
 
-int LoopInfoInitialize(Rule *rule, LoopInfo *loopInfo)
+int LoopInfoInitialize(struct _SnortConfig *sc, Rule *rule, LoopInfo *loopInfo)
 {
     int ret;
 
@@ -151,7 +151,7 @@ int LoopInfoInitialize(Rule *rule, LoopInfo *loopInfo)
     }
 
     /* Do all of the initialization for the subrule */
-    ret = RegisterOneRule(loopInfo->subRule, DONT_REGISTER_RULE);
+    ret = RegisterOneRule(sc, loopInfo->subRule, DONT_REGISTER_RULE);
     if (ret)
     {
         return ret;

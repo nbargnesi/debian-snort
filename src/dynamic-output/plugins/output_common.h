@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2012 Sourcefire, Inc.
+ ** Copyright (C) 2012-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  **
  ** Date: 02-27-2012
  ** Author: Hui Cao <hcao@sourcefire.com>
@@ -81,5 +81,7 @@
 #define OUTPUT_ERROR_NOMOD     -4  /* No module specified error */
 #define OUTPUT_ERROR_INVAL     -5  /* Invalid argument/request error */
 #define OUTPUT_ERROR_EXISTS    -6  /* Argument or device already exists */
+
+struct _SnortConfig;
 
 #endif /* _OUTPUT_COMMON_H */

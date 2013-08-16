@@ -14,9 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steve Sturges
  *         Andy  Mullican
@@ -46,10 +46,10 @@
 #include "bmh.h"
 #include "sf_snort_detection_engine.h"
 
-#define MAJOR_VERSION   1
-#define MINOR_VERSION   16
-#define BUILD_VERSION   18
-#define DETECT_NAME     "SF_SNORT_DETECTION_ENGINE"
+#define MAJOR_VERSION   REQ_ENGINE_LIB_MAJOR
+#define MINOR_VERSION   REQ_ENGINE_LIB_MINOR
+#define BUILD_VERSION   1
+#define DETECT_NAME     REQ_ENGINE_LIB_NAME
 
 #ifdef WIN32
 #ifndef PATH_MAX
@@ -83,56 +83,12 @@ NORETURN void DynamicEngineFatalMessage(const char *format, ...)
 
 ENGINE_LINKAGE int InitializeEngine(DynamicEngineData *ded)
 {
-    int i;
     if (ded->version < ENGINE_DATA_VERSION)
     {
         return -1;
     }
 
-    _ded.version = ded->version;
-    _ded.altBuffer = ded->altBuffer;
-    _ded.altDetect = ded->altDetect;
-    _ded.fileDataBuf = ded->fileDataBuf;
-
-    for (i=0;i<HTTP_BUFFER_MAX;i++)
-    {
-        _ded.uriBuffers[i] = ded->uriBuffers[i];
-    }
-    _ded.ruleRegister = ded->ruleRegister;
-    _ded.flowbitRegister = ded->flowbitRegister;
-    _ded.flowbitCheck = ded->flowbitCheck;
-    _ded.asn1Detect = ded->asn1Detect;
-    _ded.dataDumpDirectory = ded->dataDumpDirectory;
-    _ded.logMsg = ded->logMsg;
-    _ded.errMsg = ded->errMsg;
-    _ded.fatalMsg = ded->fatalMsg;
-    _ded.preprocRuleOptInit = ded->preprocRuleOptInit;
-    _ded.setRuleData = ded->setRuleData;
-    _ded.getRuleData = ded->getRuleData;
-
-    _ded.debugMsg = ded->debugMsg;
-#ifdef SF_WCHAR
-    _ded.debugWideMsg = ded->debugWideMsg;
-#endif
-    _ded.debugMsgFile = ded->debugMsgFile;
-    _ded.debugMsgLine = ded->debugMsgLine;
-
-    _ded.pcreStudy = ded->pcreStudy;
-    _ded.pcreCompile = ded->pcreCompile;
-    _ded.pcreExec = ded->pcreExec;
-    _ded.pcreCapture = ded->pcreCapture;
-    _ded.pcreOvectorInfo = ded->pcreOvectorInfo;
-    _ded.sfUnfold = ded->sfUnfold;
-    _ded.sfbase64decode = ded->sfbase64decode;
-    _ded.GetAltDetect = ded->GetAltDetect;
-    _ded.SetAltDetect = ded->SetAltDetect;
-    _ded.Is_DetectFlag = ded->Is_DetectFlag;
-    _ded.DetectFlag_Disable = ded->DetectFlag_Disable;
-
-    _ded.allocRuleData = ded->allocRuleData;
-    _ded.freeRuleData = ded->freeRuleData;
-
-    _ded.flowbitUnregister = ded->flowbitUnregister;
+    _ded = *ded;
 
     return 0;
 }
@@ -144,7 +100,8 @@ ENGINE_LINKAGE int LibVersion(DynamicPluginMeta *dpm)
     dpm->major = MAJOR_VERSION;
     dpm->minor = MINOR_VERSION;
     dpm->build = BUILD_VERSION;
-    strncpy(dpm->uniqueName, DETECT_NAME, MAX_NAME_LEN);
+    strncpy(dpm->uniqueName, DETECT_NAME, MAX_NAME_LEN-1);
+    dpm->uniqueName[MAX_NAME_LEN-1] = '\0';
     return 0;
 }
 
@@ -257,8 +214,7 @@ static int GetDynamicContents(void *r, int type, FPContentInfo **contents)
                         case CONTENT_HTTP:
                             base64_buf_flag = 0;
                             mime_buf_flag = 0;
-                            if (!(flags & URI_CONTENT_BUFS)
-                                    || (!(flags & URI_FAST_PATTERN_BUFS)))
+                            if ( !IsHttpFastPattern(flags) )
                                 continue;
                             break;
                         default:
@@ -276,6 +232,7 @@ static int GetDynamicContents(void *r, int type, FPContentInfo **contents)
                     memcpy(fp_content->content, content->patternByteForm, fp_content->length);
                     fp_content->offset = content->offset;
                     fp_content->depth = content->depth;
+
                     if (content->flags & CONTENT_RELATIVE)
                         fp_content->is_relative = 1;
                     if (content->flags & CONTENT_NOCASE)
@@ -284,11 +241,12 @@ static int GetDynamicContents(void *r, int type, FPContentInfo **contents)
                         fp_content->fp = 1;
                     if (content->flags & NOT_FLAG)
                         fp_content->exception_flag = 1;
-                    if (content->flags & CONTENT_BUF_URI)
+
+                    if ( HTTP_CONTENT(content->flags) == CONTENT_BUF_URI )
                         fp_content->uri_buffer |= CONTENT_HTTP_URI;
-                    if (content->flags & CONTENT_BUF_HEADER)
+                    else if ( HTTP_CONTENT(content->flags) == CONTENT_BUF_HEADER )
                         fp_content->uri_buffer |= CONTENT_HTTP_HEADER;
-                    if (content->flags & CONTENT_BUF_POST)
+                    else if ( HTTP_CONTENT(content->flags) == CONTENT_BUF_POST )
                         fp_content->uri_buffer |= CONTENT_HTTP_CLIENT_BODY;
 
                     /* Fast pattern only and specifying an offset and length are
@@ -650,7 +608,7 @@ static unsigned int getNonRepeatingLength(char *data, int data_len)
 
 static int ValidateContentInfo(Rule *rule, ContentInfo *content, int fast_pattern)
 {
-    char *content_error = "WARNING: Invalid content option in shared "
+    const char *content_error = "WARNING: Invalid content option in shared "
         "object rule: gid:%u, sid:%u : %s.  Rule will not be registered.\n";
 
     if (content->flags & CONTENT_FAST_PATTERN)
@@ -678,7 +636,7 @@ static int ValidateContentInfo(Rule *rule, ContentInfo *content, int fast_patter
             return -1;
         }
 
-        if ((content->flags & URI_CONTENT_BUFS) && !(content->flags & URI_FAST_PATTERN_BUFS))
+        if ( HTTP_CONTENT(content->flags) && !IsHttpFastPattern(content->flags) )
         {
             _ded.errMsg(content_error,
                     rule->info.genID, rule->info.sigID,
@@ -771,7 +729,7 @@ static int ValidateContentInfo(Rule *rule, ContentInfo *content, int fast_patter
 
 static int Base64DecodeInitialize(Rule *rule, base64DecodeData *content)
 {
-    char *content_error = "WARNING: Invalid base64decode option in shared "
+    const char *content_error = "WARNING: Invalid base64decode option in shared "
         "object rule: gid:%u, sid:%u : %s.  Rule will not be registered.\n";
 
     if( content->relative !=0 && content->relative !=1)
@@ -784,7 +742,7 @@ static int Base64DecodeInitialize(Rule *rule, base64DecodeData *content)
     return 0;
 }
 
-int RegisterOneRule(Rule *rule, int registerRule)
+int RegisterOneRule(struct _SnortConfig *sc, Rule *rule, int registerRule)
 {
     int i;
     int contentFlags = 0;
@@ -821,7 +779,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
                         content->flags |= CONTENT_FAST_PATTERN_ONLY;
                     }
 
-                    if (content->flags & URI_CONTENT_BUFS)
+                    if ( HTTP_CONTENT(content->flags) )
                         contentFlags |= CONTENT_HTTP;
                     else
                         contentFlags |= CONTENT_NORMAL;
@@ -843,7 +801,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
 
                     if (pcre->compiled_expr == NULL)
                     {
-                        if (PCRESetup(rule, pcre))
+                        if (PCRESetup(sc, rule, pcre))
                         {
                             rule->initialized = 0;
                             FreeOneRule(rule);
@@ -904,7 +862,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
             case OPTION_TYPE_LOOP:
                 {
                     LoopInfo *loopInfo = option->option_u.loop;
-                    result = LoopInfoInitialize(rule, loopInfo);
+                    result = LoopInfoInitialize(sc, rule, loopInfo);
                     if (result)
                     {
                         /* Don't initialize this rule */
@@ -919,7 +877,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
                 {
                     PreprocessorOption *preprocOpt = option->option_u.preprocOpt;
 
-                    if (_ded.preprocRuleOptInit((void *)preprocOpt) == -1)
+                    if (_ded.preprocRuleOptInit(sc, (void *)preprocOpt) == -1)
                     {
                         /* Don't initialize this rule */
                         rule->initialized = 0;
@@ -987,6 +945,7 @@ int RegisterOneRule(Rule *rule, int registerRule)
     {
         /* Allocate an OTN and link it in with snort */
         if (_ded.ruleRegister(
+                    sc,
                     rule->info.sigID,
                     rule->info.genID,
                     (void *)rule,
@@ -1110,7 +1069,7 @@ static void FreeOneRule(void *data)
             case OPTION_TYPE_BASE64_DECODE:
             case OPTION_TYPE_ASN1:
                 break;
-                
+
             case OPTION_TYPE_FLOWBIT:
                 {
                     FlowBitsInfo *flowbits = option->option_u.flowBit;
@@ -1248,14 +1207,14 @@ static int DumpRule(FILE *fp, Rule *rule)
     return 0;
 }
 
-ENGINE_LINKAGE int RegisterRules(Rule **rules)
+ENGINE_LINKAGE int RegisterRules(struct _SnortConfig *sc, Rule **rules)
 {
     int i;
 
     for (i=0; rules[i] != NULL; i++)
     {
         if (rules[i]->initialized == 0)
-            RegisterOneRule(rules[i], REGISTER_RULE);
+            RegisterOneRule(sc, rules[i], REGISTER_RULE);
     }
 
     return 0;

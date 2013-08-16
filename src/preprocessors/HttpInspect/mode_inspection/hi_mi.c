@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -84,12 +84,11 @@ int hi_mi_mode_inspection(HI_SESSION *Session, int iInspectMode,
     */
     if(iInspectMode == HI_SI_CLIENT_MODE)
     {
-#ifdef ENABLE_PAF
         if ( ScPafEnabled() )
-            iRet = hi_client_inspection((void *)Session, p->data, p->dsize, hsd, !PacketHasStartOfPDU(p));
+            iRet = hi_client_inspection(p, (void *)Session, hsd, !PacketHasStartOfPDU(p));
         else
-#endif
-            iRet = hi_client_inspection((void *)Session, p->data, p->dsize, hsd, p->packet_flags & PKT_STREAM_INSERT);
+            iRet = hi_client_inspection(p, (void *)Session, hsd, p->packet_flags & PKT_STREAM_INSERT);
+
         if (iRet)
             return iRet;
     }

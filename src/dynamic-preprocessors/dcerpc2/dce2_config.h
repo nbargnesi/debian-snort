@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  * Provides convenience functions for parsing and querying configuration.
@@ -278,9 +278,6 @@ typedef struct _DCE2_Config
 extern DCE2_Config *dce2_eval_config;
 extern tSfPolicyUserContextId dce2_config;
 extern DCE2_Config *dce2_eval_config;
-#ifdef SNORT_RELOAD
-extern tSfPolicyUserContextId dce2_swap_config;
-#endif
 
 /********************************************************************
  * Inline function prototypes
@@ -327,9 +324,9 @@ static inline DCE2_Ret DCE2_CheckAndSetMask(int, int *);
  * Public function prototypes
  ********************************************************************/
 void DCE2_GlobalConfigure(DCE2_Config *, char *);
-void DCE2_ServerConfigure(DCE2_Config *, char *);
-void DCE2_CreateDefaultServerConfig(DCE2_Config *, tSfPolicyId);
-void DCE2_ScCheckTransports(DCE2_Config *);
+void DCE2_ServerConfigure(struct _SnortConfig *, DCE2_Config *, char *);
+int DCE2_CreateDefaultServerConfig(struct _SnortConfig *, DCE2_Config *, tSfPolicyId);
+int DCE2_ScCheckTransports(DCE2_Config *);
 const DCE2_ServerConfig * DCE2_ScGetConfig(const SFSnortPacket *);
 int DCE2_ScIsPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);
 int DCE2_ScIsDetectPortSet(const DCE2_ServerConfig *, const uint16_t, const DCE2_TransType);

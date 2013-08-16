@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -66,11 +66,14 @@ typedef enum {
     ACTIVE_WOULD_DROP = 2,
     ACTIVE_FORCE_DROP = 3
 } tActiveDrop;
+
 extern tActiveDrop active_drop_pkt;
 extern int active_drop_ssn;
 #ifdef ACTIVE_RESPONSE
 extern int active_have_rsp;
 #endif
+extern int active_tunnel_bypass;
+extern int active_suspend;
 
 static inline void Active_Reset (void)
 {
@@ -79,15 +82,37 @@ static inline void Active_Reset (void)
 #ifdef ACTIVE_RESPONSE
     active_have_rsp = 0;
 #endif
+    active_tunnel_bypass = 0;
+}
+
+static inline void Active_Suspend (void)
+{
+    active_suspend = 1;
+}
+
+static inline void Active_Resume (void)
+{
+    active_suspend = 0;
+}
+
+static inline bool Active_Suspended (void)
+{
+    return ( active_suspend != 0 );
 }
 
 static inline void Active_ForceDropPacket (void)
 {
+    if ( Active_Suspended() )
+        return;
+
     active_drop_pkt = ACTIVE_FORCE_DROP;
 }
 
 static inline void Active_DropPacket (void)
 {
+    if ( Active_Suspended() )
+        return;
+
     if ( active_drop_pkt != ACTIVE_FORCE_DROP )
     {
         if ( ScInlineMode() )
@@ -103,8 +128,20 @@ static inline void Active_DropPacket (void)
 
 static inline void Active_DropSession (void)
 {
+    if ( Active_Suspended() )
+        return;
+
     active_drop_ssn = 1;
     Active_DropPacket();
+}
+
+static inline void Active_ForceDropSession (void)
+{
+    if ( Active_Suspended() )
+        return;
+
+    active_drop_ssn = 1;
+    Active_ForceDropPacket();
 }
 
 static inline int Active_PacketWouldBeDropped (void)
@@ -133,6 +170,21 @@ static inline int Active_ResponseQueued (void)
     return ( active_have_rsp != 0 );
 }
 #endif
+
+static inline void Active_SetTunnelBypass (void)
+{
+    active_tunnel_bypass++;
+}
+
+static inline void Active_ClearTunnelBypass (void)
+{
+    active_tunnel_bypass--;
+}
+
+static inline int Active_GetTunnelBypass (void)
+{
+    return ( active_tunnel_bypass > 0 );
+}
 
 // drops current session with active response invoked
 // for rules with action = drop | sdrop | reject

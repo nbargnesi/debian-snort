@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  *
@@ -241,11 +241,7 @@ static inline void DCE2_SsnSetReassembly(const SFSnortPacket *p)
  ********************************************************************/
 static inline int DCE2_SsnIsRebuilt(const SFSnortPacket *p)
 {
-    return
-#ifdef ENABLE_PAF
-        PacketHasFullPDU(p) ||
-#endif
-        (p->flags & FLAG_REBUILT_STREAM);
+    return PacketHasFullPDU(p) || (p->flags & FLAG_REBUILT_STREAM);
 }
 
 /********************************************************************
@@ -338,12 +334,11 @@ static inline int DCE2_SsnFromClient(const SFSnortPacket *p)
  ********************************************************************/
 static inline bool DCE2_SsnIsPafActive(const SFSnortPacket *p)
 {
-#ifdef ENABLE_PAF
     if ((p->stream_session_ptr == NULL)
             || (_dpd.streamAPI->is_paf_active(p->stream_session_ptr, true)
                 && _dpd.streamAPI->is_paf_active(p->stream_session_ptr, false)))
         return true;
-#endif
+
     return false;
 }
 

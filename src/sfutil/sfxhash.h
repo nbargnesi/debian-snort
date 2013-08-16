@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -117,7 +117,7 @@ void            sfxhash_delete( SFXHASH * h );
 int             sfxhash_make_empty(SFXHASH *);
 
 int             sfxhash_add ( SFXHASH * h, void * key, void * data );
-SFXHASH_NODE * sfxhash_get_node( SFXHASH * t, void * key );
+SFXHASH_NODE * sfxhash_get_node( SFXHASH * t, const void * key );
 int             sfxhash_remove( SFXHASH * h, void * key );
 
 /*!
@@ -202,7 +202,7 @@ void          * sfxhash_lru( SFXHASH * t );
 SFXHASH_NODE  * sfxhash_mru_node( SFXHASH * t );
 SFXHASH_NODE  * sfxhash_lru_node( SFXHASH * t );
 void          * sfxhash_find( SFXHASH * h, void * key );
-SFXHASH_NODE  * sfxhash_find_node( SFXHASH * t, void * key);
+SFXHASH_NODE  * sfxhash_find_node( SFXHASH * t, const void * key);
 
 SFXHASH_NODE  * sfxhash_findfirst( SFXHASH * h );
 SFXHASH_NODE  * sfxhash_findnext ( SFXHASH * h );

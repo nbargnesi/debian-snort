@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2012 Sourcefire, Inc.
+ ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
  ** Author: Bhagyashree Bantwal <bbantwal@sourcefire.com>
  **
@@ -16,7 +16,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -569,7 +569,10 @@ int BitEncExtract(const uint8_t *start, const uint8_t *end, Email_DecodeState *d
 
     if( (uint32_t)(end-start) < bytes_avail )
     {
-        act_size = ( end - start);
+        if ((end > start) && (*(end-1) == '\r'))
+            act_size = ( end - start) - 1;
+        else
+            act_size = ( end - start);
     }
     else
     {

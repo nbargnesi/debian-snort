@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /*
@@ -64,7 +64,6 @@
  ********************************************************************/
 #define MAX_PATTERN_SIZE 2048
 #define PM_FP_ONLY  "only"
-#define URIBUFS_SET(pmd, flags) (((pmd)->uri_buffer & (flags)) == (flags))
 
 /********************************************************************
  * Global variables
@@ -90,36 +89,35 @@ extern PreprocStats ruleOTNEvalPerfStats;
 /********************************************************************
  * Private function prototypes
  ********************************************************************/
-static void PayloadSearchInit(char *, OptTreeNode *, int);
-static void PayloadSearchUri(char *, OptTreeNode *, int);
-static void PayloadSearchHttpMethod(char *, OptTreeNode *, int);
-static void PayloadSearchHttpUri(char *, OptTreeNode *, int);
-static void PayloadSearchHttpHeader(char *, OptTreeNode *, int);
-static void PayloadSearchHttpCookie(char *, OptTreeNode *, int);
-static void PayloadSearchHttpBody(char *, OptTreeNode *, int);
-static void PayloadSearchHttpRawUri(char *, OptTreeNode *, int);
-static void PayloadSearchHttpRawHeader(char *, OptTreeNode *, int);
-//static void PayloadSearchHttpRawBody(char *, OptTreeNode *, int);
-static void PayloadSearchHttpRawCookie(char *, OptTreeNode *, int);
-static void PayloadSearchHttpStatCode(char *, OptTreeNode *, int);
-static void PayloadSearchHttpStatMsg(char *, OptTreeNode *, int);
-static void PayloadSearchOffset(char *, OptTreeNode *, int);
-static void PayloadSearchDepth(char *, OptTreeNode *, int);
-static void PayloadSearchDistance(char *, OptTreeNode *, int);
-static void PayloadSearchWithin(char *, OptTreeNode *, int);
-static void PayloadSearchNocase(char *, OptTreeNode *, int);
-static void PayloadSearchRawbytes(char *, OptTreeNode *, int);
-static void PayloadSearchFastPattern(char *, OptTreeNode *, int);
+static void PayloadSearchInit(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchUri(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpMethod(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpUri(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpHeader(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpCookie(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpBody(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpRawUri(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpRawHeader(struct _SnortConfig *, char *, OptTreeNode *, int);
+//static void PayloadSearchHttpRawBody(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpRawCookie(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpStatCode(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchHttpStatMsg(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchOffset(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchDepth(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchDistance(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchWithin(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchNocase(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchRawbytes(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void PayloadSearchFastPattern(struct _SnortConfig *, char *, OptTreeNode *, int);
 static inline int HasFastPattern(OptTreeNode *, int);
 static int32_t ParseInt(const char *, const char *);
 static inline PatternMatchData * GetLastPmdError(OptTreeNode *, int, const char *);
 static inline PatternMatchData * GetLastPmd(OptTreeNode *, int);
-static void ValidateHttpContentModifiers(PatternMatchData *);
+static void ValidateHttpContentModifiers(struct _SnortConfig *, PatternMatchData *);
 static void MovePmdToUriDsList(OptTreeNode *, PatternMatchData *);
 static char *PayloadExtractParameter(char *, int *);
-static inline void ValidateContent(PatternMatchData *, int);
+static inline void ValidateContent(struct _SnortConfig *, PatternMatchData *, int);
 static unsigned int GetMaxJumpSize(char *, int);
-static inline int computeWithin(int, PatternMatchData *);
 static int uniSearch(const char *, int, PatternMatchData *);
 static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int nocase);
 
@@ -186,7 +184,7 @@ void SetupPatternMatch(void)
                 "Plugin: PatternMatch Initialized!\n"););
 }
 
-static void PayloadSearchInit(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchInit(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     OptFpList *fpl;
     PatternMatchData *pmd;
@@ -250,75 +248,75 @@ static void PayloadSearchInit(char *data, OptTreeNode * otn, int protocol)
 
         if (!strcasecmp(opts[0], "offset"))
         {
-            PayloadSearchOffset(opt1, otn, protocol);
+            PayloadSearchOffset(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "depth"))
         {
-            PayloadSearchDepth(opt1, otn, protocol);
+            PayloadSearchDepth(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "nocase"))
         {
-            PayloadSearchNocase(opt1, otn, protocol);
+            PayloadSearchNocase(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "rawbytes"))
         {
-            PayloadSearchRawbytes(opt1, otn, protocol);
+            PayloadSearchRawbytes(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_uri"))
         {
-            PayloadSearchHttpUri(opt1, otn, protocol);
+            PayloadSearchHttpUri(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_client_body"))
         {
-            PayloadSearchHttpBody(opt1, otn, protocol);
+            PayloadSearchHttpBody(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_header"))
         {
-            PayloadSearchHttpHeader(opt1, otn, protocol);
+            PayloadSearchHttpHeader(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_method"))
         {
-            PayloadSearchHttpMethod(opt1, otn, protocol);
+            PayloadSearchHttpMethod(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_cookie"))
         {
-            PayloadSearchHttpCookie(opt1, otn, protocol);
+            PayloadSearchHttpCookie(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_raw_uri"))
         {
-            PayloadSearchHttpRawUri(opt1, otn, protocol);
+            PayloadSearchHttpRawUri(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_raw_header"))
         {
-            PayloadSearchHttpRawHeader(opt1, otn, protocol);
+            PayloadSearchHttpRawHeader(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_raw_cookie"))
         {
-            PayloadSearchHttpRawCookie(opt1, otn, protocol);
+            PayloadSearchHttpRawCookie(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_stat_code"))
         {
-            PayloadSearchHttpStatCode(opt1, otn, protocol);
+            PayloadSearchHttpStatCode(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "http_stat_msg"))
         {
-            PayloadSearchHttpStatMsg(opt1, otn, protocol);
+            PayloadSearchHttpStatMsg(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "fast_pattern"))
         {
-            PayloadSearchFastPattern(opt1, otn, protocol);
+            PayloadSearchFastPattern(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "distance"))
         {
-            PayloadSearchDistance(opt1, otn, protocol);
+            PayloadSearchDistance(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "within"))
         {
-            PayloadSearchWithin(opt1, otn, protocol);
+            PayloadSearchWithin(sc, opt1, otn, protocol);
         }
         else if (!strcasecmp(opts[0], "replace"))
         {
-            PayloadReplaceInit(opt1, otn, protocol);
+            PayloadReplaceInit(sc, opt1, otn, protocol);
         }
         else
         {
@@ -337,7 +335,7 @@ static void PayloadSearchInit(char *data, OptTreeNode * otn, int protocol)
                 "OTN function PatternMatch Added to rule!\n"););
 }
 
-static void PayloadSearchUri(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchUri(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = NewNode(otn, PLUGIN_PATTERN_MATCH_URI);
     OptFpList *fpl;
@@ -349,7 +347,7 @@ static void PayloadSearchUri(char *data, OptTreeNode * otn, int protocol)
     /* set up the pattern buffer */
     ParsePattern(data, otn, PLUGIN_PATTERN_MATCH_URI);
 
-    pmd->uri_buffer |= HTTP_SEARCH_URI;
+    pmd->http_buffer = HTTP_BUFFER_URI;
 
     /* link the plugin function in to the current OTN */
     fpl = AddOptFuncToList(CheckUriPatternMatch, otn);
@@ -367,110 +365,140 @@ static void PayloadSearchUri(char *data, OptTreeNode * otn, int protocol)
                 "OTN function PatternMatch Added to rule!\n"););
 }
 
-static void PayloadSearchHttpMethod(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpMethod(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_method");
 
     if (data != NULL)
         ParseError("'http_method' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_METHOD;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_METHOD;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpUri(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpUri(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_uri");
 
     if (data != NULL)
         ParseError("'http_uri' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_URI;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_URI;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpHeader(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpHeader(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_header");
 
     if (data != NULL)
         ParseError("'http_header' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_HEADER;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_HEADER;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpCookie(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpCookie(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_cookie");
 
     if (data != NULL)
         ParseError("'http_cookie' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_COOKIE;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_COOKIE;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpBody(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpBody(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_client_body");
 
     if (data != NULL)
         ParseError("'http_client_body' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_CLIENT_BODY;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_CLIENT_BODY;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpRawUri(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpRawUri(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_raw_uri");
 
     if (data != NULL)
         ParseError("'http_raw_uri' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_RAW_URI;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_RAW_URI;
     MovePmdToUriDsList(otn, pmd);
 }
 
-static void PayloadSearchHttpRawHeader(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpRawHeader(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_raw_header");
 
     if (data != NULL)
         ParseError("'http_raw_header' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_RAW_HEADER;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_RAW_HEADER;
     MovePmdToUriDsList(otn, pmd);
 }
-static void PayloadSearchHttpRawCookie(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpRawCookie(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_raw_cookie");
 
     if (data != NULL)
         ParseError("'http_raw_cookie' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_RAW_COOKIE;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_RAW_COOKIE;
     MovePmdToUriDsList(otn, pmd);
 }
-static void PayloadSearchHttpStatCode(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpStatCode(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_stat_code");
 
     if (data != NULL)
         ParseError("'http_stat_code' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_STAT_CODE;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_STAT_CODE;
     MovePmdToUriDsList(otn, pmd);
 }
-static void PayloadSearchHttpStatMsg(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchHttpStatMsg(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "http_stat_msg");
 
     if (data != NULL)
         ParseError("'http_stat_msg' does not take an argument");
 
-    pmd->uri_buffer |= HTTP_SEARCH_STAT_MSG;
+    if ( pmd->http_buffer )
+        ParseWarning("at most one http buffer can be specified per content option");
+
+    pmd->http_buffer = HTTP_BUFFER_STAT_MSG;
     MovePmdToUriDsList(otn, pmd);
 }
 
@@ -493,7 +521,7 @@ static unsigned GetCMF (PatternMatchData* pmd)
 #define BAD_OFFSET (CMF_OFFSET | CMF_DISTANCE | CMF_WITHIN)
 #define BAD_DEPTH (CMF_DEPTH | CMF_DISTANCE | CMF_WITHIN)
 
-static void PayloadSearchOffset(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchOffset(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "offset");
 
@@ -520,7 +548,7 @@ static void PayloadSearchOffset(char *data, OptTreeNode * otn, int protocol)
                 pmd->offset););
 }
 
-static void PayloadSearchDepth(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchDepth(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "depth");
 
@@ -554,7 +582,7 @@ static void PayloadSearchDepth(char *data, OptTreeNode * otn, int protocol)
                 pmd->depth););
 }
 
-static void PayloadSearchDistance(char *data, OptTreeNode *otn, int protocol)
+static void PayloadSearchDistance(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "distance");
 
@@ -588,7 +616,7 @@ static void PayloadSearchDistance(char *data, OptTreeNode *otn, int protocol)
     }
 }
 
-static void PayloadSearchWithin(char *data, OptTreeNode *otn, int protocol)
+static void PayloadSearchWithin(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "within");
 
@@ -625,7 +653,7 @@ static void PayloadSearchWithin(char *data, OptTreeNode *otn, int protocol)
     }
 }
 
-static void PayloadSearchNocase(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchNocase(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     unsigned int i;
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "nocase");
@@ -642,7 +670,7 @@ static void PayloadSearchNocase(char *data, OptTreeNode * otn, int protocol)
     make_precomp(pmd);
 }
 
-static void PayloadSearchRawbytes(char *data, OptTreeNode * otn, int protocol)
+static void PayloadSearchRawbytes(struct _SnortConfig *sc, char *data, OptTreeNode * otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "rawbytes");
 
@@ -654,7 +682,7 @@ static void PayloadSearchRawbytes(char *data, OptTreeNode * otn, int protocol)
     pmd->rawbytes = 1;
 }
 
-static void PayloadSearchFastPattern(char *data, OptTreeNode *otn, int protocol)
+static void PayloadSearchFastPattern(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     PatternMatchData *pmd = GetLastPmdError(otn, lastType, "fast_pattern");
 
@@ -772,6 +800,10 @@ PatternMatchData * NewNode(OptTreeNode *otn, int type)
             pmd->next->prev = pmd;
             pmd = pmd->next;
         }
+        else
+        {
+            return NULL;
+        }
     }
 
     /* Set any non-zero default values here. */
@@ -854,12 +886,12 @@ static inline PatternMatchData * GetLastPmd(OptTreeNode *otn, int type)
 
 /* Options that can't be used with http content modifiers.  Additionally
  * http_inspect preprocessor needs to be enabled */
-static void ValidateHttpContentModifiers(PatternMatchData *pmd)
+static void ValidateHttpContentModifiers(struct _SnortConfig *sc, PatternMatchData *pmd)
 {
     if (pmd == NULL)
         ParseError("Please place \"content\" rules before http content modifiers");
 
-    if (!IsPreprocEnabled(PP_HTTPINSPECT))
+    if (!IsPreprocEnabled(sc, PP_HTTPINSPECT))
     {
         ParseError("Please enable the HTTP Inspect preprocessor "
                 "before using the http content modifiers");
@@ -874,23 +906,6 @@ static void ValidateHttpContentModifiers(PatternMatchData *pmd)
     if (pmd->rawbytes == 1)
     {
         ParseError("Cannot use 'rawbytes' and http content as modifiers for "
-                "the same \"content\"");
-    }
-
-    if ( URIBUFS_SET(pmd , (HTTP_SEARCH_URI | HTTP_SEARCH_RAW_URI)) )
-    {
-        ParseError("Cannot use 'http_uri' and 'http_raw_uri' modifiers for "
-                "the same \"content\"");
-    }
-
-    if ( URIBUFS_SET(pmd , (HTTP_SEARCH_HEADER | HTTP_SEARCH_RAW_HEADER)) )
-    {
-        ParseError("Cannot use 'http_header' and 'http_raw_header' modifiers for "
-                "the same \"content\"");
-    }
-    if ( URIBUFS_SET(pmd , (HTTP_SEARCH_COOKIE | HTTP_SEARCH_RAW_COOKIE)) )
-    {
-        ParseError("Cannot use 'http_cookie' and 'http_raw_cookie' modifiers for "
                 "the same \"content\"");
     }
 }
@@ -960,7 +975,7 @@ static void PrintDupDOTPmds(PatternMatchData *pmd,
             pmd->rawbytes,
             pmd->nocase,
             pmd->use_doe,
-            pmd->uri_buffer,
+            pmd->http_buffer,
             pmd->pattern_max_jump_size,
             pmd_dup->exception_flag,
             pmd_dup->offset,
@@ -970,7 +985,7 @@ static void PrintDupDOTPmds(PatternMatchData *pmd,
             pmd_dup->rawbytes,
             pmd_dup->nocase,
             pmd_dup->use_doe,
-            pmd_dup->uri_buffer,
+            pmd_dup->http_buffer,
             pmd_dup->pattern_max_jump_size);
 
     for (i = 0; i < pmd->pattern_size; i++)
@@ -1007,7 +1022,7 @@ uint32_t PatternMatchHash(void *d)
 
     a += pmd->nocase;
     b += pmd->use_doe;
-    c += pmd->uri_buffer;
+    c += pmd->http_buffer;
 
     mix(a,b,c);
 
@@ -1088,7 +1103,7 @@ uint32_t PatternMatchHash(void *d)
         mix(a,b,c);
     }
 
-    if (pmd->uri_buffer)
+    if (pmd->http_buffer)
     {
         a += RULE_OPTION_TYPE_CONTENT_URI;
     }
@@ -1176,7 +1191,7 @@ int PatternMatchCompare(void *l, void *r)
         (left->within == right->within) &&
         (left->rawbytes == right->rawbytes) &&
         (left->use_doe == right->use_doe) &&
-        (left->uri_buffer == right->uri_buffer) &&
+        (left->http_buffer == right->http_buffer) &&
         (left->search == right->search) &&
         (left->pattern_max_jump_size == right->pattern_max_jump_size) &&
         (left->fp == right->fp) &&
@@ -1196,7 +1211,7 @@ int PatternMatchCompare(void *l, void *r)
 
 /* This function is called in parser.c after the rule has been
  * completely parsed */
-void FinalizeContentUniqueness(OptTreeNode *otn)
+void FinalizeContentUniqueness(struct _SnortConfig *sc, OptTreeNode *otn)
 {
     OptFpList *opt_fp = otn->opt_func;
 
@@ -1212,11 +1227,11 @@ void FinalizeContentUniqueness(OptTreeNode *otn)
             /* Since each content modifier can be parsed as a rule option,
              * do this check now that the entire rule has been parsed */
             if (option_type == RULE_OPTION_TYPE_CONTENT_URI)
-                ValidateContent(pmd, PLUGIN_PATTERN_MATCH_URI);
+                ValidateContent(sc, pmd, PLUGIN_PATTERN_MATCH_URI);
             else
-                ValidateContent(pmd, PLUGIN_PATTERN_MATCH);
+                ValidateContent(sc, pmd, PLUGIN_PATTERN_MATCH);
 
-            if (add_detection_option(option_type, (void *)pmd, &pmd_dup) == DETECTION_OPTION_EQUAL)
+            if (add_detection_option(sc, option_type, (void *)pmd, &pmd_dup) == DETECTION_OPTION_EQUAL)
             {
                  /* Don't do anything if they are the same pointer.  This might happen when
                   * converting an so rule to a text rule via ConvertDynamicRule() in sf_convert_dynamic.c
@@ -1273,7 +1288,7 @@ void ValidateFastPattern(OptTreeNode *otn)
         if (fp_only == 1)
         {
             if (fpl->isRelative)
-                ParseWarning("relative rule option used after "
+                ParseError("relative rule option used after "
                     "fast_pattern:only");
         }
 
@@ -1291,7 +1306,7 @@ void ValidateFastPattern(OptTreeNode *otn)
 
         /* set/unset the check on content options.
          */
-        if ((fpl->type == RULE_OPTION_TYPE_CONTENT) || 
+        if ((fpl->type == RULE_OPTION_TYPE_CONTENT) ||
             (fpl->type == RULE_OPTION_TYPE_CONTENT_URI))
         {
             PatternMatchData *pmd = (PatternMatchData *)fpl->context;
@@ -1353,14 +1368,14 @@ static char *PayloadExtractParameter(char *data, int *result_len)
 
 /* Since each content modifier can be parsed as a rule option, do this check
  * after parsing the entire rule in FinalizeContentUniqueness() */
-static inline void ValidateContent(PatternMatchData *pmd, int type)
+static inline void ValidateContent(struct _SnortConfig *sc, PatternMatchData *pmd, int type)
 {
     if (pmd == NULL)
         return;
 
     if (pmd->fp)
     {
-        if ((type == PLUGIN_PATTERN_MATCH_URI) && !IsHttpBufFpEligible(pmd->uri_buffer))
+        if ((type == PLUGIN_PATTERN_MATCH_URI) && !IsHttpBufFpEligible(pmd->http_buffer))
 
         {
             ParseError("Cannot use the fast_pattern content modifier for a lone "
@@ -1396,7 +1411,7 @@ static inline void ValidateContent(PatternMatchData *pmd, int type)
     }
 
     if (type == PLUGIN_PATTERN_MATCH_URI)
-        ValidateHttpContentModifiers(pmd);
+        ValidateHttpContentModifiers(sc, pmd);
 }
 
 /****************************************************************************
@@ -1735,42 +1750,6 @@ void ParsePattern(char *rule, OptTreeNode * otn, int type)
  * Runtime functions
  ********************************************************************/
 /*
- * Figure out how deep the into the packet from the base_ptr we can go
- *
- * base_ptr = the offset into the payload relative to the last match plus the offset
- *            contained within the current pmd
- *
- * dlen = amount of data in the packet from the base_ptr to the end of the packet
- *
- * pmd = the patterm match data struct for this test
- */
-static inline int computeWithin(int dlen, PatternMatchData *pmd)
-{
-    /* do we want to check more bytes than there are in the buffer? */
-    if(pmd->within > (unsigned int)dlen)
-    {
-        /* should we just return -1 here since the data might actually be within
-         * the stream but not the current packet's payload?
-         */
-
-        /* if the buffer size is greater than the size of the pattern to match */
-        if(dlen >= (int)pmd->pattern_size)
-        {
-            /* return the size of the buffer */
-            return dlen;
-        }
-        else
-        {
-            /* failed, pattern size is greater than number of bytes in the buffer */
-            return -1;
-        }
-    }
-
-    /* the within vaule is in range of the number of buffer bytes */
-    return pmd->within;
-}
-
-/*
  * case sensitive search
  *
  * data = ptr to buffer to search
@@ -1819,20 +1798,15 @@ static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int 
      * depth + offset adjustments have been made by the calling function
      */
     int depth = dlen;
-    int old_depth = dlen;
     int success = 0;
     const char *start_ptr = data;
     const char *end_ptr = data + dlen;
     const char *base_ptr = start_ptr;
     uint32_t extract_offset, extract_depth, extract_distance, extract_within;
 
-    DEBUG_WRAP(char *hexbuf;);
-
-
     if(pmd->use_doe != 1)
     {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "NOT Using Doe Ptr\n"););
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "NOT Using Doe Ptr\n"););
         UpdateDoePtr(NULL, 0); /* get rid of all our pattern match state */
     }
 
@@ -1858,106 +1832,96 @@ static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int 
         pmd->within = (u_int) extract_within;
     }
 
-    /* check to see if we've got a stateful start point */
-    if(doe_ptr)
+    // Set our initial starting point
+    if (doe_ptr)
     {
+        // Sanity check to make sure the doe_ptr is within the buffer we're
+        // searching.  It could be at the very end of the buffer due to a
+        // previous match, but may have a negative distance here.
+        if (((char *)doe_ptr < start_ptr) || ((char *)doe_ptr > end_ptr))
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Returning because "
+                        "doe_ptr isn't within the buffer we're searching: "
+                        "start_ptr: %p, end_ptr: %p, doe_ptr: %p\n",
+                        start_ptr, end_ptr, doe_ptr););
+            return -1;
+        }
+
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Using Doe Ptr\n"););
+                    "Setting base_ptr to doe_ptr (%p)\n", doe_ptr););
 
         base_ptr = (const char *)doe_ptr;
-        depth = dlen - ((char *) doe_ptr - data);
+        depth = dlen - ((char *)doe_ptr - data);
     }
     else
     {
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                    "Setting base_ptr to start_ptr (%p)\n", start_ptr););
+
         base_ptr = start_ptr;
         depth = dlen;
     }
 
-    /* if we're using a distance call */
-    if(pmd->distance)
+    // Adjust base_ptr and depth based on distance/within
+    // or offset/depth parameters.
+    if ((pmd->distance != 0) || (pmd->within != 0))
     {
-        /* set the base pointer up for the distance */
-        base_ptr += pmd->distance;
-        depth -= pmd->distance;
+        if (pmd->distance != 0)
+        {
+            base_ptr += pmd->distance;
+            depth -= pmd->distance;
+        }
+
+        // If the distance is negative and puts us before start_ptr
+        // set base_ptr to start_ptr and adjust depth based on within.
+        if (base_ptr < start_ptr)
+        {
+            int delta = (int)pmd->within - (start_ptr - base_ptr);
+            base_ptr = start_ptr;
+            depth = ((pmd->within == 0) || (delta > dlen)) ? dlen : delta;
+        }
+        else if ((pmd->within != 0) && ((int)pmd->within < depth))
+        {
+            depth = (int)pmd->within;
+        }
     }
-    else /* otherwise just use the offset (validated by calling function) */
+    else if ((pmd->offset != 0) || (pmd->depth != 0))
     {
-        base_ptr += pmd->offset;
-        depth -= pmd->offset;
+        if (pmd->offset != 0)
+        {
+            base_ptr += pmd->offset;
+            depth -= pmd->offset;
+        }
+
+        if ((pmd->depth != 0) && (pmd->depth < depth))
+            depth = pmd->depth;
     }
 
-    if(pmd->within != 0)
+    // If the pattern size is greater than the amount of data we have to
+    // search, there's no way we can match, but return 0 here for the
+    // case where the match is inverted and there is at least some data.
+    if ((int)pmd->pattern_size > depth)
     {
-        /*
-         * calculate the "real" depth based on the current base and available
-         * number of bytes in the buffer
-         *
-         * this should account for the current base_ptr as it relates to
-         * the back of the buffer being tested
-         */
-        old_depth = depth;
+        if (pmd->exception_flag && (depth > 0))
+            return 0;
 
-        depth = computeWithin(depth, pmd);
-
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Changing Depth from %d to %d\n", old_depth, depth););
-    }
-
-    /* make sure we and in range */
-    if(!inBounds((const uint8_t *)start_ptr, (const uint8_t *)end_ptr, (const uint8_t *)base_ptr))
-    {
-
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "returning because base_ptr"
-                                " is out of bounds start_ptr: %p end: %p base: %p\n",
-                                start_ptr, end_ptr, base_ptr););
         return -1;
-    }
-
-    if(depth < 0)
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "returning because depth is negative (%d)\n",
-                                depth););
-        return -1;
-    }
-
-    if(depth > dlen)
-    {
-        /* if offsets are negative but somehow before the start of the
-           packet, let's make sure that we get everything going
-           straight */
-        depth = dlen;
-    }
-
-    if((pmd->depth > 0) && (depth > pmd->depth))
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "Setting new depth to %d from %d\n",
-                                pmd->depth, depth););
-
-        depth = pmd->depth;
-    }
-
-    /* make sure we end in range */
-    if(!inBounds((const uint8_t *)start_ptr, (const uint8_t *)end_ptr, (const uint8_t *)(base_ptr + depth - 1)))
-    {
-        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
-                                "returning because base_ptr + depth - 1"
-                                " is out of bounds start_ptr: %p end: %p base: %p\n",
-                                start_ptr, end_ptr, base_ptr););
-        return 0;
     }
 
 #ifdef DEBUG_MSGS
-    assert(depth <= old_depth);
+    {
+        char *hexbuf;
 
-    DebugMessage(DEBUG_PATTERN_MATCH, "uniSearchReal:\n ");
+        assert(depth <= dlen);
 
-    hexbuf = hex((u_char *)pmd->pattern_buf, pmd->pattern_size);
-    DebugMessage(DEBUG_PATTERN_MATCH, "   p->data: %p\n   doe_ptr: %p\n   "
-                 "base_ptr: %p\n   depth: %d\n   searching for: %s\n",
-                 data, doe_ptr, base_ptr, depth, hexbuf);
-    free(hexbuf);
+        DebugMessage(DEBUG_PATTERN_MATCH, "uniSearchReal:\n ");
+
+        hexbuf = hex((u_char *)pmd->pattern_buf, pmd->pattern_size);
+        DebugMessage(DEBUG_PATTERN_MATCH, "   p->data: %p\n   doe_ptr: %p\n   "
+                "base_ptr: %p\n   depth: %d\n   searching for: %s\n",
+                data, doe_ptr, base_ptr, depth, hexbuf);
+        free(hexbuf);
+    }
 #endif /* DEBUG_MSGS */
 
     if(nocase)
@@ -1995,8 +1959,10 @@ int CheckANDPatternMatch(void *option_data, Packet *p)
     int found = 0;
     int dsize;
     char *dp;
+#if 0
     int origUseDoe;
     char *orig_doe;
+#endif
     PatternMatchData *idx;
     PROFILE_VARS;
 
@@ -2005,7 +1971,9 @@ int CheckANDPatternMatch(void *option_data, Packet *p)
     DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "CheckPatternANDMatch: "););
 
     idx = (PatternMatchData *)option_data;
+#if 0
     origUseDoe = idx->use_doe;
+#endif
 
     if(idx->rawbytes == 0)
     {
@@ -2019,7 +1987,7 @@ int CheckANDPatternMatch(void *option_data, Packet *p)
         else if(Is_DetectFlag(FLAG_ALT_DECODE))
         {
             dsize = DecodeBuffer.len;
-            dp = (char *) DecodeBuffer.data; 
+            dp = (char *) DecodeBuffer.data;
             DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                         "Using Alternative Decode buffer!\n"););
         }
@@ -2048,9 +2016,11 @@ int CheckANDPatternMatch(void *option_data, Packet *p)
             "Using Full Packet Data!\n"););
     }
 
+#if 0
     /* this now takes care of all the special cases where we'd run
      * over the buffer */
     orig_doe = (char *)doe_ptr;
+#endif
 
     if(doe_buf_flags & DOE_BUF_URI)
         UpdateDoePtr(NULL, 0);
@@ -2069,7 +2039,7 @@ int CheckANDPatternMatch(void *option_data, Packet *p)
     }
     else
     {
-        found = found ^ idx->exception_flag;
+        found ^= idx->exception_flag;
     }
 #else
     /* Original code.  Does not account for searching outside the buffer. */
@@ -2252,11 +2222,11 @@ int CheckUriPatternMatch(void *option_data, Packet *p)
 {
     int rval = DETECTION_OPTION_NO_MATCH;
     int found = 0;
-    int i = 0;
     PatternMatchData *idx = (PatternMatchData *)option_data;
+    const HttpBuffer* hb = GetHttpBuffer(idx->http_buffer);
     PROFILE_VARS;
 
-    if(p->uri_count <= 0)
+    if ( !hb )
     {
         DEBUG_WRAP(DebugMessage(DEBUG_HTTP_DECODE,"CheckUriPatternMatch: no "
             "HTTP buffers set, retuning"););
@@ -2264,92 +2234,36 @@ int CheckUriPatternMatch(void *option_data, Packet *p)
     }
 
     PREPROC_PROFILE_START(uricontentPerfStats);
-    for (i = 0; i<p->uri_count; i++)
 
+    /*
+    * have to reset the doe_ptr for each new UriBuf
+    */
+    if(idx->use_doe != 1)
+        UpdateDoePtr(NULL, 0);
+
+    else if(!(doe_buf_flags & DOE_BUF_URI))
+        SetDoePtr(hb->buf, DOE_BUF_URI);
+
+    /* this now takes care of all the special cases where we'd run
+     * over the buffer */
+    found = idx->search((const char *)hb->buf, hb->length, idx);
+
+    if (found == -1)
+        found = 0;
+    else
+        found ^= idx->exception_flag;
+
+    if(found > 0 )
     {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "CheckUriPatternMatch: "););
+        doe_buf_flags = DOE_BUF_URI;
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Pattern Match successful!\n"););
 
-        if (!UriBufs[i].uri || (UriBufs[i].length == 0))
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_HTTP_DECODE,"Checking for %s pattern in "
-                "buffer %d: HTTP buffer not set/zero length, returning",
-                uri_buffer_name[i], i););
-            continue;
-        }
-
-        if (!(idx->uri_buffer & (1 << i)))
-        {
-            DEBUG_WRAP(DebugMessage(DEBUG_HTTP_DECODE,"Skipping %s pattern in "
-                "buffer %d: buffer not part of inspection set",
-                uri_buffer_name[i], i););
-            continue;
-        }
-
-        DEBUG_WRAP(DebugMessage(DEBUG_HTTP_DECODE,"Checking for %s pattern in "
-                "buffer %d ",
-                uri_buffer_name[i], i););
-
-#ifdef DEBUG_MSGS /* for variable declaration */
-        {
-            int j;
-
-            DebugMessage(DEBUG_HTTP_DECODE,"Checking against HTTP data (%s): ", uri_buffer_name[idx->uri_buffer]);
-            for(j=0; j<UriBufs[i].length; j++)
-            {
-                DebugMessage(DEBUG_HTTP_DECODE, "%c", UriBufs[i].uri[j]);
-            }
-            DebugMessage(DEBUG_HTTP_DECODE,"\n");
-        }
-#endif /* DEBUG_MSGS */
-
-        /*
-        * have to reset the doe_ptr for each new UriBuf
-        */
-        if(idx->use_doe != 1)
-            UpdateDoePtr(NULL, 0);
-
-        else if(!(doe_buf_flags & DOE_BUF_URI))
-            SetDoePtr(UriBufs[i].uri, DOE_BUF_URI);
-
-        /* this now takes care of all the special cases where we'd run
-         * over the buffer */
-        found = (idx->search((const char *)UriBufs[i].uri, UriBufs[i].length, idx) ^ idx->exception_flag);
-
-        if(found > 0 )
-        {
-            doe_buf_flags = DOE_BUF_URI;
-
-            DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH, "Pattern Match successful!\n"););
-            /*if found print the normalized and unnormalized buffer */
-#ifdef DEBUG_MSGS
-            if ( idx->uri_buffer & (HTTP_SEARCH_URI | HTTP_SEARCH_COOKIE | HTTP_SEARCH_HEADER ))
-            {
-                DEBUG_WRAP(
-                    if(UriBufs[i].uri)
-                        DebugMessage(DEBUG_HTTP_DECODE, "Normalized contents of the matched Http buffer is: %s\n",
-                                    UriBufs[i].uri);
-                    if(UriBufs[i+1].uri)
-                        DebugMessage(DEBUG_HTTP_DECODE, "Unnormalized/Raw contents of the matched Http buffer is: %s\n",
-                                    UriBufs[i+1].uri);
-                        );
-            }
-            else
-            {
-                DEBUG_WRAP(
-                        if(UriBufs[i].uri)
-                            DebugMessage(DEBUG_HTTP_DECODE, "Unnormalized/Raw contents of the matched Http buffer is: %s\n",
-                                UriBufs[i].uri);
-                        );
-            }
-#endif
-            /* call the next function in the OTN */
-            PREPROC_PROFILE_END(uricontentPerfStats);
-            return DETECTION_OPTION_MATCH;
-        }
-
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Pattern match failed\n"););
+        /* call the next function in the OTN */
+        PREPROC_PROFILE_END(uricontentPerfStats);
+        return DETECTION_OPTION_MATCH;
     }
 
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Pattern match failed\n"););
     PREPROC_PROFILE_END(uricontentPerfStats);
     return rval;
 }
@@ -2373,7 +2287,7 @@ void PatternMatchDuplicatePmd(void *src, PatternMatchData *pmd_dup)
     pmd_dup->rawbytes = pmd_src->rawbytes;
     pmd_dup->nocase = pmd_src->nocase;
     pmd_dup->use_doe = pmd_src->use_doe;
-    pmd_dup->uri_buffer = pmd_src->uri_buffer;
+    pmd_dup->http_buffer = pmd_src->http_buffer;
     pmd_dup->buffer_func = pmd_src->buffer_func;
     pmd_dup->pattern_size = pmd_src->pattern_size;
     pmd_dup->replace_size = pmd_src->replace_size;
@@ -2730,60 +2644,6 @@ int CheckORPatternMatch(Packet * p, OptTreeNode * otn_idx, OptFpList * fp_list)
                 "No more keywords, exiting... \n"););
 
     return 0;
-}
-#endif
-
-#if 0
-/* Not currently used */
-static const char *format_uri_buffer_str(int uri_buffer, int search_buf, char *first_buf)
-{
-    if (uri_buffer & search_buf)
-    {
-        if (*first_buf == 1)
-        {
-            switch (search_buf)
-            {
-                case HTTP_SEARCH_URI:
-                    return "http_uri";
-                    break;
-                case HTTP_SEARCH_CLIENT_BODY:
-                    return "http_client_body";
-                    break;
-                case HTTP_SEARCH_HEADER:
-                    return "http_header";
-                    break;
-                case HTTP_SEARCH_METHOD:
-                    return "http_method";
-                    break;
-                case HTTP_SEARCH_COOKIE:
-                    return "http_cookie";
-                    break;
-            }
-            *first_buf = 0;
-        }
-        else
-        {
-            switch (search_buf)
-            {
-                case HTTP_SEARCH_URI:
-                    return " | http_uri";
-                    break;
-                case HTTP_SEARCH_CLIENT_BODY:
-                    return " | http_client_body";
-                    break;
-                case HTTP_SEARCH_HEADER:
-                    return " | http_header";
-                    break;
-                case HTTP_SEARCH_METHOD:
-                    return " | http_method";
-                    break;
-                case HTTP_SEARCH_COOKIE:
-                    return " | http_cookie";
-                    break;
-            }
-        }
-    }
-    return "";
 }
 #endif
 

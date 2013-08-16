@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2004-2012 Sourcefire, Inc.
+ ** Copyright (C) 2004-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* pp_ftp.c
@@ -71,9 +71,7 @@
 #define MAXHOSTNAMELEN 256
 #endif
 
-#ifdef SUP_IP6
 #include "ipv6_port.h"
-#endif
 
 #ifdef TARGET_BASED
 extern int16_t ftp_data_app_id;
@@ -152,12 +150,8 @@ int getIP(const int type, const char **ip_start, const char *last_char, char *te
         return FTPP_MALFORMED_IP_PORT;
     }
 
-#ifdef SUP_IP6
 // XXX-IPv6 NOT YET IMPLEMENTED - IPv4 only at the moment
     sfip_set_raw(ipRet, &ip, AF_INET);
-#else
-    *ipRet = ip;
-#endif
     *portRet = port;
     *ip_start = this_param;
 
@@ -232,12 +226,8 @@ static int getIP959(
         return FTPP_MALFORMED_IP_PORT;
     }
 
-#ifdef SUP_IP6
     ip = htonl(ip);
     sfip_set_raw(ipRet, &ip, AF_INET);
-#else
-     *ipRet = ip;
-#endif
     *portRet = port;
     *ip_start = this_param;
 
@@ -301,19 +291,14 @@ static int getIP1639 (
             int n;
             for ( n = 0; n < 4; n++ )
                 ip4_addr = (ip4_addr << 8) | bytes[n+2];
-#ifdef SUP_IP6
             /* don't call sfip_set_raw() on raw bytes
                to avoid possible word alignment issues */
             ip4_addr = htonl(ip4_addr);
             sfip_set_raw(ipRet, (void*)&ip4_addr, AF_INET);
-#else
-            *ipRet = ip4_addr;
-#endif
         }
         *portRet = (bytes[7] << 8) | bytes[8];
         break;
 
-#ifdef SUP_IP6
     case 6:
         if ( nBytes != 21 || bytes[1] != 16 || bytes[18] != 2 )
             return FTPP_INVALID_ARG;
@@ -321,7 +306,6 @@ static int getIP1639 (
         sfip_set_raw(ipRet, bytes+2, AF_INET6);
         *portRet = (bytes[19] << 8) | bytes[20];
         break;
-#endif
     default:
         return FTPP_INVALID_ARG;
     }
@@ -408,21 +392,14 @@ static int getIP2428 (
             case 1:  /* check family */
                 family = atoi(tok);
                 if ( family == 1 ) family = AF_INET;
-#ifdef SUP_IP6
                 else if ( family == 2 ) family = AF_INET6;
-#endif
                 else return FTPP_INVALID_ARG;
                 fieldMask |= 1;
                 break;
 
             case 2:  /* check address */
                 CopyField(buf, tok, sizeof(buf), last_char, delim);
-#ifdef SUP_IP6
                 if ( sfip_pton(buf, ipRet) != SFIP_SUCCESS || family != ipRet->family )
-#else
-                *ipRet = ntohl(inet_addr(buf));
-                if ( *ipRet == INADDR_NONE || family != AF_INET )
-#endif
                     return FTPP_INVALID_ARG;
 
                 fieldMask |= 2;
@@ -827,20 +804,12 @@ static int validate_param(SFSnortPacket *p,
             {
                 // actually, we expect no addr in 229 responses, which is
                 // understood to be server address, so we set that here
-#ifdef SUP_IP6
                 ipAddr = *GET_SRC_IP(p);
-#else
-                ipAddr = ntohl(p->ip4_header->source.s_addr);
-#endif
             }
             if ((Session->client_conf->bounce.on) &&
                 (Session->client_conf->bounce.alert))
             {
-#ifdef SUP_IP6
                 if (!IP_EQUALITY(&ipAddr, GET_SRC_IP(p)))
-#else
-                if (ipAddr != ntohl(p->ip4_header->source.s_addr))
-#endif
                 {
                     int alert = 1;
 
@@ -876,11 +845,7 @@ static int validate_param(SFSnortPacket *p,
                 }
             }
 
-#ifdef SUP_IP6
             Session->clientIP = ipAddr;
-#else
-            Session->clientIP = htonl(ipAddr);
-#endif
             Session->clientPort = port;
             Session->data_chan_state |= DATA_CHAN_PORT_CMD_ISSUED;
             if (Session->data_chan_state & DATA_CHAN_PASV_CMD_ISSUED)
@@ -1185,16 +1150,40 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                                 IP_COPY_VALUE(Session->serverIP, GET_SRC_IP(p));
                             else
                             {
-#ifdef SUP_IP6
                                 Session->serverIP = ipAddr;
-#else
-                                Session->serverIP = htonl(ipAddr);
-#endif
                             }
                             Session->serverPort = port;
                             IP_COPY_VALUE(Session->clientIP, GET_DST_IP(p));
                             Session->clientPort = 0;
+#ifdef TARGET_BASED
+                            if ((_dpd.fileAPI->get_max_file_depth() > 0) || !(Session->server_conf->data_chan))
+                            {
+                                FTP_DATA_SESSION *ftpdata = FTPDataSessionNew(p);
+
+                                if (ftpdata)
+                                {
+                                    int result;
+                                    /* This is a passive data transfer */ 
+                                    ftpdata->mode = FTPP_XFER_PASSIVE;
+
+                                    ftpdata->data_chan = Session->server_conf->data_chan;
+
+                                    /* Call into Streams to mark data channel as ftp-data */
+                                    result = _dpd.streamAPI->set_application_protocol_id_expected(
+                                        IP_ARG(Session->clientIP), Session->clientPort,
+                                        IP_ARG(Session->serverIP), Session->serverPort,
+                                        (uint8_t)(GET_IPH_PROTO(p)),
+                                        p->pkt_header->ts.tv_sec, ftp_data_app_id,
+                                        PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree);
+
+                                    if (result < 0)
+                                        FTPDataSessionFree(ftpdata);
+                                }
+                            }
+                            else if (Session->server_conf->data_chan)
+#else
                             if (Session->server_conf->data_chan)
+#endif
                             {
                                 /* Call into Streams to mark data channel as something
                                  * to ignore. */
@@ -1204,16 +1193,6 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                                         PP_FTPTELNET, SSN_DIR_BOTH,
                                         0 /* Not permanent */ );
                             }
-#ifdef TARGET_BASED
-                            else
-                            {
-                                /* Call into Streams to mark data channel as ftp-data */
-                                _dpd.streamAPI->set_application_protocol_id_expected(IP_ARG(Session->clientIP),
-                                        Session->clientPort, IP_ARG(Session->serverIP),
-                                        Session->serverPort, (uint8_t)(GET_IPH_PROTO(p)), p->pkt_header->ts.tv_sec,
-                                        ftp_data_app_id, PP_FTPTELNET, NULL, NULL);
-                            }
-#endif
                         }
                     }
                     else
@@ -1256,7 +1235,34 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                         /*
                         Session->serverPort = ntohs(p->tcph->th_sport) -1;
                         */
+#ifdef TARGET_BASED
+                        if ((_dpd.fileAPI->get_max_file_depth() > 0) || !(Session->server_conf->data_chan))
+                        {
+                            FTP_DATA_SESSION *ftpdata = FTPDataSessionNew(p);
+
+                            if (ftpdata)
+                            {
+                                int result;
+                                /* This is a active data transfer */ 
+                                ftpdata->mode = FTPP_XFER_ACTIVE;
+                                ftpdata->data_chan = Session->server_conf->data_chan;
+
+                                /* Call into Streams to mark data channel as ftp-data */
+                                result = _dpd.streamAPI->set_application_protocol_id_expected(
+                                    IP_ARG(Session->clientIP), Session->clientPort,
+                                    IP_ARG(Session->serverIP), Session->serverPort,
+                                    (uint8_t)(GET_IPH_PROTO(p)),
+                                    p->pkt_header->ts.tv_sec, ftp_data_app_id,
+                                    PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree);
+
+                                if (result < 0)
+                                    FTPDataSessionFree(ftpdata);
+                            }
+                        }
+                        else if (Session->server_conf->data_chan)
+#else
                         if (Session->server_conf->data_chan)
+#endif
                         {
                             /* Call into Streams to mark data channel as something
                              * to ignore. */
@@ -1266,16 +1272,6 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                                     PP_FTPTELNET, SSN_DIR_BOTH,
                                     0 /* Not permanent */ );
                         }
-#ifdef TARGET_BASED
-                        else
-                        {
-                            /* Call into Streams to mark data channel as ftp-data */
-                            _dpd.streamAPI->set_application_protocol_id_expected(IP_ARG(Session->clientIP),
-                                    Session->clientPort, IP_ARG(Session->serverIP),
-                                    Session->serverPort, (uint8_t)(GET_IPH_PROTO(p)), p->pkt_header->ts.tv_sec,
-                                    ftp_data_app_id, PP_FTPTELNET, NULL, NULL);
-                        }
-#endif
                     }
                 }
                 else if (ftp_cmd_pipe_index == Session->data_chan_index)
@@ -1723,17 +1719,13 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
             }
             else
             {
-                /* Now grab the command parameters/response message */
-                if (read_ptr < end)
-                {
-                    req->param_begin = (const char *)read_ptr;
-                    while ((read_ptr < end) && (*read_ptr != CR))
-                    {
-                        read_ptr++;
-                    }
-                    req->param_end = (const char *)read_ptr;
-                    read_ptr++;
-                }
+                /* Now grab the command parameters/response message
+                 * read_ptr < end already checked */
+                req->param_begin = (const char *)read_ptr;
+                if ((read_ptr = memchr(read_ptr, CR, end - read_ptr)) == NULL)
+                    read_ptr = end;
+                req->param_end = (const char *)read_ptr;
+                read_ptr++;
 
                 if (read_ptr < end)
                 {
@@ -1863,6 +1855,44 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
                 }
                 else if (CmdConf->data_xfer_cmd)
                 {
+#ifdef TARGET_BASED
+                    /* If we are not ignoring the data channel OR file processing is enabled */
+                    if (!ftpssn->server_conf->data_chan || (_dpd.fileAPI->get_max_file_depth() > -1))
+                    {
+                        /* The following  check cleans up filename  for failed data 
+                         * transfers.  If  the  transfer had  been  successful  the 
+                         * filename  pointer  would have  been  handed  off to  the 
+                         * FTP_DATA_SESSION for tracking. */
+                        if (ftpssn->filename)
+                        {
+                            free(ftpssn->filename);
+                            ftpssn->filename = NULL;
+                            ftpssn->file_xfer_info = FTPP_FILE_IGNORE;
+                        }
+
+                        // Get the file name and set direction of the get/put request.
+                        // Request could have been sent without parameters, i.e. filename,
+                        // so make sure something is there.
+                        if (((req->param_begin != NULL) && (req->param_size > 0))
+                                && (CmdConf->file_get_cmd || CmdConf->file_put_cmd))
+                        {
+                            ftpssn->filename = (char *)malloc(req->param_size+1);
+                            if (ftpssn->filename)
+                            {
+                                memcpy(ftpssn->filename, req->param_begin, req->param_size);
+                                ftpssn->filename[req->param_size] = '\0';
+                                ftpssn->file_xfer_info = req->param_size;
+                            }
+
+                            // 0 for Download, 1 for Upload
+                            ftpssn->data_xfer_dir = CmdConf->file_get_cmd ? 0 : 1;
+                        }
+                        else
+                        {
+                            ftpssn->file_xfer_info = FTPP_FILE_IGNORE;
+                        }
+                    }
+#endif
                     ftpssn->data_chan_state |= DATA_CHAN_XFER_CMD_ISSUED;
                     ftpssn->data_xfer_index = ftp_cmd_pipe_index;
                 }

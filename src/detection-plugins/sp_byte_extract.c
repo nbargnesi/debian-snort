@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2010-2012 Sourcefire, Inc.
+ ** Copyright (C) 2010-2013 Sourcefire, Inc.
  ** Author: Ryan Jordan <ryan.jordan@sourcefire.com>
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* sp_byte_extract
@@ -54,7 +54,7 @@ static uint32_t extracted_values[NUM_BYTE_EXTRACT_VARS];
 static char *variable_names[NUM_BYTE_EXTRACT_VARS];
 
 /* Prototypes */
-static void ByteExtractInit(char *, OptTreeNode *, int);
+static void ByteExtractInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 static void ByteExtractCleanup(int, void *);
 
 /* Setup function */
@@ -318,7 +318,7 @@ static int ByteExtractParse(ByteExtractData *data, char *args)
         else if (strncmp(token, "multiplier ", 11) == 0)
         {
             char *value = (token+11);
-            if (token == NULL)
+            if (value[0] == '\0')
                 ParseError("byte_extract rule option has a \"multiplier\" "
                         "argument with no value specified.");
 
@@ -480,7 +480,7 @@ int8_t AddVarNameToList(ByteExtractData *data)
 
 
 /* Inititialization function. Handles rule parsing. */
-static void ByteExtractInit(char *data, OptTreeNode *otn, int protocol)
+static void ByteExtractInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     ByteExtractData *idx;
     OptFpList *fpl;
@@ -506,7 +506,7 @@ static void ByteExtractInit(char *data, OptTreeNode *otn, int protocol)
 
     fpl = AddOptFuncToList(DetectByteExtract, otn);
     fpl->type = RULE_OPTION_TYPE_BYTE_EXTRACT;
-    if (add_detection_option(RULE_OPTION_TYPE_BYTE_EXTRACT, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_BYTE_EXTRACT, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
         /* duplicate exists. */
         free(idx->name);

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -85,7 +85,7 @@ typedef struct _IpProtoData
 } IpProtoData;
 
 
-void IpProtoInit(char *, OptTreeNode *, int);
+void IpProtoInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void IpProtoRuleParseFunction(char *, IpProtoData *);
 int IpProtoDetectorFunction(void *option_data, Packet *p);
 
@@ -147,7 +147,7 @@ void SetupIpProto(void)
 
 /****************************************************************************
  *
- * Function: IpProtoInit(char *, OptTreeNode *)
+ * Function: IpProtoInit(struct _SnortConfig *, char *, OptTreeNode *)
  *
  * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -159,7 +159,7 @@ void SetupIpProto(void)
  * Returns: void function
  *
  ****************************************************************************/
-void IpProtoInit(char *data, OptTreeNode *otn, int protocol)
+void IpProtoInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *ofl;
     IpProtoData *ipd;
@@ -201,7 +201,7 @@ void IpProtoInit(char *data, OptTreeNode *otn, int protocol)
     if(!otn->ds_list[PLUGIN_IP_PROTO_CHECK])
         otn->ds_list[PLUGIN_IP_PROTO_CHECK] = ipd;
 
-    if (add_detection_option(RULE_OPTION_TYPE_IP_PROTO, (void *)ipd, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_IP_PROTO, (void *)ipd, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
     {
         free(ipd);
         ipd = otn->ds_list[PLUGIN_IP_PROTO_CHECK] = ds_ptr_dup;

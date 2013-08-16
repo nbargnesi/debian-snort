@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
@@ -298,4 +298,36 @@ int init_winsock(void)
 int geteuid(void)
 {
 	return 0;
+}
+
+/****************************************************************************
+ *
+ * Function: ffs(int x)
+ *
+ * Purpose:  find first bit set in x
+ *
+ * Arguments: int x => integer in which to find bit
+ *
+ * Returns: bit => position of first LSB that is set in x
+ *
+ ****************************************************************************/
+int ffs(int x)
+{
+	int bit = 1;
+	int mask = 1;
+
+	if (x == 0)
+		return 0;
+
+	while ((x & mask) == 0)
+	{
+		mask = mask << 1;
+		bit += 1;
+
+	}
+
+	if (bit > (sizeof(int)*8))
+		bit = 0;
+
+	return bit;
 }

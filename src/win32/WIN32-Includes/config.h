@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 /* $Id$ */
@@ -125,7 +125,7 @@
  * should both match the ones specified in the
  * AM_INIT_AUTOMAKE() macro of configure.in
  */
-#define VERSION "2.9.3.1"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
+#define VERSION "2.9.5.3"VERSION_ENABLE_ODBC""VERSION_ENABLE_MYSQL""VERSION_ENABLE_MSSQL""VERSION_ENABLE_ORACLE""VERSION_ENABLE_RESPONSE"-WIN32"VERSION_DEBUG
 #define PACKAGE "snort"
 
 #define IFNAMSIZ   255
@@ -224,6 +224,7 @@ typedef long		ssize_t;
 #define snprintf                 _snprintf
 #define strncasecmp              strnicmp
 #define strcasecmp               stricmp
+#define ftruncate                _chsize
 #if _MSC_VER < 1500  /* VC9 defines this */
 #define vsnprintf                _vsnprintf
 #define strdup                   _strdup
@@ -302,7 +303,7 @@ void *GetAdapterFromList(void *, int);
 char *print_interface(const char *);
 void  PrintDeviceList(const char *);
 int   init_winsock(void);
-
+int   ffs(int x);
 
 #if defined(ENABLE_WIN32_SERVICE)
 #define SERVICE_CMDLINE_PARAM            "/SERVICE"

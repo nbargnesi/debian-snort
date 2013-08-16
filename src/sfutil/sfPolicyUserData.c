@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -27,9 +27,6 @@
 #include "sf_types.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
-
-tSfPolicyId runtimePolicyId = 0;
-tSfPolicyId parserPolicyId = 0;
 
 /** @defgroup sfPolicyConfig Sourcefire policy configuration module
  *
@@ -144,6 +141,29 @@ void * sfPolicyUserDataClear (
 }
 
 int sfPolicyUserDataIterate (
+        struct _SnortConfig *sc,
+        tSfPolicyUserContextId pContext,
+        int (*callback)(struct _SnortConfig *sc, tSfPolicyUserContextId pContext, tSfPolicyId policyId, void* config)
+        )
+{
+    tSfPolicyId policyId;
+    int ret = 0;
+
+    //must not use numActivePolicies because the callback may delete a policy
+    for (policyId = 0; policyId < pContext->numAllocatedPolicies; policyId++)
+    {
+        if (pContext->userConfig[policyId])
+        {
+            ret = callback(sc, pContext, policyId, pContext->userConfig[policyId]);
+            if (ret != 0)
+                break;
+        }
+    }
+
+    return ret;
+}
+
+int sfPolicyUserDataFreeIterate (
         tSfPolicyUserContextId pContext,
         int (*callback)(tSfPolicyUserContextId pContext, tSfPolicyId policyId, void* config)
         )
@@ -164,7 +184,6 @@ int sfPolicyUserDataIterate (
 
     return ret;
 }
-
 
 /** @} */ //
 

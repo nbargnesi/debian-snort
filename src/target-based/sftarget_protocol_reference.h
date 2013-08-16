@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2012 Sourcefire, Inc.
+** Copyright (C) 2006-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /*
@@ -35,6 +35,10 @@ typedef struct _SFTargetProtocolReference
     char name[STD_BUF];
     int16_t ordinal;
 } SFTargetProtocolReference;
+
+extern int16_t protocolReferenceTCP;
+extern int16_t protocolReferenceUDP;
+extern int16_t protocolReferenceICMP;
 
 void InitializeProtocolReferenceTable(void);
 void FreeProtoocolReferenceTable(void);

@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 2011-2012 Sourcefire, Inc.
+ ** Copyright (C) 2011-2013 Sourcefire, Inc.
  **
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  **
  ** 8/7/2011 - Initial implementation ... Hui Cao <hcao@sourcefire.com>
  */
@@ -94,7 +94,7 @@ void segment_free ( MEM_OFFSET ptr )
 MEM_OFFSET segment_calloc ( size_t num, size_t size )
 {
     MEM_OFFSET current_ptr;
-    uint64_t total;
+    size_t total;
 
     if ((0 == size)||(0 == num))
         return 0;
@@ -102,9 +102,9 @@ MEM_OFFSET segment_calloc ( size_t num, size_t size )
     if (num > SIZE_MAX/size)
         return 0;
     total = num * size;
-    current_ptr = segment_malloc((size_t)total);
+    current_ptr = segment_malloc(total);
     if (0 != current_ptr)
-        memset((uint8_t *)base_ptr + current_ptr, 0, (size_t)total);
+        memset((uint8_t *)base_ptr + current_ptr, 0, total);
 
     return current_ptr;
 }

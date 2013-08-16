@@ -1,7 +1,7 @@
 /*
  ** $Id$
 
- ** Copyright (C) 2003-2012 Sourcefire, Inc.
+ ** Copyright (C) 2003-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  *
  *  Major rewrite: Hui Cao <hcao@sourcefire.com>
@@ -94,8 +94,8 @@ static unsigned int giFlowbitSize = DEFAULT_FLOWBIT_SIZE;
 
 void FlowItemFree(void *);
 void FlowBitsGrpFree(void *);
-static void FlowBitsInit(char *, OptTreeNode *, int);
-static void FlowBitsParse(char *, FLOWBITS_OP *, OptTreeNode *);
+static void FlowBitsInit(struct _SnortConfig *, char *, OptTreeNode *, int);
+static void FlowBitsParse(struct _SnortConfig *, char *, FLOWBITS_OP *, OptTreeNode *);
 static void FlowBitsCleanExit(int, void *);
 
 /****************************************************************************
@@ -271,7 +271,7 @@ void SetupFlowBits(void)
 
 /****************************************************************************
  *
- * Function: FlowBitsInit(char *, OptTreeNode *)
+ * Function: FlowBitsInit(struct _SnortConfig *, char *, OptTreeNode *)
  *
  * Purpose: Configure the flow init option to register the appropriate checks
  *
@@ -281,7 +281,7 @@ void SetupFlowBits(void)
  * Returns: void function
  *
  ****************************************************************************/
-static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
+static void FlowBitsInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     FLOWBITS_OP *flowbits;
     OptFpList *fpl;
@@ -325,8 +325,8 @@ static void FlowBitsInit(char *data, OptTreeNode *otn, int protocol)
     /* Set the ds_list value to 1 (yes, we have flowbits for this rule) */
     otn->ds_list[PLUGIN_FLOWBIT] = (void *)1;
 
-    FlowBitsParse(data, flowbits, otn);
-    if (add_detection_option(RULE_OPTION_TYPE_FLOWBIT, (void *)flowbits, &idx_dup) == DETECTION_OPTION_EQUAL)
+    FlowBitsParse(sc, data, flowbits, otn);
+    if (add_detection_option(sc, RULE_OPTION_TYPE_FLOWBIT, (void *)flowbits, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
         char *group_name =  ((FLOWBITS_OP *)idx_dup)->group;
 
@@ -436,7 +436,7 @@ static  FLOWBITS_OBJECT* getFlowBitItem(char *flowbitName, FLOWBITS_OP *flowbits
         }
         else
         {
-            flowbits_item->id = flowbits_count;
+            flowbits_item->id = (uint16_t)flowbits_count;
 
             flowbits_count++;
 
@@ -676,7 +676,7 @@ void validateFlowbitsSyntax(FLOWBITS_OP *flowbits)
             break;
         ParseError("Flowbits: operation noalert uses syntax: flowbits:noalert." );
         break;
-        
+
     default:
         ParseError("Flowbits: unknown operator.\n"
                 , file_name, file_line);
@@ -718,7 +718,7 @@ void processFlowBitsWithGroup(char *flowbitsName, char *groupName, FLOWBITS_OP *
  * Returns: void function
  *
  ****************************************************************************/
-static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
+static void FlowBitsParse(struct _SnortConfig *sc, char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
 {
     char **toks;
     int num_toks;
@@ -726,8 +726,6 @@ static void FlowBitsParse(char *data, FLOWBITS_OP *flowbits, OptTreeNode *otn)
     char *groupName = NULL;
     char *flowbitsName = NULL;
     FLOWBITS_GRP *flowbits_grp;
-
-    SnortConfig *sc = snort_conf_for_parsing;
 
     if (sc == NULL)
     {
@@ -929,7 +927,7 @@ static inline int issetFlowbits(StreamFlowData *flowdata, uint8_t eval, uint16_t
         flowbits_grp = (FLOWBITS_GRP *)sfghash_find(flowbits_grp_hash, group);
         if( flowbits_grp == NULL )
             return 0;
-        for ( i = 0; i <= (flowbits_grp->max_id >>3) ; i++ )
+        for ( i = 0; i <= (unsigned int)(flowbits_grp->max_id >>3) ; i++ )
         {
             uint8_t val = flowdata->boFlowbits.pucBitBuffer[i] & flowbits_grp->GrpBitOp.pucBitBuffer[i];
             if (val != flowbits_grp->GrpBitOp.pucBitBuffer[i])
@@ -941,7 +939,7 @@ static inline int issetFlowbits(StreamFlowData *flowdata, uint8_t eval, uint16_t
         flowbits_grp = (FLOWBITS_GRP *)sfghash_find(flowbits_grp_hash, group);
         if( flowbits_grp == NULL )
             return 0;
-        for ( i = 0; i <= (flowbits_grp->max_id >>3) ; i++ )
+        for ( i = 0; i <= (unsigned int)(flowbits_grp->max_id >>3) ; i++ )
         {
             uint8_t val = flowdata->boFlowbits.pucBitBuffer[i] & flowbits_grp->GrpBitOp.pucBitBuffer[i];
             if (val)

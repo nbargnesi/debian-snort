@@ -2,7 +2,7 @@
 /*
 ** Copyright (C) 2003 Brian Caswell <bmc@snort.org>
 ** Copyright (C) 2003 Michael J. Pomraning <mjp@securepipe.com>
-** Copyright (C) 2003-2012 Sourcefire, Inc.
+** Copyright (C) 2003-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -17,7 +17,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <sys/types.h>
@@ -66,8 +66,8 @@ extern PreprocStats ruleOTNEvalPerfStats;
  */
 static int s_pcre_init = 1;
 
-void SnortPcreInit(char *, OptTreeNode *, int);
-void SnortPcreParse(char *, PcreData *, OptTreeNode *);
+void SnortPcreInit(struct _SnortConfig *, char *, OptTreeNode *, int);
+void SnortPcreParse(struct _SnortConfig *, char *, PcreData *, OptTreeNode *);
 void SnortPcreDump(PcreData *);
 int SnortPcre(void *option_data, Packet *p);
 
@@ -171,7 +171,7 @@ int PcreAdjustRelativeOffsets(PcreData *pcre, uint32_t search_offset)
         return 0; /* Don't search again */
     }
 
-    if (pcre->options & ( SNORT_PCRE_URI_BUFS ))
+    if (pcre->options & ( SNORT_PCRE_HTTP_BUFS ))
     {
         return 0;
     }
@@ -190,12 +190,11 @@ void SetupPcre(void)
 #endif
 }
 
-static void Ovector_Init(int unused, void *data)
+static void Ovector_Init(struct _SnortConfig *sc, int unused, void *data)
 {
     /* Since SO rules are loaded 1 time at startup, regardless of
      * configuraton, we won't pcre capture count again, so save the max.  */
     static int s_ovector_max = 0;
-    SnortConfig *sc = getWorkingConf(); 
 
     /* The pcre_fullinfo() function can be used to find out how many
      * capturing subpatterns there are in a compiled pattern. The
@@ -212,15 +211,14 @@ static void Ovector_Init(int unused, void *data)
 }
 
 #if SNORT_RELOAD
-static void Ovector_Reload(int unused, void *data)
+static void Ovector_Reload(struct _SnortConfig *sc, int unused, void *data)
 {
-    Ovector_Init(unused, data);
+    Ovector_Init(sc, unused, data);
 }
 #endif
 
-void PcreCapture(const void *code, const void *extra)
+void PcreCapture(struct _SnortConfig *sc, const void *code, const void *extra)
 {
-    SnortConfig *sc = getWorkingConf();
     int tmp_ovector_size = 0;
 
     pcre_fullinfo((const pcre *)code, (const pcre_extra *)extra,
@@ -231,7 +229,7 @@ void PcreCapture(const void *code, const void *extra)
 
     if (s_pcre_init)
     {
-        AddFuncToPostConfigList(Ovector_Init, NULL);
+        AddFuncToPostConfigList(sc, Ovector_Init, NULL);
 #if SNORT_RELOAD
         AddFuncToReloadList(Ovector_Reload, NULL);
 #endif
@@ -240,7 +238,7 @@ void PcreCapture(const void *code, const void *extra)
 
 }
 
-void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
+void SnortPcreInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     PcreData *pcre_data;
     OptFpList *fpl;
@@ -251,14 +249,14 @@ void SnortPcreInit(char *data, OptTreeNode *otn, int protocol)
      */
     pcre_data = (PcreData *) SnortAlloc(sizeof(PcreData));
 
-    SnortPcreParse(data, pcre_data, otn);
+    SnortPcreParse(sc, data, pcre_data, otn);
 
     otn->pcre_flag = 1;
 
     fpl = AddOptFuncToList(SnortPcre, otn);
     fpl->type = RULE_OPTION_TYPE_PCRE;
 
-    if (add_detection_option(RULE_OPTION_TYPE_PCRE, (void *)pcre_data, &pcre_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_PCRE, (void *)pcre_data, &pcre_dup) == DETECTION_OPTION_EQUAL)
     {
 #ifdef DEBUG_RULE_OPTION_TREE
         LogMessage("Duplicate PCRE:\n%d %s\n%d %s\n\n",
@@ -302,24 +300,9 @@ static inline void ValidatePcreHttpContentModifiers(PcreData *pcre_data)
     if( pcre_data->options & SNORT_PCRE_RAWBYTES )
         FatalError("%s(%d): PCRE unsupported configuration : both rawbytes & uri options specified\n",
                 file_name, file_line);
-
-    if( (pcre_data->options & SNORT_PCRE_HTTP_URI) &&
-            (pcre_data->options & SNORT_PCRE_HTTP_RAW_URI))
-        FatalError("%s(%d): PCRE unsupported configuration : Cannot use http uri and raw uri modifiers for "
-                "the same content\n", file_name, file_line);
-
-    if( (pcre_data->options & SNORT_PCRE_HTTP_HEADER) &&
-            (pcre_data->options & SNORT_PCRE_HTTP_RAW_HEADER))
-        FatalError("%s(%d): PCRE unsupported configuration : Cannot use http header and raw header modifiers for "
-                "the same content\n", file_name, file_line);
-
-    if( (pcre_data->options & SNORT_PCRE_HTTP_COOKIE) &&
-            (pcre_data->options & SNORT_PCRE_HTTP_RAW_COOKIE))
-        FatalError("%s(%d): PCRE unsupported configuration : Cannot use http cookie and raw cookie modifiers for "
-                "the same content\n", file_name, file_line);
 }
 
-void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
+void SnortPcreParse(struct _SnortConfig *sc, char *data, PcreData *pcre_data, OptTreeNode *otn)
 {
     const char *error;
     char *re, *free_me;
@@ -327,6 +310,7 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
     char delimit = '/';
     int erroffset;
     int compile_flags = 0;
+    unsigned http = 0;
 
     if(data == NULL)
     {
@@ -384,6 +368,9 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
 
     /* find ending delimiter, trim delimit chars */
     opts = strrchr(re, delimit);
+    if (opts == NULL)
+        goto syntax;
+
     if(!((opts - re) > 1)) /* empty regex(m||) or missing delim not OK */
         goto syntax;
 
@@ -409,19 +396,18 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
              * these are snort specific don't work with pcre or perl
              */
         case 'R':  pcre_data->options |= SNORT_PCRE_RELATIVE; break;
-        case 'U':  pcre_data->options |= SNORT_PCRE_HTTP_URI; break;
         case 'B':  pcre_data->options |= SNORT_PCRE_RAWBYTES; break;
-        case 'P':  pcre_data->options |= SNORT_PCRE_HTTP_BODY;  break;
         case 'O':  pcre_data->options |= SNORT_OVERRIDE_MATCH_LIMIT; break;
-        case 'H':  pcre_data->options |= SNORT_PCRE_HTTP_HEADER;  break;
-        case 'M':  pcre_data->options |= SNORT_PCRE_HTTP_METHOD;  break;
-        case 'C':  pcre_data->options |= SNORT_PCRE_HTTP_COOKIE;  break;
-        case 'I':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_URI; break;
-        case 'D':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_HEADER; break;
-        case 'K':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_COOKIE; break;
-        case 'S':  pcre_data->options |= SNORT_PCRE_HTTP_STAT_CODE; break;
-        case 'Y':  pcre_data->options |= SNORT_PCRE_HTTP_STAT_MSG; break;
-
+        case 'U':  pcre_data->options |= SNORT_PCRE_HTTP_URI; http++; break;
+        case 'P':  pcre_data->options |= SNORT_PCRE_HTTP_BODY;  http++; break;
+        case 'H':  pcre_data->options |= SNORT_PCRE_HTTP_HEADER;  http++; break;
+        case 'M':  pcre_data->options |= SNORT_PCRE_HTTP_METHOD;  http++; break;
+        case 'C':  pcre_data->options |= SNORT_PCRE_HTTP_COOKIE;  http++; break;
+        case 'I':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_URI; http++; break;
+        case 'D':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_HEADER; http++; break;
+        case 'K':  pcre_data->options |= SNORT_PCRE_HTTP_RAW_COOKIE; http++; break;
+        case 'S':  pcre_data->options |= SNORT_PCRE_HTTP_STAT_CODE; http++; break;
+        case 'Y':  pcre_data->options |= SNORT_PCRE_HTTP_STAT_MSG; http++; break;
 
         default:
             FatalError("%s (%d): unknown/extra pcre option encountered\n", file_name, file_line);
@@ -429,7 +415,10 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
         opts++;
     }
 
-    if(pcre_data->options & (SNORT_PCRE_URI_BUFS))
+    if ( http > 1 )
+        ParseWarning("at most one HTTP buffer may be indicated with pcre");
+
+    if(pcre_data->options & (SNORT_PCRE_HTTP_BUFS))
         ValidatePcreHttpContentModifiers(pcre_data);
 
     /* now compile the re */
@@ -504,7 +493,7 @@ void SnortPcreParse(char *data, PcreData *pcre_data, OptTreeNode *otn)
                    file_line, error);
     }
 
-    PcreCapture(pcre_data->re, pcre_data->pe);
+    PcreCapture(sc, pcre_data->re, pcre_data->pe);
 
     PcreCheckAnchored(pcre_data);
 
@@ -663,6 +652,7 @@ int SnortPcre(void *option_data, Packet *p)
     int length; /* length of the buffer pointed to by base_ptr  */
     int matched = 0;
     uint8_t rst_doe_flags = 1;
+    unsigned hb_type;
     DEBUG_WRAP(char *hexbuf;)
 
     PROFILE_VARS;
@@ -676,79 +666,27 @@ int SnortPcre(void *option_data, Packet *p)
     }
 
     /* This is the HTTP case */
-    if(pcre_data->options & SNORT_PCRE_URI_BUFS)
+    if ( (hb_type = pcre_data->options & SNORT_PCRE_HTTP_BUFS) )
     {
-        int i;
-        for (i=0; i<p->uri_count; i++)
+        const HttpBuffer* hb = GetHttpBuffer(hb_type);
+
+        if ( hb )
         {
-            switch (i)
-            {
-                case HTTP_BUFFER_URI:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_URI))
-                        continue;
-                    break;
-                case HTTP_BUFFER_HEADER:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_HEADER))
-                        continue;
-                    break;
-                case HTTP_BUFFER_CLIENT_BODY:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_BODY))
-                        continue;
-                    break;
-                case HTTP_BUFFER_METHOD:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_METHOD))
-                        continue;
-                    break;
-                case HTTP_BUFFER_COOKIE:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_COOKIE))
-                        continue;
-                    break;
-                case HTTP_BUFFER_RAW_URI:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_RAW_URI))
-                        continue;
-                    break;
-                case HTTP_BUFFER_RAW_HEADER:
-                    if(!(pcre_data->options & SNORT_PCRE_HTTP_RAW_HEADER))
-                        continue;
-                    break;
-                case HTTP_BUFFER_RAW_COOKIE:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_RAW_COOKIE))
-                        continue;
-                    break;
-                case HTTP_BUFFER_STAT_CODE:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_STAT_CODE))
-                        continue;
-                    break;
-                case HTTP_BUFFER_STAT_MSG:
-                    if (!(pcre_data->options & SNORT_PCRE_HTTP_STAT_MSG))
-                        continue;
-                    break;
-                default:
-                    /* Uh, what buffer is this */
-                    PREPROC_PROFILE_END(pcrePerfStats);
-                    return DETECTION_OPTION_NO_MATCH;
-            }
+            matched = pcre_search(
+                pcre_data, (const char*)hb->buf, hb->length, 0, &found_offset);
 
-            if (!UriBufs[i].uri || UriBufs[i].length == 0)
-                continue;
-
-            matched = pcre_search(pcre_data,
-                              (const char *)UriBufs[i].uri,
-                              UriBufs[i].length,
-                              0,
-                              &found_offset);
-
-            PREPROC_PROFILE_END(pcrePerfStats);
-            if(matched)
+            if ( matched )
             {
                 /* don't touch doe_ptr on URI contents */
+                PREPROC_PROFILE_END(pcrePerfStats);
                 return DETECTION_OPTION_MATCH;
             }
         }
-
+        PREPROC_PROFILE_END(pcrePerfStats);
         return DETECTION_OPTION_NO_MATCH;
     }
     /* end of the HTTP case */
+
     if( !(pcre_data->options & SNORT_PCRE_RAWBYTES))
     {
         if(Is_DetectFlag(FLAG_ALT_DETECT))

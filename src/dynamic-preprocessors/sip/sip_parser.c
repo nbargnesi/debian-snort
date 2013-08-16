@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  * Provides convenience functions for parsing and querying configuration.
@@ -937,10 +937,12 @@ static int sip_parse_content_type(SIPMsg *msg, const char *start, const char *en
 
 static int sip_parse_content_len(SIPMsg *msg, const char *start, const char *end)
 {
-	int length;
 	char *next = NULL;
+#ifdef DEBUG
+	int length;
 	length = end - start;
 	DEBUG_WRAP(DebugMessage(DEBUG_SIP, "Content length value: %.*s\n", length, start););
+#endif
 
 	msg->content_len = _dpd.SnortStrtoul(start, &next, 10);
 	if ( sip_eval_config->maxContentLen && (msg->content_len > sip_eval_config->maxContentLen))

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  * Parses and processes configuration set in snort.conf.
@@ -56,10 +56,6 @@
  ********************************************************************/
 tSfPolicyUserContextId dce2_config = NULL;
 DCE2_Config *dce2_eval_config = NULL;
-
-#ifdef SNORT_RELOAD
-tSfPolicyUserContextId dce2_swap_config = NULL;
-#endif
 
 /* Default ports */
 static const uint16_t DCE2_PORTS_SMB__DEFAULT[] = {139, 445};
@@ -260,9 +256,9 @@ static void DCE2_ScSmbShareFree(void *);
 static void DCE2_ScPrintConfig(const DCE2_ServerConfig *, DCE2_Queue *);
 static void DCE2_ScPrintPorts(const DCE2_ServerConfig *, int);
 static void DCE2_ScIpListDataFree(void *);
-static void DCE2_ScCheckTransport(void *);
+static int DCE2_ScCheckTransport(void *);
 static DCE2_Ret DCE2_ScCheckPortOverlap(const DCE2_ServerConfig *);
-static void DCE2_AddPortsToStream5Filter(DCE2_ServerConfig *, tSfPolicyId);
+static void DCE2_AddPortsToStream5Filter(struct _SnortConfig *, DCE2_ServerConfig *, tSfPolicyId);
 static void DCE2_ScError(const char *, ...);
 static void DCE2_ServerConfigCleanup(void *);
 
@@ -1092,7 +1088,7 @@ static DCE2_Ret DCE2_GcParseSmbFingerprintPolicy(DCE2_GlobalConfig *gc, char **p
 
             default:
                 DCE2_Log(DCE2_LOG_TYPE__ERROR, "%s(%d) Invalid smb fingerprint state: %d",
-                         __FILE__, __LINE__, state);
+                    __FILE__, __LINE__, state);
                 return DCE2_RET__ERROR;
         }
 
@@ -1307,13 +1303,13 @@ static DCE2_Ret DCE2_ScInitPortArray(DCE2_ServerConfig *sc, DCE2_DetectFlag dfla
  *
  * Arguments: None
  *
- * Returns: None
+ * Returns: -1 on error
  *
  ********************************************************************/
-void DCE2_CreateDefaultServerConfig(DCE2_Config *config, tSfPolicyId policy_id)
+int DCE2_CreateDefaultServerConfig(struct _SnortConfig *sc, DCE2_Config *config, tSfPolicyId policy_id)
 {
     if (config == NULL)
-        return;
+        return 0;
 
     config->dconfig = (DCE2_ServerConfig *)
         DCE2_Alloc(sizeof(DCE2_ServerConfig), DCE2_MEM_TYPE__CONFIG);
@@ -1326,11 +1322,13 @@ void DCE2_CreateDefaultServerConfig(DCE2_Config *config, tSfPolicyId policy_id)
 
     if (DCE2_ScInitConfig(config->dconfig) != DCE2_RET__SUCCESS)
     {
-        DCE2_Die("%s(%d) Failed to initialize default server "
+        DCE2_Log(DCE2_LOG_TYPE__WARN, "%s(%d) Failed to initialize default server "
                  "configuration.", __FILE__, __LINE__);
+        return -1;
     }
 
-    DCE2_AddPortsToStream5Filter(config->dconfig, policy_id);
+    DCE2_AddPortsToStream5Filter(sc, config->dconfig, policy_id);
+    return 0;
 }
 
 /********************************************************************
@@ -1346,12 +1344,12 @@ void DCE2_CreateDefaultServerConfig(DCE2_Config *config, tSfPolicyId policy_id)
  * Returns: None
  *
  ********************************************************************/
-void DCE2_ServerConfigure(DCE2_Config *config, char *args)
+void DCE2_ServerConfigure(struct _SnortConfig *snortConf, DCE2_Config *config, char *args)
 {
     DCE2_ServerConfig *sc;
     DCE2_Queue *ip_queue;
     DCE2_Ret status;
-    tSfPolicyId policy_id = _dpd.getParserPolicy();
+    tSfPolicyId policy_id = _dpd.getParserPolicy(snortConf);
 
     if (config == NULL)
         return;
@@ -1419,7 +1417,7 @@ void DCE2_ServerConfigure(DCE2_Config *config, char *args)
         DCE2_Die("%s", dce2_config_error);
     }
 
-    DCE2_AddPortsToStream5Filter(sc, policy_id);
+    DCE2_AddPortsToStream5Filter(snortConf, sc, policy_id);
 
     if ((sc != config->dconfig) &&
         (DCE2_ScAddToRoutingTable(config, sc, ip_queue) != DCE2_RET__SUCCESS))
@@ -2930,9 +2928,7 @@ static DCE2_Ret DCE2_ScAddToRoutingTable(DCE2_Config *config,
                                          DCE2_ServerConfig *sc, DCE2_Queue *ip_queue)
 {
     sfip_t *ip;
-#ifdef SUP_IP6
     sfip_t tmp_ip;
-#endif
 
     if ((config == NULL) || (sc == NULL) || (ip_queue == NULL))
         return DCE2_RET__ERROR;
@@ -2943,9 +2939,6 @@ static DCE2_Ret DCE2_ScAddToRoutingTable(DCE2_Config *config,
     {
         int rt_status;
 
-#ifndef SUP_IP6
-        uint32_t addr = ntohl(ip->ip32[0]);
-#else
         /* For IPv4, need to pass the address in host order */
         if (ip->family == AF_INET)
         {
@@ -2962,15 +2955,10 @@ static DCE2_Ret DCE2_ScAddToRoutingTable(DCE2_Config *config,
             /* Just set ip to tmp_ip since we don't need to modify ip */
             ip = &tmp_ip;
         }
-#endif
 
         if (config->sconfigs == NULL)
         {
-#ifdef SUP_IP6
             config->sconfigs = sfrt_new(DIR_16_4x4_16x5_4x4, IPv6, 100, 20);
-#else
-            config->sconfigs = sfrt_new(DIR_16_4x4, IPv4, 100, 20);
-#endif
             if (config->sconfigs == NULL)
             {
                 DCE2_Log(DCE2_LOG_TYPE__ERROR,
@@ -2983,13 +2971,8 @@ static DCE2_Ret DCE2_ScAddToRoutingTable(DCE2_Config *config,
         {
             DCE2_ServerConfig *conf;
 
-#ifdef SUP_IP6
             conf = (DCE2_ServerConfig *)sfrt_search((void *)ip,
                                                     (unsigned char)ip->bits, config->sconfigs);
-#else
-            conf = (DCE2_ServerConfig *)sfrt_search((void *)&addr,
-                                                    (unsigned char)ip->bits, config->sconfigs);
-#endif
 
             if (conf != NULL)
             {
@@ -2999,13 +2982,8 @@ static DCE2_Ret DCE2_ScAddToRoutingTable(DCE2_Config *config,
             }
         }
 
-#ifdef SUP_IP6
         rt_status = sfrt_insert((void *)ip, (unsigned char)ip->bits,
                                 (void *)sc, RT_FAVOR_SPECIFIC, config->sconfigs);
-#else
-        rt_status = sfrt_insert((void *)&addr, (unsigned char)ip->bits, (void *)sc,
-                                RT_FAVOR_SPECIFIC, config->sconfigs);
-#endif
 
         if (rt_status != RT_SUCCESS)
         {
@@ -3066,9 +3044,7 @@ const DCE2_ServerConfig * DCE2_ScGetConfig(const SFSnortPacket *p)
 {
     const DCE2_ServerConfig *sc = NULL;
     snort_ip_p ip;
-#ifdef SUP_IP6
     sfip_t tmp_ip;
-#endif
 
     if (dce2_eval_config == NULL)
         return NULL;
@@ -3080,7 +3056,6 @@ const DCE2_ServerConfig * DCE2_ScGetConfig(const SFSnortPacket *p)
 
     if (dce2_eval_config->sconfigs != NULL)
     {
-#ifdef SUP_IP6
         if (ip->family == AF_INET)
         {
             if (sfip_set_ip(&tmp_ip, ip) != SFIP_SUCCESS)
@@ -3100,10 +3075,6 @@ const DCE2_ServerConfig * DCE2_ScGetConfig(const SFSnortPacket *p)
         }
 
         sc = sfrt_lookup((void *)ip, dce2_eval_config->sconfigs);
-#else
-        ip = ntohl(ip);
-        sc = sfrt_lookup((void *)&ip, dce2_eval_config->sconfigs);
-#endif
     }
 
     if (sc == NULL)
@@ -3596,16 +3567,16 @@ static void DCE2_ScPrintPorts(const DCE2_ServerConfig *sc, int autodetect)
  *  void *
  *      Pointer to a server configuration structure.
  *
- * Returns: None
+ * Returns: -1 on error
  *
  *********************************************************************/
-static void DCE2_ScCheckTransport(void *data)
+static int DCE2_ScCheckTransport(void *data)
 {
     unsigned int i;
     DCE2_ServerConfig *sc = (DCE2_ServerConfig *)data;
 
     if (data == NULL)
-        return;
+        return 0;
 
     for (i = 0; i < DCE2_PORTS__MAX_INDEX - 3; i += 4)
     {
@@ -3620,16 +3591,17 @@ static void DCE2_ScCheckTransport(void *data)
             *((uint32_t *)&sc->auto_http_proxy_ports[i]) ||
             *((uint32_t *)&sc->auto_http_server_ports[i]))
         {
-            return;
+            return 0;
         }
     }
 
-    DCE2_Die("%s: Must have at least one detect or autodetect transport "
+    DCE2_Log(DCE2_LOG_TYPE__WARN, "%s: Must have at least one detect or autodetect transport "
              "enabled for a server configuration if target-based/attribute-"
              "table/adaptive-profiles is not enabled. However, if specific "
              "server configurations are configured, the default server "
              "configuration does not need to have any detect/autodetect "
              "transports configured.", DCE2_SNAME);
+    return -1;
 }
 
 /*********************************************************************
@@ -3641,18 +3613,17 @@ static void DCE2_ScCheckTransport(void *data)
  *
  * Arguments: None
  *
- * Returns: None
+ * Returns: -1 on error
  *
  *********************************************************************/
-void DCE2_ScCheckTransports(DCE2_Config *config)
+int DCE2_ScCheckTransports(DCE2_Config *config)
 {
     if (config == NULL)
-        return;
+        return 0;
 
     if (config->sconfigs == NULL)
-        DCE2_ScCheckTransport(config->dconfig);
-    else
-        sfrt_iterate(config->sconfigs, DCE2_ScCheckTransport);
+        return DCE2_ScCheckTransport(config->dconfig);
+    return sfrt_iterate2(config->sconfigs, DCE2_ScCheckTransport);
 }
 
 /*********************************************************************
@@ -3734,7 +3705,7 @@ static DCE2_Ret DCE2_ScCheckPortOverlap(const DCE2_ServerConfig *sc)
  * Returns: None
  *
  *********************************************************************/
-static void DCE2_AddPortsToStream5Filter(DCE2_ServerConfig *sc, tSfPolicyId policy_id)
+static void DCE2_AddPortsToStream5Filter(struct _SnortConfig *snortConf, DCE2_ServerConfig *sc, tSfPolicyId policy_id)
 {
     unsigned int port;
 
@@ -3743,31 +3714,31 @@ static void DCE2_AddPortsToStream5Filter(DCE2_ServerConfig *sc, tSfPolicyId poli
         if (DCE2_IsPortSet(sc->smb_ports, (uint16_t)port))
         {
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
+                (snortConf, IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
         }
 
         if (DCE2_IsPortSet(sc->tcp_ports, (uint16_t)port))
         {
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
+                (snortConf, IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
         }
 
         if (DCE2_IsPortSet(sc->udp_ports, (uint16_t)port))
         {
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_UDP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
+                (snortConf, IPPROTO_UDP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
         }
 
         if (DCE2_IsPortSet(sc->http_proxy_ports, (uint16_t)port))
         {
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
+                (snortConf, IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
         }
 
         if (DCE2_IsPortSet(sc->http_server_ports, (uint16_t)port))
         {
             _dpd.streamAPI->set_port_filter_status
-                (IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
+                (snortConf, IPPROTO_TCP, (uint16_t)port, PORT_MONITOR_SESSION, policy_id, 1);
         }
     }
 }
@@ -4013,26 +3984,14 @@ DCE2_Ret DCE2_ParseIp(char **ptr, char *end, sfip_t *ip)
                         return DCE2_RET__ERROR;
                     }
 
-#ifndef SUP_IP6
-                    if (ip->family != AF_INET)
-                    {
-                        DCE2_ScError("IPv6 addresses are not allowed in a "
-                                     "non-IPv6 build.  Configure Snort with "
-                                     "--enable-ipv6 to use IPv6 addresses in "
-                                     "the configuration");
-                        return DCE2_RET__ERROR;
-                    }
-#endif
                     return DCE2_RET__SUCCESS;
                 }
 
                 break;
 
-            default:
-                DCE2_Log(DCE2_LOG_TYPE__ERROR,
-                         "%s(%d) Invalid IP address state: %d",
-                         __FILE__, __LINE__, state);
-                return DCE2_RET__ERROR;
+            case DCE2_IP_STATE__END:
+                // make the compiler happy
+                break;
         }
 
         (*ptr)++;
@@ -4496,8 +4455,6 @@ DCE2_Ret DCE2_GetValue(char *start, char *end, void *int_value, int negate,
         case DCE2_INT_TYPE__UINT64:
             max_value = UINT64_MAX;
             break;
-        default:
-            return DCE2_RET__ERROR;
     }
 
     if (value > max_value)
@@ -4532,8 +4489,6 @@ DCE2_Ret DCE2_GetValue(char *start, char *end, void *int_value, int negate,
         case DCE2_INT_TYPE__UINT64:
             *(uint64_t *)int_value = (uint64_t)value;
             break;
-        default:
-            return DCE2_RET__ERROR;
     }
 
     return DCE2_RET__SUCCESS;
@@ -4679,7 +4634,7 @@ void DCE2_FreeConfigs(tSfPolicyUserContextId config)
     if (config == NULL)
         return;
 
-    sfPolicyUserDataIterate (config, DCE2_FreeConfigsPolicy);
+    sfPolicyUserDataFreeIterate (config, DCE2_FreeConfigsPolicy);
     sfPolicyConfigDelete(config);
 }
 

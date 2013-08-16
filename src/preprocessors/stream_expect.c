@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
-** Copyright (C) 2005-2012 Sourcefire, Inc.
+** Copyright (C) 2005-2013 Sourcefire, Inc.
 ** AUTHOR: Steven Sturges
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* stream_expect.c
@@ -60,6 +60,7 @@
 #include "ipv6_port.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
+#include "stream5_ha.h"
 
 /* Reasonably small, and prime */
 #define EXPECT_HASH_SIZE 1021
@@ -175,14 +176,12 @@ int StreamExpectAddChannel(snort_ip_p cliIP, uint16_t cliPort,
     ExpectedSessionDataList *data_list;
     ExpectedSessionData *data;
     int reversed_key;
-#ifdef SUP_IP6
     SFIP_RET rval;
-#endif
 
     if (cliPort != UNKNOWN_PORT)
         srvPort = UNKNOWN_PORT;
 
-#if defined(DEBUG_MSGS) && defined(SUP_IP6)
+#if defined(DEBUG_MSGS)
     {
         char src_ip[INET6_ADDRSTRLEN];
         char dst_ip[INET6_ADDRSTRLEN];
@@ -201,7 +200,6 @@ int StreamExpectAddChannel(snort_ip_p cliIP, uint16_t cliPort,
     if ((cliPort == UNKNOWN_PORT) && (srvPort == UNKNOWN_PORT))
         return -1;
 
-#ifdef SUP_IP6
     if (cliIP->family == AF_INET)
     {
         if (!cliIP->ip.u6_addr32[0] || cliIP->ip.u6_addr32[0] == 0xFFFFFFFF ||
@@ -214,20 +212,9 @@ int StreamExpectAddChannel(snort_ip_p cliIP, uint16_t cliPort,
     {
         return -1;
     }
-#else
-    if (!cliIP || cliIP == 0xFFFFFFFF ||
-        !srvIP || srvIP == 0xFFFFFFFF)
-    {
-        return -1;
-    }
-#endif
 
-#ifdef SUP_IP6
     rval = sfip_compare(cliIP, srvIP);
     if (rval == SFIP_LESSER || (rval == SFIP_EQUAL && cliPort < srvPort))
-#else
-    if (cliIP < srvIP || (cliIP == srvIP && cliPort < srvPort))
-#endif
     {
         IP_COPY_VALUE(hashKey.ip1, cliIP);
         hashKey.port1 = cliPort;
@@ -420,9 +407,7 @@ int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node)
     SFXHASH_NODE *hash_node;
     ExpectHashKey hashKey;
     ExpectNode *node;
-#ifdef SUP_IP6
     SFIP_RET rval;
-#endif
     uint16_t port1;
     uint16_t port2;
     int reversed_key;
@@ -437,7 +422,7 @@ int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node)
     srcIP = GET_SRC_IP(p);
     dstIP = GET_DST_IP(p);
 
-#if defined(DEBUG_MSGS) && defined(SUP_IP6)
+#if defined(DEBUG_MSGS)
     {
         char src_ip[INET6_ADDRSTRLEN];
         char dst_ip[INET6_ADDRSTRLEN];
@@ -449,12 +434,8 @@ int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node)
     }
 #endif
 
-#ifdef SUP_IP6
     rval = sfip_compare(dstIP, srcIP);
     if (rval == SFIP_LESSER || (rval == SFIP_EQUAL && p->dp < p->sp))
-#else
-    if (dstIP < srcIP || (dstIP == srcIP && p->dp < p->sp))
-#endif
     {
         IP_COPY_VALUE(hashKey.ip1, dstIP);
         IP_COPY_VALUE(hashKey.ip2, srcIP);
@@ -537,7 +518,7 @@ int StreamExpectIsExpected(Packet *p, SFXHASH_NODE **expected_hash_node)
     return 0;
 }
 
-char SteamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expected_hash_node)
+char StreamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expected_hash_node)
 {
     SFXHASH_NODE *hash_node;
     ExpectNode *node;
@@ -568,11 +549,16 @@ char SteamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expe
     if (!node->appId)
         retVal = node->direction;
 #ifdef TARGET_BASED
-    else
-        lws->application_protocol = node->appId;
+    else if (lws->ha_state.application_protocol != node->appId)
+    {
+        lws->ha_state.application_protocol = node->appId;
+#ifdef ENABLE_HA
+        lws->ha_flags |= HA_FLAG_MODIFIED;
+#endif
+    }
 #endif
 
-#if defined(DEBUG_MSGS) && defined(SUP_IP6)
+#if defined(DEBUG_MSGS)
     {
         snort_ip_p srcIP, dstIP;
         char src_ip[INET6_ADDRSTRLEN];
@@ -617,20 +603,29 @@ char SteamExpectProcessNode(Packet *p, Stream5LWSession* lws, SFXHASH_NODE *expe
     return retVal;
 }
 
-char SteamExpectCheck(Packet *p, Stream5LWSession* lws)
+char StreamExpectCheck(Packet *p, Stream5LWSession* lws)
 {
     SFXHASH_NODE *hash_node;
 
     if (!StreamExpectIsExpected(p, &hash_node))
         return SSN_DIR_NONE;
 
-    return SteamExpectProcessNode(p, lws, hash_node);
+    return StreamExpectProcessNode(p, lws, hash_node);
 }
 
-void StreamExpectInit(void)
+void StreamExpectInit (uint32_t max)
 {
-    channelHash = sfxhash_new(-EXPECT_HASH_SIZE, sizeof(ExpectHashKey), sizeof(ExpectNode), 0, 1,
-                              freeHashNode, freeHashNode, 1);
+    // number of entries * overhead per entry
+    max *= (sizeof(SFXHASH_NODE) + sizeof(long) + 
+        sizeof(ExpectHashKey) + sizeof(ExpectNode));
+ 
+    // add in fixed cost of hash table
+    max += (sizeof(SFXHASH_NODE**) * EXPECT_HASH_SIZE) + sizeof(long);
+
+    channelHash = sfxhash_new(
+        -EXPECT_HASH_SIZE, sizeof(ExpectHashKey), 
+        sizeof(ExpectNode), max, 1, freeHashNode, freeHashNode, 1);
+
     if (!channelHash)
         FatalError("Failed to create the expected channel hash table.\n");
 

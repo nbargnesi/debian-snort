@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2003-2012 Sourcefire, Inc.
+ * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -118,7 +118,11 @@ static HI_EVENT_INFO client_event_info[HI_EO_CLIENT_EVENT_NUM] = {
     {HI_EO_CLIENT_UNKNOWN_METHOD, HI_EO_MED_PRIORITY,
         HI_EO_CLIENT_UNKNOWN_METHOD_STR},
     {HI_EO_CLIENT_SIMPLE_REQUEST, HI_EO_HIGH_PRIORITY,
-        HI_EO_CLIENT_SIMPLE_REQUEST_STR}
+        HI_EO_CLIENT_SIMPLE_REQUEST_STR},
+    {HI_EO_CLIENT_UNESCAPED_SPACE_URI, HI_EO_MED_PRIORITY,
+            HI_EO_CLIENT_UNESCAPED_SPACE_URI_STR},
+    {HI_EO_CLIENT_PIPELINE_MAX, HI_EO_MED_PRIORITY,
+        HI_EO_CLIENT_PIPELINE_MAX_STR}
 };
 
 static HI_EVENT_INFO server_event_info[HI_EO_SERVER_EVENT_NUM] = {

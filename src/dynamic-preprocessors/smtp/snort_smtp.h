@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * **************************************************************************/
 
@@ -47,6 +47,7 @@
 #include "sfPolicyUserData.h"
 #include "mempool.h"
 #include "sf_email_attach_decode.h"
+#include "file_api.h"
 
 #ifdef DEBUG
 #include "sf_types.h"
@@ -79,10 +80,13 @@
 #define STATE_CONNECT          0
 #define STATE_COMMAND          1    /* Command state of SMTP transaction */
 #define STATE_DATA             2    /* Data state */
-#define STATE_TLS_CLIENT_PEND  3    /* Got STARTTLS */
-#define STATE_TLS_SERVER_PEND  4    /* Got STARTTLS */
-#define STATE_TLS_DATA         5    /* Successful handshake, TLS encrypted data */
-#define STATE_UNKNOWN          6
+#define STATE_BDATA            3    /* Binary data state */
+#define STATE_TLS_CLIENT_PEND  4    /* Got STARTTLS */
+#define STATE_TLS_SERVER_PEND  5    /* Got STARTTLS */
+#define STATE_TLS_DATA         6    /* Successful handshake, TLS encrypted data */
+#define STATE_AUTH             7
+#define STATE_XEXCH50          8
+#define STATE_UNKNOWN          9
 
 #define STATE_DATA_INIT    0
 #define STATE_DATA_HEADER  1    /* Data header section of data state */
@@ -102,6 +106,8 @@
 #define SMTP_FLAG_MULTIPLE_EMAIL_ATTACH      0x00000100
 #define SMTP_FLAG_IN_CONT_DISP               0x00000200
 #define SMTP_FLAG_IN_CONT_DISP_CONT          0x00000400
+#define SMTP_FLAG_MIME_END                   0x00000800
+#define SMTP_FLAG_BDAT                       0x00001000
 
 /* log flags */
 #define SMTP_FLAG_MAIL_FROM_PRESENT          0x00000001
@@ -187,7 +193,9 @@ typedef enum _SMTPRespEnum
 {
     RESP_220 = 0,
     RESP_221,
+    RESP_235,
     RESP_250,
+    RESP_334,
     RESP_354,
     RESP_421,
     RESP_450,
@@ -198,6 +206,7 @@ typedef enum _SMTPRespEnum
     RESP_502,
     RESP_503,
     RESP_504,
+    RESP_535,
     RESP_550,
     RESP_551,
     RESP_552,
@@ -249,20 +258,6 @@ typedef struct _SMTPPcre
 
 } SMTPPcre;
 
-typedef struct s_SMTP_LogState
-{
-    MemBucket *log_hdrs_bkt;
-    unsigned char *emailHdrs;
-    uint32_t log_depth;
-    uint32_t hdrs_logged;
-    uint8_t *recipients;
-    uint16_t rcpts_logged;
-    uint8_t *senders;
-    uint16_t snds_logged;
-    uint8_t *filenames;
-    uint16_t file_logged;
-} SMTP_LogState;
-
 typedef struct _SMTP
 {
     int state;
@@ -272,6 +267,7 @@ typedef struct _SMTP
     int session_flags;
     int alert_mask;
     int reassembling;
+    uint32_t dat_chunk;
 #ifdef DEBUG_MSGS
     uint64_t session_number;
 #endif
@@ -284,7 +280,7 @@ typedef struct _SMTP
     MemBucket *decode_bkt;
     SMTPMimeBoundary  mime_boundary;
     Email_DecodeState *decode_state;
-    SMTP_LogState *log_state;
+    MAIL_LogState *log_state;
 
     /* In future if we look at forwarded mail (message/rfc822) we may
      * need to keep track of additional mime boundaries
@@ -314,7 +310,6 @@ int SMTP_GetFilename(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetMailFrom(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetRcptTo(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
 int SMTP_GetEmailHdrs(void *data, uint8_t **buf, uint32_t *len, uint32_t *type);
-void SMTP_MimeMempoolInit(int, int);
 void SMTP_MempoolInit(uint32_t, uint32_t);
 
 /**************************************************************************/

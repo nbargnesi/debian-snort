@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2005-2012 Sourcefire, Inc.
+ * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -54,6 +54,7 @@
 
 static uint8_t* dst_mac = NULL;
 Packet* encode_pkt = NULL;
+uint64_t total_rebuilt_pkts = 0;
 
 static inline int IsIcmp (int type)
 {
@@ -162,7 +163,7 @@ void Encode_Term (void)
 //
 // when multiple responses are sent, both forwards and backwards directions,
 // or multiple ICMP types (unreachable port, host, net), it may be possible
-// to reuse the 1st encoding and just tweak it.  optimization for later 
+// to reuse the 1st encoding and just tweak it.  optimization for later
 // consideration.
 
 // pci is copied from in to out
@@ -225,8 +226,18 @@ const uint8_t* Encode_Response(
 // - inner layer header is very similar but payload differs
 // - original ttl is always used
 //-------------------------------------------------------------------------
+#ifdef HAVE_DAQ_ADDRESS_SPACE_ID
+int Encode_Format_With_DAQ_Info (
+    EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type,
+    const DAQ_PktHdr_t* phdr, uint32_t opaque)
 
+#elif defined(HAVE_DAQ_ACQUIRE_WITH_META)
+int Encode_Format_With_DAQ_Info (
+    EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type,
+    uint32_t opaque)
+#else
 int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type)
+#endif
 {
     DAQ_PktHdr_t* pkth = (DAQ_PktHdr_t*)c->pkth;
     uint8_t* pkt = (uint8_t*)c->pkt;
@@ -243,13 +254,23 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
     c->pkth = pkth;
     c->pkt = pkt;
 
+#ifdef HAVE_DAQ_ADDRESS_SPACE_ID
+    pkth->ingress_index = phdr->ingress_index;
+    pkth->ingress_group = phdr->ingress_group;
+    pkth->egress_index = phdr->egress_index;
+    pkth->egress_group = phdr->egress_group;
+    pkth->flags = phdr->flags & (~DAQ_PKT_FLAG_HW_TCP_CS_GOOD);
+    pkth->address_space_id = phdr->address_space_id;
+    pkth->opaque = opaque;
+#elif defined(HAVE_DAQ_ACQUIRE_WITH_META)
+    pkth->opaque = opaque;
+#endif
+
     if ( f & ENC_FLAG_NET )
     {
         for ( i = next_layer-1; i >= 0; i-- )
             if ( p->layers[i].proto == PROTO_IP4
-#ifdef SUP_IP6
               || p->layers[i].proto == PROTO_IP6
-#endif
             )
                 break;
          if ( i < next_layer ) next_layer = i + 1;
@@ -284,13 +305,13 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
     // setup payload info
     c->data = lyr->start + lyr->length;
     len = c->data - c->pkt;
-
     assert(len < PKT_MAX - IP_MAXPACKET);
-    c->max_dsize = IP_MAXPACKET;
+    c->max_dsize = IP_MAXPACKET - len;
 
     c->proto_bits = p->proto_bits;
     c->packet_flags |= PKT_PSEUDO;
     c->pseudo_type = type;
+    UpdateRebuiltPktCount();
 
     switch ( type )
     {
@@ -316,6 +337,27 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
 
     return 0;
 }
+
+//-------------------------------------------------------------------------
+// formatters:
+// - these packets undergo detection
+// - need to set Packet stuff except for frag3 which calls grinder
+// - include original options except for frag3 inner ip
+// - inner layer header is very similar but payload differs
+// - original ttl is always used
+//-------------------------------------------------------------------------
+
+#ifdef HAVE_DAQ_ADDRESS_SPACE_ID
+int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type)
+{
+    return Encode_Format_With_DAQ_Info(f, p, c, type, p->pkth, p->pkth->opaque);
+}
+#elif defined(HAVE_DAQ_ACQUIRE_WITH_META)
+int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType type)
+{
+    return Encode_Format_With_DAQ_Info(f, p, c, type, p->pkth->opaque);
+}
+#endif
 
 //-------------------------------------------------------------------------
 // updaters:  these functions set length and checksum fields, only needed
@@ -344,6 +386,8 @@ void Encode_Update (Packet* p)
 #endif
     )
         pkth->caplen = pkth->pktlen = len;
+
+    p->packet_flags &= ~PKT_LOGGED;
 }
 
 //-------------------------------------------------------------------------
@@ -470,7 +514,7 @@ static inline uint16_t IpId_Next ()
 // TTL for forward packets and use (maximum - current) TTL for reverse
 // packets.
 //
-// the reason we don't just force ttl to 255 (max) is to make it look a 
+// the reason we don't just force ttl to 255 (max) is to make it look a
 // little more authentic.
 //
 // for reference, flexresp used a const rand >= 64 in both directions (the
@@ -538,7 +582,7 @@ static inline uint8_t RevTTL (const EncState* enc, uint8_t ttl)
 // BUFLEN
 // Get the buffer length for a given protocol
 #define BUFF_DIFF(buf, ho) ((uint8_t*)(buf->base+buf->end)-(uint8_t*)ho)
-    
+
 //-------------------------------------------------------------------------
 // ethernet
 //-------------------------------------------------------------------------
@@ -675,7 +719,7 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
     {
         ENC_STATUS err = encoders[next].fencode(enc, in, out);
         if ( ENC_OK != err ) return err;
-    }  
+    }
     if ( enc->proto )
     {
         ho->ip_proto = enc->proto;
@@ -684,7 +728,7 @@ static ENC_STATUS IP4_Encode (EncState* enc, Buffer* in, Buffer* out)
 
     len = out->end - start;
     ho->ip_len = htons((uint16_t)len);
-    
+
     ho->ip_csum = 0;
 
     /* IPv4 encoded header is hardcoded 20 bytes, we save some
@@ -740,9 +784,7 @@ static void IP4_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
             SET_IP_HLEN(ch, lyr->length >> 2);
         }
     }
-#ifdef SUP_IP6
     sfiph_build(c, c->iph, AF_INET);
-#endif
 }
 
 //-------------------------------------------------------------------------
@@ -809,10 +851,10 @@ static ENC_STATUS ICMP4_Update (Packet* p, Layer* lyr, uint32_t* len)
 
     *len += sizeof(*h) + p->dsize;
 
-    
+
     if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
         h->cksum = 0;
-        h->cksum = in_chksum_icmp((uint16_t *)h, *len); 
+        h->cksum = in_chksum_icmp((uint16_t *)h, *len);
     }
 
     return ENC_OK;
@@ -974,7 +1016,7 @@ static ENC_STATUS TCP_Encode (EncState* enc, Buffer* in, Buffer* out)
         ho->th_dport = hi->th_dport;
 
         // th_seq depends on whether the data passes or drops
-        if ( (enc->type == ENC_TCP_FIN) || !ScAdapterInlineMode() )
+        if ( DAQ_GetInterfaceMode(enc->p->pkth) != DAQ_MODE_INLINE )
             ho->th_seq = htonl(ntohl(hi->th_seq) + enc->p->dsize + ctl);
         else
             ho->th_seq = hi->th_seq;
@@ -1097,7 +1139,6 @@ static void TCP_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
 // IP6 encoder
 //-------------------------------------------------------------------------
 
-#ifdef SUP_IP6
 static ENC_STATUS IP6_Encode (EncState* enc, Buffer* in, Buffer* out)
 {
     int len;
@@ -1233,7 +1274,6 @@ static ENC_STATUS Opt6_Update (Packet* p, Layer* lyr, uint32_t* len)
 
     return ENC_OK;
 }
-#endif
 
 //-------------------------------------------------------------------------
 // ICMP6 functions
@@ -1289,7 +1329,6 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     return ENC_OK;
 }
 
-#ifdef SUP_IP6
 static ENC_STATUS ICMP6_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     IcmpHdr* h = (IcmpHdr*)(lyr->start);
@@ -1316,7 +1355,6 @@ static void ICMP6_Format (EncodeFlags f, const Packet* p, Packet* c, Layer* lyr)
     // TBD handle nested icmp6 layers
     c->icmp6h = (ICMP6Hdr*)lyr->start;
 }
-#endif
 
 //-------------------------------------------------------------------------
 // GTP functions
@@ -1460,16 +1498,15 @@ static EncoderFunctions encoders[PROTO_MAX] = {
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ICMP_IP4
     { UDP_Encode,  UDP_Update,   UDP_Format   },
     { TCP_Encode,  TCP_Update,   TCP_Format   },
-#ifdef SUP_IP6
     { IP6_Encode,  IP6_Update,   IP6_Format   },
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Hop Opts
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Dst Opts
     { UN6_Encode,  ICMP6_Update, ICMP6_Format },
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ICMP_IP6
-#endif
     { XXX_Encode,  XXX_Update,   VLAN_Format  },
 #ifdef GRE
     { XXX_Encode,  XXX_Update,   GRE_Format   },
+    { XXX_Encode,  XXX_Update,   XXX_Format   },  // ERSPAN
 #endif
     { PPPoE_Encode,XXX_Update,   XXX_Format   },
     { XXX_Encode,  XXX_Update,   XXX_Format   },  // PPP Encap
@@ -1477,6 +1514,7 @@ static EncoderFunctions encoders[PROTO_MAX] = {
     { XXX_Encode,  XXX_Update,   XXX_Format   },  // MPLS
 #endif
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ARP
-    { GTP_Encode,  GTP_Update,   XXX_Format,  }   // GTP
+    { GTP_Encode,  GTP_Update,   XXX_Format,  },  // GTP
+    { XXX_Encode,  XXX_Update,   XXX_Format,  }   // Auth Header
 };
 

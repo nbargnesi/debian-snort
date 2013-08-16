@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2005-2012 Sourcefire, Inc.
+** Copyright (C) 2005-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,8 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, RZBston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+** USA
 */
 
 /* $Id$ */
@@ -29,6 +30,7 @@
 #include <strings.h>
 #endif
 
+#include <assert.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -116,11 +118,8 @@ void RZBProcess(void *p, void *context)
 {
    SFSnortPacket *sp = (SFSnortPacket *)p;
 
-   if(!sp->ip4_header || sp->ip4_header->proto != IPPROTO_TCP || !sp->tcp_header)
-   {
-      /* Not for me, return */
-      return;
-   }
+   // preconditions - what we registered for
+   assert(IsTCP(sp));
 
    // Only rebuilt packets from server
    if (sp->src_port == 80 && !(sp->flags & FLAG_REBUILT_STREAM) && sp->payload_size != 0)

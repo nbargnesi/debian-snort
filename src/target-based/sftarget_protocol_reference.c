@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2006-2012 Sourcefire, Inc.
+** Copyright (C) 2006-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /*
@@ -39,6 +39,10 @@
 #include "spp_frag3.h"
 #include "sftarget_reader.h"
 #include "sftarget_hostentry.h"
+
+int16_t protocolReferenceTCP;
+int16_t protocolReferenceUDP;
+int16_t protocolReferenceICMP;
 
 static SFGHASH *proto_reference_table = NULL;
 static int16_t protocol_number = 1;
@@ -169,6 +173,9 @@ void InitializeProtocolReferenceTable(void)
     {
         AddProtocolReference(*protocol);
     }
+    protocolReferenceTCP = FindProtocolReference("tcp");
+    protocolReferenceUDP = FindProtocolReference("udp");
+    protocolReferenceICMP = FindProtocolReference("icmp");
 }
 
 void FreeProtoocolReferenceTable(void)
@@ -214,13 +221,13 @@ int16_t GetProtocolReference(Packet *p)
         switch (GET_IPH_PROTO(p))
         {
         case IPPROTO_TCP:
-            ipprotocol = FindProtocolReference("tcp");
+            ipprotocol = protocolReferenceTCP;
             break;
         case IPPROTO_UDP:
-            ipprotocol = FindProtocolReference("udp");
+            ipprotocol = protocolReferenceUDP;
             break;
         case IPPROTO_ICMP:
-            ipprotocol = FindProtocolReference("icmp");
+            ipprotocol = protocolReferenceICMP;
             break;
         }
 

@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -36,7 +36,8 @@
 bool hi_paf_init(uint32_t cap);
 void hi_paf_term(void);
 
-int hi_paf_register(uint16_t port, bool client, bool server, tSfPolicyId pid);
+int hi_paf_register_port(struct _SnortConfig *sc, uint16_t port, bool client, bool server, tSfPolicyId pid, bool auto_on);
+int hi_paf_register_service(struct _SnortConfig *, uint16_t service, bool client, bool server, tSfPolicyId pid, bool auto_on);
 
 bool hi_paf_simple_request(void* ssn);
 

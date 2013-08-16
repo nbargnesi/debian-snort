@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -34,7 +34,7 @@ static inline int IsBound (
     tSfPolicyId id
     )
 {
-    return ( id != SF_VLAN_UNBOUND );
+    return ( id != SF_POLICY_UNBOUND );
 }
 
 static inline int NotBound (
@@ -60,15 +60,16 @@ tSfPolicyConfig * sfPolicyInit(void)
     //initialize vlan bindings
     for (i = 0; i < SF_VLAN_BINDING_MAX; i++)
     {
-        new->vlanBindings[i] = SF_VLAN_UNBOUND;
+        new->vlanBindings[i] = SF_POLICY_UNBOUND;
+    }
+
+    for (i = 0; i < SF_POLICY_ID_BINDING_MAX; i++)
+    {
+        new->policyIdBindings[i] = SF_POLICY_UNBOUND;
     }
 
     //initialize net bindings
-#ifdef SUP_IP6
     new->netBindTable = sfrt_new(DIR_16x7_4x4, IPv6, SF_NETWORK_BINDING_MAX, 20);
-#else
-    new->netBindTable = sfrt_new(DIR_16_4x4, IPv4, SF_NETWORK_BINDING_MAX, 20);
-#endif
 
     return new;
 }
@@ -83,6 +84,11 @@ void sfPolicyFini(tSfPolicyConfig *config)
     for (i = 0; i < SF_VLAN_BINDING_MAX; i++)
     {
         sfVlanDeleteBinding(config, i);
+    }
+
+    for (i = 0; i < SF_POLICY_ID_BINDING_MAX; i++)
+    {
+        sfPolicyIdDeleteBinding(config, i);
     }
 
     sfrt_cleanup2(config->netBindTable, netBindFree, config);
@@ -122,7 +128,7 @@ int sfPolicyAdd(tSfPolicyConfig *config, char *fileName)
     tSfPolicy **ppTmp;
 
     if (config == NULL)
-        return SF_VLAN_UNBOUND;
+        return SF_POLICY_UNBOUND;
 
     for (i = 0; i < config->numAllocatedPolicies; i++)
     {
@@ -146,7 +152,7 @@ int sfPolicyAdd(tSfPolicyConfig *config, char *fileName)
         ppTmp = (tSfPolicy **)calloc(config->numAllocatedPolicies + POLICY_ALLOCATION_CHUNK,
                                      sizeof(tSfPolicy *));
         if (!ppTmp)
-            return SF_VLAN_UNBOUND;
+            return SF_POLICY_UNBOUND;
 
         if (config->numAllocatedPolicies)
         {
@@ -163,14 +169,14 @@ int sfPolicyAdd(tSfPolicyConfig *config, char *fileName)
     //allocate and initialize
     pObject = (tSfPolicy *)calloc(1, sizeof(tSfPolicy));
     if (!pObject)
-        return SF_VLAN_UNBOUND;
+        return SF_POLICY_UNBOUND;
 
     pObject->refCount++;
     pObject->filename = strdup(fileName);
     if (!pObject->filename)
     {
         free(pObject);
-        return SF_VLAN_UNBOUND;
+        return SF_POLICY_UNBOUND;
     }
 
     config->ppPolicies[emptyIndex] = pObject;
@@ -278,7 +284,7 @@ void sfVlanDeleteBinding(tSfPolicyConfig *config, int vlanId)
     if ( IsBound(policyId) )
     {
         sfPolicyDelete(config, policyId);
-        config->vlanBindings[vlanId] = SF_VLAN_UNBOUND;
+        config->vlanBindings[vlanId] = SF_POLICY_UNBOUND;
     }
 }
 
@@ -329,7 +335,7 @@ void sfPolicyIdDeleteBinding(tSfPolicyConfig *config, int parsedPolicyId)
     if ( IsBound(policyId) )
     {
         sfPolicyDelete(config, policyId);
-        config->vlanBindings[parsedPolicyId] = SF_VLAN_UNBOUND;
+        config->policyIdBindings[parsedPolicyId] = SF_POLICY_UNBOUND;
     }
 }
 
@@ -356,7 +362,7 @@ tSfPolicyId sfGetApplicablePolicyId(
     tSfPolicyId dst_id;
 
     if (config == NULL)
-        return SF_VLAN_UNBOUND;
+        return SF_POLICY_UNBOUND;
 
     if (vlanId > 0)
     {
@@ -383,11 +389,7 @@ int sfNetworkAddBinding(
 {
     tSfPolicyId *policyId;
     int iRet;
-#ifdef SUP_IP6
     sfip_t tmp_ip;
-#else
-    uint32_t addr;
-#endif
 
     if ((config == NULL) || (Ip == NULL) || (fileName == NULL))
         return -1;
@@ -405,7 +407,6 @@ int sfNetworkAddBinding(
         return -1;
     }
 
-#ifdef SUP_IP6
     /* For IPv4, need to pass the address in host order */
     if (Ip->family == AF_INET)
     {
@@ -420,15 +421,11 @@ int sfNetworkAddBinding(
 
     iRet = sfrt_insert((void *)Ip, (unsigned char)Ip->bits,
                        (void *)policyId, RT_FAVOR_SPECIFIC, config->netBindTable);
-#else
-    addr = ntohl(Ip->ip32[0]);
-    iRet = sfrt_insert((void *)&addr, (unsigned char)Ip->bits,
-                       (void *)policyId, RT_FAVOR_SPECIFIC, config->netBindTable);
-#endif
 
     //DEBUG_WRAP(DebugMessage(DEBUG_CONFIGRULES,"Added  vlandId  %d, file %s, policyId: %d\n", vlanId, fileName, policyId););
     if (iRet)
     {
+        free(policyId);
         return -1;
     }
 
@@ -441,24 +438,17 @@ unsigned int sfNetworkGetBinding(
         )
 {
     tSfPolicyId *policyId = NULL;
-#ifdef SUP_IP6
     sfip_t tmp_ip;
 
     if ((void *)ip == NULL)
-        return 0;
-#else
-    if (ip == 0)
-        return 0;
+        return config->defaultPolicyId;
 
-#endif
-
-#ifdef SUP_IP6
     if (ip->family == AF_INET)
     {
         if (sfip_set_ip(&tmp_ip, ip) != SFIP_SUCCESS)
         {
             /* Just return default configuration */
-            return 0;
+            return config->defaultPolicyId;
         }
 
         tmp_ip.ip32[0] = ntohl(tmp_ip.ip32[0]);
@@ -468,14 +458,10 @@ unsigned int sfNetworkGetBinding(
     }
 
     policyId = (tSfPolicyId *)sfrt_lookup((void *)ip, config->netBindTable);
-#else
-    ip = ntohl(ip);
-    policyId = (tSfPolicyId *)sfrt_lookup((void *)&ip, config->netBindTable);
-#endif
 
     if (!policyId)
     {
-        return 0;
+        return config->defaultPolicyId;
     }
 
     return *policyId;
@@ -487,18 +473,11 @@ void sfNetworkDeleteBinding(
         )
 {
     tSfPolicyId *policyId;
-#ifdef SUP_IP6
     sfip_t tmp_ip;
 
     if ((void *)ip == NULL)
         return;
-#else
-    if (ip == 0)
-        return;
 
-#endif
-
-#ifdef SUP_IP6
     if (ip->family == AF_INET)
     {
         if (sfip_set_ip(&tmp_ip, ip) != SFIP_SUCCESS)
@@ -511,10 +490,6 @@ void sfNetworkDeleteBinding(
     }
 
     policyId = (tSfPolicyId *)sfrt_lookup((void *)ip, config->netBindTable);
-#else
-    ip = ntohl(ip);
-    policyId = (tSfPolicyId *)sfrt_lookup((void *)&ip, config->netBindTable);
-#endif
 
     if (!policyId)
         return;

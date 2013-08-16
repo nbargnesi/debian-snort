@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -31,9 +31,12 @@
 #define __IMAP_CONFIG_H__
 
 #include "sfPolicyUserData.h"
+#include "file_api.h"
+
 #define CONF_SEPARATORS                  " \t\n\r"
 #define CONF_PORTS                       "ports"
-#define CONF_IMAP_MEMCAP                  "memcap"
+#define CONF_IMAP_MEMCAP                 "memcap"
+#define CONF_MAX_MIME_MEM                "max_mime_mem"
 #define CONF_B64_DECODE                  "b64_decode_depth"
 #define CONF_QP_DECODE                   "qp_decode_depth"
 #define CONF_BITENC_DECODE               "bitenc_decode_depth"
@@ -43,13 +46,15 @@
 #define CONF_END_LIST   "}"
 
 /*These are temporary values*/
-
-#define DEFAULT_IMAP_MEMCAP            838860
+#define DEFAULT_MAX_MIME_MEM          838860
+#define DEFAULT_IMAP_MEMCAP           838860
 #define DEFAULT_DEPTH                 1464
-#define MAX_IMAP_MEMCAP                104857600
-#define MIN_IMAP_MEMCAP                3276
-#define MAX_DEPTH                     65535 
-#define MIN_DEPTH                     -1 
+#define MAX_IMAP_MEMCAP               104857600
+#define MIN_IMAP_MEMCAP               3276
+#define MAX_MIME_MEM                  104857600
+#define MIN_MIME_MEM                  3276
+#define MAX_DEPTH                     65535
+#define MIN_DEPTH                     -1
 #define IMAP_DEFAULT_SERVER_PORT       143  /* IMAP normally runs on port 143 */
 
 #define ERRSTRLEN   512
@@ -80,17 +85,20 @@ typedef struct _IMAPCmdConfig
 typedef struct _IMAPConfig
 {
     char  ports[8192];
-    uint32_t   memcap;
+    int  max_mime_mem;
+    uint32_t  memcap;
     int max_depth;
     int b64_depth;
     int qp_depth;
     int bitenc_depth;
     int uu_depth;
+    int64_t file_depth;
     IMAPToken *cmds;
     IMAPSearch *cmd_search;
     void *cmd_search_mpse;
     int num_cmds;
     int disabled;
+    MAIL_LogConfig log_config;
 
     int ref_count;
 

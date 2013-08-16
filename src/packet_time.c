@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 1998-2012 Sourcefire, Inc.
+ ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 /**
  * @file   packet_time.c
@@ -36,25 +36,19 @@
 
 #include "packet_time.h"
 
-static time_t s_first_packet  = 0;
-static time_t s_recent_packet = 0;
+static struct timeval s_recent_packet = { 0, 0 };
 
-void packet_time_update(time_t cur)
+void packet_time_update(const struct timeval *cur_tv)
 {
-    if(s_first_packet == 0)
-    {
-        s_first_packet = cur;
-    }
-
-    s_recent_packet = cur;
+    s_recent_packet = *cur_tv;
 }
 
-time_t packet_timeofday(void)
+time_t packet_time(void)
 {
-    return s_recent_packet;
+    return s_recent_packet.tv_sec;
 }
 
-time_t packet_first_time(void)
+void packet_gettimeofday(struct timeval *tv)
 {
-    return s_first_packet;
+    *tv = s_recent_packet;
 }

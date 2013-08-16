@@ -1,7 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
- * Copyright (C) 2009-2012 Sourcefire, Inc.
+ * Copyright (C) 2009-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************/
 
@@ -94,7 +94,7 @@ void RateFilter_Cleanup(void)
 /*
  * Create and Add a Thresholding Event Object
  */
-int RateFilter_Create(RateFilterConfig *rf_config, tSFRFConfigNode *thdx)
+int RateFilter_Create(SnortConfig *sc, RateFilterConfig *rf_config, tSFRFConfigNode *thdx)
 {
     int error;
 
@@ -109,7 +109,7 @@ int RateFilter_Create(RateFilterConfig *rf_config, tSFRFConfigNode *thdx)
 #endif
 
     /* Add the object to the table - */
-    error = SFRF_ConfigAdd(rf_config, thdx);
+    error = SFRF_ConfigAdd(sc, rf_config, thdx);
 
     // enable internal events as required
     if ( !error && EventIsInternal(thdx->gid) )

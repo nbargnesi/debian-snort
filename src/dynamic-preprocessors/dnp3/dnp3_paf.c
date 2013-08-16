@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -46,16 +46,29 @@ typedef struct _dnp3_paf_data
     uint16_t real_length;
 } dnp3_paf_data_t;
 
-static int DNP3PafRegister(uint16_t port, tSfPolicyId policy_id)
+static int DNP3PafRegisterPort (struct _SnortConfig *sc, uint16_t port, tSfPolicyId policy_id)
 {
     if (!_dpd.isPafEnabled())
         return 0;
 
-    _dpd.streamAPI->register_paf_cb(policy_id, port, 0, DNP3Paf, true);
-    _dpd.streamAPI->register_paf_cb(policy_id, port, 1, DNP3Paf, true);
+    _dpd.streamAPI->register_paf_port(sc, policy_id, port, 0, DNP3Paf, true);
+    _dpd.streamAPI->register_paf_port(sc, policy_id, port, 1, DNP3Paf, true);
 
     return 0;
 }
+
+#ifdef TARGET_BASED
+int DNP3AddServiceToPaf (struct _SnortConfig *sc, uint16_t service, tSfPolicyId policy_id)
+{
+    if (!_dpd.isPafEnabled())
+        return 0;
+
+    _dpd.streamAPI->register_paf_service(sc, policy_id, service, 0, DNP3Paf, true);
+    _dpd.streamAPI->register_paf_service(sc, policy_id, service, 1, DNP3Paf, true);
+
+    return 0;
+}
+#endif
 
 /* Function: DNP3Paf()
 
@@ -109,7 +122,7 @@ static PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
                 else
                     return PAF_ABORT;
                 break;
-                
+
             case DNP3_PAF_STATE__START_2:
                 if (((uint8_t) *(data + bytes_processed)) == DNP3_START_BYTE_2)
                     pafdata->state++;
@@ -154,7 +167,7 @@ static PAF_Status DNP3Paf(void *ssn, void **user, const uint8_t *data,
 }
 
 /* Take a DNP3 config + Snort policy, iterate through ports, register PAF callback. */
-int DNP3AddPortsToPaf(dnp3_config_t *config, tSfPolicyId policy_id)
+int DNP3AddPortsToPaf(struct _SnortConfig *sc, dnp3_config_t *config, tSfPolicyId policy_id)
 {
     unsigned int i;
 
@@ -162,7 +175,7 @@ int DNP3AddPortsToPaf(dnp3_config_t *config, tSfPolicyId policy_id)
     {
         if (config->ports[PORT_INDEX(i)] & CONV_PORT(i))
         {
-            DNP3PafRegister((uint16_t) i, policy_id);
+            DNP3PafRegisterPort(sc, (uint16_t) i, policy_id);
         }
     }
 

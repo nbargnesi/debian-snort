@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* $Id$ */
@@ -47,6 +47,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -149,23 +150,22 @@ static int16_t rpc_decode_app_protocol_id;
 PreprocStats rpcdecodePerfStats;
 #endif
 
-static void RpcDecodeInit(char *);
+static void RpcDecodeInit(struct _SnortConfig *, char *);
 static void PreprocRpcDecode(Packet *, void *);
 static void ParseRpcConfig(RpcDecodeConfig *, char *);
 static int ConvertRPC(RpcDecodeConfig *, RpcSsnData *, Packet *);
 static void RpcDecodeFreeConfig(tSfPolicyUserContextId rpc);
 static void RpcDecodeCleanExit(int, void *);
-static void _addPortsToStream5Filter(RpcDecodeConfig *, tSfPolicyId);
+static void _addPortsToStream5Filter(struct _SnortConfig *, RpcDecodeConfig *, tSfPolicyId);
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId);
+static void _addServicesToStream5Filter(struct _SnortConfig *, tSfPolicyId);
 #endif
 static void RpcDecodePortsAssign(uint8_t *, char *);
 static int RpcDecodeIsEligible(RpcDecodeConfig *, Packet *);
 
 #ifdef SNORT_RELOAD
-static tSfPolicyUserContextId rpc_decode_swap_config = NULL;
-static void RpcDecodeReload(char *);
-static void * RpcDecodeReloadSwap(void);
+static void RpcDecodeReload(struct _SnortConfig *, char *, void **);
+static void * RpcDecodeReloadSwap(struct _SnortConfig *, void *);
 static void RpcDecodeReloadSwapFree(void *);
 #endif
 
@@ -245,7 +245,7 @@ void SetupRpcDecode(void)
 #ifndef SNORT_RELOAD
     RegisterPreprocessor("rpc_decode", RpcDecodeInit);
 #else
-    RegisterPreprocessor("rpc_decode", RpcDecodeInit, RpcDecodeReload,
+    RegisterPreprocessor("rpc_decode", RpcDecodeInit, RpcDecodeReload, NULL,
                          RpcDecodeReloadSwap, RpcDecodeReloadSwapFree);
 #endif
 
@@ -265,9 +265,9 @@ void SetupRpcDecode(void)
  * Returns: void function
  *
  */
-void RpcDecodeInit(char *args)
+void RpcDecodeInit(struct _SnortConfig *sc, char *args)
 {
-    tSfPolicyId policy_id = getParserPolicy();
+    tSfPolicyId policy_id = getParserPolicy(sc);
     RpcDecodeConfig *pPolicyConfig = NULL;
 
     if (rpc_decode_config == NULL)
@@ -307,12 +307,12 @@ void RpcDecodeInit(char *args)
     ParseRpcConfig(pPolicyConfig, args);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToPreprocList(PreprocRpcDecode, PRIORITY_APPLICATION, PP_RPCDECODE, PROTO_BIT__TCP);
+    AddFuncToPreprocList(sc, PreprocRpcDecode, PRIORITY_APPLICATION, PP_RPCDECODE, PROTO_BIT__TCP);
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 
     DEBUG_WRAP(DebugMessage(DEBUG_RPC,"Preprocessor: RpcDecode Initialized\n"););
@@ -452,8 +452,8 @@ static void PreprocRpcDecode(Packet *p, void *context)
     if (rconfig == NULL)
         return;
 
-    if (!IsTCP(p) || (p->dsize == 0))
-        return;
+    // preconditions - what we registered for
+    assert(IsTCP(p) && p->dsize);
 
     /* If we're stateful that means stream5 has been configured.
      * In this case we don't look at server packets.
@@ -1388,7 +1388,7 @@ static int ConvertRPC(RpcDecodeConfig *rconfig, RpcSsnData *rsdata, Packet *p)
     return 0;
 }
 
-static void _addPortsToStream5Filter(RpcDecodeConfig *rpc, tSfPolicyId policy_id)
+static void _addPortsToStream5Filter(struct _SnortConfig *sc, RpcDecodeConfig *rpc, tSfPolicyId policy_id)
 {
     unsigned int portNum;
 
@@ -1403,18 +1403,18 @@ static void _addPortsToStream5Filter(RpcDecodeConfig *rpc, tSfPolicyId policy_id
             {
                 //Add port the port
                 stream_api->set_port_filter_status
-                    (IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
+                    (sc, IPPROTO_TCP, (uint16_t)portNum, PORT_MONITOR_SESSION, policy_id, 1);
             }
         }
     }
 }
 
 #ifdef TARGET_BASED
-static void _addServicesToStream5Filter(tSfPolicyId policy_id)
+static void _addServicesToStream5Filter(struct _SnortConfig *sc, tSfPolicyId policy_id)
 {
     if (stream_api)
         stream_api->set_service_filter_status
-            (rpc_decode_app_protocol_id, PORT_MONITOR_SESSION, policy_id, 1);
+            (sc, rpc_decode_app_protocol_id, PORT_MONITOR_SESSION, policy_id, 1);
 }
 #endif
 
@@ -1431,7 +1431,7 @@ static void RpcDecodeFreeConfig(tSfPolicyUserContextId rpc)
 
     if (rpc == NULL)
         return;
-    sfPolicyUserDataIterate (rpc, RpcDecodeFreeConfigPolicy);
+    sfPolicyUserDataFreeIterate (rpc, RpcDecodeFreeConfigPolicy);
     sfPolicyConfigDelete(rpc);
 }
 
@@ -1442,14 +1442,16 @@ static void RpcDecodeCleanExit(int signal, void *unused)
 }
 
 #ifdef SNORT_RELOAD
-static void RpcDecodeReload(char *args)
+static void RpcDecodeReload(struct _SnortConfig *sc, char *args, void **new_config)
 {
-    int policy_id = (int)getParserPolicy();
+    tSfPolicyUserContextId rpc_decode_swap_config = (tSfPolicyUserContextId)*new_config;
+    int policy_id = (int)getParserPolicy(sc);
     RpcDecodeConfig *pPolicyConfig = NULL;
 
-    if (rpc_decode_swap_config == NULL)
+    if (!rpc_decode_swap_config)
     {
         rpc_decode_swap_config = sfPolicyConfigCreate();
+        *new_config = rpc_decode_swap_config;
     }
     sfPolicyUserPolicySet (rpc_decode_swap_config, policy_id);
     pPolicyConfig = (RpcDecodeConfig *)sfPolicyUserDataGetCurrent(rpc_decode_swap_config);
@@ -1469,24 +1471,24 @@ static void RpcDecodeReload(char *args)
     ParseRpcConfig(pPolicyConfig, args);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToPreprocList(PreprocRpcDecode, PRIORITY_APPLICATION, PP_RPCDECODE, PROTO_BIT__TCP);
+    AddFuncToPreprocList(sc, PreprocRpcDecode, PRIORITY_APPLICATION, PP_RPCDECODE, PROTO_BIT__TCP);
 
-    _addPortsToStream5Filter(pPolicyConfig, policy_id);
+    _addPortsToStream5Filter(sc, pPolicyConfig, policy_id);
 
 #ifdef TARGET_BASED
-    _addServicesToStream5Filter(policy_id);
+    _addServicesToStream5Filter(sc, policy_id);
 #endif
 }
 
-static void * RpcDecodeReloadSwap(void)
+static void * RpcDecodeReloadSwap(struct _SnortConfig *sc, void *swap_config)
 {
+    tSfPolicyUserContextId rpc_decode_swap_config = (tSfPolicyUserContextId)swap_config;
     tSfPolicyUserContextId old_config = rpc_decode_config;
 
     if (rpc_decode_swap_config == NULL)
         return NULL;
 
     rpc_decode_config = rpc_decode_swap_config;
-    rpc_decode_swap_config = NULL;
     return (void *)old_config;
 }
 
@@ -1498,3 +1500,4 @@ static void RpcDecodeReloadSwapFree(void *data)
     RpcDecodeFreeConfig((tSfPolicyUserContextId)data);
 }
 #endif
+

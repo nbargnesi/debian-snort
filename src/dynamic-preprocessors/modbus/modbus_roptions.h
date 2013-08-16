@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -51,9 +51,9 @@ typedef struct _modbus_func_map_t
     uint8_t func;
 } modbus_func_map_t;
 
-int ModbusFuncInit(char *name, char *params, void **data);
-int ModbusUnitInit(char *name, char *params, void **data);
-int ModbusDataInit(char *name, char *params, void **data);
+int ModbusFuncInit(struct _SnortConfig *sc, char *name, char *params, void **data);
+int ModbusUnitInit(struct _SnortConfig *sc, char *name, char *params, void **data);
+int ModbusDataInit(struct _SnortConfig *sc, char *name, char *params, void **data);
 
 int ModbusRuleEval(void *raw_packet, const uint8_t **cursor, void *data);
 

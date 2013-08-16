@@ -1,5 +1,5 @@
 /*
- ** Copyright (C) 1998-2012 Sourcefire, Inc.
+ ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* sp_file_data
@@ -60,7 +60,7 @@ extern char *file_name;  /* this is the file name from rules.c, generally used
 extern int file_line;    /* this is the file line number from rules.c that is
                             used to indicate file lines for error messages */
 
-static void FileDataInit(char *, OptTreeNode *, int);
+static void FileDataInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void FileDataParse(char *, FileData *, OptTreeNode *);
 int  FileDataEval(void *option_data, Packet *p);
 
@@ -118,7 +118,7 @@ void SetupFileData(void)
 
 /****************************************************************************
  *
- * Function: FileDataInit(char *, OptTreeNode *, int protocol)
+ * Function: FileDataInit(struct _SnortConfig *, char *, OptTreeNode *, int protocol)
  *
  * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -131,7 +131,7 @@ void SetupFileData(void)
  * Returns: void function
  *
  ****************************************************************************/
-static void FileDataInit(char *data, OptTreeNode *otn, int protocol)
+static void FileDataInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     FileData *idx;
     OptFpList *fpl;
@@ -151,7 +151,7 @@ static void FileDataInit(char *data, OptTreeNode *otn, int protocol)
 
     FileDataParse(data, idx, otn);
 
-    if (add_detection_option(RULE_OPTION_TYPE_FILE_DATA, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_FILE_DATA, (void *)idx, &idx_dup) == DETECTION_OPTION_EQUAL)
     {
         free(idx);
         idx = idx_dup;
@@ -199,7 +199,6 @@ void FileDataParse(char *data, FileData *idx, OptTreeNode *otn)
     return;
 
 }
-
 
 /****************************************************************************
  *

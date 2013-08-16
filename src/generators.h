@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-** Copyright (C) 2002-2012 Sourcefire, Inc.
+** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 **
 ** You should have received a copy of the GNU General Public License
 ** along with this program; if not, write to the Free Software
-** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #ifndef __GENERATORS_H__
@@ -218,7 +218,11 @@ enum {
     DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE,
     DECODE_IPV6_BAD_FRAG_PKT,
     DECODE_ZERO_LENGTH_FRAG,
-    
+    DECODE_ICMPV6_NODE_INFO_BAD_CODE,
+    DECODE_IPV6_ROUTE_ZERO,
+    DECODE_ERSPAN_HDR_VERSION_MISMATCH,
+    DECODE_ERSPAN2_DGRAM_LT_HDR,
+    DECODE_ERSPAN3_DGRAM_LT_HDR,
     DECODE_INDEX_MAX
 };
 
@@ -270,6 +274,8 @@ enum {
 #define     HI_CLIENT_BOTH_TRUEIP_XFF_HDRS          30 
 #define     HI_CLIENT_UNKNOWN_METHOD                31
 #define     HI_CLIENT_SIMPLE_REQUEST                32
+#define     HI_CLIENT_UNESCAPED_SPACE_URI           33
+#define     HI_CLIENT_PIPELINE_MAX                  34
 
 // these are either server specific or both client / server
 #define GENERATOR_SPP_HTTP_INSPECT                 120 
@@ -328,8 +334,14 @@ enum {
 #define     FRAG3_ANOMALY_BADSIZE_SM                6
 #define     FRAG3_ANOMALY_BADSIZE_LG                7
 #define     FRAG3_ANOMALY_OVLP                      8
+/* 123:9, 123:10 are OBE w/ addition of 116:458
+ * (aka DECODE_IPV6_BAD_FRAG_PKT).
+ * Leave these here so they are not reused.
+ * ------
 #define     FRAG3_IPV6_BSD_ICMP_FRAG                9
 #define     FRAG3_IPV6_BAD_FRAG_PKT                10
+ * ------
+*/
 #define     FRAG3_MIN_TTL_EVASION                  11
 #define     FRAG3_EXCESSIVE_OVERLAP                12
 #define     FRAG3_TINY_FRAGMENT                    13
@@ -347,7 +359,9 @@ enum {
 * #define     SMTP_DECODE_MEMCAP_EXCEEDED            9*/
 #define     SMTP_B64_DECODING_FAILED               10 
 #define     SMTP_QP_DECODING_FAILED                11
-#define     SMTP_BITENC_DECODING_FAILED            12
+/* Do not delete or reuse this SID. Commenting this SID as this alert is no longer valid.*
+* #define     SMTP_BITENC_DECODING_FAILED            12
+*/
 #define     SMTP_UU_DECODING_FAILED                13
     
 /*
@@ -404,6 +418,7 @@ enum {
 #define     STREAM5_BAD_ACK                        17
 #define     STREAM5_DATA_AFTER_RST_RCVD            18
 #define     STREAM5_WINDOW_SLAM                    19
+#define     STREAM5_NO_3WHS                        20
 
 #define GENERATOR_DNS                             131
 #define     DNS_EVENT_OBSOLETE_TYPES                1
@@ -473,14 +488,14 @@ enum {
 #define GENERATOR_PPM                               134
 #define     PPM_EVENT_RULE_TREE_DISABLED              1
 #define     PPM_EVENT_RULE_TREE_ENABLED               2
+#define     PPM_EVENT_PACKET_ABORTED                  3
 
 #define GENERATOR_INTERNAL                          135
 #define     INTERNAL_EVENT_SYN_RECEIVED               1
 #define     INTERNAL_EVENT_SESSION_ADD                2
 #define     INTERNAL_EVENT_SESSION_DEL                3
 
-/* Reserved for Marty's IP blacklisting patch
-#define GENERATOR_SPP_IPLIST                        136 */
+#define GENERATOR_SPP_REPUTATION	                136
 
 #define GENERATOR_SPP_SSLPP                         137
 
@@ -497,6 +512,10 @@ enum {
 #define GENERATOR_SPP_MODBUS                        144
 
 #define GENERATOR_SPP_DNP3                          145
+
+// #define GENERATOR_FILE_TYPE                      146 //Defined in file_service.h
+// #define GENERATOR_FILE_SIGNATURE                 147 //Defined in file_service.h
+
 
 /*  This is where all the alert messages will be archived for each
     internal alerts */
@@ -523,8 +542,14 @@ enum {
 #define FRAG3_ANOM_BADSIZE_SM_STR "(spp_frag3) Bad fragment size, packet size is negative"
 #define FRAG3_ANOM_BADSIZE_LG_STR "(spp_frag3) Bad fragment size, packet size is greater than 65536"
 #define FRAG3_ANOM_OVLP_STR "(spp_frag3) Fragmentation overlap"
+/* 123:9, 123:10 are OBE w/ addition of 116:458
+ * (aka DECODE_IPV6_BAD_FRAG_PKT).
+ * Leave these here so they are not reused.
+ * ------
 #define FRAG3_IPV6_BSD_ICMP_FRAG_STR "(spp_frag3) IPv6 BSD mbufs remote kernel buffer overflow"
 #define FRAG3_IPV6_BAD_FRAG_PKT_STR "(spp_frag3) Bogus fragmentation packet. Possible BSD attack"
+ * ------
+ */
 #define FRAG3_MIN_TTL_EVASION_STR "(spp_frag3) TTL value less than configured minimum, not using for reassembly"
 #define FRAG3_EXCESSIVE_OVERLAP_STR "(spp_frag3) Excessive fragment overlap"
 #define FRAG3_TINY_FRAGMENT_STR "(spp_frag3) Tiny fragment"
@@ -549,12 +574,14 @@ enum {
 #define STREAM5_BAD_ACK_STR "ACK number is greater than prior FIN"
 #define STREAM5_DATA_AFTER_RST_RCVD_STR "Data sent on stream after TCP Reset received"
 #define STREAM5_WINDOW_SLAM_STR "TCP window closed before receiving data"
+#define STREAM5_NO_3WHS_STR "TCP session without 3-way handshake"
 
 #define STREAM5_INTERNAL_EVENT_STR ""
 
 /* PPM strings */
-#define PPM_EVENT_RULE_TREE_DISABLED_STR "Rule Options Disabled by Rule Latency"
-#define PPM_EVENT_RULE_TREE_ENABLED_STR "Rule Options Re-enabled by Rule Latency"
+#define PPM_EVENT_RULE_TREE_DISABLED_STR "PPM Rule Options Disabled by Rule Latency"
+#define PPM_EVENT_RULE_TREE_ENABLED_STR  "PPM Rule Options Re-enabled by Rule Latency"
+#define PPM_EVENT_PACKET_ABORTED_STR     "PPM Packet Aborted due to Latency"
 
 /*   Snort decoder strings */
 #define DECODE_NOT_IPV4_DGRAM_STR "(snort_decoder) WARNING: Not IPv4 datagram"
@@ -714,6 +741,11 @@ enum {
 #define DECODE_ICMPV6_UNREACHABLE_NON_RFC_4443_CODE_STR "(snort_decoder) WARNING: ICMPv6 packet of type 1 (destination unreachable) with non-RFC 4443 code"
 #define DECODE_IPV6_BAD_FRAG_PKT_STR "(snort_decoder) WARNING: bogus fragmentation packet. Possible BSD attack"
 #define DECODE_ZERO_LENGTH_FRAG_STR "(snort_decoder) WARNING: fragment with zero length"
+#define DECODE_ICMPV6_NODE_INFO_BAD_CODE_STR "(snort_decoder) WARNING: ICMPv6 node info query/response packet with a code greater than 2"
+#define DECODE_IPV6_ROUTE_ZERO_STR "(snort decoder) WARNING: IPV6 routing type 0 extension header"
+#define DECODE_ERSPAN_HDR_VERSION_MISMATCH_STR "(snort_decoder) WARNING: ERSpan Header version mismatch"
+#define DECODE_ERSPAN2_DGRAM_LT_HDR_STR "(snort_decoder) WARNING: captured < ERSpan Type2 Header Length"
+#define DECODE_ERSPAN3_DGRAM_LT_HDR_STR "(snort_decoder) WARNING: captured < ERSpan Type3 Header Length"
 
 /*  RPC decode preprocessor strings */
 #define RPC_FRAG_TRAFFIC_STR "(spp_rpc_decode) Fragmented RPC Records"

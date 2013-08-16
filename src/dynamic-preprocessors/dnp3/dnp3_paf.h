@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (C) 2011-2012 Sourcefire, Inc.
+ * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
  *
@@ -28,6 +28,7 @@
 #include "spp_dnp3.h"
 #include "stream_api.h"
 
-int DNP3AddPortsToPaf(dnp3_config_t *config, tSfPolicyId policy_id);
+int DNP3AddPortsToPaf(struct _SnortConfig *sc, dnp3_config_t *config, tSfPolicyId policy_id);
+int DNP3AddServiceToPaf(struct _SnortConfig *sc, uint16_t service, tSfPolicyId policy_id);
 
 #endif /* DNP3_PAF__H */

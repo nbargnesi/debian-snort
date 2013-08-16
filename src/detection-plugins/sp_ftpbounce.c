@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- ** Copyright (C) 2005-2012 Sourcefire, Inc.
+ ** Copyright (C) 2005-2013 Sourcefire, Inc.
  ** Author: Steven Sturges
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if not, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /* sp_ftpbounce
@@ -83,7 +83,7 @@ extern PreprocStats ruleOTNEvalPerfStats;
 #include "detection_options.h"
 #include "detection_util.h"
 
-void FTPBounceInit(char *, OptTreeNode *, int);
+void FTPBounceInit(struct _SnortConfig *, char *, OptTreeNode *, int);
 void FTPBounceParse(char *, OptTreeNode *);
 int FTPBounce(void *option_data, Packet *p);
 
@@ -134,7 +134,7 @@ void SetupFTPBounce(void)
 
 /****************************************************************************
  *
- * Function: FTPBounceInit(char *, OptTreeNode *)
+ * Function: FTPBounceInit(struct _SnortConfig *, char *, OptTreeNode *)
  *
  * Purpose: Generic rule configuration function.  Handles parsing the rule
  *          information and attaching the associated detection function to
@@ -147,7 +147,7 @@ void SetupFTPBounce(void)
  * Returns: void function
  *
  ****************************************************************************/
-void FTPBounceInit(char *data, OptTreeNode *otn, int protocol)
+void FTPBounceInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
 {
     OptFpList *fpl;
     void *ds_ptr_dup;
@@ -164,7 +164,7 @@ void FTPBounceInit(char *data, OptTreeNode *otn, int protocol)
      */
     fpl->context = (void *) NULL;
 
-    if (add_detection_option(RULE_OPTION_TYPE_FTPBOUNCE, (void *)NULL, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_FTPBOUNCE, (void *)NULL, &ds_ptr_dup) == DETECTION_OPTION_EQUAL)
     {
         //otn->ds_list[PLUGIN_FTPBOUNCE] = ds_ptr_dup;
     }
@@ -217,7 +217,7 @@ int FTPBounce(void *option_data, Packet *p)
     const uint8_t *this_param = doe_ptr;
 
     int dsize;
-    const uint8_t *base_ptr, *end_ptr, *start_ptr;
+    const uint8_t *end_ptr, *start_ptr;
     PROFILE_VARS;
 
     if (!doe_ptr)
@@ -259,7 +259,6 @@ int FTPBounce(void *option_data, Packet *p)
 
     /* save off whatever our ending pointer is */
     end_ptr = start_ptr + dsize;
-    base_ptr = start_ptr;
 
     if(doe_ptr)
     {
@@ -317,11 +316,7 @@ int FTPBounce(void *option_data, Packet *p)
         return DETECTION_OPTION_NO_MATCH;
     }
 
-#ifdef SUP_IP6
     if ( ip != ntohl(GET_SRC_IP(p)->ip32[0]) )
-#else
-    if ( ip != ntohl(GET_SRC_IP(p)) )
-#endif
     {
         PREPROC_PROFILE_END(ftpBouncePerfStats);
         return DETECTION_OPTION_MATCH;

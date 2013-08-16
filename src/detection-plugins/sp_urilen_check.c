@@ -1,6 +1,6 @@
 /* $Id */
 /*
- ** Copyright (C) 2005-2012 Sourcefire, Inc.
+ ** Copyright (C) 2005-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -15,7 +15,8 @@
  **
  ** You should have received a copy of the GNU General Public License
  ** along with this program; if nto, write to the Free Software
- ** Foundation, Inc., 59 Temple Place - Suite 330, Bosotn, MA 02111-1307, USA.
+ ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+ ** USA
  */
 
 /*
@@ -55,8 +56,8 @@ extern PreprocStats ruleOTNEvalPerfStats;
 #include "detection_options.h"
 #include "detection_util.h"
 
-void UriLenCheckInit( char*, OptTreeNode*, int );
-void ParseUriLen( char*, OptTreeNode* );
+void UriLenCheckInit( struct _SnortConfig *, char*, OptTreeNode*, int );
+void ParseUriLen( struct _SnortConfig *, char*, OptTreeNode* );
 int CheckUriLen(void *option_data, Packet*p);
 
 uint32_t UriLenCheckHash(void *d)
@@ -124,7 +125,7 @@ void SetupUriLenCheck(void)
  *
  * RETURNS:	Nothing.
  */
-void UriLenCheckInit( char* argp, OptTreeNode* otnp, int protocol )
+void UriLenCheckInit( struct _SnortConfig *sc, char* argp, OptTreeNode* otnp, int protocol )
 {
     /* Sanity check(s) */
     if ( !otnp )
@@ -141,7 +142,7 @@ void UriLenCheckInit( char* argp, OptTreeNode* otnp, int protocol )
 
     otnp->ds_list[PLUGIN_URILEN_CHECK] = SnortAlloc(sizeof(UriLenCheckData));
 
-    ParseUriLen( argp, otnp );
+    ParseUriLen( sc, argp, otnp );
 }
 
 /* Parses the urilen rule arguments and attaches the resulting
@@ -157,7 +158,7 @@ void UriLenCheckInit( char* argp, OptTreeNode* otnp, int protocol )
  *
  * RETURNS:	Nothing.
  */
-void ParseUriLen( char* argp, OptTreeNode* otnp )
+void ParseUriLen( struct _SnortConfig *sc, char* argp, OptTreeNode* otnp )
 {
     OptFpList *fpl;
     UriLenCheckData* datap = (UriLenCheckData*)otnp->ds_list[PLUGIN_URILEN_CHECK];
@@ -289,7 +290,7 @@ void ParseUriLen( char* argp, OptTreeNode* otnp )
     fpl = AddOptFuncToList(CheckUriLen, otnp);
     fpl->type = RULE_OPTION_TYPE_URILEN;
 
-    if (add_detection_option(RULE_OPTION_TYPE_URILEN, (void *)datap, &datap_dup) == DETECTION_OPTION_EQUAL)
+    if (add_detection_option(sc, RULE_OPTION_TYPE_URILEN, (void *)datap, &datap_dup) == DETECTION_OPTION_EQUAL)
     {
         otnp->ds_list[PLUGIN_URILEN_CHECK] = datap_dup;
         free(datap);
@@ -302,12 +303,12 @@ int CheckUriLen(void *option_data, Packet *p)
 {
     UriLenCheckData *udata = (UriLenCheckData *)option_data;
     int rval = DETECTION_OPTION_NO_MATCH;
-    uint16_t uri_len = UriBufs[udata->uri_buf].length;
+    const HttpBuffer* hb = GetHttpBuffer(udata->uri_buf);
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(urilenCheckPerfStats);
 
-    if (!p->uri_count || !uri_len)
+    if ( !hb )
     {
         PREPROC_PROFILE_END(urilenCheckPerfStats);
         return rval;
@@ -316,19 +317,19 @@ int CheckUriLen(void *option_data, Packet *p)
     switch (udata->oper)
     {
         case URILEN_CHECK_EQ:
-            if (udata->urilen == uri_len)
+            if (udata->urilen == hb->length)
                 rval = DETECTION_OPTION_MATCH;
             break;
         case URILEN_CHECK_GT:
-            if (udata->urilen < uri_len)
+            if (udata->urilen < hb->length)
                 rval = DETECTION_OPTION_MATCH;
             break;
         case URILEN_CHECK_LT:
-            if (udata->urilen > uri_len)
+            if (udata->urilen > hb->length)
                 rval = DETECTION_OPTION_MATCH;
             break;
         case URILEN_CHECK_RG:
-            if ((udata->urilen <= uri_len) && (udata->urilen2 >= uri_len))
+            if ((udata->urilen <= hb->length) && (udata->urilen2 >= hb->length))
                 rval = DETECTION_OPTION_MATCH;
             break;
         default:

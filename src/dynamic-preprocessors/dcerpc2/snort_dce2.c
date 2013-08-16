@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2008-2012 Sourcefire, Inc.
+ * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  ****************************************************************************
  *
@@ -269,7 +269,6 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
     {
         sd->wire_pkt = p;
 
-#ifdef ENABLE_PAF
         if (_dpd.isPafEnabled() && !DCE2_SsnIsPafActive(p))
         {
             DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "PAF was aborted on "
@@ -278,7 +277,6 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
             PREPROC_PROFILE_END(dce2_pstat_session);
             return DCE2_RET__NOT_INSPECTED;
         }
-#endif
 
         if (IsTCP(p) && !DCE2_SsnIsRebuilt(p))
         {
@@ -287,9 +285,7 @@ DCE2_Ret DCE2_Process(SFSnortPacket *p)
 
             if (DCE2_SsnIsStreamInsert(p))
             {
-#ifdef ENABLE_PAF
                 if (!_dpd.isPafEnabled())
-#endif
                 {
                     DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__MAIN, "Flushing opposite direction.\n"));
                     DCE2_SsnFlush(p);
@@ -596,7 +592,7 @@ static DCE2_TransType DCE2_GetTransport(SFSnortPacket *p, const DCE2_ServerConfi
     *autodetected = 0;
 
 #ifdef TARGET_BASED
-    if (_dpd.isAdaptiveConfigured(_dpd.getRuntimePolicy(), 0))
+    if (_dpd.isAdaptiveConfigured(_dpd.getRuntimePolicy()))
     {
         proto_id = _dpd.streamAPI->get_application_protocol_id(p->stream_session_ptr);
 
@@ -917,7 +913,6 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
     rpkt->payload_size = (uint16_t)(data_overhead + data_len);
     _dpd.encodeUpdate(rpkt);
 
-#ifdef SUP_IP6
     if (wire_pkt->family == AF_INET)
     {
         rpkt->ip4h->ip_len = rpkt->ip4_header->data_length;
@@ -925,11 +920,10 @@ SFSnortPacket * DCE2_GetRpkt(const SFSnortPacket *wire_pkt, DCE2_RpktType rpkt_t
     else
     {
         IP6RawHdr* ip6h = (IP6RawHdr*)rpkt->raw_ip6_header;
-        if ( ip6h ) rpkt->ip6h->len = ip6h->payload_len;
+        if ( ip6h ) rpkt->ip6h->len = ip6h->ip6_payload_len;
     }
-#endif
 
-    rpkt->flags |= (FLAG_STREAM_EST | FLAG_ALLOW_MULTIPLE_DETECT);
+    rpkt->flags |= FLAG_STREAM_EST;
     if (DCE2_SsnFromClient(wire_pkt))
         rpkt->flags |= FLAG_FROM_CLIENT;
     else
@@ -1023,7 +1017,6 @@ DCE2_Ret DCE2_AddDataToRpkt(SFSnortPacket *rpkt, DCE2_RpktType rtype,
     // will suffice.
     _dpd.encodeUpdate(rpkt);
 
-#ifdef SUP_IP6
     if (rpkt->family == AF_INET)
     {
         rpkt->ip4h->ip_len = rpkt->ip4_header->data_length;
@@ -1031,9 +1024,8 @@ DCE2_Ret DCE2_AddDataToRpkt(SFSnortPacket *rpkt, DCE2_RpktType rtype,
     else
     {
         IP6RawHdr* ip6h = (IP6RawHdr*)rpkt->raw_ip6_header;
-        if ( ip6h ) rpkt->ip6h->len = ip6h->payload_len;
+        if ( ip6h ) rpkt->ip6h->len = ip6h->ip6_payload_len;
     }
-#endif
     return DCE2_RET__SUCCESS;
 }
 
