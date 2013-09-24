@@ -1,3 +1,17 @@
+snort (2.9.5.3-2) UNRELEASED; urgency=low
+
+  * Template review (by the debian-l10n-english team) 
+  * Updated Translations:
+    - Update Spanish translation, contributed by Javier Fernandez-Sanguino
+    - Updated Russian translation, contributed by Yuri Kozlov (Closes: 722987)
+    - Updated German translation, contributed by Chris Leick (Closes: 723769)
+    - Updated Portuguese translation, contributed by Miguel Figueiredo (Closes: 723779)
+    - Add Simplified Chinese debconf, contributed by Yi Mingjing (Closes: 723818)
+    - Updated Czech translation, contributed by Michal Šimůnek (Closes: 724289)
+    - Updated French translation, contributed by JP Guillonneau (Closes: 724300)
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 24 Sep 2013 03:39:00 +0200
+
 snort (2.9.5.3-1) unstable; urgency=low
 
   * New upstream release.
