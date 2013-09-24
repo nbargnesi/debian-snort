@@ -1,3 +1,12 @@
+# These templates have been reviewed by the debian-l10n-english
+# team
+#
+# If modifications/additions/rewording are needed, please ask
+# debian-l10n-english@lists.debian.org for advice.
+#
+# Even minor modifications require translation updates and such
+# changes should be coordinated with translators and reviewers.
+
 Template: snort/deprecated_config
 Type: note
 _Description: Deprecated options in configuration file
@@ -17,7 +26,7 @@ _Description: Configuration error
  starting up normally. Please review and correct it.
  .
  To diagnose errors in your Snort configuration you can run (as root)
- the following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'
+ the following: "/usr/sbin/snort -T -c /etc/snort/snort.conf"
 
 Template: snort/deprecated_file
 Type: note
