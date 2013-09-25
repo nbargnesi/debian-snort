@@ -41,7 +41,7 @@ Conflicts:
     snort-mysql, 
     snort-pgsql
 Replaces: snort-common (<< 2.0.2-3)
-Recommends: iproute
+Recommends: iproute2
 Suggests: snort-doc
 Description: flexible Network Intrusion Detection System
  Snort is a libpcap-based packet sniffer/logger which can be used as a
