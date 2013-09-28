@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.9.5.3-2\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2013-09-13 08:03+0200\n"
+"POT-Creation-Date: 2013-09-29 00:16+0200\n"
 "PO-Revision-Date: 2013-09-15 08:10+0400\n"
 "Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
@@ -48,17 +48,13 @@ msgstr "Способ запуска Snort:"
 #. Type: select
 #. Description
 #: ../snort.templates:2002
-#| msgid ""
-#| "Snort can be started during boot, when connecting to the net with pppd or "
-#| "only manually with the /usr/sbin/snort command."
 msgid ""
 "Please choose how Snort should be started: automatically on boot, "
 "automatically when connecting to the net with pppd, or manually with the /"
 "usr/sbin/snort command."
 msgstr ""
-"Выберите как будет запускаться Snort: автоматически при загрузке машины, "
-"при подключении к сети через pppd, или вручную с помощью "
-"команды /usr/sbin/snort."
+"Выберите как будет запускаться Snort: автоматически при загрузке машины, при "
+"подключении к сети через pppd, или вручную с помощью команды /usr/sbin/snort."
 
 #. Type: string
 #. Description
@@ -69,10 +65,6 @@ msgstr "Интерфейсы, которые должен слушать Snort:"
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#| msgid ""
-#| "This value is usually 'eth0', but this may be inappropriate in some "
-#| "network environments; for a dialup connection 'ppp0' might be more "
-#| "appropriate (see the output of '/sbin/ifconfig')."
 msgid ""
 "This value is usually \"eth0\", but this may be inappropriate in some "
 "network environments; for a dialup connection \"ppp0\" might be more "
@@ -85,10 +77,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#| msgid ""
-#| "Typically, this is the same interface as the 'default route' is on. You "
-#| "can determine which interface is used for this by running '/sbin/route -"
-#| "n' (look for '0.0.0.0')."
 msgid ""
 "Typically, this is the same interface as the \"default route\" is on. You "
 "can determine which interface is used for this by running \"/sbin/route -n"
@@ -101,13 +89,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#| msgid ""
-#| "It is also not uncommon to use an interface with no IP address configured "
-#| "in promiscuous mode. For such cases, select the interface in this system "
-#| "that is physically connected to the network that should be inspected, "
-#| "enable promiscuous mode later on and make sure that the network traffic "
-#| "is sent to this interface (either connected to a 'port mirroring/"
-#| "spanning' port in a switch, to a hub or to a tap)."
 msgid ""
 "It is also not uncommon to use an interface with no IP address configured in "
 "promiscuous mode. For such cases, select the interface in this system that "
@@ -192,10 +173,6 @@ msgstr "Неправильный интерфейс"
 #. Type: error
 #. Description
 #: ../snort.templates:6001
-#| msgid ""
-#| "Snort is trying to use an interface which does not exist or is down. "
-#| "Either it is defaulting inappropriately to 'eth0', or you specified one "
-#| "which is invalid."
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
 "it is defaulting inappropriately to \"eth0\", or you specified one which is "
@@ -283,9 +260,6 @@ msgstr "Snort требуется перезапустить"
 #. Type: note
 #. Description
 #: ../snort.templates:11001
-#| msgid ""
-#| "As Snort is manually launched, you need to run '/etc/init.d/snort' for "
-#| "the changes to take place."
 msgid ""
 "As Snort is manually launched, you need to run \"service snort restart\" for "
 "the changes to take place."
@@ -373,9 +347,6 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../snort-common.templates:3001
-#| msgid ""
-#| "To diagnose errors in your Snort configuration you can run (as root) the "
-#| "following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
 msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
 "following: \"/usr/sbin/snort -T -c /etc/snort/snort.conf\""

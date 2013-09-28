@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 23:48+0200\n"
+"POT-Creation-Date: 2013-09-29 00:16+0200\n"
 "PO-Revision-Date: 2007-03-07 17:31+0530\n"
 "Last-Translator: Dr.T.Vasudevan <agnihot3@gmail.com>\n"
 "Language-Team: TAMIL <ubuntu-l10n-tam@lists.ubuntu.com>\n"
@@ -19,45 +19,46 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "boot"
 msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "dialup"
 msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "manual"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002
+#: ../snort.templates:2002
 msgid "Snort start method:"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002
+#: ../snort.templates:2002
 #, fuzzy
 #| msgid ""
 #| "Snort can be started during boot, when connecting to the net with pppd or "
 #| "only when you manually start it via /usr/sbin/snort."
 msgid ""
-"Snort can be started during boot, when connecting to the net with pppd or "
-"only manually with the /usr/sbin/snort command."
+"Please choose how Snort should be started: automatically on boot, "
+"automatically when connecting to the net with pppd, or manually with the /"
+"usr/sbin/snort command."
 msgstr ""
 "ஸ்னோர்டை கணினி துவக்கும் போதோ, வலைக்கு பிபிபிடி ஐ பயன் படுத்தி இணைக்கும் போதோ அல்லது "
 "கைமுறையாக /usr/sbin/snort வழியாகவோ துவக்கலாம்."
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid "On which interface(s) should Snort listen?"
 msgid "Interface(s) which Snort should listen on:"
@@ -65,16 +66,16 @@ msgstr "எந்த இடை முகத்தில் ஸ்னோர்ட
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid ""
-"This value is usually 'eth0', but this may be inappropriate in some network "
-"environments; for a dialup connection 'ppp0' might be more appropriate (see "
-"the output of '/sbin/ifconfig')."
+"This value is usually \"eth0\", but this may be inappropriate in some "
+"network environments; for a dialup connection \"ppp0\" might be more "
+"appropriate (see the output of \"/sbin/ifconfig\")."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid ""
 #| "Notice that Snort is usually configured to inspect all traffic coming "
@@ -83,9 +84,9 @@ msgstr ""
 #| "this running either '/sbin/ip ro sh' or '/sbin/route -n' (look for "
 #| "'default' or '0.0.0.0')."
 msgid ""
-"Typically, this is the same interface as the 'default route' is on. You can "
-"determine which interface is used for this by running '/sbin/route -n' (look "
-"for '0.0.0.0')."
+"Typically, this is the same interface as the \"default route\" is on. You "
+"can determine which interface is used for this by running \"/sbin/route -n"
+"\" (look for \"0.0.0.0\")."
 msgstr ""
 "ஸ்னோர்ட் சாதாரணமாக உள்வரும் எல்லா போக்கு வரத்தை கண்காணிக்க வடிவமைக்கப் படுகிறதுஆகவே நீங்கள் "
 "இங்கு சேர்க்கும் இடைமுகம் வழக்கமாக முன்னிருப்பு தடம் உள்ளதே ஆகும். நீங்கள் '/sbin/ip ro "
@@ -94,7 +95,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid ""
 #| "It is also not uncommon to run Snort on an interface with no IP and "
@@ -108,8 +109,8 @@ msgid ""
 "promiscuous mode. For such cases, select the interface in this system that "
 "is physically connected to the network that should be inspected, enable "
 "promiscuous mode later on and make sure that the network traffic is sent to "
-"this interface (either connected to a 'port mirroring/spanning' port in a "
-"switch, to a hub or to a tap)."
+"this interface (either connected to a \"port mirroring/spanning\" port in a "
+"switch, to a hub, or to a tap)."
 msgstr ""
 "ஐபி இல்லாமலும் வரைமுறை இல்லா பாங்கில் வடிவமைக்கப் பட்ட இடைமுகத்தில் ஸ்னோர்ட்டை இயக்குவதும் "
 "வழக்கமே. இந்த பாங்கிற்கு நீங்கள் ஆராய விரும்பும் வலைப் பின்னலுக்குபௌதிகமாக இணக்கப் பட்டுள்ள "
@@ -119,7 +120,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 #, fuzzy
 #| msgid ""
 #| "You can configure multiple interfaces here, just by adding more than one "
@@ -135,7 +136,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 #, fuzzy
 #| msgid "Please enter the address range that Snort will listen on."
 msgid "Address range for the local network:"
@@ -143,7 +144,7 @@ msgstr "ஸ்னோர்ட் செவி சாய்க்க வேண்
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 #, fuzzy
 #| msgid ""
 #| "You have to use CIDR form, i.e. 192.168.1.0/24 for a block of 256 IPs or "
@@ -160,7 +161,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 #, fuzzy
 #| msgid ""
 #| "Notice that if you are using multiple interfaces this definition will be "
@@ -174,13 +175,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001
+#: ../snort.templates:5001
 msgid "Should Snort disable promiscuous mode on the interface?"
 msgstr "ஸ்னோர்ட் இடைமுகத்தில் பாங்கை செயலிழக்கச் செய்ய வேண்டுமா?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001
+#: ../snort.templates:5001
 #, fuzzy
 #| msgid ""
 #| "Disabling promiscuous mode means that Snort will only see packets "
@@ -199,28 +200,28 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001
+#: ../snort.templates:6001
 msgid "Invalid interface"
 msgstr "செல்லுபடியாகாத இடைமுகம்"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001
+#: ../snort.templates:6001
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
-"it is defaulting inappropriately to 'eth0', or you specified one which is "
+"it is defaulting inappropriately to \"eth0\", or you specified one which is "
 "invalid."
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr "தினசரி சுருக்கத்தை மின்னஞ்சலில் அனுப்ப வேண்டுமா?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
@@ -228,13 +229,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid "Please choose whether you want to activate this feature."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001
+#: ../snort.templates:8001
 #, fuzzy
 #| msgid "Who should receive the daily statistics mails?"
 msgid "Recipient of daily statistics mails:"
@@ -242,7 +243,7 @@ msgstr "தினசரி புள்ளிவிவர அஞ்சலை ய
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001
+#: ../snort.templates:8001
 msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
@@ -250,25 +251,25 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001
+#: ../snort.templates:9001
 msgid "Additional custom options:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001
+#: ../snort.templates:9001
 msgid "Please specify any additional options Snort should use."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001
+#: ../snort.templates:10001
 msgid "Minimum occurrences before alerts are reported:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001
+#: ../snort.templates:10001
 #, fuzzy
 #| msgid ""
 #| "An alert needs to appear more times than this number to be included in "
@@ -282,21 +283,21 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001
+#: ../snort.templates:11001
 msgid "Snort restart required"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001
+#: ../snort.templates:11001
 msgid ""
-"As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
-"changes to take place."
+"As Snort is manually launched, you need to run \"service snort restart\" for "
+"the changes to take place."
 msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 #, fuzzy
 #| msgid "This system uses an obsolete configuration file"
 msgid "Obsolete configuration file"
@@ -304,7 +305,7 @@ msgstr "இந்த கணினி வழக்கொழிந்த வடி
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 #, fuzzy
 #| msgid ""
 #| "Your system has an obsolete configuration file (/etc/snort/snort.common."
@@ -326,7 +327,7 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 #, fuzzy
 #| msgid ""
 #| "Your system has an obsolete configuration file (/etc/snort/snort.common."
@@ -348,7 +349,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
+#: ../snort-common.templates:2001
 #, fuzzy
 #| msgid "This system uses an obsolete configuration file"
 msgid "Deprecated options in configuration file"
@@ -356,7 +357,7 @@ msgstr "இந்த கணினி வழக்கொழிந்த வடி
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
+#: ../snort-common.templates:2001
 #, fuzzy
 #| msgid ""
 #| "Your Snort configuration file (/etc/snort/snort.conf) uses deprecated "
@@ -378,7 +379,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
+#: ../snort-common.templates:2001
 #, fuzzy
 #| msgid ""
 #| "The following deprecated options were found in your configuration file: "
@@ -391,13 +392,13 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
+#: ../snort-common.templates:3001
 msgid "Configuration error"
 msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
+#: ../snort-common.templates:3001
 msgid ""
 "The current Snort configuration is invalid and will prevent Snort starting "
 "up normally. Please review and correct it."
@@ -405,15 +406,15 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
+#: ../snort-common.templates:3001
 msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
-"following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
+"following: \"/usr/sbin/snort -T -c /etc/snort/snort.conf\""
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 #, fuzzy
 #| msgid "This system uses an obsolete configuration file"
 msgid "Deprecated configuration file"
@@ -421,7 +422,7 @@ msgstr "இந்த கணினி வழக்கொழிந்த வடி
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 msgid ""
 "Your system has deprecated configuration files which should not be used any "
 "longer and might contain deprecated options. If included through the "
@@ -431,7 +432,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 msgid ""
 "Please remove these files as well as any existing references to them in the /"
 "etc/snort/snort.conf configuration file."
@@ -439,7 +440,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 #, fuzzy
 #| msgid ""
 #| "The following deprecated options were found in your configuration file: "
