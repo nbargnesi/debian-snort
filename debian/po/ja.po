@@ -14,10 +14,10 @@
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: snort 2.8.1-2\n"
+"Project-Id-Version: snort 2.9.5.3-2\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2012-08-08 23:48+0200\n"
-"PO-Revision-Date: 2008-12-21 22:26+0900\n"
+"POT-Creation-Date: 2013-09-13 08:03+0200\n"
+"PO-Revision-Date: 2013-09-13 15:03+0900\n"
 "Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "Language: ja\n"
@@ -27,118 +27,119 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "boot"
 msgstr "起動時"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "dialup"
 msgstr "ダイヤルアップ時"
 
 #. Type: select
 #. Choices
-#: ../snort.templates:1001
+#: ../snort.templates:2001
 msgid "manual"
 msgstr "手動"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002
+#: ../snort.templates:2002
 msgid "Snort start method:"
 msgstr "snort の起動方法:"
 
 #. Type: select
 #. Description
-#: ../snort.templates:1002
+#: ../snort.templates:2002
 msgid ""
-"Snort can be started during boot, when connecting to the net with pppd or "
-"only manually with the /usr/sbin/snort command."
+"Please choose how Snort should be started: automatically on boot, "
+"automatically when connecting to the net with pppd, or manually with the /"
+"usr/sbin/snort command."
 msgstr ""
-"Snort は、システム起動中、pppd を利用してネットワークに接続した時、または /"
-"usr/sbin/snort コマンドを手動で実行した時のみ、のいずれかで起動できます。"
+"Snort の起動方法を、システム起動時に自動で、pppd を利用してネットワークに接続"
+"した時に自動で、/usr/sbin/snort コマンドにより手作業で、から選択してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid "Interface(s) which Snort should listen on:"
 msgstr "Snort が listen するインターフェイス:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid ""
-"This value is usually 'eth0', but this may be inappropriate in some network "
-"environments; for a dialup connection 'ppp0' might be more appropriate (see "
-"the output of '/sbin/ifconfig')."
+"This value is usually \"eth0\", but this may be inappropriate in some "
+"network environments; for a dialup connection \"ppp0\" might be more "
+"appropriate (see the output of \"/sbin/ifconfig\")."
 msgstr ""
-"ここでの値は通常 'eth0' ですが、環境よっては変更したいかもしれません: ダイヤ"
-"ルアップ接続を利用している場合は、'ppp0' がより適切でしょう ('/sbin/"
-"ifconfig' の出力を確認してください)。"
+"ここでの値は通常「eth0」ですが、ネットワーク環境によってはそれでは適切ではない"
+"かもしれません: ダイヤルアップ接続を利用している場合は、「ppp0」がより適切で"
+"しょう (「/sbin/ifconfig」の出力を確認してください)。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid ""
-"Typically, this is the same interface as the 'default route' is on. You can "
-"determine which interface is used for this by running '/sbin/route -n' (look "
-"for '0.0.0.0')."
+"Typically, this is the same interface as the \"default route\" is on. You "
+"can determine which interface is used for this by running \"/sbin/route -n"
+"\" (look for \"0.0.0.0\")."
 msgstr ""
-"大抵の場合、これは 'default route' が存在するものと同じです。どのインターフェ"
-"イスを使うかは '/sbin/route -n' を実行して ('0.0.0.0' を探して)、決定できま"
+"大抵の場合、これは「default route」が存在するものと同じです。どのインターフェ"
+"イスを使うかは「/sbin/route -n」を実行して (「0.0.0.0」を探して)、決定できま"
 "す。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid ""
 "It is also not uncommon to use an interface with no IP address configured in "
 "promiscuous mode. For such cases, select the interface in this system that "
 "is physically connected to the network that should be inspected, enable "
 "promiscuous mode later on and make sure that the network traffic is sent to "
-"this interface (either connected to a 'port mirroring/spanning' port in a "
-"switch, to a hub or to a tap)."
+"this interface (either connected to a \"port mirroring/spanning\" port in a "
+"switch, to a hub, or to a tap)."
 msgstr ""
-"IP を付与していないインターフェイス上で promiscuous モードの Snort を動作させ"
-"るのはあまり一般的ではありません。このような場合、受信を行いたいネットワーク"
-"に対して物理的に接続されているこのシステム上のインターフェイスを選択し、後ほ"
-"ど promiscuous モードを有効にしてネットワークトラフィックがこのインターフェイ"
-"ス (スイッチの 'port mirrorining/spanning' ポートかハブ、あるいはネットワーク"
-"タップに接続されています) に届いているのを確認してください。"
+"IP を付与していないインターフェイス上でプロミスキャスモードの Snort を動作させ"
+"るのも珍しいことではありません。このような場合、受信を行いたいネットワークに対"
+"して物理的に接続されているこのシステム上のインターフェイスを選択し、後ほどプロ"
+"ミスキャスモードを有効にしてネットワークトラフィックがこのインターフェイス (ス"
+"イッチの「port mirrorining/spanning」ポートかハブ、あるいはネットワークタップ"
+"に接続されています) に届いているのを確認してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:2001
+#: ../snort.templates:3001
 msgid ""
 "You can configure multiple interfaces, just by adding more than one "
 "interface name separated by spaces. Each interface can have its own specific "
 "configuration."
 msgstr ""
-"一つより多いインターフェイス名は空白で区切って追加することで、複数のインター"
-"フェイスを設定できます。インターフェイスごとに固有の設定が可能です。"
+"インターフェイスの名前を空白で区切って複数列挙することで複数のインターフェイス"
+"を設定できます。インターフェイスごとに固有の設定が可能です。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 msgid "Address range for the local network:"
 msgstr "ローカルネットワークのアドレス範囲:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 msgid ""
 "Please use the CIDR form - for example, 192.168.1.0/24 for a block of 256 "
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
 "separated (without spaces)."
 msgstr ""
-"CIDR 形式で記述してください。例えば 192.168.1.0/24 は 256 個のアドレスブロッ"
-"クで、192.168.1.42/32 は 1 個のアドレスとなります。複数の値の場合、(スペース"
-"ではなく) カンマで区切って記述しましょう。"
+"CIDR 形式で記述してください。例えば 192.168.1.0/24 は 256 個のアドレスブロック"
+"で、192.168.1.42/32 は 1 個のアドレスとなります。値を複数指定する場合、(空白は"
+"入れずに) コンマで区切って記述しましょう。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:3001
+#: ../snort.templates:4001
 msgid ""
 "Please note that if Snort is configured to use multiple interfaces, it will "
 "use this value as the HOME_NET definition for all of them."
@@ -148,51 +149,51 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001
+#: ../snort.templates:5001
 msgid "Should Snort disable promiscuous mode on the interface?"
-msgstr "Snort は、このインターフェイスで promiscuous モードを無効にしますか?"
+msgstr "Snort で、このインターフェイスでのプロミスキャスモードを無効にしますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:4001
+#: ../snort.templates:5001
 msgid ""
 "Disabling promiscuous mode means that Snort will only see packets addressed "
 "to the interface it is monitoring. Enabling it allows Snort to check every "
 "packet that passes the Ethernet segment even if it's a connection between "
 "two other computers."
 msgstr ""
-"promiscuous モードを無効にすると、Snort は自身がモニタリングしているインター"
-"フェイスへ向けられたパケットのみを監視します。有効にすると、自身以外の他のコ"
-"ンピュータ間のやり取りを含めたイーサネットセグメント上の全てのパケットを"
-"チェックするようになります。"
+"プロミスキャスモードを無効にすると、Snort は自身がモニタリングしているインター"
+"フェイスへ向けられたパケットのみを監視します。有効にすると、自身以外の他のコン"
+"ピュータ間のやり取りを含めたイーサネットセグメント上の全てのパケットをチェック"
+"するようになります。"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001
+#: ../snort.templates:6001
 msgid "Invalid interface"
 msgstr "不正なインターフェイス"
 
 #. Type: error
 #. Description
-#: ../snort.templates:5001
+#: ../snort.templates:6001
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
-"it is defaulting inappropriately to 'eth0', or you specified one which is "
+"it is defaulting inappropriately to \"eth0\", or you specified one which is "
 "invalid."
 msgstr ""
-"Snort が存在していない、あるいはダウンしているインターフェイスを使おうとして"
-"います。適切ではなくデフォルトにされている 'eth0'、あるいはあなたが指定したイ"
-"ンターフェイスは正しくありません。"
+"Snort が存在していない、あるいはダウンしているインターフェイスを使おうとしてい"
+"ます。適切ではなくデフォルトにされている「eth0」あるいはあなたが指定したイン"
+"ターフェイスは正しくありません。"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid "Should daily summaries be sent by e-mail?"
 msgstr "メールで毎日サマリを送りますか?"
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
@@ -202,19 +203,19 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../snort.templates:6001
+#: ../snort.templates:7001
 msgid "Please choose whether you want to activate this feature."
 msgstr "この機能を有効にするかどうかを選択してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001
+#: ../snort.templates:8001
 msgid "Recipient of daily statistics mails:"
 msgstr "日次統計のメールの宛先:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:7001
+#: ../snort.templates:8001
 msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
@@ -222,25 +223,25 @@ msgstr "Snort ログの日次サマリを受け取れるメールアドレスを
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001
+#: ../snort.templates:9001
 msgid "Additional custom options:"
 msgstr "追加のカスタムオプション:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:8001
+#: ../snort.templates:9001
 msgid "Please specify any additional options Snort should use."
 msgstr "Snort が使う追加のオプションを指定してください。"
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001
+#: ../snort.templates:10001
 msgid "Minimum occurrences before alerts are reported:"
 msgstr "アラートを報告する最小発生件数:"
 
 #. Type: string
 #. Description
-#: ../snort.templates:9001
+#: ../snort.templates:10001
 msgid ""
 "Please enter the minimum number of alert occurrences before a given alert is "
 "included in the daily statistics."
@@ -249,29 +250,29 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001
+#: ../snort.templates:11001
 msgid "Snort restart required"
 msgstr "Snort の再起動が必要です"
 
 #. Type: note
 #. Description
-#: ../snort.templates:10001
+#: ../snort.templates:11001
 msgid ""
-"As Snort is manually launched, you need to run '/etc/init.d/snort' for the "
-"changes to take place."
+"As Snort is manually launched, you need to run \"service snort restart\" for "
+"the changes to take place."
 msgstr ""
-"Snort が手動で起動された場合と同様に、変更を反映するには '/etc/init.d/snort' "
-"を実行する必要があります。"
+"Snort が手動で起動されているため、変更を反映するには「/etc/init.d/snort」を実"
+"行する必要があります。"
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 msgid "Obsolete configuration file"
 msgstr "古く無効な設定ファイル"
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 msgid ""
 "This system uses an obsolete configuration file (/etc/snort/snort.common."
 "parameters) which has been automatically converted into the new "
@@ -283,27 +284,25 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort.templates:11001
+#: ../snort.templates:12001
 msgid ""
 "Please review the new configuration and remove the obsolete one. Until you "
 "do this, the initialization script will not use the new configuration and "
 "you will not take advantage of the benefits introduced in newer releases."
 msgstr ""
-"新しい設定を確認して、古い設定を削除してください。古い設定が削除されるまで、"
-"初期化スクリプトは新しい設定を使おうとはしないので、新しいリリースでの恩恵を"
-"享受することはできません。"
+"新しい設定を確認して古い設定を削除してください。古い設定が削除されるまで初期化"
+"スクリプトは新しい設定を使おうとはしないので、新しいリリースでの恩恵を享受する"
+"ことはできません。"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
-#, fuzzy
-#| msgid "Deprecated configuration file"
+#: ../snort-common.templates:2001
 msgid "Deprecated options in configuration file"
-msgstr "無効にされた設定ファイル"
+msgstr "設定ファイルに無効なオプションがあります"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
+#: ../snort-common.templates:2001
 msgid ""
 "The Snort configuration file (/etc/snort/snort.conf) uses deprecated options "
 "no longer available for this Snort release. Snort will not be able to start "
@@ -311,14 +310,14 @@ msgid ""
 "configuration file to be replaced with the one provided in this package or "
 "fix it manually by removing deprecated options."
 msgstr ""
-"Snort の設定ファイル (/etc/snort/snort.conf) は、今回の Snort のリリース以降"
-"使えなくなっている無効なオプションを指定しています。設定ファイルを修正しない"
-"限り起動できなくなります。設定ファイルをこのパッケージが提供しているものに置"
-"換するか、無効なオプションを手動で削除するかすれば起動出来るようになります。"
+"Snort の設定ファイル (/etc/snort/snort.conf) は、今回の Snort のリリース以降使"
+"えなくなっている無効なオプションを指定しています。設定ファイルを修正しない限り"
+"起動できなくなります。設定ファイルをこのパッケージが提供しているものに置換する"
+"か、無効なオプションを手動で削除するかすれば起動できるようになります。"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:1001
+#: ../snort-common.templates:2001
 msgid ""
 "The following deprecated options were found in the configuration file: "
 "${DEP_CONFIG}"
@@ -326,13 +325,13 @@ msgstr "設定ファイルで以下の無効なオプションが見つかりま
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
+#: ../snort-common.templates:3001
 msgid "Configuration error"
 msgstr "設定エラー"
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
+#: ../snort-common.templates:3001
 msgid ""
 "The current Snort configuration is invalid and will prevent Snort starting "
 "up normally. Please review and correct it."
@@ -342,191 +341,45 @@ msgstr ""
 
 #. Type: error
 #. Description
-#: ../snort-common.templates:2001
-#, fuzzy
-#| msgid ""
-#| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
-#| "T -c <file>'."
+#: ../snort-common.templates:3001
 msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
-"following: '/usr/sbin/snort -T -c /etc/snort/snort.conf'"
+"following: \"/usr/sbin/snort -T -c /etc/snort/snort.conf\""
 msgstr ""
-"Snort の設定ファイル中のエラーを分析するには、'/usr/sbin/snort -T -c <file>' "
-"としてください。"
+"Snort の設定ファイル中のエラーを分析するには、root で「/usr/sbin/snort -T -c "
+"/etc/snort/snort.conf」を実行してください。"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 msgid "Deprecated configuration file"
 msgstr "無効にされた設定ファイル"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 msgid ""
 "Your system has deprecated configuration files which should not be used any "
 "longer and might contain deprecated options. If included through the "
 "standard configuration file (/etc/snort/snort.conf), they might prevent "
 "Snort from starting up properly."
 msgstr ""
+"このシステムにはもう使うべきではない古い設定ファイルがあり、無効なオプションが"
+"使われているかもしれません。標準の設定ファイル (/etc/snort/snort.conf) からこ"
+"れを読み込ませた場合、Snort が正常に起動しなくなるかもしれません。"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
+#: ../snort-common.templates:4001
 msgid ""
 "Please remove these files as well as any existing references to them in the /"
 "etc/snort/snort.conf configuration file."
 msgstr ""
+"こういったファイルや /etc/snort/snort.conf 設定ファイルからそれを参照している"
+"個所を削除してください。"
 
 #. Type: note
 #. Description
-#: ../snort-common.templates:3001
-#, fuzzy
-#| msgid ""
-#| "The following deprecated options were found in the configuration file: "
-#| "${DEP_CONFIG}"
+#: ../snort-common.templates:4001
 msgid "The following deprecated configuration files were found: ${DEP_FILE}"
-msgstr "設定ファイルで以下の無効なオプションが見つかりました: ${DEP_CONFIG}"
-
-#~ msgid "Set up a database for snort-mysql to log to?"
-#~ msgstr ""
-#~ "snort-mysql を利用してログに記録するため、データベースを設定しますか?"
-
-#~ msgid ""
-#~ "No database has been set up for Snort to log to. Before continuing, you "
-#~ "should make sure you have:"
-#~ msgstr ""
-#~ "Snort がログを保存するデータベースが設定されていません。設定を続ける前に以"
-#~ "下を確認しておく必要があります:"
-
-#~ msgid ""
-#~ " - the server host name (that server must allow TCP connections\n"
-#~ "   from this machine);\n"
-#~ " - a database on that server;\n"
-#~ " - a username and password to access the database."
-#~ msgstr ""
-#~ " - サーバのホスト名 (サーバはこのマシンからの TCP 接続を許可している\n"
-#~ "   必要があります);\n"
-#~ " - 上記サーバ上のデータベース;\n"
-#~ " - データベースにアクセスするためのユーザ名とパスワード"
-
-#~ msgid ""
-#~ "If some of these requirements are missing, reject this option and run "
-#~ "with regular file logging support."
-#~ msgstr ""
-#~ "この必要な設定のどれかが分からない場合は、このオプションを使わずに通常の"
-#~ "ファイルでのログ設定で動作させてください。"
-
-#~ msgid ""
-#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-#~ "plow snort-mysql'."
-#~ msgstr ""
-#~ "データベースでのログ収集設定をしたい場合は、後ほど 'dpkg-reconfigure -"
-#~ "plow snort-mysql' を実行します。"
-
-#~ msgid "Database server hostname:"
-#~ msgstr "データベースサーバのホスト名:"
-
-#~ msgid ""
-#~ "Please specify the host name of a database server that allows incoming "
-#~ "connections from this host."
-#~ msgstr ""
-#~ "このホストからの接続要求を許可しているデータベースサーバのホスト名を指定し"
-#~ "てください。"
-
-#~ msgid "Database name:"
-#~ msgstr "データベース名:"
-
-#~ msgid ""
-#~ "Please specify the name of an existing database to which the database "
-#~ "user has write access."
-#~ msgstr ""
-#~ "データベースユーザが書き込み権限を持っている既存のデータベース名を指定して"
-#~ "ください。"
-
-#~ msgid "Username for database access:"
-#~ msgstr "データベースへのアクセスに使うユーザ名:"
-
-#~ msgid ""
-#~ "Please specify a database server username with write access to the "
-#~ "database."
-#~ msgstr ""
-#~ "データベースへの書き込み権限があるデータベースサーバのユーザ名を指定してく"
-#~ "ださい。"
-
-#~ msgid "Password for the database connection:"
-#~ msgstr "データベース接続に使用するパスワード:"
-
-#~ msgid ""
-#~ "Please enter the password to use to connect to the Snort Alert database."
-#~ msgstr ""
-#~ "Snort のアラートデータベース に接続する際に使用するパスワードを入力してく"
-#~ "ださい。"
-
-#~ msgid "Configured database mandatory for Snort"
-#~ msgstr "Snort 用にデータベースを強制的に設定"
-
-#~ msgid ""
-#~ "Snort needs a configured database before it can successfully start up. In "
-#~ "order to create the structure you need to run the following commands "
-#~ "AFTER the package is installed:"
-#~ msgstr ""
-#~ "Snort が正しく動作する前にはデータベースの設定が必要です。データベースを作"
-#~ "成するには、パッケージインストール「後」に以下のコマンドを入力する必要があ"
-#~ "ります:"
-
-#~ msgid ""
-#~ " cd /usr/share/doc/snort-mysql/\n"
-#~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-#~ msgstr ""
-#~ " cd /usr/share/doc/snort-mysql/\n"
-#~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-
-#~ msgid ""
-#~ "Fill in the correct values for the user, host, and database names. MySQL "
-#~ "will prompt you for the password."
-#~ msgstr ""
-#~ "ユーザ名、ホスト名、データベース名にはそれぞれ正しい値を入れてください。"
-#~ "MySQL がパスワードを要求します。"
-
-#~ msgid ""
-#~ "After you have created the database structure, you will need to start "
-#~ "Snort manually."
-#~ msgstr "データベースの作成後、手動で Snort を起動する必要があります。"
-
-#~ msgid "Set up a database for snort-pgsql to log to?"
-#~ msgstr ""
-#~ "snort-pqsql を利用してログに記録するため、データベースを設定しますか?"
-
-#~ msgid ""
-#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-#~ "plow snort-pgsql'."
-#~ msgstr ""
-#~ "データベースでのログ収集設定をしたい場合は、後ほど 'dpkg-reconfigure -"
-#~ "plow snort-pgsql' を実行します。"
-
-#~ msgid ""
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-#~ msgstr ""
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-
-#~ msgid ""
-#~ "Fill in the correct values for the user, host, and database names. "
-#~ "PostgreSQL will prompt you for the password."
-#~ msgstr ""
-#~ "ユーザ名、ホスト名、データベース名にはそれぞれ正しい値を入れてください。"
-#~ "PostgreSQL がパスワードを要求します。"
-
-#~ msgid "Should Snort's testing order be changed to Pass|Alert|Log?"
-#~ msgstr "Snort のルールセットのテスト順を Pass|Alert|Log に変更しますか?"
-
-#~ msgid ""
-#~ "Snort's default testing order is Alert|Pass|Log; if you accept this "
-#~ "option, the order will be changed to Pass|Alert|Log, which can make it "
-#~ "simpler to use Snort with some packet-filtering tools."
-#~ msgstr ""
-#~ "Snort のデフォルトのテスト順は Alert|Pass|Log です。このオプションを有効に"
-#~ "すると、順番が Pass|Alert|Log に変更され、Snort をパケットフィルタリング"
-#~ "ツールと一緒に使うのが簡単になります。"
+msgstr "以下の無効な設定ファイルが見つかりました: ${DEP_FILE}"
