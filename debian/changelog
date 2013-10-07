@@ -11,7 +11,7 @@ snort (2.9.5.3-2) UNRELEASED; urgency=low
     - Updated French translation, contributed by JP Guillonneau (Closes: 724300)
     - Updated Janapese translation (Closes: 724706)
     - Updated Italian translation provided by Daniele Forsi (Closes: 724707)
-
+    - Updated Danish translation provided by  Joe Hansen (Closes: #724932)
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 24 Sep 2013 03:39:00 +0200
 
