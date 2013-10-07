@@ -1,26 +1,21 @@
-# Translators, if you are not familiar with the PO format, gettext
-# documentation is worth reading, especially sections dedicated to
-# this format, e.g. by running:
-# info -n '(gettext)PO Files'
-# info -n '(gettext)Header Entry'
-# Some information specific to po-debconf are available at
-# /usr/share/doc/po-debconf/README-trans
-# or http://www.debian.org/intl/l10n/po-debconf/README-trans
-# Developers do not need to manually edit POT or PO files.
+# Translation of snort debconf template to Swedish
+# Copyright (C) 2013 Martin Bagge <brother@bsnet.se>
+# This file is distributed under the same license as the snort package.
 #
-#
+# Martin Bagge <brother@bsnet.se>, 2008, 2013
 msgid ""
 msgstr ""
 "Project-Id-Version: snort 2.3.3-1\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2013-09-29 00:16+0200\n"
-"PO-Revision-Date: 2008-07-21 17:41+0100\n"
-"Last-Translator: Martin Bagge <brother@bsnet.se>\n"
-"Language-Team: Swedish <sv@li.org>\n"
-"Language: sv\n"
+"POT-Creation-Date: 2013-09-13 08:03+0200\n"
+"PO-Revision-Date: 2013-10-01 15:41+0100\n"
+"Last-Translator: Martin Bagge / brother <brother@bsnet.se>\n"
+"Language-Team: Swedish <debian-l10n-swedish@lists.debian.org>\n"
+"Language: Swedish\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=iso-8859-1\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.5.4\n"
 
 #. Type: select
 #. Choices
@@ -49,7 +44,6 @@ msgstr "Hur ska Snort starta:"
 #. Type: select
 #. Description
 #: ../snort.templates:2002
-#, fuzzy
 #| msgid ""
 #| "Snort can be started during boot, when connecting to the net with pppd or "
 #| "only manually with the /usr/sbin/snort command."
@@ -58,19 +52,18 @@ msgid ""
 "automatically when connecting to the net with pppd, or manually with the /"
 "usr/sbin/snort command."
 msgstr ""
-"Snort kan startas vid uppstart, n‰r uppkoppling mot n‰tverk sker (pppd) "
-"eller bara n‰r du manuellt startat den med /usr/sbin/snort."
+"Snort kan startas vid uppstart, n√§r uppkoppling mot n√§tverk sker med pppd "
+"eller manuellt med kommandot /usr/sbin/snort."
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001
 msgid "Interface(s) which Snort should listen on:"
-msgstr "PÂ vilket/vilka gr‰nssnitt ska Snort lyssna?"
+msgstr "P√• vilket/vilka gr√§nssnitt ska Snort lyssna?"
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
 #| msgid ""
 #| "This value is usually 'eth0', but this may be inappropriate in some "
 #| "network environments; for a dialup connection 'ppp0' might be more "
@@ -80,14 +73,13 @@ msgid ""
 "network environments; for a dialup connection \"ppp0\" might be more "
 "appropriate (see the output of \"/sbin/ifconfig\")."
 msgstr ""
-"Detta v‰rde ‰r oftast 'eth0' men det kan vara fel i en del n‰tverksmiljˆer. "
-"Fˆr uppringd anslutning bˆr 'ppp0' anv‰ndas (se vidare utdatat frÂn '/sbin/"
-"ifconfig')"
+"Detta v√§rde √§r oftast \"eth0\" men det kan vara fel i en del "
+"n√§tverksmilj√∂er. F√∂r uppringd anslutning b√∂r \"ppp0\" vara mer korrekt (se "
+"vidare utdatat fr√•n \"/sbin/ifconfig\")."
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
 #| msgid ""
 #| "Typically, this is the same interface as the 'default route' is on. You "
 #| "can determine which interface is used for this by running '/sbin/route -"
@@ -97,15 +89,13 @@ msgid ""
 "can determine which interface is used for this by running \"/sbin/route -n"
 "\" (look for \"0.0.0.0\")."
 msgstr ""
-"Observera att Snort ‰r normalt konfigurerad att inspektera all trafik som "
-"kommer frÂn Internet sÂ gr‰nssnittet du l‰gger till h‰r ‰r normalt det samma "
-"som din standardgateway ‰r pÂ.  Du kan ta fram denna information genom att "
-"kˆra \"/sbin/route -n\" (leta efter \"0.0.0.0\")."
+"Vanligen √§r detta samma gr√§nssnitt som standardrutten √§r inst√§lld p√•. Du kan "
+"ta fram vilket gr√§nssnitt som anv√§nds f√∂r detta med kommandot \"/sbin/route -"
+"n\" (leta efter \"0.0.0.0\")."
 
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
 #| msgid ""
 #| "It is also not uncommon to use an interface with no IP address configured "
 #| "in promiscuous mode. For such cases, select the interface in this system "
@@ -121,12 +111,12 @@ msgid ""
 "this interface (either connected to a \"port mirroring/spanning\" port in a "
 "switch, to a hub, or to a tap)."
 msgstr ""
-"Det ‰r inte helt ovanligt att kˆra Snort pÂ ett gr‰nssnitt utan IP-adress "
-"och som ‰r konfigurerat i l‰get promiscuous. Om det ‰r det du vill, v‰lj "
-"gr‰nssnittet pÂ detta system som ‰r fysiskt kopplad till n‰tverket du vill "
-"inspektera. Aktivera promiscuousl‰get efter det och kontrollera att "
-"n‰tverkstrafiken skickas till detta gr‰nssnitt (antingen kopplade till en "
-"\"port mirror/spanning\"-port i en switch, en hubb eller en n‰tverkstapp)"
+"Det √§r inte helt ovanligt att k√∂ra Snort p√• ett gr√§nssnitt utan IP-adress i "
+"l√§get \"promiscuous\". Om det √§r det du vill, v√§lj gr√§nssnittet p√• detta "
+"system som √§r fysiskt kopplad till n√§tverket du vill inspektera. Aktivera "
+"promiscuousl√§get efter det och kontrollera att n√§tverkstrafiken skickas till "
+"detta gr√§nssnitt (antingen kopplade till en \"port mirror/spanning\"-port i "
+"en switch, en hubb eller en n√§tverkstapp)"
 
 #. Type: string
 #. Description
@@ -136,15 +126,15 @@ msgid ""
 "interface name separated by spaces. Each interface can have its own specific "
 "configuration."
 msgstr ""
-"Du kan konfigurera flera gr‰nssnitt h‰r, bara att l‰gga till fler ‰n ett "
-"gr‰nssnittsnamn separerade med blanksteg. Varje gr‰nssnitt kan ha sin egen "
+"Du kan konfigurera flera gr√§nssnitt h√§r, bara att l√§gga till fler √§n ett "
+"gr√§nssnittsnamn separerade med blanksteg. Varje gr√§nssnitt kan ha sin egen "
 "specifika konfiguration."
 
 #. Type: string
 #. Description
 #: ../snort.templates:4001
 msgid "Address range for the local network:"
-msgstr "Ange adressintervallet som Snort ska lyssna pÂ."
+msgstr "Ange adressintervallet som Snort ska lyssna p√•."
 
 #. Type: string
 #. Description
@@ -154,10 +144,10 @@ msgid ""
 "addresses or 192.168.1.42/32 for just one. Multiple values should be comma-"
 "separated (without spaces)."
 msgstr ""
-"Du ska anv‰nda CIDR-formatet, till exempel 192.168.1.0/24 fˆr ett block av "
-"256 IP-adresser eller 192.168.1.42/32 fˆr bara en av dem. Ange flera "
-"adresser pÂ samma rad separerade med \",\" (kommatecken), blanksteg ‰r inte "
-"tillÂtna!"
+"Du ska anv√§nda CIDR-formatet, till exempel 192.168.1.0/24 f√∂r ett block av "
+"256 IP-adresser eller 192.168.1.42/32 f√∂r bara en av dem. Ange flera "
+"adresser p√• samma rad separerade med \",\" (kommatecken), blanksteg √§r inte "
+"till√•tna!"
 
 #. Type: string
 #. Description
@@ -166,14 +156,14 @@ msgid ""
 "Please note that if Snort is configured to use multiple interfaces, it will "
 "use this value as the HOME_NET definition for all of them."
 msgstr ""
-"Observera att om du anv‰nder flera gr‰nssnitt kommer denna definition att "
-"anv‰ndas som HOME_NET-definition pÂ alla."
+"Observera att om du anv√§nder flera gr√§nssnitt kommer denna definition att "
+"anv√§ndas som HOME_NET-definition p√• alla."
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:5001
 msgid "Should Snort disable promiscuous mode on the interface?"
-msgstr "Ska Snort inaktivera promiscuousl‰get pÂ gr‰nssnittet?"
+msgstr "Ska Snort inaktivera promiscuousl√§get p√• gr√§nssnittet?"
 
 #. Type: boolean
 #. Description
@@ -184,21 +174,20 @@ msgid ""
 "packet that passes the Ethernet segment even if it's a connection between "
 "two other computers."
 msgstr ""
-"Inaktivering av promiscuousl‰get betyder att Snort bara kommer att se paket "
-"adresserade till sitt eget gr‰nssnitt. Aktivering av det tillÂter Snort att "
-"undersˆka varje paket som passerar Ethernet-segmentet ‰ven om det ‰r "
-"anslutning mellan tvÂ andra datorer."
+"Inaktivering av promiscuousl√§get betyder att Snort bara kommer att se paket "
+"adresserade till sitt eget gr√§nssnitt. Aktivering av det till√•ter Snort att "
+"unders√∂ka varje paket som passerar Ethernet-segmentet √§ven om det √§r "
+"anslutning mellan tv√• andra datorer."
 
 #. Type: error
 #. Description
 #: ../snort.templates:6001
 msgid "Invalid interface"
-msgstr "Ogiltigt gr‰nssnitt"
+msgstr "Ogiltigt gr√§nssnitt"
 
 #. Type: error
 #. Description
 #: ../snort.templates:6001
-#, fuzzy
 #| msgid ""
 #| "Snort is trying to use an interface which does not exist or is down. "
 #| "Either it is defaulting inappropriately to 'eth0', or you specified one "
@@ -208,9 +197,9 @@ msgid ""
 "it is defaulting inappropriately to \"eth0\", or you specified one which is "
 "invalid."
 msgstr ""
-"Snort fˆrsˆker anv‰nda en n‰tverksanslutning som inte existerar eller som "
-"inte ‰r uppkopplad. Antingen sÂ har standardv‰rdet 'eth0' smugit sig in "
-"eller sÂ har du angivit en felaktig anslutning."
+"Snort f√∂rs√∂ker anv√§nda en n√§tverksanslutning som inte existerar eller som "
+"inte √§r uppkopplad. Antingen s√• har standardv√§rdet \"eth0\" smugit sig in "
+"eller s√• har du angivit ett felaktigt gr√§nssnitt."
 
 #. Type: boolean
 #. Description
@@ -225,14 +214,14 @@ msgid ""
 "A cron job can be set up to send daily summaries of Snort logs to a selected "
 "e-mail address."
 msgstr ""
-"Ett cron-jobb kan st‰llas in fˆr att s‰nda dagliga summeringar av Snorts "
-"logfiler till en fˆrvald e-post-adress."
+"Ett cron-jobb kan st√§llas in f√∂r att s√§nda dagliga summeringar av Snorts "
+"logfiler till en f√∂rvald e-post-adress."
 
 #. Type: boolean
 #. Description
 #: ../snort.templates:7001
 msgid "Please choose whether you want to activate this feature."
-msgstr "V‰nligen ange om du vill aktivera denna funktionen."
+msgstr "V√§nligen ange om du vill aktivera denna funktionen."
 
 #. Type: string
 #. Description
@@ -247,7 +236,7 @@ msgid ""
 "Please specify the e-mail address that should receive daily summaries of "
 "Snort logs."
 msgstr ""
-"V‰nligen ange e-post-adressen som ska fÂ dagliga summeringar av Snorts "
+"V√§nligen ange e-post-adressen som ska f√• dagliga summeringar av Snorts "
 "logfiler."
 
 #. Type: string
@@ -260,13 +249,13 @@ msgstr "Ytterligare alternativ"
 #. Description
 #: ../snort.templates:9001
 msgid "Please specify any additional options Snort should use."
-msgstr "Ange ytterligare inst‰llningar som Snort ska anv‰nda."
+msgstr "Ange ytterligare inst√§llningar som Snort ska anv√§nda."
 
 #. Type: string
 #. Description
 #: ../snort.templates:10001
 msgid "Minimum occurrences before alerts are reported:"
-msgstr "Minsta antalet fˆrekomster innan varningar skickas:"
+msgstr "Minsta antalet f√∂rekomster innan varningar skickas:"
 
 #. Type: string
 #. Description
@@ -275,19 +264,18 @@ msgid ""
 "Please enter the minimum number of alert occurrences before a given alert is "
 "included in the daily statistics."
 msgstr ""
-"Ett larm behˆver dyka upp fler gÂnger ‰n denna siffra fˆr att bli "
+"Ett larm beh√∂ver dyka upp fler g√•nger √§n denna siffra f√∂r att bli "
 "inkluderade i den dagliga rapporten."
 
 #. Type: note
 #. Description
 #: ../snort.templates:11001
 msgid "Snort restart required"
-msgstr "Snort mÂste startas om"
+msgstr "Snort m√•ste startas om"
 
 #. Type: note
 #. Description
 #: ../snort.templates:11001
-#, fuzzy
 #| msgid ""
 #| "As Snort is manually launched, you need to run '/etc/init.d/snort' for "
 #| "the changes to take place."
@@ -295,14 +283,14 @@ msgid ""
 "As Snort is manually launched, you need to run \"service snort restart\" for "
 "the changes to take place."
 msgstr ""
-"I och med att Snort kˆrs manuellt sÂ mÂste du kˆra '/etc/init.d/snort' fˆr "
-"att ‰ndringarna ska aktiveras."
+"I och med att Snort k√∂rs manuellt s√• m√•ste du k√∂ra \"service snort restart\" "
+"f√∂r att √§ndringarna ska aktiveras."
 
 #. Type: error
 #. Description
 #: ../snort.templates:12001
 msgid "Obsolete configuration file"
-msgstr "Detta system anv‰nder en gammal konfigurationsfil"
+msgstr "Detta system anv√§nder en gammal konfigurationsfil"
 
 #. Type: error
 #. Description
@@ -325,16 +313,15 @@ msgid ""
 "you will not take advantage of the benefits introduced in newer releases."
 msgstr ""
 "Kontrollera den nya konfiguration och ta bort den gamla. Fram till att du "
-"gˆr detta kommer init.d-skriptet inte anv‰nda den nya konfigurationen och du "
-"kan inte anv‰nda de nya fˆrdelarna i den nya versionen."
+"g√∂r detta kommer init.d-skriptet inte anv√§nda den nya konfigurationen och du "
+"kan inte anv√§nda de nya f√∂rdelarna i den nya versionen."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:2001
-#, fuzzy
 #| msgid "Deprecated configuration file"
 msgid "Deprecated options in configuration file"
-msgstr "Detta system anv‰nder en gammal konfigurationsfil"
+msgstr "Utdaterade inst√§llningar i inst√§llningsfil"
 
 #. Type: note
 #. Description
@@ -346,11 +333,11 @@ msgid ""
 "configuration file to be replaced with the one provided in this package or "
 "fix it manually by removing deprecated options."
 msgstr ""
-"Din Snort-konfigurationsfil (/etc/snort/snort.conf) anv‰nder gamla "
-"inst‰llningar som inte l‰ngre anv‰nds i denna Snort-utgÂva.  Snort kan inte "
+"Din Snort-konfigurationsfil (/etc/snort/snort.conf) anv√§nder gamla "
+"inst√§llningar som inte l√§ngre anv√§nds i denna Snort-utg√•va.  Snort kan inte "
 "starta om du har felaktigheter i konfigurationsfilen. Du kan byta ut din "
-"konfigurationsfil mot den som fˆljer med detta paket eller lˆsa problemet "
-"manuellt genom att ta bort de felaktiga inst‰llningarna."
+"konfigurationsfil mot den som f√∂ljer med detta paket eller l√∂sa problemet "
+"manuellt genom att ta bort de felaktiga inst√§llningarna."
 
 #. Type: note
 #. Description
@@ -359,14 +346,14 @@ msgid ""
 "The following deprecated options were found in the configuration file: "
 "${DEP_CONFIG}"
 msgstr ""
-"De fˆljande inst‰llningarna som hittades i din konfigurationsfil ‰r inte "
-"l‰ngre giltiga: ${DEP_CONFIG}"
+"De f√∂ljande inst√§llningarna som hittades i din konfigurationsfil √§r inte "
+"l√§ngre giltiga: ${DEP_CONFIG}"
 
 #. Type: error
 #. Description
 #: ../snort-common.templates:3001
 msgid "Configuration error"
-msgstr "Fel i inst‰llningar"
+msgstr "Fel i inst√§llningar"
 
 #. Type: error
 #. Description
@@ -375,14 +362,13 @@ msgid ""
 "The current Snort configuration is invalid and will prevent Snort starting "
 "up normally. Please review and correct it."
 msgstr ""
-"Nuvarande inst‰llningar fˆr Snort ‰r felaktiga och kommer att fˆrhindra "
-"Snort frÂn att starta pÂ ett korrekt s‰tt. V‰nligen kontrollera "
-"inst‰llningarna och r‰tta felen."
+"Nuvarande inst√§llningar f√∂r Snort √§r felaktiga och kommer att f√∂rhindra "
+"Snort fr√•n att starta p√• ett korrekt s√§tt. V√§nligen kontrollera "
+"inst√§llningarna och r√§tta felen."
 
 #. Type: error
 #. Description
 #: ../snort-common.templates:3001
-#, fuzzy
 #| msgid ""
 #| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
 #| "T -c <file>'."
@@ -390,14 +376,14 @@ msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
 "following: \"/usr/sbin/snort -T -c /etc/snort/snort.conf\""
 msgstr ""
-"Fˆr att hitta fel i Snorts inst‰llningar anv‰nds kommandot '/usr/sbin/snort -"
-"T -c <fil>'."
+"F√∂r att hitta fel i Snorts inst√§llningar kan du (som root) anv√§nda kommandot "
+"\"/usr/sbin/snort -T -c /etc/snort/snort.conf\"."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:4001
 msgid "Deprecated configuration file"
-msgstr "Detta system anv‰nder en gammal konfigurationsfil"
+msgstr "Detta system anv√§nder en gammal konfigurationsfil"
 
 #. Type: note
 #. Description
@@ -408,6 +394,10 @@ msgid ""
 "standard configuration file (/etc/snort/snort.conf), they might prevent "
 "Snort from starting up properly."
 msgstr ""
+"Ditt system har utdaterade inst√§llningsfiler som inte ska anv√§ndas mer och "
+"dessa kan inneh√•lla utdaterade inst√§llningar. Om dessa inkluderas via "
+"standardinst√§llningarna (/etc/snort/snort.conf) kan det inneb√§ra att Snort "
+"inte kan starta korrekt."
 
 #. Type: note
 #. Description
@@ -416,28 +406,28 @@ msgid ""
 "Please remove these files as well as any existing references to them in the /"
 "etc/snort/snort.conf configuration file."
 msgstr ""
+"V√§nligen radera dessa inst√§llningsfiler liksom eventuella referenser till de "
+"i inst√§llningsfilen /etc/snort/snort.conf."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:4001
-#, fuzzy
 #| msgid ""
 #| "The following deprecated options were found in the configuration file: "
 #| "${DEP_CONFIG}"
 msgid "The following deprecated configuration files were found: ${DEP_FILE}"
 msgstr ""
-"De fˆljande inst‰llningarna som hittades i din konfigurationsfil ‰r inte "
-"l‰ngre giltiga: ${DEP_CONFIG}"
+"F√∂ljande inst√§llningsfiler hittades och bed√∂mdes utdaterade: ${DEP_FILE}"
 
 #~ msgid "Set up a database for snort-mysql to log to?"
-#~ msgstr "Vill du konfigurera en databas fˆr snort-mysql att logga till?"
+#~ msgstr "Vill du konfigurera en databas f√∂r snort-mysql att logga till?"
 
 #~ msgid ""
 #~ "No database has been set up for Snort to log to. Before continuing, you "
 #~ "should make sure you have:"
 #~ msgstr ""
-#~ "Ingen databas har st‰llts in fˆr Snorts loggningsfunktioner. Du mÂste ha "
-#~ "fˆljande innan du forts‰tter:"
+#~ "Ingen databas har st√§llts in f√∂r Snorts loggningsfunktioner. Du m√•ste ha "
+#~ "f√∂ljande innan du forts√§tter:"
 
 #~ msgid ""
 #~ " - the server host name (that server must allow TCP connections\n"
@@ -445,34 +435,34 @@ msgstr ""
 #~ " - a database on that server;\n"
 #~ " - a username and password to access the database."
 #~ msgstr ""
-#~ " - serverns v‰rdnamn (servern mÂste tillÂta TCP-anslutningar\n"
-#~ "   frÂn denna maskinen.\n"
-#~ " - en databas pÂ den servern.\n"
-#~ " - ett anv‰ndarnamn och ett lˆsenord fˆr att komma Ât databasen."
+#~ " - serverns v√§rdnamn (servern m√•ste till√•ta TCP-anslutningar\n"
+#~ "   fr√•n denna maskinen.\n"
+#~ " - en databas p√• den servern.\n"
+#~ " - ett anv√§ndarnamn och ett l√∂senord f√∂r att komma √•t databasen."
 
 #~ msgid ""
 #~ "If some of these requirements are missing, reject this option and run "
 #~ "with regular file logging support."
 #~ msgstr ""
-#~ "Om du inte har alla uppgifter ‰nnu kan du hoppa ˆver att st‰lla in detta "
-#~ "nu och anv‰nda dig av vanlig loggning till fil."
+#~ "Om du inte har alla uppgifter √§nnu kan du hoppa √∂ver att st√§lla in detta "
+#~ "nu och anv√§nda dig av vanlig loggning till fil."
 
 #~ msgid ""
 #~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
 #~ "plow snort-mysql'."
 #~ msgstr ""
-#~ "Loggning till databas kan aktiveras vid ett senare tillf‰lle genom att "
-#~ "kˆra 'dpkg-reconfigure -plow snort-mysql'."
+#~ "Loggning till databas kan aktiveras vid ett senare tillf√§lle genom att "
+#~ "k√∂ra 'dpkg-reconfigure -plow snort-mysql'."
 
 #~ msgid "Database server hostname:"
-#~ msgstr "V‰rdnamn fˆr databas:"
+#~ msgstr "V√§rdnamn f√∂r databas:"
 
 #~ msgid ""
 #~ "Please specify the host name of a database server that allows incoming "
 #~ "connections from this host."
 #~ msgstr ""
-#~ "Ange v‰rdnan pÂ databasservern och att den  tillÂter inkommande "
-#~ "uppkopplingar frÂn denna v‰rd."
+#~ "Ange v√§rdnan p√• databasservern och att den  till√•ter inkommande "
+#~ "uppkopplingar fr√•n denna v√§rd."
 
 #~ msgid "Database name:"
 #~ msgstr "Databasnamn:"
@@ -481,36 +471,36 @@ msgstr ""
 #~ "Please specify the name of an existing database to which the database "
 #~ "user has write access."
 #~ msgstr ""
-#~ "Ange ett namn pÂ en existerande databas som den h‰r anv‰ndaren har "
-#~ "skrivr‰ttigheter till."
+#~ "Ange ett namn p√• en existerande databas som den h√§r anv√§ndaren har "
+#~ "skrivr√§ttigheter till."
 
 #~ msgid "Username for database access:"
-#~ msgstr "Anv‰ndarnamn fˆr databas:"
+#~ msgstr "Anv√§ndarnamn f√∂r databas:"
 
 #~ msgid ""
 #~ "Please specify a database server username with write access to the "
 #~ "database."
 #~ msgstr ""
-#~ "Kontrollera att din databasanv‰ndare har skrivr‰ttigheter till denna "
+#~ "Kontrollera att din databasanv√§ndare har skrivr√§ttigheter till denna "
 #~ "databas."
 
 #~ msgid "Password for the database connection:"
-#~ msgstr "Ange lˆsenordet fˆr databasuppkopplingen."
+#~ msgstr "Ange l√∂senordet f√∂r databasuppkopplingen."
 
 #~ msgid ""
 #~ "Please enter the password to use to connect to the Snort Alert database."
-#~ msgstr "Ange ett lˆsenord fˆr uppkoppling mot Snorts larmdatabas."
+#~ msgstr "Ange ett l√∂senord f√∂r uppkoppling mot Snorts larmdatabas."
 
 #~ msgid "Configured database mandatory for Snort"
-#~ msgstr "Databasen mÂste fˆrberedas fˆr Snort fˆre anv‰ndning."
+#~ msgstr "Databasen m√•ste f√∂rberedas f√∂r Snort f√∂re anv√§ndning."
 
 #~ msgid ""
 #~ "Snort needs a configured database before it can successfully start up. In "
 #~ "order to create the structure you need to run the following commands "
 #~ "AFTER the package is installed:"
 #~ msgstr ""
-#~ "Snort behˆver en konfigurerad databas innan den kan starta korrekt. Fˆr "
-#~ "att skapa databasstrukturen behˆver du kˆra fˆljande kommandon EFTER att "
+#~ "Snort beh√∂ver en konfigurerad databas innan den kan starta korrekt. F√∂r "
+#~ "att skapa databasstrukturen beh√∂ver du k√∂ra f√∂ljande kommandon EFTER att "
 #~ "paketet har installerats:"
 
 #~ msgid ""
@@ -518,56 +508,56 @@ msgstr ""
 #~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
 #~ msgstr ""
 #~ " cd /usr/share/doc/snort-mysql/\n"
-#~ " zcat create_mysql.gz | mysql -u <anv‰ndarnamn> -h <v‰rdnamn> -p "
+#~ " zcat create_mysql.gz | mysql -u <anv√§ndarnamn> -h <v√§rdnamn> -p "
 #~ "<databasnamn>"
 
 #~ msgid ""
 #~ "Fill in the correct values for the user, host, and database names. MySQL "
 #~ "will prompt you for the password."
 #~ msgstr ""
-#~ "Ange de korrekta v‰rdena fˆr anv‰ndare, v‰rd och databasens namn. MySQL "
-#~ "kommer att frÂga efter lˆsenordet."
+#~ "Ange de korrekta v√§rdena f√∂r anv√§ndare, v√§rd och databasens namn. MySQL "
+#~ "kommer att fr√•ga efter l√∂senordet."
 
 #~ msgid ""
 #~ "After you have created the database structure, you will need to start "
 #~ "Snort manually."
 #~ msgstr ""
-#~ "Efter att du skapat databasstrukturen behˆver du starta Snort manuellt."
+#~ "Efter att du skapat databasstrukturen beh√∂ver du starta Snort manuellt."
 
 #~ msgid "Set up a database for snort-pgsql to log to?"
-#~ msgstr "Vill du konfigurera en databas fˆr snort-pgsql att logga till?"
+#~ msgstr "Vill du konfigurera en databas f√∂r snort-pgsql att logga till?"
 
 #~ msgid ""
 #~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
 #~ "plow snort-pgsql'."
 #~ msgstr ""
-#~ "Loggning till databas kan aktiveras vid ett senare tillf‰lle genom att "
-#~ "kˆra 'dpkg-reconfigure -plow snort-pgsql'."
+#~ "Loggning till databas kan aktiveras vid ett senare tillf√§lle genom att "
+#~ "k√∂ra 'dpkg-reconfigure -plow snort-pgsql'."
 
 #~ msgid ""
 #~ " cd /usr/share/doc/snort-pgsql/\n"
 #~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
 #~ msgstr ""
 #~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -U <anv‰ndarnamn> -h <v‰rdnamn> -W "
+#~ " zcat create_postgresql.gz | psql -U <anv√§ndarnamn> -h <v√§rdnamn> -W "
 #~ "<databasnamn>"
 
 #~ msgid ""
 #~ "Fill in the correct values for the user, host, and database names. "
 #~ "PostgreSQL will prompt you for the password."
 #~ msgstr ""
-#~ "Ange de korrekta v‰rdena fˆr anv‰ndare, v‰rd och databasens namn. "
-#~ "PostgreSQL kommer att frÂga efter lˆsenordet."
+#~ "Ange de korrekta v√§rdena f√∂r anv√§ndare, v√§rd och databasens namn. "
+#~ "PostgreSQL kommer att fr√•ga efter l√∂senordet."
 
 #~ msgid "Should Snort's testing order be changed to Pass|Alert|Log?"
-#~ msgstr "Ska testordningen fˆr reglerna i Snort ‰ndras til Pass|Alert|Log?"
+#~ msgstr "Ska testordningen f√∂r reglerna i Snort √§ndras til Pass|Alert|Log?"
 
 #~ msgid ""
 #~ "Snort's default testing order is Alert|Pass|Log; if you accept this "
 #~ "option, the order will be changed to Pass|Alert|Log, which can make it "
 #~ "simpler to use Snort with some packet-filtering tools."
 #~ msgstr ""
-#~ "Standardv‰rdet fˆr Snorts tester ‰r Alert|Pass|Log. Om du v‰ljer detta "
-#~ "alternativ sÂ kommer ordningen att ‰ndras till Pass|Alert|Log, vilket kan "
-#~ "underl‰tta anv‰ndadet av Snort tillsammans med en del "
+#~ "Standardv√§rdet f√∂r Snorts tester √§r Alert|Pass|Log. Om du v√§ljer detta "
+#~ "alternativ s√• kommer ordningen att √§ndras till Pass|Alert|Log, vilket kan "
+#~ "underl√§tta anv√§ndadet av Snort tillsammans med en del "
 #~ "paketfiltreringsverktyg."
