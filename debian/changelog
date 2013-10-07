@@ -1,7 +1,8 @@
-snort (2.9.5.3-2) UNRELEASED; urgency=low
+snort (2.9.5.3-2) unstable; urgency=low
 
-  * Template review (by the debian-l10n-english team) 
-  * Updated Translations:
+  * Debconf templates and debian/control reviewed by the debian-l10n-english
+    team as part of the Smith review project. (Closes: 720061)
+  * Debconf updated Translations:
     - Update Spanish translation, contributed by Javier Fernandez-Sanguino
     - Updated Russian translation, contributed by Yuri Kozlov (Closes: 722987)
     - Updated German translation, contributed by Chris Leick (Closes: 723769)
@@ -11,7 +12,8 @@ snort (2.9.5.3-2) UNRELEASED; urgency=low
     - Updated French translation, contributed by JP Guillonneau (Closes: 724300)
     - Updated Janapese translation (Closes: 724706)
     - Updated Italian translation provided by Daniele Forsi (Closes: 724707)
-    - Updated Danish translation provided by  Joe Hansen (Closes: #724932)
+    - Updated Danish translation provided by  Joe Hansen (Closes: 724932)
+    - Updated Swedish translation provided by Martin Bagge (Closes: 725104)
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 24 Sep 2013 03:39:00 +0200
 
