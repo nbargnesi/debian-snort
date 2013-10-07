@@ -1,14 +1,14 @@
 # Danish translation snort.
-# Copyright (C) 2011 snort og nedenstående oversættere.
+# Copyright (C) 2013 snort og nedenstående oversættere.
 # This file is distributed under the same license as the snort package.
-# Joe Hansen (joedalton2@yahoo.dk), 2011.
+# Joe Hansen (joedalton2@yahoo.dk), 2011, 2013.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: snort\n"
 "Report-Msgid-Bugs-To: snort@packages.debian.org\n"
-"POT-Creation-Date: 2013-09-29 00:16+0200\n"
-"PO-Revision-Date: 2011-08-20 19:25+0200\n"
+"POT-Creation-Date: 2013-09-13 08:03+0200\n"
+"PO-Revision-Date: 2013-09-29 19:25+0200\n"
 "Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
 "Language-Team: Danish <debian-l10n-danish@lists.debian.org>\n"
 "Language: da\n"
@@ -43,17 +43,14 @@ msgstr "Startmetode for snort:"
 #. Type: select
 #. Description
 #: ../snort.templates:2002
-#, fuzzy
-#| msgid ""
-#| "Snort can be started during boot, when connecting to the net with pppd or "
-#| "only manually with the /usr/sbin/snort command."
 msgid ""
 "Please choose how Snort should be started: automatically on boot, "
 "automatically when connecting to the net with pppd, or manually with the /"
 "usr/sbin/snort command."
 msgstr ""
-"Snort kan igangsættes ved opstart, når der forbindes til nettet med pppd "
-"eller kun manuelt med kommandoen /usr/sbin/snort."
+"Vælg venligst hvordan Snort skal startes: Automatisk ved opstart, "
+"automatisk når der forbindes til nettet med pppd, eller manuelt med "
+"kommandoen /usr/sbin/snort."
 
 #. Type: string
 #. Description
@@ -64,11 +61,6 @@ msgstr "Grænseflader som Snort skal lytte på:"
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
-#| msgid ""
-#| "This value is usually 'eth0', but this may be inappropriate in some "
-#| "network environments; for a dialup connection 'ppp0' might be more "
-#| "appropriate (see the output of '/sbin/ifconfig')."
 msgid ""
 "This value is usually \"eth0\", but this may be inappropriate in some "
 "network environments; for a dialup connection \"ppp0\" might be more "
@@ -81,11 +73,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
-#| msgid ""
-#| "Typically, this is the same interface as the 'default route' is on. You "
-#| "can determine which interface is used for this by running '/sbin/route -"
-#| "n' (look for '0.0.0.0')."
 msgid ""
 "Typically, this is the same interface as the \"default route\" is on. You "
 "can determine which interface is used for this by running \"/sbin/route -n"
@@ -98,14 +85,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../snort.templates:3001
-#, fuzzy
-#| msgid ""
-#| "It is also not uncommon to use an interface with no IP address configured "
-#| "in promiscuous mode. For such cases, select the interface in this system "
-#| "that is physically connected to the network that should be inspected, "
-#| "enable promiscuous mode later on and make sure that the network traffic "
-#| "is sent to this interface (either connected to a 'port mirroring/"
-#| "spanning' port in a switch, to a hub or to a tap)."
 msgid ""
 "It is also not uncommon to use an interface with no IP address configured in "
 "promiscuous mode. For such cases, select the interface in this system that "
@@ -194,11 +173,6 @@ msgstr "Ugyldig grænseflade"
 #. Type: error
 #. Description
 #: ../snort.templates:6001
-#, fuzzy
-#| msgid ""
-#| "Snort is trying to use an interface which does not exist or is down. "
-#| "Either it is defaulting inappropriately to 'eth0', or you specified one "
-#| "which is invalid."
 msgid ""
 "Snort is trying to use an interface which does not exist or is down. Either "
 "it is defaulting inappropriately to \"eth0\", or you specified one which is "
@@ -282,10 +256,6 @@ msgstr "Genstart af Snort er krævet"
 #. Type: note
 #. Description
 #: ../snort.templates:11001
-#, fuzzy
-#| msgid ""
-#| "As Snort is manually launched, you need to run '/etc/init.d/snort' for "
-#| "the changes to take place."
 msgid ""
 "As Snort is manually launched, you need to run \"service snort restart\" for "
 "the changes to take place."
@@ -327,10 +297,8 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../snort-common.templates:2001
-#, fuzzy
-#| msgid "Deprecated configuration file"
 msgid "Deprecated options in configuration file"
-msgstr "Forældet (deprecated) konfigurationsfil"
+msgstr "Forældede (deprecated) indstillinger i konfigurationsfilen"
 
 #. Type: note
 #. Description
@@ -378,16 +346,12 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../snort-common.templates:3001
-#, fuzzy
-#| msgid ""
-#| "To diagnose an error in a Snort configuration file, use '/usr/sbin/snort -"
-#| "T -c <file>'."
 msgid ""
 "To diagnose errors in your Snort configuration you can run (as root) the "
 "following: \"/usr/sbin/snort -T -c /etc/snort/snort.conf\""
 msgstr ""
-"For at diagnosticere en fejl i en Snortkonfigurationsfil så brug »/usr/sbin/"
-"snort -T -c <fil>«."
+"For at diagnosticere fejl i din Snortkonfigurationsfil kan du køre (som "
+"root) følgende: »/usr/sbin/snort -T -c /etc/snort/snort.conf«."
 
 #. Type: note
 #. Description
@@ -404,6 +368,10 @@ msgid ""
 "standard configuration file (/etc/snort/snort.conf), they might prevent "
 "Snort from starting up properly."
 msgstr ""
+"Dit system har forældede konfigurationsfiler, som ikke bør bruges længere "
+"og kan indeholder forældede indstillinger. Hvis inkluderet via "
+"standardkonfigurationsfilen (/etc/snort/snort.conf), kan de forhindre "
+"Snort i at starte korrekt op."
 
 #. Type: note
 #. Description
@@ -412,145 +380,14 @@ msgid ""
 "Please remove these files as well as any existing references to them in the /"
 "etc/snort/snort.conf configuration file."
 msgstr ""
+"Fjern venligst disse filer samt alle eksisterende referencer til dem i "
+"konfigurationsfilen /etc/snort/snort.conf."
 
 #. Type: note
 #. Description
 #: ../snort-common.templates:4001
-#, fuzzy
-#| msgid ""
-#| "The following deprecated options were found in the configuration file: "
-#| "${DEP_CONFIG}"
 msgid "The following deprecated configuration files were found: ${DEP_FILE}"
 msgstr ""
-"De følgende forældede indstillinger blev fundet i konfigurationsfilen: "
-"${DEP_CONFIG}"
+"De følgende forældede konfigurationsfiler blev fundet ${DEP_FILE}"
 
-#~ msgid "Set up a database for snort-mysql to log to?"
-#~ msgstr "Opsæt en database som snort-mysql kan logge på?"
 
-#~ msgid ""
-#~ "No database has been set up for Snort to log to. Before continuing, you "
-#~ "should make sure you have:"
-#~ msgstr ""
-#~ "Ingen database er blevet opsat for Snort at logge på. Før du fortsætter, "
-#~ "skal du sikre dig, at du har:"
-
-#~ msgid ""
-#~ " - the server host name (that server must allow TCP connections\n"
-#~ "   from this machine);\n"
-#~ " - a database on that server;\n"
-#~ " - a username and password to access the database."
-#~ msgstr ""
-#~ " - serverværtsnavnet (den server skal tillade TCP-forbindelser\n"
-#~ "   fra denne maskine);\n"
-#~ " - en database på den server;\n"
-#~ " - et brugernavn og adgangskode for at tilgå databasen."
-
-#~ msgid ""
-#~ "If some of these requirements are missing, reject this option and run "
-#~ "with regular file logging support."
-#~ msgstr ""
-#~ "Hvis nogle af disse krav mangler, så afvis denne indstilling og kør med "
-#~ "regulær fillogningsunderstøttelse."
-
-#~ msgid ""
-#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-#~ "plow snort-mysql'."
-#~ msgstr ""
-#~ "Databaselogning kan omkonfigureres senere ved at køre »dpkg-reconfigure -"
-#~ "plow snort-mysql«."
-
-#~ msgid "Database server hostname:"
-#~ msgstr "Værtsnavn for databaseserver:"
-
-#~ msgid ""
-#~ "Please specify the host name of a database server that allows incoming "
-#~ "connections from this host."
-#~ msgstr ""
-#~ "Angiv venligst værtsnavnet på en databaseserver, som tillader indgående "
-#~ "forbindelser fra denne vært."
-
-#~ msgid "Database name:"
-#~ msgstr "Databasenavn:"
-
-#~ msgid ""
-#~ "Please specify the name of an existing database to which the database "
-#~ "user has write access."
-#~ msgstr ""
-#~ "Angiv venligst navnet på en eksisterende database hvortil "
-#~ "databasebrugeren har skriveadgang."
-
-#~ msgid "Username for database access:"
-#~ msgstr "Brugernavn for databaseadgang:"
-
-#~ msgid ""
-#~ "Please specify a database server username with write access to the "
-#~ "database."
-#~ msgstr ""
-#~ "Angiv venligst et brugernavn for databaseserveren med skriveadgang til "
-#~ "databasen."
-
-#~ msgid "Password for the database connection:"
-#~ msgstr "Adgangskode for databaseforbindelsen:"
-
-#~ msgid ""
-#~ "Please enter the password to use to connect to the Snort Alert database."
-#~ msgstr ""
-#~ "Indtast venligst adgangskoden at bruge for at forbinde til Snorts "
-#~ "påmindelsesdatabase."
-
-#~ msgid "Configured database mandatory for Snort"
-#~ msgstr "Konfigureret database er et krav for Snort"
-
-#~ msgid ""
-#~ "Snort needs a configured database before it can successfully start up. In "
-#~ "order to create the structure you need to run the following commands "
-#~ "AFTER the package is installed:"
-#~ msgstr ""
-#~ "Snort kræver en konfigureret database, før den kan starte op. For at "
-#~ "oprette strukturen skal du køre de følgende kommandoer EFTER at pakken er "
-#~ "installeret:"
-
-#~ msgid ""
-#~ " cd /usr/share/doc/snort-mysql/\n"
-#~ " zcat create_mysql.gz | mysql -u <user> -h <host> -p <databasename>"
-#~ msgstr ""
-#~ " cd /usr/share/doc/snort-mysql/\n"
-#~ " zcat create_mysql.gz | mysql -u <bruger> -h <vært> -p <databasenavn>"
-
-#~ msgid ""
-#~ "Fill in the correct values for the user, host, and database names. MySQL "
-#~ "will prompt you for the password."
-#~ msgstr ""
-#~ "Udfyld de korrekte værdier for brugeren, værten og databasenavnene. MySQL "
-#~ "vil spørge dig om adgangskoden."
-
-#~ msgid ""
-#~ "After you have created the database structure, you will need to start "
-#~ "Snort manually."
-#~ msgstr ""
-#~ "Efter at du har oprettet databasestrukturen, skal du starte Snort manuelt."
-
-#~ msgid "Set up a database for snort-pgsql to log to?"
-#~ msgstr "Opsæt en database for snort-pgsql at logge på?"
-
-#~ msgid ""
-#~ "Database logging can be reconfigured later by running 'dpkg-reconfigure -"
-#~ "plow snort-pgsql'."
-#~ msgstr ""
-#~ "Databaselogning kan omkonfigureres senere ved at køre »dpkg-reconfigure -"
-#~ "plow snort-pgsql«."
-
-#~ msgid ""
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -U <user> -h <host> -W <databasename>"
-#~ msgstr ""
-#~ " cd /usr/share/doc/snort-pgsql/\n"
-#~ " zcat create_postgresql.gz | psql -U <bruger> -h <vært> -W <databasenavn>"
-
-#~ msgid ""
-#~ "Fill in the correct values for the user, host, and database names. "
-#~ "PostgreSQL will prompt you for the password."
-#~ msgstr ""
-#~ "Udfyld de korrekte værdier for brugeren, værten og databasenavnene. "
-#~ "PostgreSQL vil spørge dig om adgangskoden."
