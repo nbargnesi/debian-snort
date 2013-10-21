@@ -1,3 +1,11 @@
+snort (2.9.5.3-3) unstable; urgency=low
+
+  * debian/control: Add texlive-font-utils to Build-depends (Closes: 713254) 
+  * Debconf updated Translations:
+    - Updated Russian translation, contributed by Yuri Kozlov (Closes: 722987)
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Mon, 21 Oct 2013 19:39:20 +0200
+
 snort (2.9.5.3-2) unstable; urgency=low
 
   * Debconf templates and debian/control reviewed by the debian-l10n-english
