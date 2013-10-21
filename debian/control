@@ -16,6 +16,7 @@ Build-Depends:
     bison
 Build-Depends-Indep: 
     texlive, 
+    texlive-binaries, 
     texlive-latex-base, 
     texlive-font-utils,
     latex2html,

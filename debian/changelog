@@ -1,6 +1,10 @@
 snort (2.9.5.3-3) unstable; urgency=low
 
-  * debian/control: Add texlive-font-utils to Build-depends (Closes: 713254) 
+  * debian/control: Add texlive-binaries and texlive-font-utils to
+     Build-Depends-Indep to make sure that buildds have the binaries
+     required to build the documentation as suggested by Hideki Yamane.
+     Kept the texlive metapackage however in debian/control just int case.
+     (Closes: 713254) 
   * Debconf updated Translations:
     - Updated Russian translation, contributed by Yuri Kozlov (Closes: 722987)
 
