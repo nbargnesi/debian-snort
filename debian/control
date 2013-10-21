@@ -17,6 +17,7 @@ Build-Depends:
 Build-Depends-Indep: 
     texlive, 
     texlive-latex-base, 
+    texlive-font-utils,
     latex2html,
     ghostscript
 Standards-Version:  3.9.2
