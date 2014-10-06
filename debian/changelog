@@ -1,3 +1,10 @@
+snort (2.9.5.3-4) unstable; urgency=medium
+
+  * Drop libgnutls-dev, as it is not longer required and it is scheduled
+    for removal in sid, and (apparently) uninstallable. (Closes: #764108)
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Mon, 06 Oct 2014 20:11:15 +0200
+
 snort (2.9.5.3-3) unstable; urgency=low
 
   * debian/control: Add texlive-binaries and texlive-font-utils to

@@ -9,7 +9,6 @@ Build-Depends:
     libpcre3-dev, 
     debhelper (>= 5.0.0), 
     po-debconf (>= 0.5.0), 
-    libgnutls-dev, 
     libdumbnet-dev, 
     libdaq-dev, 
     flex, 
