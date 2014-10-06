@@ -12,7 +12,8 @@ Build-Depends:
     libdumbnet-dev, 
     libdaq-dev, 
     flex, 
-    bison
+    bison,
+    dh-autoreconf
 Build-Depends-Indep: 
     texlive, 
     texlive-binaries, 

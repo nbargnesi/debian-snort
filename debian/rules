@@ -62,11 +62,13 @@ clean: clean-sources
 	cd doc && [ ! -f Makefile ] || $(MAKE) distclean
 	rm -f doc/snort_manual.pdf doc/snort_manual.ps doc/snort_manual.aux \
 	    doc/snort_manual.log doc/snort_manual.toc
+	dh_autoreconf_clean
 	dh_clean
 
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
+	dh_autoreconf
 # Standard package configuration:
 	./configure $(CONFFLAGS) 
 	touch $@
