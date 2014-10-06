@@ -196,6 +196,8 @@ case "$1" in
 				myret=$(expr "$myret" + 1)
 				;;
                      esac
+                     # Change the pidfile permissions if it exists
+                     [ -e "$PIDFILE" ] && chown $SNORTUSER:$SNORTGROUP $PIDFILE
                      set -e
                 else
                         log_progress_msg "...already running)"
