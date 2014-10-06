@@ -9,9 +9,10 @@
 .Sh DESCRIPTION
 .Nm snort-stat
 is a small script that generates a nice statistic on the port scans that
-were detected by snort and reported via /var/log/snort/alert.log.
-The output of this script is mailed to a user that is setup in 
-/etc/snort/snort.debian.conf.
+were detected by snort and reported via /var/log/snort/alert .
+The output of this script is mailed to the user confgured in  the
+/etc/snort/snort.debian.conf
+configuration file.
 The cron script /etc/cron.daily/5snort uses this script.
 .Sh SEE ALSO
 .Xr snort 8
