@@ -1,10 +1,11 @@
-snort (2.9.7.0-1) UNRELEASED; urgency=high
+snort (2.9.7.0-1) unstable; urgency=high
 
   * Upgrade to latest upstream version. Rules updates have been dropped
     by Snort upstream for older releases.  Snort 2.9.5.3 is not supported for
     rule updates since December 2013 (Closes: #753915)
-
     For more information see: https://www.snort.org/eol
+  * debian/patches/{config,config_disabled_rules,fix_upstream_typos}: Refresh
+    to apply to the newest source
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 24 Oct 2014 02:04:35 +0200
 
