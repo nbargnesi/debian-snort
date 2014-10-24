@@ -1,3 +1,14 @@
+snort (2.9.7.0-3) unstable; urgency=high
+
+  * debian/control: 
+     - Add pkg-config in Build-Depends, it provides the PKG_CHECK_MODULES
+       macro used in configure.in. This fixes a FTBFS observed in the
+       buildds
+     - Add libzma-dev dependency in Build-Depends as it is used in
+       configure.in if available
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 24 Oct 2014 23:04:34 +0200
+
 snort (2.9.7.0-2) unstable; urgency=high
 
   * The new upstream release, as seen with the previous upload, fixes the Out
