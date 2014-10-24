@@ -45,3 +45,15 @@ index 25b4485..7a4622a 100644
  {
      internal_log_level = snort_conf->internal_log_level;
  }
+diff --git a/src/detection-plugins/detection_options.c b/src/detection-plugins/detection_options.c
+index eed708a..f64977e 100644
+--- a/src/detection-plugins/detection_options.c
++++ b/src/detection-plugins/detection_options.c
+@@ -875,6 +875,7 @@ int detection_option_node_evaluate(detection_option_tree_node_t *node, detection
+     uint16_t save_dflags = 0;
+     uint64_t cur_eval_pkt_count = (rule_eval_pkt_count + (GetRebuiltPktCount()));
+     NODE_PROFILE_VARS;
++    node_ticks_start = 0;
+ 
+     if (!node || !eval_data || !eval_data->p || !eval_data->pomd)
+         return 0;
