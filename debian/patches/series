@@ -1,5 +1,6 @@
 config
-configure-werror
+configure_werror
+hardening_werror
 documentation
 fix_ftbfs_in_manual.tex
 fix_upstream_typos

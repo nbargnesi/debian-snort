@@ -10,8 +10,10 @@ snort (2.9.7.0-1) unstable; urgency=high
       + Use dpkg-buildflags to setup the defult compiler and link flags.
       + Enable hardening options when building
   * debian/control: Build-Depend on (dpkg-dev >= 1.16.1~) due to above change
-  * debian/patches/configure-werror: New patch to fix configure.in so
+  * debian/patches/configure_werror: New patch to fix configure.in so
      that it can work properly when setting the hardening flags
+  * debian/patches/hardening_werror: New patch to fix issues found
+     when building with -Werror 
   * Debconf updated Translations:
     - Updated Dutch translation, contributed by Frans Spiesschaert (Closes:
       #764319)
