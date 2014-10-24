@@ -1,3 +1,13 @@
+snort (2.9.7.0-1) UNRELEASED; urgency=high
+
+  * Upgrade to latest upstream version. Rules updates have been dropped
+    by Snort upstream for older releases.  Snort 2.9.5.3 is not supported for
+    rule updates since December 2013 (Closes: #753915)
+
+    For more information see: https://www.snort.org/eol
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 24 Oct 2014 02:04:35 +0200
+
 snort (2.9.5.3-4) unstable; urgency=medium
 
   * debian/control: Drop libgnutls-dev, as it is not longer required and it is scheduled
