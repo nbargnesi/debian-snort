@@ -1,6 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -62,6 +63,9 @@ enum {
     PLUGIN_FLOWBIT,
     PLUGIN_FILE_DATA,
     PLUGIN_BASE64_DECODE,
+#if defined(FEAT_OPEN_APPID)
+    PLUGIN_APPID,
+#endif /* defined(FEAT_OPEN_APPID) */
     PLUGIN_MAX  /* sentinel value */
 };
 

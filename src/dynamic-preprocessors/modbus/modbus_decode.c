@@ -14,6 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
@@ -416,7 +417,7 @@ int ModbusDecode(modbus_config_t *config, SFSnortPacket *packet)
         return MODBUS_FAIL;
 
     session = (modbus_session_data_t *)
-        _dpd.streamAPI->get_application_data(packet->stream_session_ptr, PP_MODBUS);
+        _dpd.sessionAPI->get_application_data(packet->stream_session, PP_MODBUS);
     
     /* Lay the header struct over the payload */
     header = (modbus_header_t *) packet->payload;

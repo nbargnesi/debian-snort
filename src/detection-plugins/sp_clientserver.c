@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 2002-2013 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
@@ -250,7 +251,7 @@ static inline void CheckStream(char *token)
 {
     if (!stream_api)
     {
-        FatalError("%s(%d): Stream5 must be enabled to use the '%s' option.\n",
+        FatalError("%s(%d): Stream must be enabled to use the '%s' option.\n",
             file_name, file_line, token);
     }
 }

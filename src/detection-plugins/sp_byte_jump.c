@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 2002-2013 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
@@ -404,7 +405,7 @@ static ByteJumpOverrideData * ByteJumpParse(char *data, ByteJumpData *idx, OptTr
         idx->offset_var = GetVarByName(toks[1]);
         if (idx->offset_var == BYTE_EXTRACT_NO_VAR)
         {
-            FatalError("%s (%d): %s\n", file_name, file_line, BYTE_EXTRACT_INVALID_ERR_STR);
+            ParseError(BYTE_EXTRACT_INVALID_ERR_FMT, "byte_jump", toks[1]);
         }
     }
 
@@ -564,6 +565,7 @@ int ByteJump(void *option_data, Packet *p)
     int dsize;
     const uint8_t *base_ptr, *end_ptr, *start_ptr;
     uint8_t rst_doe_flags = 1;
+    int search_start = 0;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(byteJumpPerfStats);
@@ -627,16 +629,28 @@ int ByteJump(void *option_data, Packet *p)
             return rval;
         }
 
-        base_ptr = doe_ptr + bjd->offset;
+        search_start = (doe_ptr - start_ptr) + bjd->offset;
+        base_ptr = doe_ptr;
         rst_doe_flags = 0;
     }
     else
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "checking absolute offset %d\n", bjd->offset););
-        base_ptr = start_ptr + bjd->offset;
+        search_start = bjd->offset;
+        base_ptr = start_ptr;
     }
 
+    if ( search_start < 0 )
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                                "[*] byte jump bounds check failed..\n"););
+
+        PREPROC_PROFILE_END(byteJumpPerfStats);
+        return rval;
+    }
+
+    base_ptr = base_ptr + bjd->offset;
     /* Use byte_order_func to determine endianess, if present */
     if (bjd->byte_order_func)
     {

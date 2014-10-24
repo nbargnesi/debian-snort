@@ -1,5 +1,6 @@
 /****************************************************************************
  * 
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,7 +24,7 @@
  *
  * imap_util.h
  *
- * Author: Bhagyashree Bantwal <bbantwal@sourcefire.com>
+ * Author: Bhagyashree Bantwal <bbantwal@cisco.com>
  *
  *************************************************************************/
 

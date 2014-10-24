@@ -14,6 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
@@ -30,6 +31,7 @@
 #include "spp_modbus.h"
 #include "modbus_decode.h"
 #include "modbus_roptions.h"
+#include "modbus_paf.h"
 
 /* Mapping of name -> function code for 'modbus_func' option. */
 static modbus_func_map_t func_map[] =
@@ -206,11 +208,11 @@ int ModbusRuleEval(void *raw_packet, const uint8_t **cursor, void *data)
     /* The preprocessor only evaluates PAF-flushed PDUs. If the rule options
        don't check for this, they'll fire on stale session data when the
        original packet goes through before flushing. */
-    if (!PacketHasFullPDU(packet))
+    if (!PacketHasFullPDU(packet) && ModbusIsPafActive(packet))
         return RULE_NOMATCH;
 
     session_data = (modbus_session_data_t *)
-        _dpd.streamAPI->get_application_data(packet->stream_session_ptr, PP_MODBUS);
+        _dpd.sessionAPI->get_application_data(packet->stream_session, PP_MODBUS);
 
     if ((packet->payload_size == 0 ) || (session_data == NULL))
     {

@@ -1,6 +1,7 @@
 /*
  * snort_ftptelnet.h
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2004-2013 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
@@ -66,6 +67,7 @@ void FTPTelnetFreeConfigs(tSfPolicyUserContextId GlobalConf);
 void FTPTelnetFreeConfig(FTPTELNET_GLOBAL_CONF *GlobalConf);
 int SnortFTPTelnet(SFSnortPacket *p);
 #ifdef TARGET_BASED
+void SnortFTPData_EOF(SFSnortPacket *p);
 int SnortFTPData(SFSnortPacket *p);
 #endif
 int FTPConfigCheck(struct _SnortConfig *);
@@ -88,8 +90,9 @@ int FTPTelnetCheckFTPServerConfigs(struct _SnortConfig *, FTPTELNET_GLOBAL_CONF 
 
 int ProcessFTPGlobalConf(FTPTELNET_GLOBAL_CONF *, char *, int);
 int ProcessTelnetConf(FTPTELNET_GLOBAL_CONF *, char *, int);
-int ProcessFTPClientConf(FTPTELNET_GLOBAL_CONF *, char *, int);
-int ProcessFTPServerConf(FTPTELNET_GLOBAL_CONF *, char *, int);
+int ProcessFTPClientConf(struct _SnortConfig *sc, FTPTELNET_GLOBAL_CONF *, char *, int);
+int ProcessFTPServerConf(struct _SnortConfig *sc, FTPTELNET_GLOBAL_CONF *, char *, int);
 int PrintFTPGlobalConf(FTPTELNET_GLOBAL_CONF *);
 int FTPTelnetCheckConfigs(struct _SnortConfig *, void* , tSfPolicyId );
+void enableFtpTelnetPortStreamServices( struct _SnortConfig *sc, PROTO_CONF *pc, char *network, int direction );
 #endif

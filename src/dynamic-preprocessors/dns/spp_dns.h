@@ -1,6 +1,7 @@
 /* $Id */
 
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2006-2013 Sourcefire, Inc.
 **
 **
@@ -62,7 +63,7 @@ typedef struct _DNSConfig
     uint8_t  autodetect;
 #endif
     uint16_t enabled_alerts;
-    char      ports[MAX_PORTS/8];
+    uint8_t  ports[MAX_PORTS/8];
 
 } DNSConfig;
 

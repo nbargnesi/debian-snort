@@ -11,6 +11,7 @@
 *
 *
 **  Copyright (C) 2001 Marc Norton
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2003-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -42,16 +43,19 @@
 
 #include "sf_types.h"
 
+#ifndef DYNAMIC_PREPROC_CONTEXT
 #define SFKSEARCH_TRACK_Q
 
 #ifdef SFKSEARCH_TRACK_Q
 # include "snort.h"
 # include "util.h"
 #endif
+#endif //DYNAMIC_PREPROC_CONTEXT
 
 #include "snort_debug.h"
 #include "sfksearch.h"
 #include "snort_bounds.h"
+#include "sf_dynamic_preprocessor.h"
 
 static void KTrieFree(KTRIENODE *n);
 

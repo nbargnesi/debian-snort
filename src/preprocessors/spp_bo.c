@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2005-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2005 Martin Roesch <roesch@sourcefire.com>
 **
@@ -141,6 +142,7 @@
 #include "sf_types.h"
 #include "sfPolicy.h"
 #include "sfPolicyUserData.h"
+#include "session_api.h"
 
 #define BACKORIFICE_DEFAULT_KEY   31337
 #define BACKORIFICE_MAGIC_SIZE    8
@@ -280,7 +282,8 @@ static void BoInit(struct _SnortConfig *sc, char *args)
     ProcessArgs(pPolicyConfig, args);
 
     /* Set the preprocessor function into the function list */
-    AddFuncToPreprocList(sc, BoFind, PRIORITY_LAST, PP_BO, PROTO_BIT__UDP);
+    AddFuncToPreprocList(sc, BoFind, PRIORITY_APPLICATION, PP_BO, PROTO_BIT__UDP);
+    session_api->enable_preproc_all_ports( sc, PP_BO, PROTO_BIT__UDP );
 }
 
 
@@ -554,7 +557,7 @@ static void BoFind(Packet *p, void *context)
     BoConfig *bo = NULL;
     PROFILE_VARS;
 
-    sfPolicyUserPolicySet (bo_config, getRuntimePolicy());
+    sfPolicyUserPolicySet (bo_config, getNapRuntimePolicy());
     bo = (BoConfig *)sfPolicyUserDataGetCurrent(bo_config);
 
     /* Not configured in this policy */
@@ -638,7 +641,7 @@ static void BoFind(Packet *p, void *context)
                 }
                 if ( (bo->drop_flags & BO_ALERT_CLIENT) )
                 {
-                    Active_DropSession();
+                    Active_DropSession(p);
                 }
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Client packet\n"););
             }
@@ -651,7 +654,7 @@ static void BoFind(Packet *p, void *context)
                 }
                 if ( (bo->drop_flags & BO_ALERT_SERVER) )
                 {
-                    Active_DropSession();
+                    Active_DropSession(p);
                 }
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Server packet\n"););
             }
@@ -664,7 +667,7 @@ static void BoFind(Packet *p, void *context)
                 }
                 if ( (bo->drop_flags & BO_ALERT_GENERAL) )
                 {
-                    Active_DropSession();
+                    Active_DropSession(p);
                 }
             }
         }
@@ -753,7 +756,7 @@ static int BoGetDirection(BoConfig *bo, Packet *p, char *pkt_data)
         }
         if ( (bo->drop_flags & BO_ALERT_SNORT_ATTACK) )
         {
-            Active_DropSession();
+            Active_DropSession(p);
         }
 
         return BO_FROM_UNKNOWN;
@@ -897,6 +900,7 @@ static void BoReload(struct _SnortConfig *sc, char *args, void **new_config)
     ProcessArgs(pPolicyConfig, args);
 
     AddFuncToPreprocList(sc, BoFind, PRIORITY_LAST, PP_BO, PROTO_BIT__UDP);
+    session_api->enable_preproc_all_ports( sc, PP_BO, PROTO_BIT__UDP );
 }
 
 static void * BoReloadSwap(struct _SnortConfig *sc, void *swap_config)

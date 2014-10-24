@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2009-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -96,5 +97,6 @@ int IntelGetPatternCount(IntelPm *ipm);
 int IntelPmPrintInfo(IntelPm *ipm);
 void IntelPmPrintSummary(struct _SnortConfig *);
 void IntelPmPrintBufferStats(void);
+int IntelPmRelease(struct _IntelPmHandles *);
 
 #endif  /* _INTEL_H_ */

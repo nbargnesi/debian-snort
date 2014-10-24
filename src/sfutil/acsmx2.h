@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2004-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -180,6 +181,9 @@ int acsmCompile2WithSnortConf ( struct _SnortConfig *, ACSM_STRUCT2 * acsm,
                                 int (*build_tree)(struct _SnortConfig *, void * id, void **existing_tree),
                                 int (*neg_list_func)(void *id, void **list));
 int acsmSearch2 ( ACSM_STRUCT2 * acsm,unsigned char * T, int n,
+                  int (*Match)(void * id, void *tree, int index, void *data, void *neg_list),
+                  void * data, int* current_state );
+int acsmSearchAll2 ( ACSM_STRUCT2 * acsm,unsigned char * T, int n,
                   int (*Match)(void * id, void *tree, int index, void *data, void *neg_list),
                   void * data, int* current_state );
 void acsmFree2 ( ACSM_STRUCT2 * acsm );

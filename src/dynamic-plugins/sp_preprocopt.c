@@ -17,6 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steven Sturges
@@ -118,7 +119,6 @@ int RegisterPreprocessorRuleOption(
 {
     int ret;
     PreprocessorOptionInfo *optionInfo;
-    SnortPolicy *p;
 
     if (sc == NULL)
     {
@@ -126,19 +126,16 @@ int RegisterPreprocessorRuleOption(
                    __FILE__, __LINE__);
     }
 
-    p = sc->targeted_policies[getParserPolicy(sc)];
-    if (p == NULL)
-        FatalError("%s(%d) Targeted policy is NULL.\n", __FILE__, __LINE__);
-
-    if (p->preproc_rule_options == NULL)
+    if (sc->preproc_rule_options == NULL)
     {
         FatalError("Preprocessor Rule Option storage not initialized\n");
     }
 
-    optionInfo = sfghash_find(p->preproc_rule_options, optionName);
+    optionInfo = sfghash_find(sc->preproc_rule_options, optionName);
     if (optionInfo != NULL)
     {
-        FatalError("Duplicate Preprocessor Rule Option '%s'\n", optionName);
+        DEBUG_WRAP(DebugMessage(DEBUG_STREAM, "Duplicate Preprocessor Rule Option '%s'\n", optionName););
+        return 0;
     }
 
     optionInfo = (PreprocessorOptionInfo *)SnortAlloc(sizeof(PreprocessorOptionInfo));
@@ -150,7 +147,7 @@ int RegisterPreprocessorRuleOption(
     optionInfo->optionFpFunc = fpFunc;
     optionInfo->otnHandler = otnHandler;
 
-    ret = sfghash_add(p->preproc_rule_options, optionName, optionInfo);
+    ret = sfghash_add(sc->preproc_rule_options, optionName, optionInfo);
     if (ret != SFGHASH_OK)
     {
         FatalError("Failed to initialize Preprocessor Rule Option '%s'\n",
@@ -171,24 +168,18 @@ int GetPreprocessorRuleOptionFuncs(
     )
 {
     PreprocessorOptionInfo *optionInfo;
-    SnortPolicy *p;
 
     if (sc == NULL)
     {
-        FatalError("%s(%d) Snort conf for parsing is NULL.\n",
-                   __FILE__, __LINE__);
+        FatalError("%s(%d) Snort conf for parsing is NULL.\n", __FILE__, __LINE__);
     }
 
-    p = sc->targeted_policies[getParserPolicy(sc)];
-    if (p == NULL)
-        return 0;
-
-    if (p->preproc_rule_options == NULL)
+    if (sc->preproc_rule_options == NULL)
     {
         FatalError("Preprocessor Rule Option storage not initialized\n");
     }
 
-    optionInfo = sfghash_find(p->preproc_rule_options, optionName);
+    optionInfo = sfghash_find(sc->preproc_rule_options, optionName);
     if (!optionInfo)
     {
         return 0;
@@ -322,19 +313,13 @@ int AddPreprocessorRuleOption(SnortConfig *sc, char *optionName, OptTreeNode *ot
     PreprocessorOptionInfo *optionInfo;
     PreprocessorOptionInfo *saveOptionInfo;
     void *option_dup;
-    SnortPolicy *p;
 
     if (sc == NULL)
     {
-        FatalError("%s(%d) Snort conf for parsing is NULL.\n",
-                   __FILE__, __LINE__);
+        FatalError("%s(%d) Snort conf for parsing is NULL.\n", __FILE__, __LINE__);
     }
 
-    p = sc->targeted_policies[getParserPolicy(sc)];
-    if (p == NULL)
-        return 0;
-
-    optionInfo = sfghash_find(p->preproc_rule_options, optionName);
+    optionInfo = sfghash_find(sc->preproc_rule_options, optionName);
 
     if (!optionInfo)
         return 0;
@@ -365,28 +350,23 @@ int AddPreprocessorRuleOption(SnortConfig *sc, char *optionName, OptTreeNode *ot
     return 1;
 }
 
-void PreprocessorRuleOptionOverrideFunc(SnortConfig *sc, char *keyword, char *option, char *args, OptTreeNode *otn, int protocol)
+void PreprocessorRuleOptionOverrideFunc(SnortConfig *sc, char *keyword, char *option,
+                                        char *args, OptTreeNode *otn, int protocol)
 {
     PreprocessorOptionInfo *optionInfo;
     char *keyword_plus_option;
     void *opt_data;
     int name_len = strlen(keyword) + strlen(option) + 2;
-    SnortPolicy *p;
 
     if (sc == NULL)
     {
-        FatalError("%s(%d) Snort conf for parsing is NULL.\n",
-                   __FILE__, __LINE__);
+        FatalError("%s(%d) Snort conf for parsing is NULL.\n", __FILE__, __LINE__);
     }
-
-    p = sc->targeted_policies[getParserPolicy(sc)];
-    if (p == NULL)
-        FatalError("%s(%d) Targeted policy is NULL.\n", __FILE__, __LINE__);
 
     keyword_plus_option = (char *)SnortAlloc(name_len);
     SnortSnprintf(keyword_plus_option, name_len, "%s %s", keyword, option);
 
-    optionInfo = sfghash_find(p->preproc_rule_options, keyword_plus_option);
+    optionInfo = sfghash_find(sc->preproc_rule_options, keyword_plus_option);
     if (optionInfo == NULL)
     {
         free(keyword_plus_option);

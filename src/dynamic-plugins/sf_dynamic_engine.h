@@ -14,6 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * Author: Steven Sturges
@@ -131,7 +132,7 @@ typedef void (*FreeRuleData)(void *);
  */
 #include "sf_dynamic_common.h"
 
-#define ENGINE_DATA_VERSION 9
+#define ENGINE_DATA_VERSION 10
 
 typedef void *(*PCRECompileFunc)(const char *, int, const char **, int *, const unsigned char *);
 typedef void *(*PCREStudyFunc)(const void *, int, const char **);

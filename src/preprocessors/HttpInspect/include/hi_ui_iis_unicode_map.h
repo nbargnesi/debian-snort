@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -38,7 +39,7 @@
 */
 #define HI_UI_NON_ASCII_CODEPOINT -1
 
-int hi_ui_parse_iis_unicode_map(int **iis_unicode_map, char *filename,
+int hi_ui_parse_iis_unicode_map(uint8_t **iis_unicode_map, char *filename,
                                 int iCodePage);
 
 #endif

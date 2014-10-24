@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -42,18 +43,19 @@
 #include "sf_ip.h"
 #include "sfPolicy.h"
 #include "hi_util_kmap.h"
+#include "file_mail_common.h"
 #include "file_api.h"
+#include "file_decomp.h"
 
 /*
 **  Defines
 */
-#define HI_UI_CONFIG_STATELESS 0
-#define HI_UI_CONFIG_STATEFUL  1
-#define HI_UI_CONFIG_MAX_PIPE  20
 
 #define HI_UI_CONFIG_MAX_HDR_DEFAULT 0
 #define HI_UI_CONFIG_MAX_HEADERS_DEFAULT 0
 #define HI_UI_CONFIG_MAX_SPACES_DEFAULT 200 
+
+#define HI_UI_CONFIG_MAX_XFF_FIELD_NAMES 8
 
 /*
 **  Special characters treated as whitespace before or after URI
@@ -120,7 +122,7 @@ typedef struct _HISmallChunkLength
 typedef struct s_HTTPINSPECT_CONF
 {
     int  port_count;
-    char ports[MAXPORTS_STORAGE];
+    uint8_t ports[MAXPORTS_STORAGE];
     int  server_flow_depth;
     int  client_flow_depth;
     int  post_depth;
@@ -130,7 +132,7 @@ typedef struct s_HTTPINSPECT_CONF
     /*
     **  Unicode mapping for IIS servers
     */
-    int  *iis_unicode_map;
+    uint8_t *iis_unicode_map;
     char *iis_unicode_map_filename;
     int  iis_unicode_codepage;
 
@@ -147,13 +149,20 @@ typedef struct s_HTTPINSPECT_CONF
     char enable_cookie;
     char inspect_response;
     char enable_xff;
+    uint8_t *xff_headers[HI_UI_CONFIG_MAX_XFF_FIELD_NAMES];
+    uint8_t xff_header_lengths[HI_UI_CONFIG_MAX_XFF_FIELD_NAMES];
     char log_uri;
     char log_hostname;
 
-#ifdef ZLIB
-    char extract_gzip;
     char unlimited_decompress;
-#endif
+    char extract_gzip;
+    unsigned long file_decomp_modes;
+
+/* NOTE:  The XFF_BUILTING_NAMES value must match the code in snort_httpinspect.c that
+          adds the builtin names to the list. */
+#define HI_UI_CONFIG_XFF_FIELD_NAME  "X-Forwarded-For"
+#define HI_UI_CONFIG_TCI_FIELD_NAME  "True-Client-IP"
+#define XFF_BUILTIN_NAMES            (2)
 
    /* Support Extended ascii codes in the URI */
     char extended_ascii_uri;
@@ -239,6 +248,9 @@ typedef struct s_HTTPINSPECT_CONF
      * this HTTPINSPECT_CONF should be actually freed.
      */
     int referenceCount;
+#if defined(FEAT_OPEN_APPID)
+    char appid_enabled;
+#endif /* defined(FEAT_OPEN_APPID) */
 
 }  HTTPINSPECT_CONF;
 
@@ -251,8 +263,6 @@ typedef struct s_HTTPINSPECT_CONF
 typedef struct s_HTTPINSPECT_GLOBAL_CONF
 {
     int              disabled;
-    int              max_pipeline_requests;
-    int              inspection_type;
     int              anomalous_servers;
     int              proxy_alert;
 
@@ -260,7 +270,7 @@ typedef struct s_HTTPINSPECT_GLOBAL_CONF
     **  These variables are for tracking the IIS
     **  Unicode Map configuration.
     */
-    int              *iis_unicode_map;
+    uint8_t          *iis_unicode_map;
     char             *iis_unicode_map_filename;
     int              iis_unicode_codepage;
 
@@ -268,12 +278,10 @@ typedef struct s_HTTPINSPECT_GLOBAL_CONF
     SERVER_LOOKUP    *server_lookup;
 
 
-#ifdef ZLIB
     int max_gzip_sessions;
     int max_gzip_mem;
     int compr_depth;
     int decompr_depth;
-#endif
     int memcap;
     uint32_t xtra_trueip_id;
     uint32_t xtra_uri_id;
@@ -301,9 +309,9 @@ int hi_ui_config_add_server(HTTPINSPECT_GLOBAL_CONF *GlobalConf,
                             HTTPINSPECT_CONF *ServerConf);
 
 int hi_ui_config_set_profile_apache(HTTPINSPECT_CONF *GlobalConf);
-int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *GlobalConf, int *);
-int hi_ui_config_set_profile_iis_4or5(HTTPINSPECT_CONF *GlobalConf, int *);
-int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *GlobalConf, int *);
+int hi_ui_config_set_profile_iis(HTTPINSPECT_CONF *GlobalConf, uint8_t *);
+int hi_ui_config_set_profile_iis_4or5(HTTPINSPECT_CONF *GlobalConf, uint8_t *);
+int hi_ui_config_set_profile_all(HTTPINSPECT_CONF *GlobalConf, uint8_t *);
 void HttpInspectCleanupHttpMethodsConf(void *);
 
 extern int hex_lookup[256];

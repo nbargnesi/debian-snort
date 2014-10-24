@@ -3,6 +3,7 @@
 **
 **  perf.c
 **
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Dan Roelker <droelker@sourcefire.com>
 **
@@ -479,10 +480,10 @@ void sfPerformanceStats(SFPERF *sfPerf, Packet *p)
 
         if (cnt >= sfPerf->pkt_cnt)
         {
-            cnt = 0;
-
             if (CheckSampleInterval(sfPerf, p))
             {
+                cnt = 0;
+
                 if (!(sfPerf->perf_flags & SFPERF_SUMMARY_BASE))
                 {
                     sfProcessBaseStats(sfPerf);

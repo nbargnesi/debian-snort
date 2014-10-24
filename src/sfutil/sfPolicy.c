@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,6 +30,8 @@
 #include "snort_debug.h"
 #include "sfrt.h"
 
+tSfPolicyId napRuntimePolicyId = 0;
+tSfPolicyId ipsRuntimePolicyId = 0;
 
 static inline int IsBound (
     tSfPolicyId id
@@ -241,7 +244,7 @@ int sfVlanAddBinding(tSfPolicyConfig *config, int vlanId, char *fileName)
 {
     tSfPolicyId policyId;
 
-    if (config == NULL)
+    if (config == NULL || vlanId >= SF_VLAN_BINDING_MAX)
         return -1;
 
     //create a policyId
@@ -261,7 +264,14 @@ int sfVlanAddBinding(tSfPolicyConfig *config, int vlanId, char *fileName)
 
 tSfPolicyId sfVlanGetBinding(tSfPolicyConfig *config, int vlanId)
 {
-    tSfPolicyId policyId = config->vlanBindings[vlanId];
+    tSfPolicyId policyId;
+
+    if(vlanId >= SF_VLAN_BINDING_MAX){
+        //invalid policyid will never be bound. return default
+        return config->defaultPolicyId;
+    }
+    
+    policyId = config->vlanBindings[vlanId];
 
     if ( NotBound(policyId) )
     {
@@ -275,6 +285,8 @@ tSfPolicyId sfVlanGetBinding(tSfPolicyConfig *config, int vlanId)
 void sfVlanDeleteBinding(tSfPolicyConfig *config, int vlanId)
 {
     tSfPolicyId policyId;
+    if(vlanId >= SF_VLAN_BINDING_MAX)
+        return; //invalid, can't delete
 
     if ((config == NULL) || (vlanId < 0))
         return;
@@ -292,7 +304,7 @@ int sfPolicyIdAddBinding(tSfPolicyConfig *config, int parsedPolicyId, char *file
 {
     tSfPolicyId policyId;
 
-    if (config == NULL)
+    if (config == NULL || parsedPolicyId >= SF_POLICY_ID_BINDING_MAX)
         return -1;
 
     //create a policyId
@@ -312,7 +324,13 @@ int sfPolicyIdAddBinding(tSfPolicyConfig *config, int parsedPolicyId, char *file
 
 tSfPolicyId sfPolicyIdGetBinding(tSfPolicyConfig *config, int parsedPolicyId)
 {
-    tSfPolicyId policyId = config->policyIdBindings[parsedPolicyId];
+    tSfPolicyId policyId;
+
+    if(parsedPolicyId >= SF_POLICY_ID_BINDING_MAX){
+        //invalid policyid will never be bound. return default
+        return config->defaultPolicyId;
+    }
+    policyId = config->policyIdBindings[parsedPolicyId];
 
     if ( NotBound(policyId) )
     {
@@ -326,6 +344,9 @@ tSfPolicyId sfPolicyIdGetBinding(tSfPolicyConfig *config, int parsedPolicyId)
 void sfPolicyIdDeleteBinding(tSfPolicyConfig *config, int parsedPolicyId)
 {
     tSfPolicyId policyId;
+
+    if(parsedPolicyId >= SF_POLICY_ID_BINDING_MAX)
+        return; //invalid, can't delete
 
     if ((config == NULL) || (parsedPolicyId < 0))
         return;

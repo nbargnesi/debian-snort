@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -66,7 +67,7 @@ static int SIP_MethodAddFastPatterns(void *, int, int, FPContentInfo **);
 static inline int SIP_RoptDoEval(SFSnortPacket *p)
 {
 	if ((p->payload_size == 0) ||
-			(p->stream_session_ptr == NULL) ||
+			(p->stream_session == NULL) ||
 			(!IsTCP(p) && !IsUDP(p)))
 	{
 
@@ -189,7 +190,7 @@ static int SIP_MethodEval(void *pkt, const uint8_t **cursor, void *data)
 	if (!SIP_RoptDoEval(p))
 		return RULE_NOMATCH;
 
-	sd = (SIPData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_SIP);
+	sd = (SIPData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_SIP);
 	if (sd == NULL)
 	{
 		DEBUG_WRAP(DebugMessage(DEBUG_SIP,
@@ -274,7 +275,7 @@ static int SIP_HeaderEval(void *pkt, const uint8_t **cursor, void *data)
 	if (!SIP_RoptDoEval(p))
 		return RULE_NOMATCH;
 
-	sd = (SIPData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_SIP);
+	sd = (SIPData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_SIP);
 	if (sd == NULL)
 	{
 		DEBUG_WRAP(DebugMessage(DEBUG_SIP,
@@ -372,7 +373,7 @@ static int SIP_StatCodeEval(void *pkt, const uint8_t **cursor, void *data)
 	if (!SIP_RoptDoEval(p))
 		return RULE_NOMATCH;
 
-	sd = (SIPData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_SIP);
+	sd = (SIPData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_SIP);
 	if (sd == NULL)
 	{
 		DEBUG_WRAP(DebugMessage(DEBUG_SIP,
@@ -431,7 +432,7 @@ static int SIP_BodyEval(void *pkt, const uint8_t **cursor, void *data)
 	if (!SIP_RoptDoEval(p))
 		return RULE_NOMATCH;
 
-	sd = (SIPData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_SIP);
+	sd = (SIPData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_SIP);
 	if (sd == NULL)
 	{
 		DEBUG_WRAP(DebugMessage(DEBUG_SIP,

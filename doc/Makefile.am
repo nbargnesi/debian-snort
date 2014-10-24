@@ -16,6 +16,7 @@ PROBLEMS \
 README \
 README.active \
 README.alert_order \
+README.appid OpenDetectorDeveloperGuide.pdf \
 README.asn1 \
 README.counts \
 README.csv \
@@ -26,12 +27,15 @@ README.decoder_preproc_rules \
 README.dnp3 \
 README.dns \
 README.event_queue \
+README.file \
+README.file_ips \
 README.filters \
 README.flowbits \
 README.frag3 \
 README.ftptelnet \
 README.gre \
 README.GTP \
+README.ha \
 README.http_inspect \
 README.imap \
 README.ipip \
@@ -46,7 +50,6 @@ README.pop \
 README.ppm \
 README.reload \
 README.reputation \
-README.rzb_saac \
 README.sensitive_data \
 README.sfportscan \
 README.SMTP \

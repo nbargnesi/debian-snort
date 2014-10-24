@@ -1,5 +1,6 @@
 /****************************************************************************
  * 
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,7 +24,7 @@
  *
  * pop_log.h
  *
- * Author: Bhagyashree Bantwal <bbantwal@sourcefire.com>
+ * Author: Bhagyashree Bantwal <bbantwal@cisco.com>
  *
  **************************************************************************/
 
@@ -59,7 +60,7 @@
 
 /* Function prototypes  */
 void POP_GenerateAlert(int, char *, ...);
-void POP_DecodeAlert(void);
+void POP_DecodeAlert(void *);
 
 
 #endif

@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 2004-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -132,7 +133,7 @@ int SnortEventqAdd(uint32_t gid, uint32_t sid, uint32_t rev,
             return 0;
         rule_info = (void *)otn;
     }
-    else if (getRtnFromOtn(otn, getRuntimePolicy()) == NULL)
+    else if (getRtnFromOtn(otn, getIpsRuntimePolicy()) == NULL)
     {
         // If the rule isn't in the current policy, don't add it to
         // the event queue.

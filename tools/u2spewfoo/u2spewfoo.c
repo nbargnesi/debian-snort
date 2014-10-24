@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2002-2013 Sourcefire, Inc.
  * Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
  * Author: Adam Keeton
@@ -53,7 +54,7 @@ typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 #endif
 #else
-void inet_ntop(int family, const void *ip_raw, char *buf, int bufsize) {
+static void inet_ntop(int family, const void *ip_raw, char *buf, int bufsize) {
     int i;
 
     if(!ip_raw || !buf || !bufsize ||
@@ -129,7 +130,7 @@ static long s_pos = 0, s_off = 0;
 
 #define TO_IP(x) x >> 24, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff
 
-u2iterator *new_iterator(char *filename) {
+static u2iterator *new_iterator(char *filename) {
     FILE *f = fopen(filename, "rb");
     u2iterator *ret;
 
@@ -152,13 +153,13 @@ u2iterator *new_iterator(char *filename) {
     return ret;
 }
 
-inline void free_iterator(u2iterator *it) {
+static inline void free_iterator(u2iterator *it) {
     if(it->file) fclose(it->file);
     if(it->filename) free(it->filename);
     if(it) free(it);
 }
 
-int get_record(u2iterator *it, u2record *record) {
+static int get_record(u2iterator *it, u2record *record) {
     uint32_t bytes_read;
     uint8_t *tmp;
 
@@ -173,7 +174,11 @@ int get_record(u2iterator *it, u2record *record) {
 
     if ( s_off )
     {
-        fseek(it->file, s_pos+s_off, SEEK_SET);
+        if (fseek(it->file, s_pos+s_off, SEEK_SET)) 
+        {
+            puts("Unable to SEEK on current file .. and this is not being handled yet.");
+            return FAILURE;
+        }
         s_off = 0;
     }
 
@@ -225,7 +230,7 @@ int get_record(u2iterator *it, u2record *record) {
     return SUCCESS;
 }
 
-void extradata_dump(u2record *record) {
+static void extradata_dump(u2record *record) {
     uint8_t *field, *data;
     int i;
     int len = 0;
@@ -349,7 +354,7 @@ void extradata_dump(u2record *record) {
 
 }
 
-void event_dump(u2record *record) {
+static void event_dump(u2record *record) {
     uint8_t *field;
     int i;
     Serial_Unified2IDSEvent_legacy event;
@@ -386,7 +391,7 @@ void event_dump(u2record *record) {
              event.impact_flag, event.blocked);
 }
 
-void event6_dump(u2record *record) {
+static void event6_dump(u2record *record) {
     uint8_t *field;
     int i;
     Serial_Unified2IDSEventIPv6_legacy event;
@@ -433,7 +438,7 @@ void event6_dump(u2record *record) {
 
 
 
-void event2_dump(u2record *record) {
+static void event2_dump(u2record *record) {
     uint8_t *field;
     int i;
 
@@ -481,7 +486,58 @@ void event2_dump(u2record *record) {
 
 }
 
-void event2_6_dump(u2record *record) {
+#if defined(FEAT_OPEN_APPID)
+static void event3_dump(u2record *record) 
+{
+    uint8_t *field;
+    int i;
+
+    Serial_Unified2IDSEvent event;
+
+    memcpy(&event, record->data, sizeof(Serial_Unified2IDSEvent));
+
+    /* network to host ordering */
+    /* In the event structure, only the last 40 bits are not 32 bit fields */
+    /* The first 11 fields need to be convertted */
+    field = (uint8_t*)&event;
+    for(i=0; i<11; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    /* last 3 fields, with the exception of the last most since it's just one byte */
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
+    field += 2;
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
+    field +=6;
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
+    field += 4;
+    /* policy_id and vlanid */
+    for(i=0; i<2; i++, field+=2) {
+        *(uint16_t*)field = ntohs(*(uint16_t*)field);
+    }
+    /* done changing the network ordering */
+
+
+    printf("\n(Event)\n"
+            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
+            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
+            "\tpriority: %u\tip source: %u.%u.%u.%u\tip destination: %u.%u.%u.%u\n"
+            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
+            "\tmpls label: %u\tvland id: %u\tpolicy id: %u\tappid: %s\n",
+             event.sensor_id, event.event_id,
+             event.event_second, event.event_microsecond,
+             event.signature_id, event.generator_id,
+             event.signature_revision, event.classification_id,
+             event.priority_id, TO_IP(event.ip_source),
+             TO_IP(event.ip_destination), event.sport_itype,
+             event.dport_icode, event.protocol,
+             event.impact_flag, event.blocked,
+             event.mpls_label, event.vlanId, event.pad2, event.app_name);
+
+}
+
+#endif /* defined(FEAT_OPEN_APPID) */
+static void event2_6_dump(u2record *record) {
     uint8_t *field;
     int i;
     char ip6buf[INET6_ADDRSTRLEN+1];
@@ -536,6 +592,96 @@ void event2_6_dump(u2record *record) {
 
 }
 
+#if defined(FEAT_OPEN_APPID)
+static void event3_6_dump(u2record *record) {
+    uint8_t *field;
+    int i;
+    char ip6buf[INET6_ADDRSTRLEN+1];
+    Serial_Unified2IDSEventIPv6 event;
+
+    memcpy(&event, record->data, sizeof(Serial_Unified2IDSEventIPv6));
+
+    /* network to host ordering */
+    /* In the event structure, only the last 40 bits are not 32 bit fields */
+    /* The first fields need to be convertted */
+    field = (uint8_t*)&event;
+    for(i=0; i<9; i++, field+=4) {
+        *(uint32_t*)field = ntohl(*(uint32_t*)field);
+    }
+
+    field = field + 2*sizeof(struct in6_addr);
+
+    /* last 3 fields, with the exception of the last most since it's just one byte */
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* sport_itype */
+    field += 2;
+    *(uint16_t*)field = ntohs(*(uint16_t*)field); /* dport_icode */
+    field +=6;
+    *(uint32_t*)field = ntohl(*(uint32_t*)field); /* mpls_label */
+    field += 4;
+    /* policy_id and vlanid */
+    for(i=0; i<2; i++, field+=2) {
+        *(uint16_t*)field = ntohs(*(uint16_t*)field);
+    }
+    /* done changing the network ordering */
+
+    inet_ntop(AF_INET6, &event.ip_source, ip6buf, INET6_ADDRSTRLEN);
+
+    printf("\n(IPv6 Event)\n"
+            "\tsensor id: %u\tevent id: %u\tevent second: %u\tevent microsecond: %u\n"
+            "\tsig id: %u\tgen id: %u\trevision: %u\t classification: %u\n"
+            "\tpriority: %u\tip source: %s\t",
+             event.sensor_id, event.event_id,
+             event.event_second, event.event_microsecond,
+             event.signature_id, event.generator_id,
+             event.signature_revision, event.classification_id,
+             event.priority_id, ip6buf);
+
+
+    inet_ntop(AF_INET6, &event.ip_destination, ip6buf, INET6_ADDRSTRLEN);
+    printf("ip destination: %s\n"
+            "\tsrc port: %u\tdest port: %u\tprotocol: %u\timpact_flag: %u\tblocked: %u\n"
+            "\tmpls label: %u\tvland id: %u\tpolicy id: %u\tappid: %s\n",
+             ip6buf, event.sport_itype,
+             event.dport_icode, event.protocol,
+             event.impact_flag, event.blocked,
+             event.mpls_label, event.vlanId,event.pad2, event.app_name);
+
+}
+
+static void appid_dump(u2record *record) {
+    uint8_t *field = (uint8_t*)record->data;
+    unsigned i;
+    unsigned appCnt;
+    unsigned statTime;
+
+    /* network to host ordering */
+    /* In the event structure, only the last 40 bits are not 32 bit fields */
+    /* The first fields need to be convertted */
+    statTime = ntohl(*(uint32_t*)field);
+    field += 4;
+    appCnt = ntohl(*(uint32_t*)field); 
+    field += 4;
+    
+    printf("\n(AppId Stats)\n"
+            "    event second: %u\tRecordCount: %u\n",
+             statTime, appCnt);
+    for(i=0; i<appCnt; i++) 
+    {
+        char appName[MAX_EVENT_APPNAME_LEN];
+        memcpy(appName, field, sizeof(appName));
+        field += MAX_EVENT_APPNAME_LEN;
+
+        int txBytes = ntohl(*(uint32_t*)field);
+        field += 4;
+        int rxBytes = ntohl(*(uint32_t*)field);
+        field += 4;
+
+        printf("    -----------\n\tApp:%s\n\tbytes_out: %u\n\tbytes_in: %u\n",
+            appName, txBytes, rxBytes);
+     }
+}
+
+#endif /* defined(FEAT_OPEN_APPID) */
 static inline void print_uuid (const char* label, uint8_t* data)
 {
 #ifdef HAVE_LIBUUID
@@ -576,7 +722,7 @@ static void LogBuffer (const uint8_t* p, unsigned n)
     }
 }
 
-void packet_dump(u2record *record) {
+static void packet_dump(u2record *record) {
     uint32_t counter;
     uint8_t *field;
 
@@ -620,7 +766,7 @@ void packet_dump(u2record *record) {
     LogBuffer(record->data+offset, reclen);
 }
 
-int u2dump(char *file) {
+static int u2dump(char *file) {
     u2record record;
     u2iterator *it = new_iterator(file);
 
@@ -638,6 +784,12 @@ int u2dump(char *file) {
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6) event6_dump(&record);
         else if(record.type == UNIFIED2_IDS_EVENT_IPV6_VLAN) event2_6_dump(&record);
         else if(record.type == UNIFIED2_EXTRA_DATA) extradata_dump(&record);
+#if defined(FEAT_OPEN_APPID)
+
+        else if(record.type == UNIFIED2_IDS_EVENT_APPID) event3_dump(&record);
+        else if(record.type == UNIFIED2_IDS_EVENT_APPID_IPV6) event3_6_dump(&record);
+        else if(record.type == UNIFIED2_IDS_EVENT_APPSTAT) appid_dump(&record);
+#endif /* defined(FEAT_OPEN_APPID) */
     }
 
     free_iterator(it);

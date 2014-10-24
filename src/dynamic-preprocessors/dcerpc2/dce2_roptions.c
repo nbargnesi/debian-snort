@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1557,7 +1558,7 @@ static int DCE2_IfaceEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
@@ -1693,7 +1694,7 @@ static int DCE2_OpnumEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
@@ -1779,7 +1780,7 @@ static int DCE2_StubDataEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
@@ -1837,7 +1838,7 @@ static int DCE2_ByteTestEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
@@ -2093,7 +2094,7 @@ static int DCE2_ByteJumpEval(void *pkt, const uint8_t **cursor, void *data)
     if (!DCE2_RoptDoEval(p))
         return RULE_NOMATCH;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,
@@ -2263,7 +2264,7 @@ static int DCE2_ByteJumpEval(void *pkt, const uint8_t **cursor, void *data)
 static inline int DCE2_RoptDoEval(SFSnortPacket *p)
 {
     if ((p->payload_size == 0) ||
-            (p->stream_session_ptr == NULL) ||
+            (p->stream_session == NULL) ||
             (!IsTCP(p) && !IsUDP(p)))
     {
 
@@ -2819,7 +2820,7 @@ int DCE2_GetByteOrder(void *data, int32_t offset)
     if (p == NULL)
         return -1;
 
-    sd = (DCE2_SsnData *)_dpd.streamAPI->get_application_data(p->stream_session_ptr, PP_DCE2);
+    sd = (DCE2_SsnData *)_dpd.sessionAPI->get_application_data(p->stream_session, PP_DCE2);
     if ((sd == NULL) || DCE2_SsnNoInspect(sd))
     {
         DEBUG_WRAP(DCE2_DebugMsg(DCE2_DEBUG__ROPTIONS,

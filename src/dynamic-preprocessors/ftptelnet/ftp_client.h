@@ -1,6 +1,7 @@
 /*
  * ftp_client.h
  * 
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2004-2013 Sourcefire, Inc.
  * Steven A. Sturges <ssturges@sourcefire.com>
  * Daniel J. Roelker <droelker@sourcefire.com>
@@ -69,6 +70,5 @@ typedef struct s_FTP_CLIENT
 }  FTP_CLIENT;
 
 int ftp_client_inspection(void *Session, unsigned char *data, int dsize);
-int ftp_client_init(FTPTELNET_GLOBAL_CONF *GlobalConf);
 
 #endif 

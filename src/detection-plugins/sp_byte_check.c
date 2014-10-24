@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 2002-2013 Sourcefire, Inc.
  ** Author: Martin Roesch
  **
@@ -489,7 +490,7 @@ static ByteTestOverrideData * ByteTestParse(char *data, ByteTestData *idx, OptTr
         idx->cmp_value_var = GetVarByName(toks[2]);
         if (idx->cmp_value_var == BYTE_EXTRACT_NO_VAR)
         {
-            FatalError("%s (%d): %s\n", file_name, file_line, BYTE_EXTRACT_INVALID_ERR_STR);
+            ParseError(BYTE_EXTRACT_INVALID_ERR_FMT, "byte_test", toks[2]);
         }
     }
 
@@ -515,7 +516,7 @@ static ByteTestOverrideData * ByteTestParse(char *data, ByteTestData *idx, OptTr
         idx->offset_var = GetVarByName(toks[3]);
         if (idx->offset_var == BYTE_EXTRACT_NO_VAR)
         {
-            FatalError("%s (%d): %s\n", file_name, file_line, BYTE_EXTRACT_INVALID_ERR_STR);
+            ParseError(BYTE_EXTRACT_INVALID_ERR_FMT, "byte_test", toks[3]);
         }
     }
 
@@ -629,6 +630,7 @@ int ByteTest(void *option_data, Packet *p)
     int payload_bytes_grabbed;
     int32_t offset;
     uint32_t extract_offset, extract_cmp_value;
+    int search_start = 0;
     PROFILE_VARS;
 
     PREPROC_PROFILE_START(byteTestPerfStats);
@@ -695,14 +697,26 @@ int ByteTest(void *option_data, Packet *p)
             return rval;
         }
 
-        base_ptr = (const char *)doe_ptr + btd->offset;
+        search_start = (doe_ptr - (const uint8_t *)start_ptr) + btd->offset;
+        base_ptr = (const char *)doe_ptr;
     }
     else
     {
         DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
                                 "checking absolute offset %d\n", btd->offset););
-        base_ptr = start_ptr + btd->offset;
+        search_start = btd->offset;
+        base_ptr = start_ptr;
     }
+
+    if( search_start < 0 )
+    {
+        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
+                                "[*] byte test bounds check failed..\n"););
+        PREPROC_PROFILE_END(byteTestPerfStats);
+        return rval;
+    }
+
+    base_ptr = base_ptr + btd->offset;
 
     /* Use byte_order_func to determine endianess, if present */
     if (btd->byte_order_func)

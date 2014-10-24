@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -47,6 +48,7 @@
 #include "sfPolicyUserData.h"
 #include "mempool.h"
 #include "sf_email_attach_decode.h"
+#include "file_mail_common.h"
 #include "file_api.h"
 
 #ifdef DEBUG
@@ -75,8 +77,6 @@
 
 #define BOUNDARY     0
 
-#define MAX_BOUNDARY_LEN  70  /* Max length of boundary string, defined in RFC 2046 */
-
 #define STATE_CONNECT          0
 #define STATE_COMMAND          1    /* Command state of SMTP transaction */
 #define STATE_DATA             2    /* Data state */
@@ -97,23 +97,8 @@
 /* state flags */
 #define SMTP_FLAG_GOT_MAIL_CMD               0x00000001
 #define SMTP_FLAG_GOT_RCPT_CMD               0x00000002
-#define SMTP_FLAG_FOLDING                    0x00000004
-#define SMTP_FLAG_IN_CONTENT_TYPE            0x00000008
-#define SMTP_FLAG_GOT_BOUNDARY               0x00000010
-#define SMTP_FLAG_DATA_HEADER_CONT           0x00000020
-#define SMTP_FLAG_IN_CONT_TRANS_ENC          0x00000040
-#define SMTP_FLAG_EMAIL_ATTACH               0x00000080
-#define SMTP_FLAG_MULTIPLE_EMAIL_ATTACH      0x00000100
-#define SMTP_FLAG_IN_CONT_DISP               0x00000200
-#define SMTP_FLAG_IN_CONT_DISP_CONT          0x00000400
-#define SMTP_FLAG_MIME_END                   0x00000800
 #define SMTP_FLAG_BDAT                       0x00001000
-
-/* log flags */
-#define SMTP_FLAG_MAIL_FROM_PRESENT          0x00000001
-#define SMTP_FLAG_RCPT_TO_PRESENT            0x00000002
-#define SMTP_FLAG_FILENAME_PRESENT           0x00000004
-#define SMTP_FLAG_EMAIL_HDRS_PRESENT         0x00000008
+#define SMTP_FLAG_ABORT                      0x00002000
 
 /* session flags */
 #define SMTP_FLAG_XLINK2STATE_GOTFIRSTCHUNK  0x00000001
@@ -131,6 +116,8 @@
 #define MAX_HEADER_NAME_LEN 64
 
 #define SMTP_PROTO_REF_STR  "smtp"
+
+#define MAX_AUTH_NAME_LEN  20  /* Max length of SASL mechanisms, defined in RFC 4422 */
 
 /**************************************************************************/
 
@@ -185,6 +172,7 @@ typedef enum _SMTPCmdEnum
     CMD_XSTA,
     CMD_XTRN,
     CMD_XUSR,
+    CMD_ABORT,
     CMD_LAST
 
 } SMTPCmdEnum;
@@ -243,27 +231,16 @@ typedef struct _SMTPSearchInfo
 
 } SMTPSearchInfo;
 
-typedef struct _SMTPMimeBoundary
+typedef struct _SMTPAuthName
 {
-    char   boundary[2 + MAX_BOUNDARY_LEN + 1];  /* '--' + MIME boundary string + '\0' */
-    int    boundary_len;
-    void  *boundary_search;
-
-} SMTPMimeBoundary;
-
-typedef struct _SMTPPcre
-{
-    pcre       *re;
-    pcre_extra *pe;
-
-} SMTPPcre;
+    int length;
+    char name[MAX_AUTH_NAME_LEN];
+} SMTPAuthName;
 
 typedef struct _SMTP
 {
     int state;
-    int data_state;
     int state_flags;
-    int log_flags;
     int session_flags;
     int alert_mask;
     int reassembling;
@@ -277,11 +254,8 @@ typedef struct _SMTP
     int               cur_server_line_len;
     */
 
-    MemBucket *decode_bkt;
-    SMTPMimeBoundary  mime_boundary;
-    Email_DecodeState *decode_state;
-    MAIL_LogState *log_state;
-
+    MimeState mime_ssn;
+    SMTPAuthName *auth_name;
     /* In future if we look at forwarded mail (message/rfc822) we may
      * need to keep track of additional mime boundaries
      * SMTPMimeBoundary  mime_boundary[8];
@@ -290,6 +264,7 @@ typedef struct _SMTP
 
     tSfPolicyId policy_id;
     tSfPolicyUserContextId config;
+    uint32_t flow_id;
 
 } SMTP;
 

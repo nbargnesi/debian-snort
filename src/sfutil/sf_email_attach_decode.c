@@ -1,7 +1,8 @@
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 1998-2013 Sourcefire, Inc.
  **
- ** Author: Bhagyashree Bantwal <bbantwal@sourcefire.com>
+ ** Author: Bhagyashree Bantwal <bbantwal@cisco.com>
  **
  ** This program is free software; you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License Version 2 as
@@ -96,11 +97,10 @@ int sf_qpdecode(char *src, uint32_t slen, char *dst, uint32_t dlen, uint32_t *by
                 return 0;
             }
         }
-        else
+        else if (isprint(ch) || isblank(ch))
         {
             dst[*bytes_copied] = ch;
             *bytes_copied +=1;
-
         }
     }
 
@@ -515,7 +515,6 @@ int UUDecode(const uint8_t *start, const uint8_t *end, Email_DecodeState *ds)
     {
         ds->uu_state.end_found = 0;
         ds->uu_state.begin_found = 0;
-        ds->decode_type = DECODE_NONE;
     }
 
 
@@ -569,10 +568,7 @@ int BitEncExtract(const uint8_t *start, const uint8_t *end, Email_DecodeState *d
 
     if( (uint32_t)(end-start) < bytes_avail )
     {
-        if ((end > start) && (*(end-1) == '\r'))
-            act_size = ( end - start) - 1;
-        else
-            act_size = ( end - start);
+        act_size = ( end - start);
     }
     else
     {

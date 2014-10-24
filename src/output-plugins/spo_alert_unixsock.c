@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 ** Copyright (C) 2000,2001 Andrew R. Baker <andrewb@uab.edu>
@@ -178,7 +179,11 @@ static void AlertUnixSock(Packet *p, char *msg, void *arg, Event *event)
     memset((char *)&alertpkt,0,sizeof(alertpkt));
     if (event)
     {
+#if defined(FEAT_OPEN_APPID)
+        memmove((void *)&alertpkt.event,(const void *)event,sizeof(Event) - offsetof(Event, app_name));
+#else
         memmove((void *)&alertpkt.event,(const void *)event,sizeof(Event));
+#endif /* defined(FEAT_OPEN_APPID) */
     }
 
     if(p && p->pkt)

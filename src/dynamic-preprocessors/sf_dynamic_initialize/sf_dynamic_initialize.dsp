@@ -159,7 +159,7 @@ SOURCE="..\..\file-process\file_api.h"
 !IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\..\file-process\file_api.h
+InputPath="..\..\file-process\file_api.h"
 InputName=file_api
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -171,7 +171,7 @@ InputName=file_api
 !ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\..\file-process\file_api.h
+InputPath="..\..\file-process\file_api.h"
 InputName=file_api
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -185,13 +185,13 @@ InputName=file_api
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\file-process\libs\file_lib.h"
+SOURCE="..\..\file-process\file_mail_common.h"
 
 !IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
 
 # Begin Custom Build
-InputPath=..\..\file-process\libs\file_lib.h
-InputName=file_lib
+InputPath="..\..\file-process\file_mail_common.h"
+InputName=file_mail_common
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	mkdir ..\include 
@@ -202,8 +202,8 @@ InputName=file_lib
 !ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
 
 # Begin Custom Build
-InputPath=..\..\file-process\libs\file_lib.h
-InputName=file_lib
+InputPath="..\..\file-process\file_mail_common.h"
+InputName=file_mail_common
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	mkdir ..\include 
@@ -437,6 +437,37 @@ BuildCmds= \
 
 "..\include\$(InputName).h.new" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sfutil\mpse_methods.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\mpse_methods.h
+InputName=mpse_methods
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include\$(InputName).h 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\sfutil\mpse_methods.h
+InputName=mpse_methods
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include\$(InputName).h 
+	
 # End Custom Build
 
 !ENDIF 
@@ -694,6 +725,113 @@ InputName=segment_mem
 # Begin Custom Build
 InputPath=..\..\sfutil\segment_mem.h
 InputName=segment_mem
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\session_api.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\session_api.h
+InputName=session_api
+
+BuildCmds= \
+	mkdir ..\include \
+	copy $(InputPath) ..\include\$(InputName).h.new \
+	c:\cygwin\bin\sed -e "s/Packet /SFSnortPacket /" -e "s/decode.h/sf_snort_packet.h/" -e "/sfportobject\.h/d" -e "s/PortObject/void/g" ../include/$(InputName).h.new > ../include/$(InputName).h \
+	
+
+"..\include\$(InputName).h.new" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\session_api.h
+InputName=session_api
+
+BuildCmds= \
+	mkdir ..\include \
+	copy $(InputPath) ..\include\$(InputName).h.new \
+	c:\cygwin\bin\sed -e "s/Packet /SFSnortPacket /" -e "s/decode.h/sf_snort_packet.h/" -e "/sfportobject\.h/d" -e "s/PortObject/void/g" ../include/$(InputName).h.new > ../include/$(InputName).h \
+	
+
+"..\include\$(InputName).h.new" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Session\session_common.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\session_common.h
+InputName=session_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\session_common.h
+InputName=session_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Session\session_expect.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\session_expect.h
+InputName=session_expect
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\session_expect.h
+InputName=session_expect
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	mkdir ..\include 
@@ -1489,6 +1627,10 @@ InputName=sfhashfcn
 # End Source File
 # Begin Source File
 
+SOURCE=..\libs\sfparser.c
+# End Source File
+# Begin Source File
+
 SOURCE="..\..\sfutil\sfPolicy.h"
 
 !IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
@@ -2041,6 +2183,37 @@ BuildCmds= \
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\preprocessors\sip_common.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\sip_common.h
+InputName=sip_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\sip_common.h
+InputName=sip_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\snort_bounds.h
 
 !IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
@@ -2114,6 +2287,77 @@ BuildCmds= \
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Session\snort_session.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\snort_session.h
+InputName=snort_session
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Session\snort_session.h
+InputName=snort_session
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_config.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_ha.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_ha.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_include.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_inspect.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_inspect.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\ssl_common\ssl_session.h
 # End Source File
 # Begin Source File
 
@@ -2200,6 +2444,37 @@ BuildCmds= \
 
 "..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\preprocessors\Stream6\stream_common.h
+
+!IF  "$(CFG)" == "sf_dynamic_initialize - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Stream6\stream_common.h
+InputName=stream_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "sf_dynamic_initialize - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\..\preprocessors\Stream6\stream_common.h
+InputName=stream_common
+
+"..\include\$(InputName).h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	mkdir ..\include 
+	copy $(InputPath) ..\include 
+	
 # End Custom Build
 
 !ENDIF 

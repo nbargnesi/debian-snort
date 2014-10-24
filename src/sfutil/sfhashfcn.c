@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,6 +38,7 @@
 
 #include "sf_types.h"
 
+
 #ifndef MODULUS_HASH
 # include "snort.h"
 #endif
@@ -64,11 +66,13 @@ SFHASHFCN * sfhashfcn_new( int m )
         return 0;
 
 #ifndef MODULUS_HASH
+#ifndef DYNAMIC_PREPROC_CONTEXT
     if (ScStaticHash())
     {
         sfhashfcn_static(p);
     }
     else
+#endif
 #endif
     {
         p->seed     = sf_nearest_prime( (rand()%m)+3191 );

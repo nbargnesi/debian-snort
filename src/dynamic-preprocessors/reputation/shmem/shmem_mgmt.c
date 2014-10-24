@@ -1,6 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -313,7 +314,7 @@ static int MapShmemDataSegmentForWriter(uint32_t size, uint32_t disk_version, in
     else
     {
         mgmt_ptr->instance[shmusr_ptr->instance_num].shmemSegActiveFlag[available_segment] = 0;
-        available_segment = NO_DATASEG;
+        available_segment = SHMEM_ERR;
     }
 
 exit:
@@ -352,7 +353,7 @@ static int InitSharedMemDataSegmentForWriter(uint32_t size, uint32_t disk_versio
             DEBUG_WRAP(DebugMessage(DEBUG_REPUTATION,
                 "Loading file into shared memory failed\n"););
             ShutdownSegment(segment_num);
-            segment_num = NO_DATASEG;
+            segment_num = SHMEM_ERR;
             goto exit;
         }
         mgmt_ptr->segment[segment_num].size = size;
@@ -404,7 +405,7 @@ int LoadSharedMemDataSegmentForWriter(int startup)
     }
 
     if ( GetSortedListOfShmemDataFiles( ) != SF_SUCCESS )
-        goto exit;
+        return SHMEM_ERR; 
 
 #ifdef DEBUG_MSGS
     PrintDataFiles();

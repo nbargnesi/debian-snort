@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,6 +33,7 @@
 #define __SMTP_CONFIG_H__
 
 #include "sfPolicyUserData.h"
+#include "file_mail_common.h"
 #include "sf_email_attach_decode.h"
 #include "file_api.h"
 
@@ -150,10 +152,9 @@ typedef struct _SMTPCmdConfig
 
 typedef struct _SMTPConfig
 {
-    char  ports[8192];
+    uint8_t ports[8192];
     char  inspection_type;
     char  normalize;
-    char  ignore_data;
     char  ignore_tls_data;
     int   max_command_line_len;
     int   max_header_line_len;
@@ -166,14 +167,8 @@ typedef struct _SMTPConfig
     char  enable_mime_decoding;
     MAIL_LogConfig log_config;
     uint32_t   memcap;
-    int   max_mime_mem;
     int   max_mime_depth; 
-    int max_depth;
-    int b64_depth;
-    int qp_depth;
-    int bitenc_depth;
-    int uu_depth;
-    int64_t file_depth;
+    DecodeConfig decode_conf;
 
     SMTPToken *cmds;
     SMTPCmdConfig *cmd_config;
@@ -195,9 +190,7 @@ typedef struct _SMTP_Stats
     uint64_t sessions;
     uint64_t conc_sessions;
     uint64_t max_conc_sessions;
-    uint64_t memcap_exceeded;
-    uint64_t attachments[DECODE_ALL];
-    uint64_t decoded_bytes[DECODE_ALL];
+    MimeStats mime_stats;
 
 } SMTP_Stats;
 
@@ -208,7 +201,6 @@ void SMTP_ParseArgs(SMTPConfig *, char *);
 void SMTP_PrintConfig(SMTPConfig *config);
 
 void SMTP_CheckConfig(SMTPConfig *, tSfPolicyUserContextId);
-int SMTP_IsDecodingEnabled(SMTPConfig *pPolicyConfig);
 
 #endif
 

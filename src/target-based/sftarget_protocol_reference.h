@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2006-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -44,6 +45,9 @@ void InitializeProtocolReferenceTable(void);
 void FreeProtoocolReferenceTable(void);
 int16_t AddProtocolReference(const char *protocol);
 int16_t FindProtocolReference(const char *protocol);
+#if defined(FEAT_OPEN_APPID)
+const char * FindProtocolName(int16_t protocol_id);
+#endif /* defined(FEAT_OPEN_APPID) */
 
 int16_t GetProtocolReference(Packet *p);
 

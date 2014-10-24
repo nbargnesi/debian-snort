@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,7 +38,7 @@
 
 /* Version for this rule library */
 #define DETECTION_LIB_MAJOR 2
-#define DETECTION_LIB_MINOR 0
+#define DETECTION_LIB_MINOR 2
 #define DETECTION_LIB_BUILD 1
 #define DETECTION_LIB_NAME "Snort_Dynamic_Rule_Example"
 
