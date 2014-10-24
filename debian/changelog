@@ -34,7 +34,7 @@ snort (2.9.5.3-4) unstable; urgency=medium
 
     (Closes: #753914)
   * debian/snort-stat.8: Fix filename of the alert log file and point to the
-    correct location.
+    correct location. (Closes: #709246)
   * Debconf updated Translations:
     - Updated Russian translation, contributed by Yuri Kozlov 
       (Closes: 729710, #721483)
