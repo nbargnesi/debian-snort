@@ -6,6 +6,10 @@ snort (2.9.7.0-1) unstable; urgency=high
     For more information see: https://www.snort.org/eol
   * debian/patches/{config,config_disabled_rules,fix_upstream_typos}: Refresh
     to apply to the newest source
+  * debian/rules: 
+      + Use dpkg-buildflags to setup the defult compiler and link flags.
+      + Enable hardening options when building
+  * debian/control: Build-Depend on (dpkg-dev >= 1.16.1~) due to above change
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Fri, 24 Oct 2014 02:04:35 +0200
 

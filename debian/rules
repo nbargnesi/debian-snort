@@ -8,9 +8,15 @@
 
 export DH_VERBOSE=1
 
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+# Enable all hardening features as Snort is a network "listener" of sorts
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
 TMP=`pwd`/debian
 
-CFLAGS:=-g -O2 -D_GNU_SOURCE
+CFLAGS +=-D_GNU_SOURCE
 
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -g
