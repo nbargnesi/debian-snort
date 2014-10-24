@@ -1,6 +1,11 @@
+Description: Fix typos in upstream code
+Author: Javier Fernández-Sanguino Peña <jfs@debian.org>
+Origin: vendor
+Last-Update: 2014-10-24
+
 --- a/src/dynamic-preprocessors/dns/spp_dns.c
 +++ b/src/dynamic-preprocessors/dns/spp_dns.c
-@@ -275,7 +275,7 @@
+@@ -279,7 +279,7 @@
              if (( !cur_tokenp ) || ( strcmp(cur_tokenp, "{" )))
              {
                  DynamicPreprocessorFatalMessage("%s(%d) Bad value specified for %s.  Must start "
@@ -11,7 +16,7 @@
                  //free(argcpyp);
 --- a/ChangeLog
 +++ b/ChangeLog
-@@ -10464,7 +10464,7 @@
+@@ -12533,7 +12533,7 @@
  
  2006-08-30 Steven Sturges <ssturges@sourcefire.com>
      * src/sfutil/ipobj.c:
@@ -20,7 +25,7 @@
      * src/dynamic-preprocessors/ftptelnet/pp_ftp.c:
        Treat spaces as part of a filename in 'string' parameter validation.
        Thanks Bamm Visscher for pointing out the issue.
-@@ -10707,7 +10707,7 @@
+@@ -12776,7 +12776,7 @@
        Update to provide links to Snort classification reference information.
        Thanks Yoann Vandoorselaere.
      * src/sfutil/ipobj.c:
@@ -29,7 +34,7 @@
      * src/configure.in:
        Update for HPUX 11.
      * src/snort.c:
-@@ -16576,7 +16576,7 @@
+@@ -18644,7 +18644,7 @@
             * added bidirectional rules functionality (now Snort goes
               both ways....)
  
@@ -38,78 +43,36 @@
           * ditto logging functions
           * fixed string termination code in the SMB alerter so that it
             can now alert to more than one box at a time
-@@ -16780,7 +16780,7 @@
+@@ -18848,7 +18848,7 @@
      * rules.c: Moved AlertPkt() and LogPkt() to log.c
  
-     * log.c: Totally revamped the logging code to be more logical and 
--                 have less duplication in the code.  There are now seperate 
+     * log.c: Totally revamped the logging code to be more logical and
+-                 have less duplication in the code.  There are now seperate
 +                 have less duplication in the code.  There are now separate
-                  logging functions for each of the layers of the packet.  
+                  logging functions for each of the layers of the packet. 
                   PrintIPPkt() has been totally rewritten, PrintFragHeader has
                   been eliminated, and two functions have been moved over from
-@@ -16866,7 +16866,7 @@
-                  mode with the "-d" command line switch if you're using Snort 
+@@ -18934,7 +18934,7 @@
+                  mode with the "-d" command line switch if you're using Snort
                   as an IDS, because it's still slow enough to drop some large
-                  packets.  Packet print out has changed as well, with the 
+                  packets.  Packet print out has changed as well, with the
 -                 different packet layers seperated by onto their own lines
 +                 different packet layers separated by onto their own lines
-                  (well, mostly).  Fragmented packets are now recorded in a 
+                  (well, mostly).  Fragmented packets are now recorded in a
                   "FRAG" file.
  
-@@ -16897,7 +16897,7 @@
+@@ -18965,7 +18965,7 @@
  1999-01-28  mfr  <roesch@clark.net>
  
          * rules.c: Rules sorting is now implemented.  There are actually three
 -                   seperate lists (Pass, Log, Alert) now, with the rules being
 +                   separate lists (Pass, Log, Alert) now, with the rules being
-                    placed on to the lists in the order they're read from the 
+                    placed on to the lists in the order they're read from the
                     rules file.  The rule execution order was changed, now
-                    Alert rules are applied first, then Pass Rules, the Log 
---- a/doc/README.multipleconfigs
-+++ b/doc/README.multipleconfigs
-@@ -22,7 +22,7 @@
- <path_to_snort.conf> : Refers to the absolute or relative path to the snort.conf
- for specific configuration.
- 
--<vlanIdList>     : Refers to the comma seperated list of vlandIds and vlanId
-+<vlanIdList>     : Refers to the comma separated list of vlandIds and vlanId
- ranges.  The format for ranges is two vlanId separated by a "-". Spaces are 
- allowed within ranges.  Valid vlanId is any number in 0-4095 range. Negative 
- vland Ids and alphanumeric are not supported.
-@@ -31,7 +31,7 @@
- or IPv4.  A maximum of 512 individual IPv4 or IPv6 addresses or CIDRs can be
- specified.
- 
--<policyIdList>   : Refers to the comma seperated list of 16bit policyIds
-+<policyIdList>   : Refers to the comma separated list of 16bit policyIds
- 
- NOTE: Vlan and Subnets can not be used in the same line. Configurations can be 
- applied based on either Vlans or Subnets not both. 
---- a/doc/README.sfportscan
-+++ b/doc/README.sfportscan
-@@ -158,7 +158,7 @@
- * watch_ip { <ip1|ip2/cidr[ [port1|port2-port3]]> }
- 
-   Defines which IPs, networks, and specific ports on those hosts to watch.
--  The list is a comma seperated list of IP addresses, IP address using CIDR
-+  The list is a comma separated list of IP addresses, IP address using CIDR
-   notation.  Optionally, ports are specified after the IP address/CIDR using
-   a space and can be either a single port or a range denoted by a dash.
-   IPs or networks not falling into this range are ignored if this option
---- a/doc/snort_manual.tex
-+++ b/doc/snort_manual.tex
-@@ -13091,7 +13091,7 @@
- \item [\texttt{path\_to\_snort.conf}] - Refers to the absolute or relative path to 
- the snort.conf for specific configuration.
- 
--\item [\texttt{vlanIdList}] - Refers to the comma seperated list of vlandIds and 
-+\item [\texttt{vlanIdList}] - Refers to the comma separated list of vlandIds and
- vlanId ranges. The format for ranges is two vlanId separated by a "-". Spaces are 
- allowed within ranges. Valid vlanId is any number in 0-4095 range. Negative vland 
- Ids and alphanumeric are not supported.
+                    Alert rules are applied first, then Pass Rules, the Log
 --- a/src/output-plugins/spo_alert_syslog.c
 +++ b/src/output-plugins/spo_alert_syslog.c
-@@ -146,7 +146,7 @@
+@@ -147,7 +147,7 @@
  /*
   * Function: ParseSyslogArgs(struct _SnortConfig *, char *)
   *
@@ -120,7 +83,7 @@
   *          function.
 --- a/src/output-plugins/spo_alert_unixsock.c
 +++ b/src/output-plugins/spo_alert_unixsock.c
-@@ -143,7 +143,7 @@
+@@ -144,7 +144,7 @@
  /*
   * Function: ParseAlertUnixSockArgs(char *)
   *
@@ -131,7 +94,7 @@
   *          function.
 --- a/src/output-plugins/spo_csv.c
 +++ b/src/output-plugins/spo_csv.c
-@@ -272,8 +272,8 @@
+@@ -273,8 +273,8 @@
   *
   * Arguments:     p => packet. (could be NULL)
   *              msg => the message to send
@@ -144,7 +107,7 @@
   *
 --- a/src/output-plugins/spo_unified2.c
 +++ b/src/output-plugins/spo_unified2.c
-@@ -1242,7 +1242,7 @@
+@@ -1241,7 +1241,7 @@
  /*
   * Function: Unified2ParseArgs(char *)
   *
@@ -155,7 +118,7 @@
   *          function.
 --- a/src/parser.c
 +++ b/src/parser.c
-@@ -4513,7 +4513,7 @@
+@@ -4516,7 +4516,7 @@
  
      if(filespec == NULL)
      {
@@ -177,7 +140,7 @@
   *          function.
 --- a/src/sfutil/sfportobject.c
 +++ b/src/sfutil/sfportobject.c
-@@ -3673,7 +3673,7 @@
+@@ -3674,7 +3674,7 @@
      {
      case POPERR_NO_NAME:            return "no name";
      case POPERR_NO_ENDLIST_BRACKET: return "no end of list bracket."
@@ -186,7 +149,7 @@
                                             " and no spaces may appear between"
                                             " brackets.";
      case POPERR_NOT_A_NUMBER:       return "not a number";
-@@ -3852,7 +3852,7 @@
+@@ -3853,7 +3853,7 @@
          //LogMessage("PortObject : '%s' \n",portlist);
  
          /*
