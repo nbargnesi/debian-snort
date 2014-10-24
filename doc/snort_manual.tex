@@ -101,7 +101,7 @@
 
 \begin{document}
 
-\title{SNORT\textsuperscript{\textregistered} Users Manual\\2.9.5.3}
+\title{SNORT\textsuperscript{\textregistered} Users Manual\\2.9.7}
 
 \author{The Snort Project}
 
@@ -114,6 +114,8 @@ Copyright \copyright 1998-2003 Martin Roesch
 Copyright \copyright 2001-2003 Chris Green
 
 Copyright \copyright 2003-2013 Sourcefire, Inc.
+
+Copyright \copyright 2014 Cisco and/or its affiliates. All rights reserved.
 
 \tableofcontents{}
 
@@ -481,12 +483,13 @@ when invoking Snort to perform pcap readback or inline operation, etc.
 
 \begin{note}
 
-Some network cards have features named "Large Receive Offload" (lro) and "Generic
-Receieve Offload" (gro). With these features enabled, the network card performs
-packet reassembly before they're processed by the kernel.
+Some network cards have features which can affect Snort. Two of these features
+are named "Large Receive Offload" (lro) and "Generic Receive Offload" (gro). 
+With these features enabled, the network card performs packet reassembly 
+before they're processed by the kernel.
 
 By default, Snort will truncate packets larger than the default snaplen of 1518
-bytes. In addition, LRO and GRO may cause issues with Stream5 target-based
+bytes. In addition, LRO and GRO may cause issues with Stream target-based
 reassembly. We recommend that you turn off LRO and GRO. On linux systems, you can run:
 
 \begin{verbatim}
@@ -728,13 +731,13 @@ additional fields:
 count of packets filtered out and not handed to Snort for analysis.
 
 \item \texttt{Injected}
-packets Snort generated and sent, eg TCP resets.
+packets Snort generated and sent, e.g. TCP resets.
 
 \item \texttt{Allow}
 packets Snort analyzed and did not take action on.
 
 \item \texttt{Block}
-packets Snort did not forward, eg due to a block rule.
+packets Snort did not forward, e.g. due to a block rule.
 
 \item \texttt{Replace}
 packets Snort modified.
@@ -1072,6 +1075,22 @@ Bad Chk Sum:        32135 (  0.863%)
 ===============================================================================
 \end{verbatim}
 
+\subsection{Snort Memory Statistics}
+On systems with mallinfo (3), you will see additional statistics. Check the man 
+page of mallinfo for details
+
+Example:
+\begin{verbatim}
+===============================================================================
+Memory usage summary:
+  Total non-mmapped bytes (arena):       415481856
+  Bytes in mapped regions (hblkhd):      409612288
+  Total allocated space (uordblks):      92130384
+  Total free space (fordblks):           323351472
+  Topmost releasable block (keepcost):   3200
+===============================================================================
+\end{verbatim}
+
 \subsection{Actions, Limits, and Verdicts}
 
 Action and verdict counts show what Snort did with the packets it analyzed.
@@ -1109,7 +1128,7 @@ Verdicts are rendered by Snort on each packet:
 \begin{itemize}
 \item Allow = packets Snort analyzed and did not take action on. 
 
-\item Block = packets Snort did not forward, eg due to a block rule.  "Block"
+\item Block = packets Snort did not forward, e.g. due to a block rule.  "Block"
 is used instead of "Drop" to avoid confusion between dropped packets (those
 Snort didn't actually see) and blocked packets (those Snort did not allow to
 pass).
@@ -1170,11 +1189,20 @@ Verdicts:
 
 \section{Tunneling Protocol Support}
 
-Snort supports decoding of GRE, IP in IP and PPTP.  To enable support, an extra
-configuration option is necessary:
+Snort supports decoding of many tunneling protocols, including GRE, PPTP over GRE,
+MPLS, IP in IP, and ERSPAN, all of which are enabled by default.  
+
+To disable support for any GRE related encapsulation, PPTP over GRE, IPv4/IPv6 over
+GRE, and ERSPAN, an extra configuration option is necessary:
 
 \begin{verbatim}
-    $ ./configure --enable-gre
+    $ ./configure --disable-gre
+\end{verbatim}
+
+To disable support for MPLS, an separate extra configuration option is necessary:
+
+\begin{verbatim}
+    $ ./configure --disable-mpls
 \end{verbatim}
 
 \subsection{Multiple Encapsulations}
@@ -1253,6 +1281,9 @@ creation of a PID file even when not running in daemon mode.
 
 The PID file will be locked so that other snort processes cannot start.  Use
 the \texttt{--nolock-pidfile} switch to not lock the PID file.
+
+If you do not wish to include the name of the interface in the PID file, use
+the \texttt{--no-interface-pidfile} switch.
 
 \subsection{Running in Rule Stub Creation Mode}
 
@@ -1439,7 +1470,7 @@ Snort can be configured to use control socket using the command line argument \t
     config cs_dir:<path>
 \end{verbatim}
 
-\texttt{<path>} specifies the directory for snort to creat the socket. If relative path is used, 
+\texttt{<path>} specifies the directory for snort to create the socket. If relative path is used, 
 the path is relative to pid path specified. If there is no pid path specified, it is relative to 
 current working directory. 
 
@@ -1830,7 +1861,7 @@ examples.\\
 \hline
 \texttt{config autogenerate\_preprocessor\newline \_decoder\_rules} & If Snort was
 configured to enable decoder and preprocessor rules, this option will cause
-Snort to revert back to it's original behavior of alerting if the decoder or
+Snort to revert back to its original behavior of alerting if the decoder or
 preprocessor generates an event. \\
 
 \hline
@@ -1898,7 +1929,7 @@ one with the latest version. \\
 
 \hline \texttt{config daq\_list: [<dir>]} & Tell Snort to dump basic DAQ
 capabilities and exit.  You can optionally specify a directory to include any
-dynamic DAQs from that directory.  You can also preceed this option with extra
+dynamic DAQs from that directory.  You can also precede this option with extra
 DAQ directory options to look in multiple directories. \\
 
 \hline
@@ -2243,6 +2274,10 @@ limit on the number of MPLS headers a packet can have. Its default value is -1,
 which means that there is no limit on label chain length.\\
 
 \hline
+\texttt{config max\_ip6\_extensions: <num-extensions>} & Sets the maximum number
+of IPv6 extension headers that Snort will decode. Default is 8. \\
+
+\hline
 \texttt{config min\_ttl: <ttl>} & Sets a Snort-wide minimum ttl to ignore all
 traffic. \\
 
@@ -2266,7 +2301,7 @@ options. The default MPLS payload type is ipv4\\
 
 \hline
 \texttt{config order: <order>} & Changes the order that rules
-are evaluated, eg: pass alert log activation. \\
+are evaluated, e.g.: pass alert log activation. \\
 
 \hline
 \texttt{config pcre\_match\_limit: $<$integer$>$} & Restricts the amount of
@@ -2305,6 +2340,10 @@ performance.  See Section \ref{preproc profiling} for more details. \\
 Section \ref{rule profiling} for more details. \\
 
 \hline
+\texttt{config protected\_content:
+md5|sha256|sha512} & Specifies a default algorithm to use for protected\_content rules.  \\
+
+\hline
 \texttt{config quiet}& Disables banner and status reports (\texttt{snort -q}).
 NOTE: The command line switch \texttt{-q} takes effect immediately after
 processing the command line parameters, whereas using \texttt{config quiet}
@@ -2314,7 +2353,7 @@ console or syslog.
 \\
 
 \hline
-\texttt{config reference: <ref>} & Adds a new reference system to Snort, eg:
+\texttt{config reference: <ref>} & Adds a new reference system to Snort, e.g.:
 myref http://myurl.com/?id=\\
 
 \hline
@@ -2674,63 +2713,37 @@ begin with ``123-'' for information on the different event types.
 
 %%Need to doc these eight types of anomalies and truncate beginning of section.
 
-\subsection{Stream5}
-\label{stream5 section}
+\subsection{Session}
+\label{session section}
 
-The Stream5 preprocessor is a target-based TCP reassembly module for Snort.  It
-is capable of tracking sessions for both TCP and UDP.  With Stream5, the rule
-'flow' and 'flowbits' keywords are usable with TCP as well as UDP traffic.
+The Session preprocessor is a global stream session management module
+for Snort.  It is derived from the session management functions that
+were part of the Stream5 preprocessor.
 
-\subsubsection{Transport Protocols}
+Since Session implements part of the functionality and API that was
+previously in Stream5 it cannot be used with Stream5 but must be
+used in conjunction with the new Stream preprocessor.  Similarly, 
+due to the API changes, the other preprocessors in Snort 2.9.7 work
+only with the new Session and Stream preprocessers.
 
-TCP sessions are identified via the classic TCP "connection".  UDP sessions are
-established as the result of a series of UDP packets from two end points via
-the same set of ports.  ICMP messages are tracked for the purposes of checking
-for unreachable and service unavailable messages, which effectively terminate a
-TCP or UDP session.
+\subsubsection{Session API}
 
-\subsubsection{Target-Based}
+Session provides an API to enable the creation and management of
+the session control block for a flow and the management of data
+and state that may be associated with that flow by service and
+application preprocessors (most of these functions were previously
+supported by the Stream5 API). These methods are called to identify
+sessions that may be ignored (large data transfers, etc), and 
+update the identifying information about the session (application
+protocol, direction, etc) that can later be used by rules.  
+API methods to enable preprocessors to register for dispatch for
+ports and services for which they should be called to process 
+the packet have been added to the Session API. Session is required
+for the use of the 'flow' and 'flowbits' keywords.
 
-Stream5, like Frag3, introduces target-based actions for handling of
-overlapping data and other TCP anomalies.  The methods for handling overlapping
-data, TCP Timestamps, Data on SYN, FIN and Reset sequence numbers, etc. and the
-policies supported by Stream5 are the results of extensive research with many
-target operating systems.
+\subsubsection{Session Global Configuration}
 
-\subsubsection{Stream API}
-
-Stream5 fully supports the Stream API, other protocol normalizers/preprocessors to
-dynamically configure reassembly behavior as required by the application layer
-protocol, identify sessions that may be ignored (large data transfers, etc), and
-update the identifying information about the session (application protocol, direction,
-etc) that can later be used by rules.
-
-\subsubsection{Anomaly Detection}
-
-TCP protocol anomalies, such as data on SYN packets, data received outside the
-TCP window, etc are configured via the \texttt{detect\_anomalies} option to the
-TCP configuration.  Some of these anomalies are detected on a per-target basis.
-For example, a few operating systems allow data in TCP SYN packets, while
-others do not.
-
-\subsubsection{Protocol Aware Flushing}
-
-Protocol aware flushing of HTTP, SMB and DCE/RPC can be enabled with this option:
-
-\begin{verbatim}
-config paf_max: <max-pdu>
-\end{verbatim}
-
-where \texttt{<max-pdu>} is between zero (off) and 63780.  This allows Snort to
-statefully scan a stream and reassemble a complete PDU regardless of
-segmentation.  For example, multiple PDUs within a single TCP segment, as well
-as one PDU spanning multiple TCP segments will be reassembled into one PDU per
-packet for each PDU.  PDUs larger than the configured maximum will be split
-into multiple packets.
-
-\subsubsection{Stream5 Global Configuration}
-
-Global settings for the Stream5 preprocessor.
+Global settings for the Session preprocessor.
 
 \begin{verbatim}
     preprocessor stream5_global: \
@@ -2740,7 +2753,9 @@ Global settings for the Stream5 preprocessor.
         [track_icmp <yes|no>], [max_icmp <number>], \
         [track_ip <yes|no>], [max_ip <number>], \
         [flush_on_alert], [show_rebuilt_packets], \
-        [prune_log_max <bytes>], [disabled]
+        [prune_log_max <bytes>], [disabled], \
+        [flush_on_alert], [show_rebuilt_packets], \
+        [prune_log_max <num bytes>], [enable_ha]
 \end{verbatim}
 
 \begin{center}
@@ -2759,7 +2774,7 @@ Track sessions for TCP.  The default is "yes".\\
 \texttt{max\_tcp <num sessions>} &
 
 Maximum simultaneous TCP sessions tracked.  The default is "262144", maximum is
-"1048576", minimum is "1".\\
+"1048576", minimum is "2".\\
 
 \hline
 \texttt{memcap <num bytes>} &
@@ -2828,10 +2843,143 @@ specified number of bytes.  The default is "1048576" (1MB), minimum can be eithe
 (disabled) or if not disabled the minimum is "1024" and maximum is "1073741824".\\
 
 \hline
+\texttt{enable\_ha} &
+
+
+Enable High Availability state sharing.  The default is set to off.\\
+
+\hline
 \end{tabular}
 \end{center}
 
-\subsubsection{Stream5 TCP Configuration}
+\subsubsection{Session HA Configuration}
+
+Configuration for HA session state sharing.
+
+\begin{verbatim}
+    preprocessor stream5_ha: [min_session_lifetime <num millisecs>], \
+        [min_sync_interval <num millisecs>], [startup_input_file <filename>], \
+        [runtime_output_file <filename>], [use_side_channel]
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{| l | p{4.5in} |}
+
+\hline
+\textbf{Option} & \textbf{Description}\\
+\hline 
+
+\hline 
+\texttt{min\_session\_lifetime <num millisecs>} &
+
+Minimum session liftime in milliseconds.  HA update messages will only be generated once a session has existed for
+at least this long.  The default is 0, the minimum is 0, and the maximum is 65535.\\
+
+\hline 
+\texttt{min\_sync\_interval <num millisecs>} &
+
+Minimum synchronization interval in milliseconds.  HA update messages will not be generated more often than
+once per interval on a given session.  The default is 0, the minimum is 0, and the maximum is 65535.\\
+
+\hline
+\texttt{startup\_input\_file <filename>} &
+
+The name of a file for snort to read HA messages from at startup.\\
+
+\hline
+\texttt{runtime\_output\_file <filename>} &
+
+The name of a file to which Snort will write all HA messages that are generated while it is running.\\
+
+\hline
+\texttt{use\_side\_channel} &
+
+Indicates that all HA messages should also be sent to the side channel for processing.\\
+
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Example Configurations}
+
+\begin{enumerate}
+
+\item{}
+
+This example configuration sets a maximum number of TCP session control blocks to 8192, 
+enables tracking of TCP and UPD sessions, and disables tracking of ICMP sessions.  The 
+number of UDP session control blocks will be set to the compiled default. 
+
+\begin{verbatim}
+    preprocessor stream5_global: \
+        max_tcp 8192, track_tcp yes, track_udp yes, track_icmp no
+
+    preprocessor stream5_tcp: \
+        policy first, use_static_footprint_sizes
+
+    preprocessor stream5_udp: \
+        ignore_any_rules
+\end{verbatim}
+
+\end{enumerate}
+
+
+
+\subsection{Stream}
+\label{stream5 section}
+
+The Stream preprocessor is a target-based TCP reassembly module for Snort.  It
+is capable of tracking sessions for both TCP and UDP.  
+
+\subsubsection{Transport Protocols}
+
+TCP sessions are identified via the classic TCP "connection".  UDP sessions are
+established as the result of a series of UDP packets from two end points via
+the same set of ports.  ICMP messages are tracked for the purposes of checking
+for unreachable and service unavailable messages, which effectively terminate a
+TCP or UDP session.
+
+\subsubsection{Target-Based}
+
+Stream, like Frag3, introduces target-based actions for handling of
+overlapping data and other TCP anomalies.  The methods for handling overlapping
+data, TCP Timestamps, Data on SYN, FIN and Reset sequence numbers, etc. and the
+policies supported by Stream are the results of extensive research with many
+target operating systems.
+
+\subsubsection{Stream API}
+
+Stream supports the modified Stream API that is now focused on
+functions specific to reassembly and protocol aware flushing
+operations.  Session management functions have been moved to the
+Session API.  The remaining API functions enable other protocol 
+normalizers/preprocessors to dynamically configure reassembly 
+behavior as required by the application layer protocol.
+
+\subsubsection{Anomaly Detection}
+
+TCP protocol anomalies, such as data on SYN packets, data received outside the
+TCP window, etc are configured via the \texttt{detect\_anomalies} option to the
+TCP configuration.  Some of these anomalies are detected on a per-target basis.
+For example, a few operating systems allow data in TCP SYN packets, while
+others do not.
+
+\subsubsection{Protocol Aware Flushing}
+
+Protocol aware flushing of HTTP, SMB and DCE/RPC can be enabled with this option:
+
+\begin{verbatim}
+config paf_max: <max-pdu>
+\end{verbatim}
+
+where \texttt{<max-pdu>} is between zero (off) and 63780.  This allows Snort to
+statefully scan a stream and reassemble a complete PDU regardless of
+segmentation.  For example, multiple PDUs within a single TCP segment, as well
+as one PDU spanning multiple TCP segments will be reassembled into one PDU per
+packet for each PDU.  PDUs larger than the configured maximum will be split
+into multiple packets.
+
+\subsubsection{Stream TCP Configuration}
 
 Provides a means on a per IP address target to configure TCP policy.  This can
 have multiple occurrences, per policy that is bound to an IP address or network.
@@ -2848,7 +2996,7 @@ address or network.
         [dont_store_large_packets], [dont_reassemble_async], \
         [max_queued_bytes <bytes>], [max_queued_segs <number segs>], \
         [small_segments <number> bytes <number> [ignore_ports number [number]*]],  \
-        [ports <client|server|both> <all|number [number]*>], \
+        [ports <client|server|both> <all|number|!number [number]* [!number]*>], \
         [protocol <client|server|both> <all|service name [service name]*>], \
         [ignore_any_rules], [flush_factor <number segs>]
 \end{verbatim}
@@ -2937,7 +3085,7 @@ Limits the number of overlapping packets per session.  The default is "0"
 Maximum TCP window allowed.  The default is "0" (unlimited), the minimum is
 "0", and the maximum is "1073725440" (65535 left shift 14).  That is the
 highest possible TCP window per RFCs.  This option is intended to prevent a DoS
-against Stream5 by an attacker using an abnormally large window, so using a
+against Stream by an attacker using an abnormally large window, so using a
 value near the maximum is discouraged.\\
 
 \hline
@@ -3015,14 +3163,15 @@ this rule. The number of ports can be up to "65535".  A message is written to
 console/syslog when this limit is enforced.\\
 
 \hline
-\texttt{ports <client|server|both> <all|number(s)>} &
+\texttt{ports <client|server|both> <all|number(s)|!number(s)>} &
 
 
 Specify the client, server, or both and list of ports in which to perform
 reassembly.  This can appear more than once in a given config.  The default
 settings are \texttt{ports client 21 23 25 42 53 80 110 111 135 136 137 139 143
 445 513 514 1433 1521 2401 3306}.  The minimum port allowed is "1" and the
-maximum allowed is "65535".\\
+maximum allowed is "65535".  To disable reassembly for a port specifiy the port
+number preceeded by an '!', e.g. !8080 !25\\
 
 \hline
 \texttt{protocol <client|server|both> <all|service name(s)>} &
@@ -3065,7 +3214,7 @@ policy uses all of the default values.
 
 \end{note}
 
-\subsubsection{Stream5 UDP Configuration}
+\subsubsection{Stream UDP Configuration}
 
 Configuration for UDP session tracking.  Since there is no target based
 binding, there should be only one occurrence of the UDP configuration.
@@ -3121,7 +3270,7 @@ rule, the ignore\_any\_rules option will be disabled in this case.
 
 \end{note}
 
-\subsubsection{Stream5 ICMP Configuration}
+\subsubsection{Stream ICMP Configuration}
 
 Configuration for ICMP session tracking.  Since there is no target based
 binding, there should be only one occurrence of the ICMP configuration.
@@ -3154,7 +3303,7 @@ Session timeout.  The default is "30", the minimum is "1", and the maximum is
 \end{tabular}
 \end{center}
 
-\subsubsection{Stream5 IP Configuration}
+\subsubsection{Stream IP Configuration}
 
 Configuration for IP session tracking.  Since there is no target based
 binding, there should be only one occurrence of the IP configuration.
@@ -3347,7 +3496,7 @@ alert.
 
 \subsubsection{sfPortscan Configuration}
 
-Use of the Stream5 preprocessor is required for sfPortscan. Stream gives
+Use of the Stream preprocessor is required for sfPortscan. Stream gives
 portscan direction in the case of connectionless protocols like ICMP and UDP.
 You should enable the Stream preprocessor in your \texttt{snort.conf}, as
 described in Section \ref{stream5 section}.
@@ -3431,7 +3580,7 @@ dir.
 
 \item \textbf{include\_midstream}
 
-This option will include sessions picked up in midstream by Stream5.
+This option will include sessions picked up in midstream by Stream.
 This can lead to false alerts, especially under heavy load with dropped
 packets; which is why the option is off by default.
 
@@ -3957,13 +4106,6 @@ HTTP Inspect is a generic HTTP decoder for user applications.  Given a data
 buffer, HTTP Inspect will decode the buffer, find HTTP fields, and normalize
 the fields.  HTTP Inspect works on both client requests and server responses.
 
-The current version of HTTP Inspect only handles stateless processing.  This
-means that HTTP Inspect looks for HTTP fields on a packet-by-packet basis, and
-will be fooled if packets are not reassembled.  This works fine when there is
-another module handling the reassembly, but there are limitations in analyzing
-the protocol.  Future versions will have a stateful processing mode which will
-hook into various reassembly modules.
-
 HTTP Inspect has a very ``rich'' user configuration.  Users can configure
 individual HTTP servers with a variety of options, which should allow the user
 to emulate any type of web server. Within HTTP Inspect, there are two areas of
@@ -4073,6 +4215,10 @@ This option determines (in bytes) the maximum amount of memory the HTTP Inspect 
 will use for decompression. The minimum allowed value for this option is 3276 bytes. This option
 determines the number of concurrent sessions that can be decompressed at any given instant.
 The default value for this option is 838860.
+
+This value is also used for the optional SWF/PDF file decompression.  If these modes are enabled
+this same value sets the maximum about of memory used for file decompression session state
+information.
 
 \begin{note}
 
@@ -4456,6 +4602,8 @@ with any other options except:
 \item \texttt{log\_uri}
 \item \texttt{log\_hostname}
 \item \texttt{small\_chunk\_length}
+\item \texttt{decompress\_swf}
+\item \texttt{decompress\_pdf}
 \end{itemize}
 
 These options must be specified after the \texttt{profile} option.
@@ -4499,6 +4647,9 @@ this option the HTTP response will be thoroughly inspected. The different fields
 of a HTTP response such as status code, status message, headers, cookie (when
 enable\_cookie is configured) and body are extracted and saved into buffers.
 Different rule options are provided to inspect these buffers.
+
+This option must be enabled to make use of the decompress\_swf or decompress\_pdf
+options.
 
 \begin{note}
 
@@ -4547,13 +4698,6 @@ Http Inspect generates a preprocessor alert with gid 120 and sid 6 when the deco
 fails. When the decompression fails due to a CRC error encountered by zlib, HTTP Inspect
 will also provide the detection module with the data that was decompressed by zlib.
 
-\begin{note}
-
-To enable compression of HTTP server response, Snort should be configured
-with the --enable-zlib flag.
-
-\end{note}
-
 \item \texttt{unlimited\_decompress}
 
 This option enables the user to decompress unlimited gzip data (across multiple 
@@ -4562,6 +4706,72 @@ sequence packet is received. To ensure unlimited decompression, user should set
 the 'compress\_depth' and 'decompress\_depth' to its maximum values in the default 
 policy. The decompression in a single packet is still limited by the 'compress\_depth' 
 and 'decompress\_depth'.
+
+\item \texttt{decompress\_swf $\{ mode [mode] \}$ } 
+
+This option will enable decompression of compressed SWF (Adobe Flash content) files
+encountered as the HTTP Response body in a GET transaction.  The available decompression
+modes are 'deflate' and 'lzma'.  A prerequisite is enabling
+extended\_response\_inspection (described above).  When enabled, the preprocessor will
+examine the response body for the corresponding file signature.  'CWS' for Deflate/ZLIB
+compressed and 'ZWS' for LZMA compressed.  Each decompression mode can be individually enabled.
+e.g. ... { lzma } or { deflate } or { lzma deflate }.  The compressed content is decompressed
+'in-place' with the content made available to the detection/rules 'file\_data' option.
+If enabled and located, the compressed SWF file signature is converted to 'FWS' to indicate
+an uncompressed file.
+
+The 'decompress\_depth', 'compress\_depth', and 'unlimited\_decompress' are optionally used to 
+place limits on the decompression process.  The semantics for SWF files are similar to the
+gzip decompression process.
+
+During the decompression process, the preprocessor may generate alert 120:12 if Deflate
+decompression fails or alert 120:13 if LZMA decompression fails.
+
+\begin{note}
+LZMA decompression is only available if Snort is built with the liblzma package present
+and functional.  If the LZMA package is not present, then the { lzma } option will indicate
+a fatal parsing error.  If the liblzma package IS present, but one desires to disable LZMA
+support, then the --disable-lzma option on configure will disable usage of the library.
+\end{note}
+
+\item \texttt{decompress\_pdf $\{ mode [mode] \}$ } 
+
+This option will enable decompression of the compressed portions of PDF files encountered
+as the HTTP Response body in a GET transaction.  A prerequisite is enabling
+extended\_response\_inspection (described above).
+
+When enabled, the preprocessor will examine the response body for the '%PDF-' file signature.
+PDF files are then parsed, locating PDF 'streams' with a single '/FlateDecode' filter.  These
+streams are decompressed in-place, replacing the compressed content.
+
+The 'decompress\_depth', 'compress\_depth', and 'unlimited\_decompress' are optionally used to 
+place limits on the decompression process.  The semantics for PDF files are similar to the
+gzip decompression process.
+
+During the file parsing/decompression process, the preprocessor may generate several alerts:
+
+\begin{center}
+\begin{tabular}{| l | p{4.5in} |}
+
+\hline
+\textbf{Alert} & \textbf{Description}\\
+\hline 
+
+\hline 
+120:14 & Deflate decompression failure \\
+
+\hline 
+120:15 & Located a 'stream' with an unsupported compression ('/Filter') algorithm \\
+
+\hline 
+120:16 & Located a 'stream' with unsupported cascaded '/FlateDecode' options, e.g.: \begin{verbatim}/Filter [ /FlateDecode /FlateDecode ]\end{verbatim} \\
+
+\hline 
+120:17 & PDF File parsing error \\
+
+\hline
+\end{tabular}
+\end{center}
 
 \item \texttt{normalize\_javascript}
 This option enables the normalization of Javascript within the HTTP response body.
@@ -4637,6 +4847,60 @@ This option enables Snort to parse and log the original client IP present in the
 X-Forwarded-For or True-Client-IP HTTP request headers along with the generated
 events. The XFF/True-Client-IP Original client IP address is logged only with
 unified2 output and is not logged with console (-A cmg) output.
+
+\item \texttt{xff\_headers}
+
+If/When the \texttt{enable\_xff} option is present, the \texttt{xff\_headers} option specifies a set of custom 'xff'
+headers.  This option allows the definition of up to six custom headers in addition to the
+two default (and always present) X-Forwarded-For and True-Client-IP headers.  The option
+permits both the custom and default headers to be prioritized.  The headers/priority pairs
+are specified as a list.  Lower numerical values imply a higher priority.  The headers do
+not need to be specified in priority order.  Nor do the priorities need to be contiguous.
+Priority values can range from 1 to 255.  The priority values and header names must be unique.
+The header names must not collide with known http headers such as 'host', 'cookie',
+'content-length', etc.
+
+A example of the \texttt{xff\_header} syntax is:
+\begin{verbatim}
+xff_headers { [ x-forwarded-highest-priority 1 ] [ x-forwarded-second-highest-priority 2 ] \
+              [ x-forwarded-lowest-priority-custom 3 ] }
+\end{verbatim}
+
+The default X-Forwarded-For and True-Client-IP headers are always present.  They may be explicitly
+specified in the \texttt{xff\_headers} config in order to determine their priority.  If not specified, they
+will be automatically added to the xff list as the lowest priority headers.
+
+For example, let us say that we have the following (abbreviated) HTTP request header:
+
+\begin{verbatim}
+...
+Host: www.snort.org
+X-Forwarded-For: 192.168.1.1
+X-Was-Originally-Forwarded-From: 10.1.1.1
+...
+\end{verbatim}
+ 
+With the default xff behavior (no \texttt{xff\_headers}), the 'X-Forwarded-For' header would be used to
+provide a 192.168.1.1 Original Client IP address in the unified2 log.  Custom headers are not
+parsed.
+
+With:
+\begin{verbatim}
+xff_headers { [ x-was-originally-forwarded-from 1 ] [ x-another-forwarding-header 2 ] \
+              [ x-forwarded-for 3 ] }
+\end{verbatim}
+
+The X-Was-Originally-Forwarded-From header is the highest priority present and its value
+of 10.1.1.1 will be logged as the Original Client IP in the unified2 log.
+
+But with:
+\begin{verbatim}
+xff_headers { [ x-was-originally-forwarded-from 3 ] [ x-another-forwarding-header 2 ] \
+              [ x-forwarded-for 1 ] }
+\end{verbatim}
+
+Now the X-Forwarded-For header is the highest priority and its value of 192.168.1.1 is logged.
+
 
 \begin{note}
 
@@ -4980,14 +5244,14 @@ No argument is specified.
 \item \texttt{normalize\_headers}
 
 This option turns on normalization for HTTP Header Fields, not including
-Cookies (using the same configuration parameters as the URI normalization (ie,
+Cookies (using the same configuration parameters as the URI normalization (i.e.,
 multi-slash, directory, etc.).  It is useful for normalizing Referrer URIs that
 may appear in the HTTP Header.
 
 \item \texttt{normalize\_cookies}
 
 This option turns on normalization for HTTP Cookie Fields (using the same
-configuration parameters as the URI normalization (ie, multi-slash, directory,
+configuration parameters as the URI normalization (i.e., multi-slash, directory,
 etc.).  It is useful for normalizing data in HTTP Cookies that may be encoded.
 
 \item \texttt{normalize\_utf}
@@ -5025,7 +5289,7 @@ Please note the maximum length for a method name is 256.
 
 This option enables HTTP Inspect preprocessor to parse the URI data from the
 HTTP request and log it along with all the generated events for that session.
-Stream5 reassembly needs to be turned on HTTP ports to enable the logging.
+Stream reassembly needs to be turned on HTTP ports to enable the logging.
 If there are multiple HTTP requests in the session, the URI data of the most recent
 HTTP request during the alert will be logged. The maximum URI logged is 2048.
 
@@ -5041,7 +5305,7 @@ the unified2.
 
 This option enables HTTP Inspect preprocessor to parse the hostname data from the
 "Host" header of the HTTP request and log it along with all the generated events
-for that session. Stream5 reassembly needs to be turned on HTTP ports to enable
+for that session. Stream reassembly needs to be turned on HTTP ports to enable
 the logging. If there are multiple HTTP requests in the session, the Hostname data
 of the most recent HTTP request during the alert will be logged. In case of
 multiple "Host" headers within one HTTP request, a preprocessor alert with sid 24 is
@@ -5104,7 +5368,7 @@ will also mark the command, data header data body sections, and TLS data.
 
 SMTP handles stateless and stateful processing.  It saves state between
 individual packets.  However maintaining correct state is dependent on the
-reassembly of the client side of the stream (ie, a loss of coherent stream data
+reassembly of the client side of the stream (i.e., a loss of coherent stream data
 results in a loss of state).
 
 \subsubsection{Configuration}
@@ -5350,7 +5614,7 @@ sessions that will be decoded at any given instant. The default value for this o
 is 838860.
 
 Note: It is suggested to set this value such that the max smtp session calculated as
-follows is atleast 1.
+follows is at least 1.
 
 max smtp session = \texttt{max\_mime\_mem} /(2 * max of (\texttt{b64\_decode\_depth}, 
 					\texttt{uu\_decode\_depth}, \texttt{qp\_decode\_depth}
@@ -5493,11 +5757,11 @@ It will also mark the command, data header data body sections and
 extract the POP3 attachments and decode it appropriately.
 
 POP will handle stateful processing. It saves state between individual
-packets. However maintaining correct state is dependent on the resassembly
-of the server side of the stream (ie, a loss of coherent stream data results
+packets. However maintaining correct state is dependent on the reassembly
+of the server side of the stream (i.e., a loss of coherent stream data results
 in a loss of state).
 
-Stream5 should be turned on for POP. Please ensure that the POP ports are added
+Stream should be turned on for POP. Please ensure that the POP ports are added
  to the stream5 ports for proper reassembly.
 
 The POP preprocessor uses GID 142 to register events.
@@ -5606,7 +5870,7 @@ sessions that will be decoded at any given instant. The default value for this o
 is 838860.
 
 Note: It is suggested to set this value such that the max pop session calculated as
-follows is atleast 1.
+follows is at least 1.
 
 max pop session = \texttt{memcap} /(2 * max of (\texttt{b64\_decode\_depth},
                                         \texttt{uu\_decode\_depth}, \texttt{qp\_decode\_depth}
@@ -5663,11 +5927,11 @@ It will also mark the command, data header data body sections and
 extract the IMAP4 attachments and decode it appropriately.
 
 IMAP will handle stateful processing. It saves state between individual
-packets. However maintaining correct state is dependent on the resassembly
-of the server side of the stream (ie, a loss of coherent stream data results
+packets. However maintaining correct state is dependent on the reassembly
+of the server side of the stream (i.e., a loss of coherent stream data results
 in a loss of state).
 
-Stream5 should be turned on for IMAP. Please ensure that the IMAP ports are added
+Stream should be turned on for IMAP. Please ensure that the IMAP ports are added
  to the stream5 ports for proper reassembly.
 
 The IMAP preprocessor uses GID 141 to register events.
@@ -5776,7 +6040,7 @@ sessions that will be decoded at any given instant. The default value for this o
 is 838860.
 
 Note: It is suggested to set this value such that the max imap session calculated as
-follows is atleast 1.
+follows is at least 1.
 
 max imap session = \texttt{memcap} /(2 * max of (\texttt{b64\_decode\_depth},
                                         \texttt{uu\_decode\_depth}, \texttt{qp\_decode\_depth}
@@ -6260,14 +6524,14 @@ data channel is different from the client.
 A few examples:
 
 \begin{itemize}
-\item Allow bounces to 192.162.1.1 port 20020 -- ie, the use of
+\item Allow bounces to 192.162.1.1 port 20020 -- i.e., the use of
 \texttt{PORT 192,168,1,1,78,52}.
 
 \begin{verbatim}
     bounce_to { 192.168.1.1,20020 }
 \end{verbatim}
 
-\item Allow bounces to 192.162.1.1 ports 20020 through 20040 -- ie, the use of
+\item Allow bounces to 192.162.1.1 ports 20020 through 20040 -- i.e., the use of
 \texttt{PORT 192,168,1,1,78,xx}, where xx is 52 through 72 inclusive.
 
 \begin{verbatim}
@@ -6372,7 +6636,7 @@ to.
 
 \item \texttt{max\_encrypted\_packets $<$ number $>$}
 
-The number of encrypted packets that Snort will inspect before ignoring a given
+The number of stream reassembled encrypted packets that Snort will inspect before ignoring a given
 SSH session. The SSH vulnerabilities that Snort can detect all happen at the
 very beginning of an SSH session. Once max\_encrypted\_packets packets have been
 seen, Snort ignores the session to increase performance. The default is set to 25.
@@ -6551,6 +6815,17 @@ By default, SSLPP watches the following ports:
 \item \texttt{noinspect\_encrypted}
 
 Disable inspection on traffic that is encrypted.  Default is off.
+
+\item \texttt{max\_heartbeat\_length}
+
+Maximum length of heartbeat record allowed.  This config option is 
+used to detect the heartbleed attacks.  The allowed range is 0 to 65535. 
+Setting the value to 0 turns off the heartbeat length checks. For heartbeat 
+requests, if the payload size of the request record is greater than the 
+max\_heartbeat\_length an alert with sid 3 and gid 137 is generated.  
+For heartbeat responses, if the record size itself is greater than 
+the max\_heartbeat\_length an alert with sid 4 and gid 137 is generated. Default
+is off.
 
 \item \texttt{trustservers}
 
@@ -7090,7 +7365,7 @@ to do defragmentation.
 \begin{itemize}
 
 \item[] Specifies the maximum fragment size that will be added to the
-defragmention module. If a fragment is greater than this size, it is truncated
+defragmentation module. If a fragment is greater than this size, it is truncated
 before being added to the defragmentation module.  The allowed range for this
 option is 1514 - 65535.
 
@@ -7254,8 +7529,10 @@ preprocessor autodetects on all proxy ports by default)\\
 \texttt{smb\_invalid\_shares} & \texttt{<shares>} & NO & NONE\\
 
 \hline
-\texttt{smb\_max\_chain} & \texttt{<max-chain>} & NO & \texttt{smb\_max\_chain
-3}\\
+\texttt{smb\_max\_chain} & \texttt{<max-chain>} & NO & \texttt{smb\_max\_chain 3}\\
+
+\hline
+\texttt{smb\_file\_inspection} & \texttt{<file-inspect>} & NO & \texttt{smb\_file\_inspection off}\\
 
 \hline
 \end{tabular}
@@ -7289,6 +7566,9 @@ preprocessor autodetects on all proxy ports by default)\\
     word         = graphical ASCII characters except ',' '"' ']' '[' '$'
     var-word     = graphical ASCII characters except ',' '"' ']' '['
     max-chain    = 0-255
+    file-inspect = file-arg | '[' file-list ']'
+    file-arg     = "off" | "on" | "only"
+    file-list    = file-arg [ ',' "file-depth" <int64_t> ]
 \end{verbatim}
 \normalsize
 
@@ -7387,6 +7667,28 @@ before an alert is generated.  Default maximum is 3 chained commands.  A value
 of 0 disables this option. This value can be set from 0 to 255.
 
 \end{itemize}
+
+\item[] \texttt{smb\_file\_inspection}
+
+\begin{itemize}
+
+\item[] Instructs the preprocessor to do inspection of normal SMB file
+transfers.  This includes doing file type and signature through
+the file API as well as setting a pointer for the \texttt{file\_data}
+rule option.  Note that the \texttt{file-depth} option only applies to the
+maximum amount of file data for which it will set the pointer for the
+\texttt{file\_data} rule option.  For file type and signature it will use the
+value configured for the file API.  If \texttt{only} is specified, the
+preprocessor will only do SMB file inspection, i.e. it will not do any DCE/RPC
+tracking or inspection.  If \texttt{on} is specified with no
+arguments, the default file depth is 16384 bytes.  An argument of -1 to
+\texttt{file-depth} disables setting the pointer for \texttt{file\_data}, effectively
+disabling SMB file inspection in rules.  An argument of 0 to
+\texttt{file-depth} means unlimited.  Default is \texttt{off}, i.e. no SMB file
+inspection is done in the preprocessor.
+
+\end{itemize}
+
 \end{itemize}
 
 \textit{Option examples}
@@ -7429,6 +7731,12 @@ of 0 disables this option. This value can be set from 0 to 255.
     smb_invalid_shares [private, "C$"]
     smb_invalid_shares ["private", "C$"]
     smb_max_chain 1
+    smb_file_inspection on
+    smb_file_inspection off
+    smb_file_inspection [ on, file-depth -1 ]
+    smb_file_inspection [ on, file-depth 0 ]
+    smb_file_inspection [ on, file-depth 4294967296 ]
+    smb_file_inspection [ only, file-depth -1 ]
 \end{verbatim}
 \normalsize
 
@@ -7458,6 +7766,9 @@ of 0 disables this option. This value can be set from 0 to 255.
 
     preprocessor dcerpc2_server: \
         net [10.4.11.56,10.4.11.57], policy Samba, detect smb, autodetect none
+
+    preprocessor dcerpc2_server: default, policy WinXP, \
+        smb_file_inspection [ on, file-depth 0 ]
 \end{verbatim}
 \normalsize
 
@@ -7466,7 +7777,8 @@ of 0 disables this option. This value can be set from 0 to 255.
 \begin{verbatim}
     preprocessor dcerpc2_server: default, policy WinXP, \
         detect [smb [139,445], tcp 135, udp 135, rpc-over-http-server 593], \
-        autodetect [tcp 1025:, udp 1025:, rpc-over-http-server 1025:], smb_max_chain 3
+        autodetect [tcp 1025:, udp 1025:, rpc-over-http-server 1025:], \
+        smb_max_chain 3, smb_file_inspection off
 \end{verbatim}
 \normalsize
 
@@ -7478,7 +7790,8 @@ of 0 disables this option. This value can be set from 0 to 255.
     preprocessor dcerpc2_server: \
         default, policy WinXP, \
         detect [smb [139,445], tcp 135, udp 135, rpc-over-http-server 593], \
-        autodetect [tcp 1025:, udp 1025:, rpc-over-http-server 1025:], smb_max_chain 3
+        autodetect [tcp 1025:, udp 1025:, rpc-over-http-server 1025:], \
+        smb_max_chain 3, smb_file_inspection off
 \end{verbatim}
 \normalsize
 
@@ -7707,6 +8020,13 @@ SID & Description\\
       first thing a client and server do to determine the SMB dialect each
       supports.  The preprocessor will alert if the client attempts multiple
       dialect negotiations.\\
+\hline
+ 57 & Malware will often set a file's attributes to ReadOnly/Hidden/System if
+      it is successful in installing itself as a Windows service or is able to
+      write an autorun.inf file since it doesn't want the user to see the file
+      and the default folder options in Windows is not to display Hidden files.
+      The preprocessor will alert if it detects a client attempt to set a
+      file's attributes to ReadOnly/Hidden/System.\\
 \hline
 \end{longtable}
 \end{itemize}
@@ -8045,7 +8365,7 @@ conversion.
     byte_test:<convert>, [!]<operator>, <value>, <offset> [, relative], dce;
 
     convert    = 1 | 2 | 4 (only with option "dce")
-    operator   = '<' | '=' | '>' | '&' | '^'
+    operator   = '<' | '=' | '>' | '<=' | '>=' | '&' | '^'
     value      = 0 - 4294967295
     offset     = -65535 to 65535
 \end{verbatim}
@@ -8070,7 +8390,7 @@ normal \texttt{byte\_test} arguments will not be allowed: \texttt{big},
 \footnotesize
 \begin{verbatim}
     byte_jump:<convert>, <offset>[, relative][, multiplier <mult_value>] \
-        [, align][, post_offet <adjustment_value>], dce;
+        [, align][, post_offset <adjustment_value>], dce;
 
     convert           = 1 | 2 | 4 (only with option "dce")
     offset            = -65535 to 65535
@@ -8129,7 +8449,7 @@ A limited regular expression syntax is also included for defining your own PII.
 
 \subsubsection{Dependencies}
 
-The Stream5 preprocessor must be enabled for the Sensitive Data preprocessor
+The Stream preprocessor must be enabled for the Sensitive Data preprocessor
 to work.
 
 \subsubsection{Preprocessor Configuration}
@@ -8415,7 +8735,7 @@ type of service (differentiated services): clear this byte.
 
 \item \texttt{trim} 
 truncate packets with excess payload to the datagram length specified in the
-IP header + the layer 2 header (eg ethernet), but don't truncate below minimum
+IP header + the layer 2 header (e.g. ethernet), but don't truncate below minimum
 frame length.  This is automatically disabled if the DAQ can't inject packets.
 \end{itemize} 
 
@@ -8431,7 +8751,7 @@ Base normalizations enabled with "preprocessor \texttt{normalize\_ip6}" include:
 
 \begin{itemize} 
 \item
-Hop limit normalizaton if enabled (explained below).
+Hop limit normalization if enabled (explained below).
 
 \item
 NOP all options octets in hop-by-hop and destination options extension headers.
@@ -8461,7 +8781,11 @@ TCP normalizations are enabled with:
 
 \begin{verbatim}
     preprocessor normalize_tcp: \
+        [block], [rsv], [pad], \
+        [req_urg], [req_pay], [req_urp], \
         [ips], [urp], [trim], \
+        [trim_syn], [trim_rst], \
+        [trim_win], [trim_mss], \
         [ecn <ecn_type>], \
         [opts [allow <allowed_opt>+]]
 
@@ -8479,51 +8803,45 @@ TCP normalizations are enabled with:
     <num> ::= (3..255) 
 \end{verbatim}
 
-Base normalizations enabled with "preprocessor \texttt{normalize\_tcp}" include:
+Normalizations include:
 
 \begin{itemize} 
+\item \texttt{block}
+allow packet drops during TCP normalization.
 
-\item
-Clear the reserved bits in the TCP header.
+\item \texttt{rsv}
+clear the reserved bits in the TCP header.
 
-\item
-Clear the urgent pointer if the urgent flag is not set.
+\item \texttt{pad}
+clear any option padding bytes.
 
-\item
-Clear the urgent pointer and the urgent flag if there is no payload.
+\item \texttt{req\_urg}
+clear the urgent pointer if the urgent flag is not set.
 
-\item
-Clear the urgent flag if the urgent pointer is not set.
+\item \texttt{req\_pay}
+clear the urgent pointer and the urgent flag if there is no payload.
 
-\item
-Clear any option padding bytes.
+\item \texttt{req\_urp} 
+clear the urgent flag if the urgent pointer is not set.
 
-\end{itemize} 
-
-Optional normalizations include:
-
-\begin{itemize} 
 \item \texttt{ips} 
-
 ensure consistency in retransmitted data (also forces reassembly policy to
 "first").  Any segments that can't be properly reassembled will be dropped.
 
-\item \texttt{urp} 
-
-urgent pointer:  don't adjust the urgent pointer if it is greater than payload
-length.
-
-\item \texttt{trim} 
+\item \texttt{trim\_syn} 
 remove data on SYN.
 
-\item \texttt{trim} 
+\item \texttt{trim\_rst} 
 remove any data from RST packet.
 
-\item \texttt{trim} 
+\item \texttt{trim\_win} 
 trim data to window.
 
-\item \texttt{trim} 
+\item \texttt{trim\_mss} 
 trim data to MSS.
+
+\item \texttt{trim} 
+enable all of the above trim options.
 
 \item \texttt{ecn packet} 
 
@@ -8968,7 +9286,7 @@ Overload modifiers to existing \texttt{pcre} rule options:
    code      = "100-999"|"1-9"   
 \end{verbatim}
  \item[] Note: 1,2,3,4,5,6... mean to check for "1xx", "2xx", '3xx', '4xx', '5xx', 
-          '6xx'... reponses.  \\
+          '6xx'... responses.  \\
 \normalsize
 
 \textit{Examples}
@@ -9048,7 +9366,7 @@ Snort rules to implement Reputation-based IP blocking. This preprocessor will
 address the performance issue and make the IP reputation management easier. 
 This preprocessor runs before other preprocessors.
 \subsubsection{Configuration}
-The preprocessor configuration name is \texttt{repuation}.\\
+The preprocessor configuration name is \texttt{reputation}.\\
 
 \begin{verbatim}
     preprocessor reputation
@@ -9412,7 +9730,7 @@ SID & Description\\
    indicates a packet needs to be inspected, but does not disable detection. This is
    different from ``block'' action, which disables further detection. This new
    action helps users evaluate their IP lists before applying it.
- \item[] An exmple manifest file:
+ \item[] An example manifest file:
     \begin{verbatim} 
      #ipreputation manifest file
      white.wlf, 111 ,white, 
@@ -10782,7 +11100,351 @@ SID & Description\\
 \end{longtable}
 
 
+\subsection{AppId Preprocessor}
+\label{sub:appid}
+With increasingly complex networks and growing network traffic, network administrators
+require application awareness in managing networks. An administrator may allow only
+applications that are business relevant, low bandwidth and/or deal with certain
+subject matter.
 
+AppId preprocessor adds application level view to manage networks. It does this by adding the following features
+\begin{itemize}
+
+\item Network control: The preprocessor provides simplified single point application awareness by making a set of application
+identifiers (AppId) available to Snort Rule writers. 
+
+\item Network usage awareness: the preprocessor outputs statistics to
+show network bandwidth used by each application seen on network. Administrators can
+monitor bandwidth usage and may decide to block applications that are wasteful.
+
+\item Custom applications: The preprocessor enables administrators to create their own application detectors
+to detect new applications. The detectors are written in Lua and interface with Snort
+using a well-defined C-Lua API.
+
+\end{itemize}
+
+\subsubsection{Dependency Requirements}
+
+For proper functioning of the preprocessor:
+\begin{itemize}
+
+\item Stream session tracking must be enabled, i.e. stream5. TCP or UDP must be
+      enabled in stream5. The preprocessor requires a session tracker to keep its
+      data.
+
+\item Protocol Aware Flushing (PAF) must be enabled.
+
+\item IP defragmentation should be enabled, i.e. the frag3 preprocessor should be
+      enabled and configured.
+
+\item HTTP preprocessor must be enabled and configured. The processor does not require
+    any AppId specific configuration. The preprocessor provides parsed HTTP headers
+    for application determination. Without HTTP preprocessor, AppId preprocessor will
+    identify only non-HTTP applications.
+
+\item LuaJIT version 2.0.2 must be installed on
+    host where snort is being compiled and run. Newer versions of LuaJIT are not tested for compatibility.
+\end{itemize}
+
+\subsubsection{Preprocessor Configuration}
+AppId dynamic preprocessor can be enabled during build time. The
+following options must be included in ./configure:
+
+--enable-open-appid
+
+The configuration name is "appid":
+
+The preprocessor name is \texttt{appid}.
+\begin{verbatim}
+preprocessor appid
+\end{verbatim}
+\textit{Option syntax}
+\begin{itemize}
+\item[]
+\begin{tabular}{|l|c|c|p{6cm}|}
+\hline
+Option & Argument & Required & Default\\
+\hline
+\hline
+\texttt{app\_detector\_dir} & \texttt{<directory>} & NO & \texttt{app\_detector\_dir \{ /usr/local/etc/appid \} }\\
+\texttt{app\_stats\_filename} & \texttt{<filename>} & NO & \texttt{NULL}\\
+\texttt{app\_stats\_period} & \texttt{<time in seconds>} & NO & \texttt{300 seconds}\\
+\texttt{app\_stats\_rollover\_size} & \texttt{<disk size in bytes>} & NO & \texttt{20 MB}\\
+\texttt{app\_stats\_rollover\_time} & \texttt{<time in seconds>} & NO & \texttt{1 day}\\
+\texttt{memcap} & \texttt{<memory limit bytes>} & NO & \texttt{256 MB}\\
+\texttt{debug} & \texttt{<"yes">} & NO & \texttt{disabled}\\
+\texttt{dump\_ports} & \texttt{No} & NO & \texttt{disabled}\\
+\hline
+\end{tabular}
+\end{itemize}
+\normalsize
+\textit{Option explanations}
+\begin{itemize}
+\item[] \texttt{app\_detector\_dir}
+\begin{itemize}
+\item[]
+      specifies base path where Cisco provided detectors and application
+      configuration files are installed by ODP (Open Detector Package) package.
+      The package contains Lua detectors and some application metadata. Customer
+      written detectors are stored in subdirectory "custom" under the same base path.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    app_detector_dir <directory name>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    app_detector_dir /usr/local/cisco/apps
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{app\_stats\_filename}
+\begin{itemize}
+\item[]  name of file. If this configuration is missing, application stats are disabled.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    app_stats_filename <filename>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    app_stats_filename appStats.log
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{app\_stats\_period}
+\begin{itemize}
+\item[]
+      bucket size in seconds. Default 5 minutes.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    app_stats_period <time in seconds>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    app_stats_period 15
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{app\_stats\_rollover\_size}
+\begin{itemize}
+\item[]  file size which will cause file rollover. Default 20 MB.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    app_stats_rollover_size <file size in bytes>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    app_stats_rollover_size 2000000
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{app\_stats\_rollover\_time >}
+\begin{itemize}
+\item[]
+      time since file creation which will cause rollover. Default 1 day.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    app_stats_rollover_time <time in seconds>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    app_stats_rollover_time 3600
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{memcap >}
+\begin{itemize}
+\item[]
+      upper bound for memory used by AppId internal structures. Default 32MB.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    memcap <memory in bytes>
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    memcap 100000000
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{dump\_ports >}
+\begin{itemize}
+\item[]
+      prints port only detectors and information on active detectors. Used for troubleshooting.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    dump_ports <"yes"|"no">
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    dump_ports "yes"
+\end{verbatim}
+\end{itemize}
+
+\item[] \texttt{debug}
+\begin{itemize}
+\item[]
+      Used in some old detectors for debugging.
+\item[] \textit{Syntax}
+\begin{verbatim}
+    debug
+\end{verbatim}
+\item[] \textit{Examples}
+\begin{verbatim}
+    debug
+\end{verbatim}
+\end{itemize}
+
+\end{itemize}
+\normalsize
+
+\textit{Default configuration}
+\footnotesize
+\begin{verbatim}
+    preprocessor appid
+\end{verbatim}
+\normalsize
+
+\subsubsection{Rule Options}
+The AppId preprocessor adds 1 new rule option as follows:
+
+\begin{itemize}
+\item[]
+\begin{verbatim}
+    appid
+\end{verbatim}
+\end{itemize}
+
+The preprocessor must be enabled for this rule option to work.
+
+\texttt{appid}
+\label{appid:appid}
+\begin{itemize}
+ \item[] 
+The rule option allows users to customize
+rules to specific application in a simple manner. The option can take up to 10
+application names separated by spaces, tabs, or commas. Application names in
+rules are the names you will see in last column in appMapping.data file.  A
+rule is considered a match if one of the appId in a rule match an appId in a
+session. 
+
+For client side packets, payloadAppId in a session is matched with all AppIds
+in a rule.  Thereafter miscAppId, clientAppId and serviceAppId are matched.
+Since Alert Events contain one AppId, only the first match is reported. If rule
+without appId option matches, then the most specific appId (in order of
+payload, misc, client, server) is reported.
+
+The same logic is followed for server side packets with one exception. Order of
+matching is changed to make serviceAppId higher then clientAppId.
+
+\end{itemize}
+
+\textit{Syntax}
+\footnotesize
+\begin{verbatim}
+    appid:<list of application names>
+\end{verbatim}
+\normalsize
+\textit{Examples}
+\footnotesize
+\begin{verbatim}
+    appid: http;
+    appid: ftp, ftp-data;
+    appid: cnn.com, zappos;
+\end{verbatim}
+\normalsize
+
+\subsubsection{Application Rule Events}
+A new event type is defined for logging application name in Snort
+Alerts in unified2 format only. These events contain only one application name.
+The Events can be enabled for unified2 output using 'appid\_event\_types keyword. 
+
+For example, the following configuration will log alert in my.alert file with
+application name.
+\footnotesize
+\begin{verbatim}
+    output alert\_unified2: filename my.alert, appid\_event\_types
+\end{verbatim}
+\normalsize
+
+u2spewfoo, u2openappid, u2streamer tools can be used to print alerts in new format. 
+Each event will display additional application name at the end of the event.
+
+\textit{Examples}
+\footnotesize
+\begin{verbatim}
+#> u2spewfoo outputs the following event format
+(Event)
+        sensor id: 0    event id: 6     event second: 1292962302        event microsecond: 227323
+        sig id: 18763   gen id: 1       revision: 4      classification: 0
+        priority: 0     ip source: 98.27.88.56  ip destination: 10.4.10.79
+        src port: 80    dest port: 54767        protocol: 6     impact\_flag: 0  blocked: 0
+        mpls label: 0   vland id: 0     policy id: 0    appid: zappos
+\end{verbatim}
+\normalsize
+
+\subsubsection{Application Usage Statistics}
+
+AppId preprocessor prints application network usage periodically in snort
+log directory in unified2 format. File name, time interval for statistic and
+file rollover are controlled by appId preprocessor configuration. u2spewfoo,
+u2openappid, u2streamer tools can be used to print contents of these files. An
+example output from u2openappid tools is as follows:
+\footnotesize
+\begin{verbatim}
+
+    statTime="1292962290",appName="firefox",txBytes="9395",rxBytes="77021"
+    statTime="1292962290",appName="google\_analytic",txBytes="2024",rxBytes="928"
+    statTime="1292962290",appName="http",txBytes="28954",rxBytes="238000"
+    statTime="1292962290",appName="zappos",txBytes="26930",rxBytes="237072"
+\end{verbatim}
+\normalsize
+
+\subsubsection{Open Detector Package (ODP) Installation}
+Application detectors from Snort team will be delivered in a separate package
+called Open Detector Package. ODP is a package that contains the following
+artifacts:
+\begin{enumerate}
+
+\item Application detectors in Lua language. 
+
+\item Port detectors, which are port only application detectors, in  meta-data in YAML format.
+
+\item appMapping.data file containing application metadata. This file should not
+   be modified.  The first column contains application identifier and second column 
+   contains application name.  Other columns contain internal information.
+
+\item Lua library files DetectorCommon.lua, flowTrackerModule.lua and
+   hostServiceTrackerModule.lua 
+\end{enumerate}
+User can install ODP package in any directory of its choosing and configure
+this directory in app\_detector\_dir option in appId preprocessor configuration.
+Installing ODP will not modify any subdirectory named custom, where
+user-created detectors are located. 
+
+When installed, ODP will create following sub-directories:
+\footnotesize
+\begin{verbatim}
+    odp/port    //Cisco port-only detectors
+    odp/lua     //Cisco Lua detectors
+    odp/libs    //Cisco Lua modules
+\end{verbatim}
+\normalsize
+
+\subsubsection{User Created Application Detectors}
+
+Users can create new applications by coding detectors in Lua language.  Users can also
+copy Snort team provided detectors into custom subdirectory and customize the detector. A
+document will be posted on Snort Website with details on API usage.
+
+\par \noindent Users must organize their Lua detectors and libraries by creating the following
+directory structure, under ODP installation directory.
+\footnotesize
+\begin{verbatim}
+
+    custom/port    //port-only detectors
+    custom/lua     //Lua detectors
+    custom/libs    //Lua modules
+\end{verbatim}
+\normalsize
 
 \section{Decoder and Preprocessor Rules}
 
@@ -10910,7 +11572,7 @@ The generator ids ( gid ) for different preprocessors and the decoder are as fol
 \texttt{128} & SSH preprocessor \\
 
 \hline
-\texttt{129} & Stream5 preprocessor \\
+\texttt{129} & Stream preprocessor \\
 
 \hline
 \texttt{131} & DNS preprocessor \\
@@ -10988,7 +11650,7 @@ rules.  This can be tuned to significantly reduce false alarms.
 
 \item \texttt{Event Suppression} 
 
-You can completely suppress the logging of unintersting events.
+You can completely suppress the logging of uninteresting events.
 
 \end{itemize} 
 
@@ -11034,7 +11696,7 @@ The options are described in the table below - all are required except
 rate is tracked either by source IP address, destination IP address, or by
 rule.  This means the match statistics are maintained for each unique source IP
 address, for each unique destination IP address, or they are aggregated at rule
-level.  For rules related to Stream5 sessions, source and destination means
+level.  For rules related to Stream sessions, source and destination means
 client and server respectively.  \texttt{track by\_rule} and \texttt{apply\_to}
 may not be used together.\\
 
@@ -12388,8 +13050,8 @@ enable_xff
 \end{verbatim}
 
 This option enables HTTP Inspect to parse and log the original
-client IP present in the X-Forwarded-For or True-Client- IP HTTP
-request headers along with the generated events.
+client IP present in the X-Forwarded-For, True-Client-IP, or custom
+HTTP request headers along with the generated events.
 
 See section \ref{sub:http-inspect} for more information
 
@@ -12448,7 +13110,7 @@ log_rcptto
 \end{verbatim}
 
 This option enables SMTP preprocessor to parse and log the MIME
-attachment filenames extracted from the Content-Dispostion header
+attachment filenames extracted from the Content-Disposition header
 within the MIME body along with all the generated events for that
 session.
 
@@ -12968,7 +13630,7 @@ upon receipt of a SIGHUP.
 \end{note}
 
 \begin{note}
-An invalid configuration will still result in Snort fatal erroring, so
+An invalid configuration will still result in a fatal error, so
 you should test your new configuration before issuing a reload, e.g.
 \texttt{\$ snort -c snort.conf -T}
 \end{note}
@@ -13084,6 +13746,7 @@ using the following configuration line:
 \begin{verbatim}
 config binding: <path_to_snort.conf> vlan <vlanIdList>
 config binding: <path_to_snort.conf> net <ipList>
+config binding: <path_to_snort.conf> policy_id <id>
 \end{verbatim}
 
 \begin{description}{}
@@ -13091,7 +13754,7 @@ config binding: <path_to_snort.conf> net <ipList>
 \item [\texttt{path\_to\_snort.conf}] - Refers to the absolute or relative path to 
 the snort.conf for specific configuration.
 
-\item [\texttt{vlanIdList}] - Refers to the comma seperated list of vlandIds and 
+\item [\texttt{vlanIdList}] - Refers to the comma separated list of vlandIds and 
 vlanId ranges. The format for ranges is two vlanId separated by a "-". Spaces are 
 allowed within ranges. Valid vlanId is any number in 0-4095 range. Negative vland 
 Ids and alphanumeric are not supported.
@@ -13100,6 +13763,7 @@ Ids and alphanumeric are not supported.
 IPV6 or IPv4.  A maximum of 512 individual IPv4 or IPv6 addresses or CIDRs can be
 specified.
 
+\item [\texttt{policy\_id}] - Refers to the specific policyi\_id to be applied. Valid policyi\_id is any number in 0-4095 range.
 \end{description}
 
 \begin{note}
@@ -13299,7 +13963,7 @@ Example:
 
 Flexresp and flexresp2 are replaced with flexresp3.
 
-* Flexresp is deleted; these features are no longer avaliable:
+* Flexresp is deleted; these features are no longer available:
 
 \begin{verbatim}
     ./configure --enable-flexresp / -DENABLE_RESPOND -DENABLE_RESPONSE
@@ -13376,7 +14040,13 @@ or else the default is used:
 
 Note that the file must contain the entire response, including any HTTP headers.
 In fact, the response isn't strictly limited to HTTP.  You could craft a binary
-payload of arbitrary content. 
+payload of arbitrary content.
+
+Be aware of size when creating such responses. While it may be possible
+to respond with arbitrarily large responses, responses for TCP sessions will need
+to take into account that the receiver's window may only accept up to a certain
+amount of data. Sending past this limit will result in truncated data. In general,
+the smaller the response, the more likely it will be successful.
 
 When the rule is configured, the page is loaded and the %s is replaced with the
 selected message, which defaults to:
@@ -13415,7 +14085,7 @@ option can be used instead.  The deprecated options are ignored.
 \subsection{Rule Actions}
 
 The block and sblock actions have been introduced as synonyms for drop and
-sdrop to help avoid confusion between packets dropped due to load (eg lack of
+sdrop to help avoid confusion between packets dropped due to load (e.g. lack of
 available buffers for incoming packets) and packets blocked due to Snort's
 analysis.
 
@@ -13689,7 +14359,7 @@ tagging (\ref{tag section}) and flowbits (\ref{flowbits}).
 \end{note}
 
 Activate/dynamic rule pairs give Snort a powerful capability. You can now have
-one rule activate another when it's action is performed for a set number of
+one rule activate another when its action is performed for a set number of
 packets. This is very useful if you want to set Snort up to perform follow on
 recording when a specific rule goes off. Activate rules act just like alert
 rules, except they have a {*}required{*} option field: activates.  Dynamic
@@ -14138,7 +14808,7 @@ Target-Based Service Identifier & "http" \\
 
 \begin{note}
 
-The \texttt{service} Metadata Key is only meaningful when a Host Atttribute
+The \texttt{service} Metadata Key is only meaningful when a Host Attribute
 Table is provided.  When the value exactly matches the service ID as specified
 in the table, the rule is applied to that packet, otherwise, the rule is not
 applied (even if the ports specified in the rule match).  See Section
@@ -14362,6 +15032,83 @@ fast\_pattern & \ref{sub:FastPattern} \\
 \end{tabular}
 \end{center}
 \end{table}
+
+\subsection{protected\_content}
+\label{sub:protectedcontent}
+
+The protected\_content keyword provides much of the functionality of the content keyword, however it performs and is utilized in a very different manner. The primary advantage protected\_content has over content is that protected allows one to hide the target contents by only revealing secure hash digests of said content. As with the content keyword, its primary purpose is to match strings of specific bytes. The search is performed by hashing portions of incoming packets and comparing the results against the hash provided, and as such, it is computationally expensive.
+
+Currently, it is possible to utilize the MD5, SHA256, and SHA512 hash algorithms with the protected\_content keyword. A hashing algorithm must be specified in the rule using \texttt{hash} if a default has not be set in the Snort configuration. Additionally, a \texttt{length} modifier must be specified with protected to indicate the length of the raw data.
+
+As with content, it is possible to use multiple protected\_content rules can in one rule. Additionally, it is possible to mix multiple protected\_content rules with multiple content rules.
+
+If the rule is preceded by a \texttt{!}, the alert will be triggered on packets
+that do not contain the target content. This is useful when writing rules that want
+to alert on packets that do not match a certain pattern
+
+\begin{note}
+
+The protected\_content keyword can be used with some (but not all) of the content modifiers. Those not supported include:
+\begin{verbatim}
+	nocase
+	fast_pattern
+	depth
+	within
+\end{verbatim}
+
+\end{note}
+
+\subsubsection{Format}
+
+\begin{verbatim}
+    protected_content:[!]"<content hash>", length:orig_len[, hash:md5|sha256|sha512];
+\end{verbatim}
+
+\subsubsection{Examples}
+The following alert on the string "HTTP":
+
+\begin{verbatim}
+    alert tcp any any <> any 80 (msg:"MD5 Alert"; 
+    protected_content:"293C9EA246FF9985DC6F62A650F78986"; hash:md5; offset:0; length:4;)
+\end{verbatim}
+
+\begin{verbatim}
+    alert tcp any any <> any 80 (msg:"SHA256 Alert"; 
+    protected_content:"56D6F32151AD8474F40D7B939C2161EE2BBF10023F4AF1DBB3E13260EBDC6342"; 
+    hash:sha256; offset:0; length:4;)
+\end{verbatim}
+
+\begin{note}
+
+A \texttt{!} modifier negates the results of the entire content search,
+modifiers included.  For example, if using \texttt{content:!"A"; within:50;}
+and there are only 5 bytes of payload and there is no "A" in those 5 bytes, the
+result will return a match.  If there must be 50 bytes for a valid match, use
+\texttt{isdataat} as a pre-cursor to the content.
+
+\end{note}
+
+\subsection{hash}
+\label{sub:hash}
+
+The hash keyword is used to specify the hashing algorithm to use when matching a protected\_content rule. If a default algorithm is not specified in the Snort configuration, a protected\_content rule must specify the algorithm used. Currently, MD5, SHA256, and SHA512 are supported.
+
+\subsubsection{Format}
+
+\begin{verbatim}
+    hash:[md5|sha256|sha512];
+\end{verbatim}
+
+\subsection{length}
+\label{sub:length}
+
+The length keyword is used to specify the original length of the content specified in a protected\_content rule digest. The value provided must be greater than 0 and less than 65536.
+
+\subsubsection{Format}
+
+\begin{verbatim}
+    length:[<original_length>];
+\end{verbatim}
 
 \subsection{nocase}
 \label{sub:nocase}
@@ -14809,7 +15556,7 @@ extracted Status code field from a HTTP server response.
 As this keyword is a modifier to the previous \texttt{content} keyword, there must be
 a content in the rule before \texttt{http\_stat\_code} is specified. 
 
-The Status Code field will be extracted only if the extended\_reponse\_inspection is 
+The Status Code field will be extracted only if the extended\_response\_inspection is 
 configured for the HttpInspect (see \ref{sub:http-inspect}).
 
 \subsubsection{Format}
@@ -14843,7 +15590,7 @@ extracted Status Message field from a HTTP server response.
 As this keyword is a modifier to the previous \texttt{content} keyword, there must be
 a content in the rule before \texttt{http\_stat\_msg} is specified.
 
-The Status Message field will be extracted only if the extended\_reponse\_inspection is
+The Status Message field will be extracted only if the extended\_response\_inspection is
 configured for the HttpInspect (see \ref{sub:http-inspect}).
 
 \subsubsection{Format}
@@ -15159,7 +15906,7 @@ The following example will match URIs that are shorter than 5 bytes:
 \end{verbatim}
 
 The following example will match URIs that are greater than 5 bytes and less
-than 10 bytes:
+than 10 bytes (inclusive):
 
 \begin{verbatim}
     urilen:5<>10;
@@ -15545,7 +16292,7 @@ payload detecting rule options to work on base64 decoded buffer.
 \subsection{base64\_data}
 \label{sub:base64_data}
 This option is similar to the rule option \texttt{file\_data} and is used 
-to set the corsor used for detection to the beginning of the base64 decoded 
+to set the cursor used for detection to the beginning of the base64 decoded 
 buffer if present.
 
 This option does not take any arguments. The rule option \texttt{base64\_decode}
@@ -15593,10 +16340,11 @@ values}.
         [, relative][, <endian>][, string, <number type>][, dce];
 
     bytes      = 1 - 10
-    operator   = '<' | '=' | '>' | '&' | '^'
+    operator   = '<' | '=' | '>' | '<=' | '>=' | '&' | '^'
     value      = 0 - 4294967295
     offset     = -65535 to 65535
 \end{verbatim}
+\normalsize
 
 \begin{tabular}{| l | p{4.5in} |}
 \hline
@@ -15613,6 +16361,8 @@ used without \texttt{dce}. If used with \texttt{dce} allowed values are 1, 2 and
 \begin{itemize}
 \item \textless{} - less than
 \item \textgreater{} - greater than
+\item \textless{}= - less than or equal
+\item \textgreater{}= - greater than or equal
 \item = - equal
 \item \& - bitwise AND
 \item \textasciicircum{} - bitwise OR
@@ -16005,7 +16755,7 @@ This plugin cannot do detection over encrypted sessions, e.g. SSH (usually port
 \texttt{invalid-entry} &
 
 Looks for an invalid Entry string, which is a way of causing a heap overflow
-(see CVE-2004-0396) and bad pointer derefenece in versions of CVS 1.11.15 and
+(see CVE-2004-0396) and bad pointer dereference in versions of CVS 1.11.15 and
 before.\\
 
 \hline
@@ -16464,7 +17214,7 @@ check for abnormally sized packets that might cause buffer overflows.
 
 \subsubsection{Example}
 
-This example looks for a dsize that is between 300 and 400 bytes.
+This example looks for a dsize that is between 300 and 400 bytes (inclusive).
 
 \begin{verbatim}
     dsize:300<>400;
@@ -16505,7 +17255,7 @@ The following modifiers can be set to change the match criteria:
 
 To handle writing rules for session initiation packets such as ECN where a SYN
 packet is sent with CWR and ECE set, an option mask
-may be specified. A rule could check for a flags value of S,CE if one wishes to
+may be specified by preceding the mask with a comma. A rule could check for a flags value of S,CE if one wishes to
 find packets with just the syn bit, regardless of the values of the reserved
 bits.
 
@@ -16535,8 +17285,8 @@ are now deprecated.
 \subsection{flow}
 \label{flow section}
 
-The flow keyword is used in conjunction with TCP stream reassembly (see Section
-\ref{stream5 section}). It allows rules to only apply to certain directions of
+The flow keyword is used in conjunction with session tracking (see Section
+\ref{session section}). It allows rules to only apply to certain directions of
 the traffic flow. 
 
 This allows rules to only apply to clients or servers. This allows packets
@@ -16603,7 +17353,7 @@ packets\\
 \label{flowbits}
 
 The \texttt{flowbits} keyword is used in conjunction with conversation tracking
-from the Stream preprocessor (see Section\ref{stream5 section}).  It allows
+from the Session preprocessor (see Section\ref{session section}).  It allows
 rules to track states during a transport protocol session.  The flowbits option
 is most useful for TCP sessions, as it allows rules to generically track the
 state of an application protocol.
@@ -16634,7 +17384,7 @@ including periods, dashes, and underscores.
 \hline
 \texttt{unset} & Unsets the specified states for the current flow.\\
 \hline
-\texttt{toggle} & For every state specifed, sets the specified state if the state is unset and unsets it if the state is set.\\
+\texttt{toggle} & For every state specified, sets the specified state if the state is unset and unsets it if the state is set.\\
 \hline
 \texttt{isset} & Checks if the specified states are set.\\
 \hline
@@ -16734,9 +17484,9 @@ false if isset is true. Isnotset works on the final result, not on individual bi
 
 \begin{verbatim}
 Syntax:  
-   flowbits:isnoset, bits => Check whether not any bit is set
-   flowbits:isnoset, bats => Check whether not all bits are set
-   flowbits:isnoset, any, group => Check whether not bit in the group is set.
+   flowbits:isnotset, bits => Check whether not any bit is set
+   flowbits:isnotset, bats => Check whether not all bits are set
+   flowbits:isnotset, any, group => Check whether not bit in the group is set.
    flowbits:isnotset, all, group => Check whether not all bits in the group are set. 
    
 Usage
@@ -16868,12 +17618,38 @@ The icode keyword is used to check for a specific ICMP code value.
     icode:[<|>]<number>;
 \end{verbatim}
 
-\subsubsection{Example}
+The \texttt{<>} operator in the first format checks for an ICMP code within a specified range (exclusive).  That is, strictly greater than the min value and strictly less than the max value.  Note that the min value can a \texttt{-1} allowing an ICMP code of zero to be included in the range.
+
+Numerical values are validated with respect to permissible ICMP code values between 0 and 255 and other criteria. 
+
+\begin{verbatim}
+    icode:min<>max
+        -1 <= min <= 254
+         1 <= max <= 256
+         (max - min) > 1
+
+    icode:number
+        0 <= number <= 255
+
+    icode:<number
+        1 <= number <= 256
+
+    icode:>number
+        0 <= number <= 254
+\end{verbatim}
+
+\subsubsection{Examples}
 
 This example looks for an ICMP code greater than 30.
 
 \begin{verbatim}
     icode:>30;
+\end{verbatim}
+
+This example looks for an ICMP code greater than zero and less than 30.
+
+\begin{verbatim}
+    icode:-1<>30;
 \end{verbatim}
 
 \subsection{icmp\_id}
@@ -16992,7 +17768,7 @@ on matching traffic.
 
 \begin{note}
 
-The stream\_reassemble option is only available when the Stream5 preprocessor is
+The stream\_reassemble option is only available when the Stream preprocessor is
 enabled.
 
 \end{note}
@@ -17027,7 +17803,7 @@ of bytes observed, as determined by the TCP sequence numbers.
 
 \begin{note}
 
-The stream\_size option is only available when the Stream5 preprocessor is
+The stream\_size option is only available when the Stream preprocessor is
 enabled.
 
 \end{note}
@@ -17261,7 +18037,8 @@ responsibility of the output plugin to properly handle these special alerts.
 \subsubsection{Format}
 
 \begin{verbatim}
-    tag:<type>, <count>, <metric>[, direction];
+    tag:host, <count>, <metric>, <direction>;
+    tag:session[, <count>, <metric>][, exclusive];
 \end{verbatim}
 
 \begin{description}{}
@@ -17291,15 +18068,18 @@ specified in the $<$metric$>$ field.
 \item \texttt{bytes}   - Tag the host/session for $<$count$>$ bytes
 \end{itemize}
 
-\item [\texttt{direction}] - only relevant if host type is used.
+\item [\texttt{other}]
 
 \begin{itemize}{}
 
 \item \texttt{src} - Tag packets containing the source IP address of the packet
-that generated the initial event.
+that generated the initial event.  Only relevant if host type is used.
 
 \item \texttt{dst} - Tag packets containing the destination IP address of the
-packet that generated the initial event.
+packet that generated the initial event.  Only relevant if host type is used.
+
+\item \texttt{exclusive} - Tag packets only in the first matching session.
+Only relevant if session type is used.
 
 \end{itemize}
 \end{description}
@@ -17342,6 +18122,14 @@ This example logs the first 10 seconds or the \texttt{tagged\_packet\_limit}
 
 \begin{verbatim}
     alert tcp any any -> any 23 (flags:S,CE; tag:session,10,seconds;)
+\end{verbatim}
+
+While at least one count and metric is required for tag:host, tag:session
+with exclusive without any metrics can be used to get a full session like
+this:
+
+\begin{verbatim}
+    pass tcp any any -> 192.168.1.1 80 (flags:S; tag:session,exclusive;)
 \end{verbatim}
 
 \subsection{activates}
@@ -17650,13 +18438,13 @@ maximize efficiency and speed.
 \subsection{Content Matching}
 
 Snort groups rules by protocol (ip, tcp, udp, icmp), then by ports
-(ip and icmp use slightly differnet logic), then by those with \texttt{content}
+(ip and icmp use slightly different logic), then by those with \texttt{content}
 and those without.  For rules with \texttt{content}, a multi-pattern matcher is
 used to select rules that have a chance at matching based on a single content.
 Selecting rules for evaluation via this "fast" pattern matcher was found to
 increase performance, especially when applied to large rule groups like HTTP.
 The longer and more unique a \texttt{content} is, the less likely that rule and
-all of it's rule options will be evaluated unnecessarily - it's safe to say
+all of its rule options will be evaluated unnecessarily - it's safe to say
 there is generally more "good" traffic than "bad".  Rules without
 \texttt{content} are always evaluated (relative to the protocol and port group
 in which they reside), potentially putting a drag on performance.
@@ -17732,7 +18520,7 @@ one space character (which includes tab), followed by root, ignoring case.
 
 \end{itemize}
 
-% optomizing :)
+% optimizing :)
 \subsection{Optimizing Rules}
 
 The content matching portion of the detection engine has recursion to handle a
@@ -17765,7 +18553,7 @@ For example, the following rule options are not optimized:
     content:"|13|"; dsize:1;
 \end{verbatim}
 
-By looking at this rule snippit, it is obvious the rule looks for a packet with
+By looking at this rule snippet, it is obvious the rule looks for a packet with
 a single byte of 0x13.  However, because of recursion, a packet with 1024 bytes
 of 0x13 could cause 1023 too many pattern match attempts and 1023 too many
 dsize checks.  Why?  The content 0x13 would be found in the first byte, then
@@ -17907,13 +18695,13 @@ Then, we need to make sure that our packet is a call to the procedure 1, the
 vulnerable procedure.  
    
 \begin{verbatim}
-    content:"|00 00 00 01|"; offset:16; depth:4;
+    content:"|00 00 00 01|"; offset:20; depth:4;
 \end{verbatim}
 
 Then, we need to make sure that our packet has auth\_unix credentials.  
     
 \begin{verbatim}
-    content:"|00 00 00 01|"; offset:20; depth:4;
+    content:"|00 00 00 01|"; offset:24; depth:4;
 \end{verbatim}
 
 We don't care about the hostname, but we want to skip over it and check a
@@ -17937,7 +18725,7 @@ If we do that, we are now at:
 
 which happens to be the exact location of the uid, the value we want to check.
 
-In english, we want to read 4 bytes, 36 bytes from the beginning of the packet,
+In English, we want to read 4 bytes, 36 bytes from the beginning of the packet,
 and turn those 4 bytes into an integer and jump that many bytes forward,
 aligning on the 4 byte boundary.  To do that in a Snort rule, we use:
 
@@ -17957,8 +18745,8 @@ all together.
 \begin{verbatim}
     content:"|00 00 00 00|"; offset:4; depth:4;
     content:"|00 01 87 88|"; offset:12; depth:4;
-    content:"|00 00 00 01|"; offset:16; depth:4;
     content:"|00 00 00 01|"; offset:20; depth:4;
+    content:"|00 00 00 01|"; offset:24; depth:4;
     byte_jump:4,36,align;
     content:"|00 00 00 00|"; within:4;
 \end{verbatim}
@@ -17969,7 +18757,7 @@ combine those patterns.  We end up with:
 \begin{verbatim}
     content:"|00 00 00 00|"; offset:4; depth:4;
     content:"|00 01 87 88|"; offset:12; depth:4;
-    content:"|00 00 00 01 00 00 00 01|"; offset:16; depth:8;
+    content:"|00 00 00 01 00 00 00 01|"; offset:20; depth:8;
     byte_jump:4,36,align;
     content:"|00 00 00 00|"; within:4;
 \end{verbatim}
@@ -17992,7 +18780,7 @@ Our full rule would be:
 \begin{verbatim}
     content:"|00 00 00 00|"; offset:4; depth:4;
     content:"|00 01 87 88|"; offset:12; depth:4;
-    content:"|00 00 00 01 00 00 00 01|"; offset:16; depth:8;
+    content:"|00 00 00 01 00 00 00 01|"; offset:20; depth:8;
     byte_test:4,>,200,36;
 \end{verbatim}
 
@@ -18541,7 +19329,7 @@ typedef struct _LoopInfo
 \end{verbatim}
 
 The {\em ByteExtract} structure defines the information to use when extracting
-bytes for a DynamicElement used a in Loop evaltion.  It includes the number of
+bytes for a DynamicElement used a in Loop evaluation.  It includes the number of
 bytes, an offset, multiplier, flags specifying the buffer, and a reference to
 the DynamicElement.
 
@@ -18652,7 +19440,7 @@ following APIs to be used by a dynamic rules library.
 \item {\em int RegisterRules(Rule **)}
 
 This is the function to iterate through each rule in the list, initialize it to
-setup content searches, PCRE evalution data, and register flowbits.
+setup content searches, PCRE evaluation data, and register flowbits.
 
 \item {\em int DumpRules(char *,Rule **)}
 
@@ -18744,7 +19532,7 @@ LoopInfo and cursor.  Cursor position is updated and returned in *cursor.
 
 \item {\em int preprocOptionEval(void *p, PreprocessorOption *preprocOpt, u\_int8\_t **cursor)}
 
-This function evaluates the preprocessor defined option, as spepcifed by
+This function evaluates the preprocessor defined option, as specified by
 PreprocessorOption.  Cursor position is updated and returned in *cursor.
 
 \item {\em void setTempCursor(u\_int8\_t **temp\_cursor, u\_int8\_t **cursor)}
@@ -18761,7 +19549,7 @@ position.
 
 \begin{note}
 
-If you decide to write you own rule evaluation function, patterns that occur
+If you decide to write your own rule evaluation function, patterns that occur
 more than once may result in false negatives.  Take extra care to handle this
 situation and search for the matched pattern again if subsequent rule options
 fail to match.  This should be done for both content and PCRE options.
@@ -19184,7 +19972,7 @@ options.
 \end{verbatim}
 
   All unified2 records are preceded by a Serial Unified2 header.  This
-  unified2 record allows an interpretting application to skip past and
+  unified2 record allows an interpreting application to skip past and
   apply simple heuristics against records.
   
   The Record Type indicates one of the following unified2 records
@@ -19202,7 +19990,7 @@ options.
 \end{verbatim}
 
   The record length field specifies the entire length of the record 
-  (not including the Serial Unified2 Header itself) upto the next 
+  (not including the Serial Unified2 Header itself) up to the next 
   Serial Unified2 Header or EOF.
 
 \subsection{Unified2 Packet}
@@ -19223,7 +20011,7 @@ options.
   Unified2 Packet records contain contain a copy of the packet that
   caused an alert (Packet Data) and is packet length octets long.
 
-\subsection{Unfied2 IDS Event}
+\subsection{Unified2 IDS Event}
 
 \begin{verbatim}
     sensor id               4 bytes
@@ -19248,7 +20036,7 @@ options.
   Unified2 IDS Event is logged for IPv4 Events without VLAN or MPLS
   tagging. 
 
-\subsection{Unfied2 IDS Event IP6}
+\subsection{Unified2 IDS Event IP6}
 
 \begin{verbatim}
     sensor id               4 bytes
@@ -19273,7 +20061,7 @@ options.
   Unified2 IDS Event IP6 is logged for IPv6 Events without VLAN or 
   MPLS tagging. 
 
-\subsection{Unfied2 IDS Event (Version 2)}
+\subsection{Unified2 IDS Event (Version 2)}
 
 \begin{verbatim}
     sensor id               4 bytes
@@ -19429,11 +20217,11 @@ Type specifies the type of extra data that was logged, the valid types are:
 
 \item Data (Unified2 Extra Data)
 
-    Raw extra event data upto Data Length bytes in size.
+    Raw extra event data up to Data Length bytes in size.
 
     All of these Extra data types, with the exception of 1, 2, 11, and
     12 (IP Addresses) are stored in plain-text. The IP Address types
-    need to be interpreted as if they were comming off the wire.
+    need to be interpreted as if they were coming off the wire.
 
 \item Signature ID
 
@@ -19451,7 +20239,7 @@ Type specifies the type of extra data that was logged, the valid types are:
 
 \item Classification ID
 
-    Classification ID as mapped in the file classifcations.conf 
+    Classification ID as mapped in the file classifications.conf 
 
 \item Priority ID
 
@@ -19484,7 +20272,7 @@ Type specifies the type of extra data that was logged, the valid types are:
   
 \item Protocol
 
-    Transport protcol of the alerting packet. One of: ip, tcp, udp, or
+    Transport protocol of the alerting packet. One of: ip, tcp, udp, or
     icmp.
 
 \item Impact flag
@@ -19515,8 +20303,9 @@ Type specifies the type of extra data that was logged, the valid types are:
 \end{verbatim}
 
 \begin{note}
-Note that you'll only obtain Would Have Dropped on rules which are set to drop
-while Snort is running in inline-test mode.
+Note that you'll obtain Would Have Dropped on rules which are set to drop
+while Snort is running in inline-test mode.  Would Have Dropped is also 
+obtained when a drop rule fires while pruning sessions or during shutdown.
 \end{note}
 
 \item MPLS Label (4 bytes)
@@ -19544,10 +20333,14 @@ while Snort is running in inline-test mode.
 \textbf{Lead Snort Developers}
 & Steve Sturges\\
 & Bhagyashree Bantwal\\
+& Ed Borgoyn\\
 & Hui Cao\\
 & Russ Combs\\
-& Todd Wease\\
 & Victor Roemer\\
+& Charles Summers\\
+& Josh Rosenbaum\\
+& Carter Waxman\\
+& Tom Peters\\
 \\
 \textbf{Snort QA Team}
 & Chris Spencer\\
@@ -19647,6 +20440,7 @@ while Snort is running in inline-test mode.
 & Chris Sherwin\\
 & Matt Smith\\
 & Jennifer Steffens\\
+& Todd Wease\\
 & JP Vossen\\
 & Leon Ward\\
 & Daniel Wittenberg\\

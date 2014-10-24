@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+ ** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  ** Copyright (C) 2004-2013 Sourcefire, Inc.
  **
  ** This program is free software; you can redistribute it and/or modify
@@ -75,6 +76,7 @@
 
 #ifdef TARGET_BASED
 extern int16_t ftp_data_app_id;
+extern unsigned s_ftpdata_eof_cb_id;
 #endif
 /*
  * Used to keep track of pipelined commands and the last one
@@ -358,7 +360,7 @@ void CopyField (
         strncpy(buf, tok, len);
         buf[len] = '\0';
     }
-    s = index(buf, delim);
+    s = strchr(buf, delim);
 
     if ( s ) *s = '\0';
     else *buf = '\0';
@@ -414,7 +416,7 @@ static int getIP2428 (
                 break;
         }
         /* advance to next field */
-        tok = index(tok, delim);
+        tok = strchr(tok, delim);
         field++;
     }
 
@@ -1169,12 +1171,11 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                                     ftpdata->data_chan = Session->server_conf->data_chan;
 
                                     /* Call into Streams to mark data channel as ftp-data */
-                                    result = _dpd.streamAPI->set_application_protocol_id_expected(
-                                        IP_ARG(Session->clientIP), Session->clientPort,
-                                        IP_ARG(Session->serverIP), Session->serverPort,
-                                        (uint8_t)(GET_IPH_PROTO(p)),
-                                        p->pkt_header->ts.tv_sec, ftp_data_app_id,
-                                        PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree);
+                                    result = _dpd.streamAPI->set_application_protocol_id_expected_preassign_callback(
+                                        p, IP_ARG(Session->clientIP), Session->clientPort,
+                                        IP_ARG(Session->serverIP), Session->serverPort, GET_IPH_PROTO(p),
+                                        ftp_data_app_id, PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree,
+                                        s_ftpdata_eof_cb_id, SE_EOF);
 
                                     if (result < 0)
                                         FTPDataSessionFree(ftpdata);
@@ -1187,11 +1188,9 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                             {
                                 /* Call into Streams to mark data channel as something
                                  * to ignore. */
-                                _dpd.streamAPI->ignore_session(IP_ARG(Session->clientIP),
-                                        Session->clientPort, IP_ARG(Session->serverIP),
-                                        Session->serverPort, (uint8_t)(GET_IPH_PROTO(p)), p->pkt_header->ts.tv_sec,
-                                        PP_FTPTELNET, SSN_DIR_BOTH,
-                                        0 /* Not permanent */ );
+                                _dpd.sessionAPI->ignore_session(p, IP_ARG(Session->clientIP), Session->clientPort,
+                                        IP_ARG(Session->serverIP), Session->serverPort, GET_IPH_PROTO(p), 
+                                        PP_FTPTELNET, SSN_DIR_BOTH, 0 /* Not permanent */ );
                             }
                         }
                     }
@@ -1248,12 +1247,11 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                                 ftpdata->data_chan = Session->server_conf->data_chan;
 
                                 /* Call into Streams to mark data channel as ftp-data */
-                                result = _dpd.streamAPI->set_application_protocol_id_expected(
-                                    IP_ARG(Session->clientIP), Session->clientPort,
-                                    IP_ARG(Session->serverIP), Session->serverPort,
-                                    (uint8_t)(GET_IPH_PROTO(p)),
-                                    p->pkt_header->ts.tv_sec, ftp_data_app_id,
-                                    PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree);
+                                result = _dpd.streamAPI->set_application_protocol_id_expected_preassign_callback(
+                                    p, IP_ARG(Session->clientIP), Session->clientPort,
+                                    IP_ARG(Session->serverIP), Session->serverPort, GET_IPH_PROTO(p),
+                                    ftp_data_app_id, PP_FTPTELNET, (void *)ftpdata, &FTPDataSessionFree, 
+                                    s_ftpdata_eof_cb_id, SE_EOF);
 
                                 if (result < 0)
                                     FTPDataSessionFree(ftpdata);
@@ -1266,11 +1264,9 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
                         {
                             /* Call into Streams to mark data channel as something
                              * to ignore. */
-                            _dpd.streamAPI->ignore_session(IP_ARG(Session->clientIP),
-                                    Session->clientPort, IP_ARG(Session->serverIP),
-                                    Session->serverPort, (uint8_t)(GET_IPH_PROTO(p)), p->pkt_header->ts.tv_sec,
-                                    PP_FTPTELNET, SSN_DIR_BOTH,
-                                    0 /* Not permanent */ );
+                            _dpd.sessionAPI->ignore_session(p, IP_ARG(Session->clientIP), Session->clientPort,
+                                    IP_ARG(Session->serverIP), Session->serverPort, GET_IPH_PROTO(p),
+                                    PP_FTPTELNET, SSN_DIR_BOTH, 0 /* Not permanent */ );
                         }
                     }
                 }
@@ -1313,6 +1309,7 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
             {
                 /* Could check that response msg includes "TLS" */
                 Session->encr_state = AUTH_TLS_ENCRYPTED;
+                Session->encr_state_chello = true;
                 if (global_conf->encrypted.alert)
                 {
                     /* Alert on encrypted channel */
@@ -1328,6 +1325,7 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
             {
                 /* Could check that response msg includes "SSL" */
                 Session->encr_state = AUTH_SSL_ENCRYPTED;
+                Session->encr_state_chello = true;
                 if (global_conf->encrypted.alert)
                 {
                     /* Alert on encrypted channel */
@@ -1342,6 +1340,7 @@ static int do_stateful_checks(FTP_SESSION *Session, SFSnortPacket *p,
             if (rsp_code == 234)
             {
                 Session->encr_state = AUTH_UNKNOWN_ENCRYPTED;
+                Session->encr_state_chello = true;
                 if (global_conf->encrypted.alert)
                 {
                     /* Alert on encrypted channel */
@@ -1515,7 +1514,7 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
                     if (!global_conf->check_encrypted_data)
                     {
                         /* Mark this session & packet as one to ignore */
-                        _dpd.streamAPI->stop_inspection(p->stream_session_ptr, p,
+                        _dpd.sessionAPI->stop_inspection(p->stream_session, p,
                                                 SSN_DIR_BOTH, -1, 0);
                     }
                     DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
@@ -1599,7 +1598,7 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
                     if (!global_conf->check_encrypted_data)
                     {
                         /* Mark this session & packet as one to ignore */
-                        _dpd.streamAPI->stop_inspection(p->stream_session_ptr, p,
+                        _dpd.sessionAPI->stop_inspection(p->stream_session, p,
                                                 SSN_DIR_BOTH, -1, 0);
                     }
                     DEBUG_WRAP(DebugMessage(DEBUG_FTPTELNET,
@@ -1836,7 +1835,6 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
                         req->cmd_size, req->cmd_begin, req->param_size,
                         CmdConf->max_param_len));
                     iRet = FTPP_ALERT;
-                    break;
                 }
 
                 if (CmdConf->data_chan_cmd)
@@ -1885,7 +1883,7 @@ int check_ftp(FTP_SESSION  *ftpssn, SFSnortPacket *p, int iMode)
                             }
 
                             // 0 for Download, 1 for Upload
-                            ftpssn->data_xfer_dir = CmdConf->file_get_cmd ? 0 : 1;
+                            ftpssn->data_xfer_dir = CmdConf->file_get_cmd ? false : true;
                         }
                         else
                         {

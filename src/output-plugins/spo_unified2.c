@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2007-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -81,6 +82,9 @@ typedef struct _Unified2Config
 #endif
     int vlan_event_types;
     int base_proto;
+#if defined(FEAT_OPEN_APPID)
+    int appid_event_types;
+#endif /* defined(FEAT_OPEN_APPID) */
 } Unified2Config;
 
 typedef struct _Unified2LogCallbackData
@@ -176,8 +180,10 @@ static void AlertExtraData(void *ssnptr, void *data, LogFunction *log_funcs, uin
 /* Obsolete flag as UI wont check the impact_flag field anymore.*/
 #define U2_FLAG_BLOCKED 0x20
 /* New flags to set the pad field (corresponds to blocked column in UI) with packet action*/
-#define U2_BLOCKED_FLAG_BLOCKED 0x01
-#define U2_BLOCKED_FLAG_WDROP 0x02
+#define U2_BLOCKED_FLAG_ALLOW 0x00
+#define U2_BLOCKED_FLAG_BLOCK 0x01
+#define U2_BLOCKED_FLAG_WOULD 0x02
+#define U2_BLOCKED_FLAG_CANT  0x03
 
 /*
  * Function: SetupUnified2()
@@ -349,6 +355,27 @@ static inline void Unified2RotateFile(Unified2Config *config)
     Unified2InitFile(config);
 }
 
+static int s_blocked_flag[] =
+{
+    U2_BLOCKED_FLAG_ALLOW,
+    U2_BLOCKED_FLAG_CANT,
+    U2_BLOCKED_FLAG_WOULD,
+    U2_BLOCKED_FLAG_BLOCK,
+    U2_BLOCKED_FLAG_BLOCK
+};
+
+static int GetU2Flags(const Packet* p, uint8_t* pimpact)
+{
+    tActiveDrop dispos = Active_GetDisposition();
+    
+    if ( dispos >= ACTIVE_DROP )
+    {
+        *pimpact = U2_FLAG_BLOCKED;
+        return U2_BLOCKED_FLAG_BLOCK;
+    }
+    return s_blocked_flag[dispos];
+}
+
 static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event)
 {
     Serial_Unified2_Header hdr;
@@ -368,23 +395,7 @@ static void _AlertIP4(Packet *p, char *msg, Unified2Config *config, Event *event
 
     if (p != NULL)
     {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
+        alertdata.blocked = GetU2Flags(p, &alertdata.impact_flag);
 
         if(IPH_IS_VALID(p))
         {
@@ -447,26 +458,13 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
     alertdata.signature_revision = htonl(event->sig_rev);
     alertdata.classification_id = htonl(event->classification);
     alertdata.priority_id = htonl(event->priority);
+#if defined(FEAT_OPEN_APPID)
+    memcpy(alertdata.app_name, event->app_name, sizeof(alertdata.app_name));
+#endif /* defined(FEAT_OPEN_APPID) */
 
     if(p)
     {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
+        alertdata.blocked = GetU2Flags(p, &alertdata.impact_flag);
 
         if(IPH_IS_VALID(p))
         {
@@ -501,6 +499,12 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
                 alertdata.pad2 = htons(p->configPolicyId);
             }
 
+#if defined(FEAT_OPEN_APPID)
+            if((event->app_name[0]) && (config->appid_event_types))
+            {
+                memcpy(alertdata.app_name, event->app_name, sizeof(alertdata.app_name));
+            }
+#endif /* defined(FEAT_OPEN_APPID) */
         }
     }
 
@@ -508,7 +512,11 @@ static void _AlertIP4_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
         Unified2RotateFile(config);
 
     hdr.length = htonl(sizeof(Unified2IDSEvent));
+#if !defined(FEAT_OPEN_APPID)
     hdr.type = htonl(UNIFIED2_IDS_EVENT_VLAN);
+#else /* defined(FEAT_OPEN_APPID) */
+    hdr.type = htonl(UNIFIED2_IDS_EVENT_APPID);
+#endif /* defined(FEAT_OPEN_APPID) */
 
     if (SafeMemcpy(write_pkt_buffer_v2, &hdr, sizeof(Serial_Unified2_Header),
                    write_pkt_buffer_v2, write_pkt_end_v2) != SAFEMEM_SUCCESS)
@@ -549,23 +557,7 @@ static void _AlertIP6(Packet *p, char *msg, Unified2Config *config, Event *event
 
     if(p)
     {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
+        alertdata.blocked = GetU2Flags(p, &alertdata.impact_flag);
 
         if(IPH_IS_VALID(p))
         {
@@ -637,23 +629,7 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
 
     if(p)
     {
-        if ( Active_PacketWasDropped() )
-        {
-            if (DAQ_GetInterfaceMode(p->pkth) == DAQ_MODE_INLINE)
-            {
-                alertdata.impact_flag = U2_FLAG_BLOCKED;
-                alertdata.blocked = U2_BLOCKED_FLAG_BLOCKED;
-            }
-            else
-            {
-                // Set would be dropped if not inline interface
-                alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-            }
-        }
-        else if ( Active_PacketWouldBeDropped() )
-        {
-            alertdata.blocked = U2_BLOCKED_FLAG_WDROP;
-        }
+        alertdata.blocked = GetU2Flags(p, &alertdata.impact_flag);
 
         if(IPH_IS_VALID(p))
         {
@@ -693,6 +669,13 @@ static void _AlertIP6_v2(Packet *p, char *msg, Unified2Config *config, Event *ev
 
                 alertdata.pad2 = htons(p->configPolicyId);
             }
+#if defined(FEAT_OPEN_APPID)
+
+            if((event->app_name[0]) && (config->appid_event_types))
+            {
+                memcpy(alertdata.app_name, event->app_name, sizeof(alertdata.app_name));
+            }
+#endif /* defined(FEAT_OPEN_APPID) */
         }
     }
 
@@ -845,9 +828,17 @@ static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
     if(IS_IP4(p))
     {
 #ifdef MPLS
+#if !defined(FEAT_OPEN_APPID)
         if((config->vlan_event_types) || (config->mpls_event_types))
+#else /* defined(FEAT_OPEN_APPID) */
+        if((config->vlan_event_types) || (config->mpls_event_types) || (config->appid_event_types))
+#endif /* defined(FEAT_OPEN_APPID) */
 #else
+#if !defined(FEAT_OPEN_APPID)
         if(config->vlan_event_types)
+#else /* defined(FEAT_OPEN_APPID) */
+        if(config->vlan_event_types || config->appid_event_types)
+#endif /* defined(FEAT_OPEN_APPID) */
 #endif
         {
             _AlertIP4_v2(p, msg, config, event);
@@ -858,9 +849,17 @@ static void Unified2LogAlert(Packet *p, char *msg, void *arg, Event *event)
     else
     {
 #ifdef MPLS
+#if !defined(FEAT_OPEN_APPID)
         if((config->vlan_event_types) || (config->mpls_event_types))
+#else /* defined(FEAT_OPEN_APPID) */
+        if((config->vlan_event_types) || (config->mpls_event_types) || (config->appid_event_types))
+#endif /* defined(FEAT_OPEN_APPID) */
 #else
+#if !defined(FEAT_OPEN_APPID)
         if(config->vlan_event_types)
+#else /* defined(FEAT_OPEN_APPID) */
+        if(config->vlan_event_types || config->appid_event_types)
+#endif /* defined(FEAT_OPEN_APPID) */
 #endif
         {
             _AlertIP6_v2(p, msg, config, event);
@@ -1318,6 +1317,12 @@ static Unified2Config * Unified2ParseArgs(char *args, char *default_filename)
             else if(strcasecmp("vlan_event_types", stoks[0]) == 0)
             {
                 config->vlan_event_types = 1;
+#if defined(FEAT_OPEN_APPID)
+            }
+            else if(strcasecmp("appid_event_types", stoks[0]) == 0)
+            {
+                config->appid_event_types = 1;
+#endif /* defined(FEAT_OPEN_APPID) */
             }
             else
             {

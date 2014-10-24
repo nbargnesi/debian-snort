@@ -3,6 +3,7 @@
  **
  **  sfcontrol.c
  **
+ **  Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  **  Copyright (C) 2002-2013 Sourcefire, Inc.
  **  Author(s):  Ron Dempster <rdempster@sourcefire.com>
  **
@@ -104,7 +105,6 @@ static void DumpHex(FILE *fp, const uint8_t *data, unsigned len)
         {
             if (pos == 8)
             {
-                str[pos] = ' ';
                 pos++;
                 fprintf(fp, "%s", "    ");
             }
@@ -186,7 +186,7 @@ static int ReadResponse(int socket_fd, CSMessageHeader *hdr)
     return 1;
 }
 
-void ConnectToUnixSocket(const char * const name, int * const psock)
+static void ConnectToUnixSocket(const char * const name, int * const psock)
 {
     struct sockaddr_un sunaddr;
     int sock = -1;

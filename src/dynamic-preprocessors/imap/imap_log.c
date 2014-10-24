@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,7 +24,7 @@
  *
  * imap_log.c
  *
- * Author: Bhagyashree Bantwal <bbantwal@sourcefire.com>
+ * Author: Bhagyashree Bantwal <bbantwal@cisco.com>
  *
  * Description:
  *
@@ -87,22 +88,26 @@ void IMAP_GenerateAlert(int event, char *format, ...)
     va_end(ap);
 }
 
-void IMAP_DecodeAlert(void)
+void IMAP_DecodeAlert(void *ds)
 {
-    switch( imap_ssn->decode_state->decode_type )
+    Email_DecodeState *decode_state = (Email_DecodeState *)ds;
+    switch( decode_state->decode_type )
     {
-        case DECODE_B64:
+    case DECODE_B64:
+        if (imap_eval_config->decode_conf.b64_depth > -1)
             IMAP_GenerateAlert(IMAP_B64_DECODING_FAILED, "%s", IMAP_B64_DECODING_FAILED_STR);
-            break;
-        case DECODE_QP:
+        break;
+    case DECODE_QP:
+        if (imap_eval_config->decode_conf.qp_depth > -1)
             IMAP_GenerateAlert(IMAP_QP_DECODING_FAILED, "%s", IMAP_QP_DECODING_FAILED_STR);
-            break;
-        case DECODE_UU:
+        break;
+    case DECODE_UU:
+        if (imap_eval_config->decode_conf.uu_depth > -1)
             IMAP_GenerateAlert(IMAP_UU_DECODING_FAILED, "%s", IMAP_UU_DECODING_FAILED_STR);
-            break;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 

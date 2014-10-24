@@ -279,6 +279,12 @@
 120 || 9 || http_inspect: JAVASCRIPT OBFUSCATION LEVELS EXCEEDS 1
 120 || 10 || http_inspect: JAVASCRIPT WHITESPACES EXCEEDS MAX ALLOWED
 120 || 11 || http_inspect: MULTIPLE ENCODINGS WITHIN JAVASCRIPT OBFUSCATED DATA
+120 || 12 || http_inspect: SWF FILE ZLIB DECOMPRESSION FAILURE
+120 || 13 || http_inspect: SWF FILE LZMA DECOMPRESSION FAILURE
+120 || 14 || http_inspect: PDF FILE DEFLATE DECOMPRESSION FAILURE
+120 || 15 || http_inspect: PDF FILE UNSUPPORTED COMPRESSION TYPES
+120 || 16 || http_inspect: PDF FILE CASCADED COMPRESSION
+120 || 17 || http_inspect: PDF FILE PARSE FAILURE
 121 || 1 || flow-portscan: Fixed Scale Scanner Limit Exceeded
 121 || 2 || flow-portscan: Sliding Scale Scanner Limit Exceeded
 121 || 3 || flow-portscan: Fixed Scale Talker Limit Exceeded
@@ -336,6 +342,7 @@
 124 || 11 || smtp: Quoted-Printable Decoding failed
 124 || 12 || smtp: Non-Encoded MIME attachment Extraction failed
 124 || 13 || smtp: Unix-to-Unix Decoding failed
+124 || 14 || smtp: Cyrus SASL authentication attack
 125 || 1 || ftp_pp: Telnet command on FTP command channel
 125 || 2 || ftp_pp: Invalid FTP command
 125 || 3 || ftp_pp: FTP parameter length overflow
@@ -435,6 +442,7 @@
 133 || 54 || dcerpc2: SMB - Unusual command used
 133 || 55 || dcerpc2: SMB - Invalid setup count
 133 || 56 || dcerpc2: SMB - Client attempted multiple dialect negotiations on session
+133 || 57 || dcerpc2: SMB - Client attempted to create or set a file's attributes to readonly/hidden/system
 134 || 1 || ppm: rule tree disabled
 134 || 2 || ppm: rule tree enabled
 134 || 3 || ppm: packet aborted
@@ -445,6 +453,8 @@
 136 || 2 || reputation: Packet is whitelisted
 137 || 1 || ssp_ssl: Invalid Client HELLO after Server HELLO Detected
 137 || 2 || ssp_ssl: Invalid Server HELLO without Client HELLO Detected
+137 || 3 || spp_ssl: Heartbeat Read Overrun Attempt Detected
+137 || 4 || spp_ssl: Large Heartbeat Response Detected
 138 || 2 || sensitive_data: sensitive data - Credit card numbers
 138 || 3 || sensitive_data: sensitive data - U.S. social security numbers with dashes
 138 || 4 || sensitive_data: sensitive data - U.S. social security numbers without dashes

@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,6 +24,7 @@
 
 #include <sys/types.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 
 #ifdef HAVE_CONFIG_H
@@ -81,7 +83,6 @@ int SearchReInit(unsigned int i)
 
     return 0;
 }
-
 
 void SearchFree(void)
 {
@@ -168,11 +169,10 @@ int SearchFindString(unsigned int mpse_id,
 
     start_state = 0;
     num = mpseSearch(_mpse[mpse_id].mpse, (unsigned char*)str, str_len, Match, (void *) str,
-		    	&start_state );
+		    	&start_state);
 
     return num;
 }
-
 
 void SearchAdd(unsigned int mpse_id, const char *pat, unsigned int pat_len, int id)
 {
@@ -195,11 +195,15 @@ void SearchPrepPatterns(unsigned int mpse_id)
  */
 void *  SearchInstanceNew(void)
 {
+    return SearchInstanceNewEx(MPSE_AC_BNFA);
+}
+void *  SearchInstanceNewEx(unsigned method)
+{
     t_search * search = malloc(sizeof(t_search));
     if( !search )
         return NULL;
 
-    search->mpse  = mpseNew(MPSE_AC_BNFA, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
+    search->mpse  = mpseNew(method, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
                             NULL, NULL, NULL);
     if (search-> mpse == NULL )
     {
@@ -211,6 +215,7 @@ void *  SearchInstanceNew(void)
 
     return search;
 }
+
 void SearchInstanceFree( void * instance )
 {
     t_search * search = (t_search*)instance;
@@ -226,7 +231,18 @@ void SearchInstanceAdd( void*instance, const char *pat, unsigned int pat_len, in
     t_search * search = (t_search*)instance;
 
     if( search && search->mpse )
-        mpseAddPattern( search->mpse, (void *)pat, pat_len, 1, 0, 0, 0, (void *)(long) id, 0);
+        mpseAddPattern( search->mpse, (void *)pat, pat_len, STR_SEARCH_CASE_INSENSITIVE, 0, 0, 0, (void *)(long) id, 0);
+
+    if ( search && pat_len > search->max_len )
+         search->max_len = pat_len;
+}
+
+void SearchInstanceAddEx( void*instance, const char *pat, unsigned int pat_len, void* id, unsigned nocase)
+{
+    t_search * search = (t_search*)instance;
+
+    if( search && search->mpse )
+        mpseAddPattern( search->mpse, (void *)pat, pat_len, nocase, 0, 0, 0, id, 0);
 
     if ( search && pat_len > search->max_len )
          search->max_len = pat_len;
@@ -258,11 +274,82 @@ int  SearchInstanceFindString(void * instance,
             str_len = search->max_len;
         }
     }
-    num = mpseSearch( search->mpse, (unsigned char*)str, str_len, Match, (void *) str,
+    num = mpseSearch( search->mpse, (unsigned char*)str, str_len, Match, (void *)str,
+            &start_state);
+
+    return num;
+}
+
+int  SearchInstanceFindStringAll(void * instance,
+                              const char *str,
+                              unsigned int str_len,
+                              int confine,
+                              int (*Match) (void *, void *, int, void *, void *),
+                              void *userData)
+{
+    int num;
+    int start_state = 0;
+    t_search * search = (t_search*)instance;
+
+    if ( confine && (search->max_len > 0) )
+    {
+        if ( search->max_len < str_len )
+        {
+            str_len = search->max_len;
+        }
+    }
+    num = mpseSearchAll( search->mpse, (unsigned char*)str, str_len, Match, userData? userData:(void *)str,
             &start_state);
 
     return num;
 
+}
+
+int  StatefulSearchInstanceFindString(void * instance,
+                              const char *str,
+                              unsigned int str_len,
+                              int confine,
+                              int (*Match) (void *, void *, int, void *, void *), int *state)
+{
+    int num;
+    t_search * search = (t_search*)instance;
+
+    if ( confine && (search->max_len > 0) )
+    {
+        if ( search->max_len < str_len )
+        {
+            str_len = search->max_len;
+        }
+    }
+    num = mpseSearch( search->mpse, (unsigned char*)str, str_len, Match, (void *) str,
+            state);
+
+    return num;
+
+}
+
+char *SearchInstanceFindStringEnd(char *match_ptr, int buflen, char *search_str, int search_len)
+{
+    char *end;
+    int i = 0;
+
+    if(buflen < search_len)
+    {
+        i = i + (search_len - buflen);
+        search_len = buflen;
+    }
+
+    end =  match_ptr + search_len;
+
+    for (;i < search_len;i++)
+    {
+        if (memcmp(match_ptr, search_str + i, (search_len - i) ) == 0)
+        {
+            end = match_ptr + search_len - i;
+            break;
+        }
+    }
+    return end;
 }
 
 
@@ -279,10 +366,15 @@ SearchAPI searchAPI =
     SearchGetHandle,
     SearchPutHandle,
     SearchInstanceNew,
+    SearchInstanceNewEx,
     SearchInstanceFree,
     SearchInstanceAdd,
+    SearchInstanceAddEx,
     SearchInstancePrepPatterns,
     SearchInstanceFindString,
+    SearchInstanceFindStringAll,
+    SearchInstanceFindStringEnd,
+    StatefulSearchInstanceFindString,
 };
 
 SearchAPI *search_api = &searchAPI;

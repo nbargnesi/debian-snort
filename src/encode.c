@@ -1,6 +1,7 @@
 /* $Id$ */
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,6 +40,7 @@
 #include "sfdaq.h"
 #include "sf_iph.h"
 #include "snort.h"
+#include "session_api.h"
 #include "stream_api.h"
 #include "checksum.h"
 
@@ -116,7 +118,9 @@ static void IpId_Term();
 static const uint8_t* Encode_Packet(
     EncState* enc, const Packet* p, uint32_t* len);
 
-static ENC_STATUS UN6_Encode(EncState*, Buffer*, Buffer*);
+static ENC_STATUS UN6_ICMP6_Encode(EncState*, Buffer*, Buffer*);
+static ENC_STATUS UN6_UDP_Encode(EncState*, Buffer*, Buffer*);
+
 
 //-------------------------------------------------------------------------
 
@@ -329,6 +333,10 @@ int Encode_Format (EncodeFlags f, const Packet* p, Packet* c, PseudoPacketType t
     pkth->caplen = pkth->pktlen = len;
     pkth->ts = p->pkth->ts;
 
+#ifdef HAVE_DAQ_FLOW_ID
+    pkth->flow_id = p->pkth->flow_id;
+#endif
+
     // cooked packet gets same policy as raw
     c->configPolicyId = p->configPolicyId;
 
@@ -398,21 +406,23 @@ Packet* Encode_New ()
 {
     Packet* p = SnortAlloc(sizeof(*p));
     uint8_t* b = SnortAlloc(sizeof(*p->pkth) + PKT_MAX + SPARC_TWIDDLE);
+    IP6Option* ip6_extensions = SnortAlloc(sizeof(IP6Option) * ScMaxIP6Extensions());
 
-    if ( !p || !b )
+    if ( !p || !b || !ip6_extensions )
         FatalError("Encode_New() => Failed to allocate packet\n");
 
     p->pkth = (void*)b;
     b += sizeof(*p->pkth);
     b += SPARC_TWIDDLE;
     p->pkt = b;
-
+    p->ip6_extensions = ip6_extensions;
     return p;
 }
 
 void Encode_Delete (Packet* p)
 {
     free((void*)p->pkth);  // cast away const!
+    free(p->ip6_extensions);
     free(p);
 }
 
@@ -421,6 +431,7 @@ void Encode_SetDstMAC(uint8_t *mac)
 {
    dst_mac = mac;
 }
+
 //-------------------------------------------------------------------------
 // private implementation stuff
 //-------------------------------------------------------------------------
@@ -537,17 +548,17 @@ static inline uint8_t GetTTL (const EncState* enc)
         return 0;
 
     if ( enc->p->packet_flags & PKT_FROM_CLIENT )
-        dir = FORWARD(enc) ? SSN_DIR_CLIENT : SSN_DIR_SERVER;
+        dir = FORWARD(enc) ? SSN_DIR_FROM_CLIENT : SSN_DIR_FROM_SERVER;
     else
-        dir = FORWARD(enc) ? SSN_DIR_SERVER : SSN_DIR_CLIENT;
+        dir = FORWARD(enc) ? SSN_DIR_FROM_SERVER : SSN_DIR_FROM_CLIENT;
 
     // outermost ip is considered to be outer here,
     // even if it is the only ip layer ...
-    ttl = stream_api->get_session_ttl(enc->p->ssnptr, dir, outer);
+    ttl = session_api->get_session_ttl(enc->p->ssnptr, dir, outer);
 
     // so if we don't get outer, we use inner
     if ( 0 == ttl && outer )
-        ttl = stream_api->get_session_ttl(enc->p->ssnptr, dir, 0);
+        ttl = session_api->get_session_ttl(enc->p->ssnptr, dir, 0);
 
     return ttl;
 }
@@ -849,7 +860,7 @@ static ENC_STATUS ICMP4_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     IcmpHdr* h = (IcmpHdr*)(lyr->start);
 
-    *len += sizeof(*h) + p->dsize;
+    *len += lyr->length + p->dsize;
 
 
     if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
@@ -931,7 +942,7 @@ static ENC_STATUS UDP_Encode (EncState* enc, Buffer* in, Buffer* out)
     if ( IP_VER((IPHdr*)enc->ip_hdr) == 4 )
         return UN4_Encode(enc, in, out);
 
-    return UN6_Encode(enc, in, out);
+    return UN6_UDP_Encode(enc, in, out);
 }
 
 static ENC_STATUS UDP_Update (Packet* p, Layer* lyr, uint32_t* len)
@@ -1042,7 +1053,7 @@ static ENC_STATUS TCP_Encode (EncState* enc, Buffer* in, Buffer* out)
     SET_TCP_OFFSET(ho, (TCP_HDR_LEN >> 2));
     ho->th_win = ho->th_urp = 0;
 
-    if ( enc->type == ENC_TCP_FIN )
+    if ( enc->type == ENC_TCP_FIN || enc->type == ENC_TCP_PUSH )
     {
         if ( enc->payLoad && enc->payLen > 0 )
         {
@@ -1050,7 +1061,17 @@ static ENC_STATUS TCP_Encode (EncState* enc, Buffer* in, Buffer* out)
             UPDATE_BOUND(out, enc->payLen);
             memcpy(pdu, enc->payLoad, enc->payLen);
         }
-        ho->th_flags = TH_FIN | TH_ACK;
+
+        ho->th_flags = TH_ACK;
+        if ( enc->type == ENC_TCP_PUSH )
+        {
+            ho->th_flags |= TH_PUSH;
+            ho->th_win = htons(65535);
+        }
+        else
+        {
+            ho->th_flags |= TH_FIN;
+        }
     }
     else
     {
@@ -1279,29 +1300,46 @@ static ENC_STATUS Opt6_Update (Packet* p, Layer* lyr, uint32_t* len)
 // ICMP6 functions
 //-------------------------------------------------------------------------
 
-static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
+static inline int IcmpV6Code (EncodeType et) {
+    switch ( et ) {
+    case ENC_UNR_NET:  return ICMP6_UNREACH_NET;
+    case ENC_UNR_HOST: return ICMP6_UNREACH_HOST;
+    case ENC_UNR_PORT: return ICMP6_UNREACH_PORT;
+    case ENC_UNR_FW:   return ICMP6_UNREACH_FILTER_PROHIB;
+    default: break;
+    }
+    return ICMP6_UNREACH_PORT;
+}
+
+
+static inline ENC_STATUS UN6_Encode_Icmpv6Hdr( EncState *enc, IcmpHdr *ho, Buffer *out )
 {
-    uint8_t* p;
-    uint8_t* hi = enc->p->layers[enc->layer-1].start;
-    IcmpHdr* ho = (IcmpHdr*)(out->base + out->end);
-    pseudoheader6 ps6;
-    int len;
-
-#ifdef DEBUG
-    if ( enc->type < ENC_UNR_NET )
-        return ENC_BAD_OPT;
-#endif
-
     enc->proto = IPPROTO_ICMPV6;
 
     UPDATE_BOUND(out, sizeof(*ho));
     ho->type = 1;   // dest unreachable
-    ho->code = 4;   // port unreachable
+    ho->code = IcmpV6Code( enc->type ); 
     ho->cksum = 0;
     ho->unused = 0;
+    return ENC_OK;
+}
 
-    // ip + udp headers are copied separately because there
-    // may be intervening extension headers which aren't copied
+static inline ENC_STATUS UN6_Encode_OrigIcmpV6( EncState *enc, Buffer *out )
+{
+    uint8_t* p;
+
+    // copy original ip header
+    p = out->base + out->end;
+    UPDATE_BOUND(out, enc->ip_len);
+    // TBD should be able to elminate enc->ip_hdr by using layer-2
+    memcpy(p, enc->ip_hdr, enc->ip_len);
+    return ENC_OK;
+} 
+
+static inline ENC_STATUS UN6_Encode_OrigUdp( EncState *enc, Buffer *out )
+{
+    uint8_t* p;
+    uint8_t* hi = enc->p->layers[enc->layer-1].start;
 
     // copy original ip header
     p = out->base + out->end;
@@ -1316,6 +1354,14 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     UPDATE_BOUND(out, ICMP_UNREACH_DATA);
     memcpy(p, hi, ICMP_UNREACH_DATA);
 
+    return ENC_OK;
+}
+
+static inline void UN6_Encode_Compute_Chksum( EncState *enc, IcmpHdr *ho, Buffer *out )
+{
+    pseudoheader6 ps6;
+    int len;
+
     len = BUFF_DIFF(out, ho);
 
     memcpy(ps6.sip, ((IP6RawHdr *)enc->ip_hdr)->ip6_src.s6_addr, sizeof(ps6.sip));
@@ -1325,6 +1371,36 @@ static ENC_STATUS UN6_Encode (EncState* enc, Buffer* in, Buffer* out)
     ps6.len = htons((uint16_t)(len));
 
     ho->cksum = in_chksum_icmp6(&ps6, (uint16_t *)ho, len);
+}
+
+static ENC_STATUS UN6_ICMP6_Encode (EncState* enc, Buffer* in, Buffer* out)
+{
+    IcmpHdr* ho = (IcmpHdr*)(out->base + out->end);
+
+#ifdef DEBUG
+    if ( enc->type < ENC_UNR_NET )
+        return ENC_BAD_OPT;
+#endif
+
+    UN6_Encode_Icmpv6Hdr( enc, ho, out);
+    UN6_Encode_OrigIcmpV6( enc, out );
+    UN6_Encode_Compute_Chksum( enc, ho, out );
+
+    return ENC_OK;
+}
+
+static ENC_STATUS UN6_UDP_Encode(EncState* enc, Buffer* in, Buffer* out)
+{
+    IcmpHdr* ho = (IcmpHdr*)(out->base + out->end);
+
+#ifdef DEBUG
+    if ( enc->type < ENC_UNR_NET )
+        return ENC_BAD_OPT;
+#endif
+
+    UN6_Encode_Icmpv6Hdr( enc, ho, out);
+    UN6_Encode_OrigUdp( enc, out );
+    UN6_Encode_Compute_Chksum( enc, ho, out );
 
     return ENC_OK;
 }
@@ -1333,7 +1409,7 @@ static ENC_STATUS ICMP6_Update (Packet* p, Layer* lyr, uint32_t* len)
 {
     IcmpHdr* h = (IcmpHdr*)(lyr->start);
 
-    *len += sizeof(*h) + p->dsize;
+    *len += lyr->length + p->dsize;
 
     if ( !PacketWasCooked(p) || (p->packet_flags & PKT_REBUILT_FRAG) ) {
         pseudoheader6 ps6;
@@ -1501,7 +1577,7 @@ static EncoderFunctions encoders[PROTO_MAX] = {
     { IP6_Encode,  IP6_Update,   IP6_Format   },
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Hop Opts
     { Opt6_Encode, Opt6_Update,  XXX_Format   },  // IP6 Dst Opts
-    { UN6_Encode,  ICMP6_Update, ICMP6_Format },
+    { UN6_ICMP6_Encode,  ICMP6_Update, ICMP6_Format },
     { XXX_Encode,  XXX_Update,   XXX_Format,  },  // ICMP_IP6
     { XXX_Encode,  XXX_Update,   VLAN_Format  },
 #ifdef GRE

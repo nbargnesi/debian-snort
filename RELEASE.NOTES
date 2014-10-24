@@ -1,80 +1,82 @@
-2013-07-24 - Snort 2.9.5.3
-
-[*] Improvements
-* Performance improvements to eliminate some unnecessary work, reduction
-  of sizes of data structures, and cleanup of processing for HTTP normalized
-  buffers.
-
-* Cap the number of expected connections (eg FTP data channel) to prevent
-  memory growth
-
-* Address issue with reloading reputation lookup tables when more addresses
-  are added.
-
-* Address issue with potential hang during shutdown of control socket config
-  reload processing thread.
-
-2013-06-11 - Snort 2.9.5
-
+2014-06-04 - Snort 2.9.7.0 rc
 [*] New additions
+* Application Identification Preprocessor, when used in conjunction with
+  open app ID detector content, that will identify application protocol,
+  client, server, and web applications (including those using SSL) and
+  include the info in Snort alert data. In addition, a new rule option
+  keyword 'appid' that can be used to constrain Snort rules based on one
+  or more applications that are identified for the connection.  Separate
+  prepackaged RPMs with App Open ID are available.  See README.appid
+  for further details.
 
-* Added tracking of FTP data channel for file transfers as file_data
-  for Snort rules.
+* A new protected_content rule option that is used to match against a
+  content that is hashed.  It can be used to obscure the full context
+  of the rule from the administrator.
 
-* Add support for doing PAF based on services loaded thru the
-  attribute table and hardened PAF code/removed --disable-paf
+* Protocol Aware Flushing (PAF) improvements for SMTP, POP, and IMAP to
+  more accurately process different portions of email messages and file
+  attachments.
 
-* Added decoding support for Cisco ERSPAN
+* Added ability to test normalization behavior without modifying
+  network traffic.  When configured using na_policy_mode:inline-test,
+  statistics will be gathered on packet normalizations that would have
+  occurred, allowing less disruptive testing of inline deployments.
 
-* Added tracking of HTTP uploads as file_data for Snort rules.
+* The HTTP Inspection preprocessor now has the ability to decompress
+  DEFLATE and LZMA compressed flash content and DEFLATE compressed PDF
+  content from http responses when configured with the new
+  decompress_swf and decompress_pdf options. This enhancement can be
+  used with existing rule options that already match against
+  decompressed equivalents.
 
-* Added ability to use event filters with PPM rules
+* Added improved XFF support to HttpInspect. It is now possible to
+  specify custom HTTP headers to use in place of 'X-Forwarded-For'. In
+  situations where traffic may contain multiple XFF-like headers, it is
+  possible to specify which headers hold precedence.
 
-* Added a control channel command to reload the Snort configuration to
-  give feedback on new configuration.  This improves on the older sigHUP
-  which would just result in Snort exiting and restarting if the new
-  configuration required a restart.
+* Added additional support for Heartbleed detection within the SSL
+  preprocessor to improve performance.
 
-* Added a configuration option to perfmon to write flow-ip data to a file
+* Added control socket command to dump packets to a file.  See
+  README.snort_dump_packets_control for details.
 
-* New decoding alert for IPv6 Routing type 0 header.
+* Added an option to suppress configuration information logging to
+  output.
 
-* Added the ability to sync basic session state from one Snort to another
-  via a side channel communication between the two Snort instances.  NOTE:
-  This is currently experimental.
+* The Stream5 preprocessor functionality is now split between the new
+  Session and Stream6 preprocessors.
 
 [*] Improvements
+* Maximum IP6 extensions decoded is now configurable.
 
-* Improved Stream's midstream pickup handling for TCP state processing,
-  sequence validation, and reassembly. 
+* Update active response to allow for responses of 1500+ bytes that span
+  multiple TCP packets.
 
-* Improved HTTP PAF reassembly capabilities to be better aligned on PDU
-  boundaries, terminate if not actually HTTP, and to include all appropriate
-  line feeds.
+* Check limits of multiple configurations to not exceed a maximum ID of
+  4095.
 
-* Hardened the code related to dynamic modules.  Removed --disable-dynamicplugin
-  configuration option since rule and preprocessor shared libraries are here
-  to stay.
+* Updated the error output of byte_test, byte_jump, byte_extract to
+  including details on offending options for a given rule.
 
-* Added a parse error for a rule if there is a relative content used
-  after a content that is 'fast_pattern only'.
+* Update build and install scripts to install preprocessor and engine
+  libraries into user specified libdir.
 
-* Improved parsing of IP lists for reputation
+* Improved performance of IP Reputation preprocessor.
 
-* Update to Teredo processing and Snort rule evaluation when the inner
-  IPv6 packet doesn't have payload
+* The control socket will now report success when reloading empty IP
+  Reputation whitelists/blacklists.
 
-* Improved logging of packets associated with alerts when a Stream 
-  reassembled packet triggers multiple Snort rules.
+* All TCP normalizations can now be enabled individually. See
+  README.normalize for details on using the new options. For
+  consistency with other options, the "urp" tcp normalization keyword
+  now enables the normalization instead of disabling it.
 
-* Improvements to the Snort manual including documentation of specific rule
-  options and configuration items.
+* Lowered memory demand of Unicode -> ASCII mapping in HttpInspect.
 
-* Removed a bunch of dead code paths, updated to use more current memory
-  functions for easier code maintenance and portability.
+* Updated profiler output to remove duplicate results when using
+  multiple configurations.
 
-[*] Deletions
+* Improved performance of FTP reassembly.
 
-* Remove deprecated unified support, use unified2 for all of your
-  logging needs.
-
+* Improved compatibility with Mac OSX 10.9 (Mavericks), OpenBSD,
+  FreeBSD, and DragonFlyBSD

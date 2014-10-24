@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2006-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -158,8 +159,8 @@ HostAttributeEntry *SFAT_LookupHostEntryByDst(Packet *p);
 void SFAT_UpdateApplicationProtocol(sfip_t *ipAddr, uint16_t port, uint16_t protocol, uint16_t id);
 
 /* Returns whether this has been configured */
-int IsAdaptiveConfigured(tSfPolicyId);
-int IsAdaptiveConfiguredForSnortConfig(struct _SnortConfig *, tSfPolicyId);
+int IsAdaptiveConfigured( void );
+int IsAdaptiveConfiguredForSnortConfig(struct _SnortConfig *);
 
 void SFAT_StartReloadThread(void);
 

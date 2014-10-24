@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2006-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -112,7 +113,7 @@ typedef struct
 
 
 #include "sfrt_dir.h"
-//#define SUPPORT_LCTRIE
+/*#define SUPPORT_LCTRIE */
 #ifdef SUPPORT_LCTRIE
 #include "sfrt_lctrie.h"
 #endif

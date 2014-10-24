@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -31,6 +32,10 @@
 
 #include "pcap_pkthdr32.h"
 
+#if defined(FEAT_OPEN_APPID)
+#define MAX_EVENT_APPNAME_LEN  16
+
+#endif /* defined(FEAT_OPEN_APPID) */
 typedef struct _Event
 {
     uint32_t sig_generator;   /* which part of snort generated the alert? */
@@ -44,6 +49,9 @@ typedef struct _Event
                                 */
     struct sf_timeval32 ref_time;   /* reference time for the event reference */
 
+#if defined(FEAT_OPEN_APPID)
+    char     app_name[MAX_EVENT_APPNAME_LEN];
+#endif /* defined(FEAT_OPEN_APPID) */
     /* Don't add to this structure because this is the serialized data
      * struct for unified logging.
      */

@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 1998-2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -52,7 +53,8 @@
 /* built-in preprocessors */
 #include "preprocessors/spp_rpc_decode.h"
 #include "preprocessors/spp_bo.h"
-#include "preprocessors/spp_stream5.h"
+#include "preprocessors/spp_session.h"
+#include "preprocessors/spp_stream6.h"
 #include "preprocessors/spp_arpspoof.h"
 #include "preprocessors/spp_perfmonitor.h"
 #include "preprocessors/spp_httpinspect.h"
@@ -93,15 +95,23 @@
 #include "detection-plugins/sp_base64_data.h"
 #include "detection-plugins/sp_pkt_data.h"
 #include "detection-plugins/sp_asn1.h"
+
 #ifdef ENABLE_REACT
 #include "detection-plugins/sp_react.h"
 #endif
+
 #ifdef ENABLE_RESPOND
 #include "detection-plugins/sp_respond.h"
 #endif
+
 #include "detection-plugins/sp_ftpbounce.h"
 #include "detection-plugins/sp_urilen_check.h"
 #include "detection-plugins/sp_cvs.h"
+#include "detection-plugins/sp_file_type.h"
+
+#if defined(FEAT_OPEN_APPID)
+#include "detection-plugins/sp_appid.h"
+#endif /* defined(FEAT_OPEN_APPID) */
 
 /* built-in output plugins */
 #include "output-plugins/spo_alert_syslog.h"
@@ -201,6 +211,10 @@ void RegisterRuleOptions(void)
     SetupFTPBounce();
     SetupUriLenCheck();
     SetupCvs();
+    SetupFileType();
+#if defined(FEAT_OPEN_APPID)
+    SetupAppId();
+#endif /* defined(FEAT_OPEN_APPID) */
 }
 
 /****************************************************************************
@@ -666,7 +680,8 @@ void RegisterPreprocessors(void)
     SetupNormalizer();
 #endif
     SetupFrag3();
-    SetupStream5();
+    SetupSessionManager();
+    SetupStream6();
     SetupRpcDecode();
     SetupBo();
     SetupHttpInspect();
@@ -974,6 +989,29 @@ PreprocEvalFuncNode * AddFuncToPreprocList(SnortConfig *sc, PreprocEvalFunc pp_e
     return node;
 }
 
+void AddFuncToPreprocListAllNapPolicies(struct _SnortConfig *sc, PreprocEvalFunc pp_eval_func, uint16_t priority,
+                                        uint32_t preproc_id, uint32_t proto_mask)
+{
+    tSfPolicyId save_policy_id = getParserPolicy( sc );
+    uint32_t i;
+
+    if (sc == NULL)
+        FatalError("%s(%d) Snort config for parsing is NULL.\n", __FILE__, __LINE__);
+
+    // preprocs are only registered in NAP policies so if num_prerocs > 0 then policy is NAP, this works here
+    //  because this func is always called after all policies have been parsed and preprocs configured per policy
+    //  have already registered...
+    for( i = 0; i < sc->num_policies_allocated; i++ )
+        if( ( sc->targeted_policies[ i ] != NULL ) && ( sc->targeted_policies[ i ]->num_preprocs > 0 ) )
+        {
+            setParserPolicy( sc, i );
+            AddFuncToPreprocList( sc, pp_eval_func, priority, preproc_id, proto_mask );
+        }
+
+    setParserPolicy( sc, save_policy_id );
+ }
+
+
 PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(
     SnortConfig *sc,
     PreprocMetaEvalFunc pp_meta_eval_func,
@@ -981,7 +1019,7 @@ PreprocMetaEvalFuncNode * AddFuncToPreprocMetaEvalList(
     uint32_t preproc_id)
 {
     PreprocMetaEvalFuncNode *node;
-    tSfPolicyId policy_id = getParserPolicy(sc);
+    tSfPolicyId policy_id = getDefaultPolicy( );
     SnortPolicy *p;
 
     if (sc == NULL)
@@ -1507,7 +1545,7 @@ void DisableAllPolicies(SnortConfig *sc)
     {
         sc->disable_all_policies = 1;
         sc->reenabled_preprocessor_bits = (1 << PP_FRAG3);
-        sc->reenabled_preprocessor_bits |= (1 << PP_STREAM5);
+        sc->reenabled_preprocessor_bits |= (1 << PP_STREAM);
         sc->reenabled_preprocessor_bits |= (1 << PP_PERFMONITOR);
     }
 }

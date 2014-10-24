@@ -4,6 +4,7 @@
 ** perf-flow.c
 **
 **
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Marc Norton <mnorton@sourcefire.com>
 ** Dan Roelker <droelker@sourcefire.com>
@@ -138,6 +139,8 @@ int InitFlowIPStats(SFFLOW *sfFlow)
     {
         sfFlow->ipMap = sfxhash_new(1021, sizeof(sfSFSKey), sizeof(sfSFSValue),
                 perfmon_config->flowip_memcap, 1, NULL, NULL, 1);
+        if(!sfFlow->ipMap)
+            FatalError("Unable to allocate memory for FlowIP stats\n");
 
         first = 0;
     }

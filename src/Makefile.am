@@ -21,6 +21,7 @@ encode.c encode.h \
 active.c active.h \
 log.c log.h \
 mstring.c mstring.h \
+hashstring.c hashstring.h \
 parser.c parser.h \
 profiler.c profiler.h \
 plugbase.c plugbase.h \
@@ -62,6 +63,10 @@ rule_option_types.h \
 sfdaq.c sfdaq.h \
 idle_processing.c idle_processing.h idle_processing_funcs.h
 
+if BUILD_CONTROL_SOCKET
+snort_SOURCES += dump.c dump.h
+endif
+
 snort_LDADD = output-plugins/libspo.a \
 detection-plugins/libspd.a            \
 dynamic-plugins/libdynamic.a            \
@@ -70,7 +75,8 @@ preprocessors/libspp.a                \
 parser/libparser.a \
 target-based/libtarget_based.a \
 preprocessors/HttpInspect/libhttp_inspect.a \
-preprocessors/Stream5/libstream5.a \
+preprocessors/Session/libsession.a \
+preprocessors/Stream6/libstream6.a \
 sfutil/libsfutil.a \
 control/libsfcontrol.a \
 file-process/libfileAPI.a \

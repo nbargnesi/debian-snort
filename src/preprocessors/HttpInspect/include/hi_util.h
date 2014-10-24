@@ -1,5 +1,6 @@
 /****************************************************************************
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2003-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -77,6 +78,19 @@ static inline void SkipWhiteSpace(const u_char *start, const u_char *end,
     while (hi_util_in_bounds(start, end, *ptr) && isspace((int)**ptr) && (**ptr != '\n'))
         (*ptr)++;
 }
+#if defined(FEAT_OPEN_APPID)
+static inline int SkipBlankColon(const u_char *start, const u_char *end,
+       const u_char **ptr)
+{
+    int count = 0;
+    while((hi_util_in_bounds(start, end, *ptr)) && ( **ptr == ' ' || **ptr == '\t' || **ptr == ':') ) 
+    {
+        (*ptr)++;
+        count++;
+    }
+    return count;
+}
+#endif /* defined(FEAT_OPEN_APPID) */
 static inline int SkipBlankSpace(const u_char *start, const u_char *end,
        const u_char **ptr)
 {

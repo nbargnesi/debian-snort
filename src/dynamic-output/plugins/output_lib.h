@@ -1,4 +1,5 @@
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2012-2013 Sourcefire, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify
@@ -28,6 +29,7 @@
 #include "sf_dynamic_common.h"
 #include "sfPolicy.h"
 #include "obfuscation.h"
+#include "session_api.h"
 #include "stream_api.h"
 #include <daq.h>
 
@@ -142,12 +144,14 @@ typedef struct _DynamicOutputData
     DebugMsgFunc debugMsg;
     SnortStrdupFunc SnortStrdup;
     SnortSnprintfFunc SnortSnprintf;
-    GetPolicyFunc getRuntimePolicy;
+    GetPolicyFunc getNapRuntimePolicy;
+    GetPolicyFunc getIpsRuntimePolicy;
     GetParserPolicyFunc getParserPolicy;
     GetPolicyFunc getDefaultPolicy;
     GetBasePolicyVersionFunc getBasePolicyVersion;
     GetTargetPolicyVersionFunc getTargetPolicyVersion;
     ObfuscationApi *obApi;
+    SessionAPI **sessionAPI;
     StreamAPI **streamAPI;
     GetDAQInterfaceMode getDAQInterfaceMode;
 

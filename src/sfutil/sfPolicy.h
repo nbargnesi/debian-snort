@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2008-2013 Sourcefire, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,9 +33,9 @@
 #define SF_POLICY_ID_BINDING_MAX 4096
 #define SF_NETWORK_BINDING_MAX 4096
 #define SF_POLICY_UNBOUND 0xffffffff
+#define SF_DEFAULT_POLICY_ID 0
 
-
-//vlan id or address range is reduced to policy id. and subsequent processing is done using policy id only.
+/*vlan id or address range is reduced to policy id. and subsequent processing is done using policy id only. */
 
 typedef struct
 {
@@ -72,10 +73,6 @@ typedef struct
     table_t *netBindTable;
 
 } tSfPolicyConfig;
-
-
-extern tSfPolicyId runtimePolicyId;
-extern tSfPolicyId parserPolicyId;
 
 tSfPolicyConfig * sfPolicyInit(
     void
@@ -172,7 +169,7 @@ static inline tSfPolicyId sfPolicyNumAllocated(
     return config->numAllocatedPolicies;
 }
 
-//dynamic array functions
+/*dynamic array functions */
 int sfDynArrayCheckBounds (
         void ** dynArray,
         unsigned int index,

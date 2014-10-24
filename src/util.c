@@ -1,5 +1,6 @@
 /* $Id$ */
 /*
+** Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
 ** Copyright (C) 2002-2013 Sourcefire, Inc.
 ** Copyright (C) 2002 Martin Roesch <roesch@sourcefire.com>
 **
@@ -47,6 +48,11 @@
 #include <pthread.h>
 #include <string.h>
 
+#ifdef HAVE_MALLINFO
+#include <malloc.h>
+static struct mallinfo mi;
+#endif
+
 #ifndef WIN32
 #include <grp.h>
 #include <pwd.h>
@@ -60,9 +66,7 @@
 #include <strings.h>
 #endif
 
-#ifdef ZLIB
 #include <zlib.h>
-#endif
 
 #include "snort.h"
 #include "mstring.h"
@@ -92,7 +96,7 @@
 #include "win32/WIN32-Code/name.h"
 #endif
 
-#include "stream5_common.h"
+#include "stream_common.h"
 
 #ifdef PATH_MAX
 #define PATH_MAX_UTIL PATH_MAX
@@ -170,9 +174,7 @@ int DisplayBanner(void)
 {
     const char * info;
     const char * pcre_ver;
-#ifdef ZLIB
     const char * zlib_ver;
-#endif
 
     info = getenv("HOSTTYPE");
     if( !info )
@@ -181,9 +183,7 @@ int DisplayBanner(void)
     }
 
     pcre_ver = pcre_version();
-#ifdef ZLIB
     zlib_ver = zlib_version;
-#endif
 
     LogMessage("\n");
     LogMessage("   ,,_     -*> Snort! <*-\n");
@@ -196,15 +196,14 @@ int DisplayBanner(void)
 #endif
                BUILD,
                info);
-    LogMessage("   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/snort/snort-team\n");
+    LogMessage("   ''''    By Martin Roesch & The Snort Team: http://www.snort.org/contact#team\n");
+    LogMessage("           Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.\n");
     LogMessage("           Copyright (C) 1998-2013 Sourcefire, Inc., et al.\n");
 #ifdef HAVE_PCAP_LIB_VERSION
     LogMessage("           Using %s\n", pcap_lib_version());
 #endif
     LogMessage("           Using PCRE version: %s\n", pcre_ver);
-#ifdef ZLIB
     LogMessage("           Using ZLIB version: %s\n", zlib_ver);
-#endif
     LogMessage("\n");
 
     return 0;
@@ -239,7 +238,7 @@ void ts_print(register const struct timeval *tvp, char *timebuf)
     if(!tvp)
     {
         /* manual page (for linux) says tz is never used, so.. */
-        bzero((char *) &tz, sizeof(tz));
+        memset((char *) &tz, 0, sizeof(tz));
         gettimeofday(&tv, &tz);
         tvp = &tv;
     }
@@ -259,9 +258,10 @@ void ts_print(register const struct timeval *tvp, char *timebuf)
 
     if (ScOutputIncludeYear())
     {
+        int year = (lt->tm_year >= 100) ? (lt->tm_year - 100) : lt->tm_year;
         (void) SnortSnprintf(timebuf, TIMEBUF_SIZE,
                         "%02d/%02d/%02d-%02d:%02d:%02d.%06u ",
-                        lt->tm_mon + 1, lt->tm_mday, lt->tm_year - 100,
+                        lt->tm_mon + 1, lt->tm_mday, year,
                         s / 3600, (s % 3600) / 60, s % 60,
                         (u_int) tvp->tv_usec);
     }
@@ -438,6 +438,9 @@ void ErrorMessage(const char *format,...)
     if (snort_conf == NULL)
         return;
 
+    if (!ScCheckInternalLogLevel(INTERNAL_LOG_LEVEL__ERROR))
+        return;
+
     va_start(ap, format);
 
     if (ScDaemonMode() || ScLogSyslog())
@@ -473,6 +476,9 @@ void ErrorMessageThrottled(ThrottleInfo *throttleInfo, const char *format,...)
     time_t current_time = packet_time();
 
     if ((snort_conf == NULL)||(!throttleInfo))
+        return;
+
+    if (!ScCheckInternalLogLevel(INTERNAL_LOG_LEVEL__ERROR))
         return;
 
     throttleInfo->count++;
@@ -521,7 +527,7 @@ void LogMessage(const char *format,...)
     if (snort_conf == NULL)
         return;
 
-    if (ScLogQuiet() && !ScDaemonMode() && !ScLogSyslog())
+    if (!ScCheckInternalLogLevel(INTERNAL_LOG_LEVEL__MESSAGE) && !ScDaemonMode() && !ScLogSyslog())
         return;
 
     va_start(ap, format);
@@ -558,7 +564,7 @@ void WarningMessage(const char *format,...)
     if (snort_conf == NULL)
         return;
 
-    if (ScLogQuiet() && !ScDaemonMode() && !ScLogSyslog())
+    if (!ScCheckInternalLogLevel(INTERNAL_LOG_LEVEL__WARNING) && !ScDaemonMode() && !ScLogSyslog())
         return;
 
     va_start(ap, format);
@@ -781,16 +787,14 @@ void CreatePidFile(const char *intf, pid_t pid)
                        "system\n", _PATH_VARRUN);
 #endif  /* _PATH_VARRUN */
 
-            stat(_PATH_VARRUN, &pt);
-
-            if(!S_ISDIR(pt.st_mode) || access(_PATH_VARRUN, W_OK) == -1)
+            if ((stat(_PATH_VARRUN, &pt) == -1) ||
+                !S_ISDIR(pt.st_mode) || access(_PATH_VARRUN, W_OK) == -1)
             {
                 LogMessage("WARNING: _PATH_VARRUN is invalid, trying "
                            "/var/log/ ...\n");
                 SnortStrncpy(snort_conf->pid_path, "/var/log/", sizeof(snort_conf->pid_path));
-                stat(snort_conf->pid_path, &pt);
-
-                if(!S_ISDIR(pt.st_mode) || access(snort_conf->pid_path, W_OK) == -1)
+                if ((stat(snort_conf->pid_path, &pt) == -1) ||
+                    !S_ISDIR(pt.st_mode) || access(snort_conf->pid_path, W_OK) == -1)
                 {
                     LogMessage("WARNING: %s is invalid, logging Snort "
                                "PID path to log directory (%s).\n", snort_conf->pid_path,
@@ -816,8 +820,16 @@ void CreatePidFile(const char *intf, pid_t pid)
         FatalError("CreatePidFile() failed to lookup interface or pid_path is unknown!\n");
     }
 
-    SnortSnprintf(snort_conf->pid_filename, sizeof(snort_conf->pid_filename),
+    if (ScNoInterfacePidFile())
+    {
+        SnortSnprintf(snort_conf->pid_filename, sizeof(snort_conf->pid_filename),
+                  "%s/snort%s.pid", snort_conf->pid_path, snort_conf->pidfile_suffix);
+    }
+    else
+    {
+        SnortSnprintf(snort_conf->pid_filename, sizeof(snort_conf->pid_filename),
                   "%s/snort_%s%s.pid", snort_conf->pid_path, intf, snort_conf->pidfile_suffix);
+    }
 
 #ifndef WIN32
     if (!ScNoLockPidFile())
@@ -1068,8 +1080,35 @@ static const char* Verdicts[MAX_DAQ_VERDICT] = {
     "Replace",
     "Whitelist",
     "Blacklist",
+#ifdef HAVE_DAQ_VERDICT_RETRY
+    "Ignore",
+    "Retry"
+#else
     "Ignore"
+#endif
 };
+
+#ifdef HAVE_MALLINFO
+static void display_mallinfo(void)
+{
+    mi = mallinfo();
+    LogMessage("%s\n", STATS_SEPARATOR);
+    LogMessage("Memory usage summary:\n");
+    LogMessage("  Total non-mmapped bytes (arena):       %d\n", mi.arena);
+    LogMessage("  Bytes in mapped regions (hblkhd):      %d\n", mi.hblkhd);    
+    LogMessage("  Total allocated space (uordblks):      %d\n", mi.uordblks);
+    LogMessage("  Total free space (fordblks):           %d\n", mi.fordblks);
+    LogMessage("  Topmost releasable block (keepcost):   %d\n", mi.keepcost);
+#ifdef DEBUG    
+    LogMessage("  Number of free chunks (ordblks):       %d\n", mi.ordblks);
+    LogMessage("  Number of free fastbin blocks (smblks):%d\n", mi.smblks);
+    LogMessage("  Number of mapped regions (hblks):      %d\n", mi.hblks);
+    LogMessage("  Max. total allocated space (usmblks):  %d\n", mi.usmblks);
+    LogMessage("  Free bytes held in fastbins (fsmblks): %d\n", mi.fsmblks);
+#endif
+
+}
+#endif
 
 /* exiting should be 0 for if not exiting, 1 if restarting, and 2 if exiting */
 void DropStats(int exiting)
@@ -1079,6 +1118,11 @@ void DropStats(int exiting)
     uint64_t pkts_recv = pc.total_from_daq;
 
     const DAQ_Stats_t* pkt_stats = DAQ_GetStats();
+
+    /*Display all the memory usage in main arena*/
+#ifdef HAVE_MALLINFO
+    display_mallinfo();
+#endif
 
 #ifdef PPM_MGR
     PPM_PRINT_SUMMARY(&snort_conf->ppm_cfg);
@@ -1224,7 +1268,7 @@ void DropStats(int exiting)
             LogStat("Int Whtlst", pc.internal_whitelist, pkts_recv);
     }
 #ifdef TARGET_BASED
-    if (ScIdsMode() && IsAdaptiveConfigured(getDefaultPolicy()))
+    if (ScIdsMode() && IsAdaptiveConfigured())
     {
         LogMessage("%s\n", STATS_SEPARATOR);
         LogMessage("Attribute Table Stats:\n");
@@ -2261,7 +2305,7 @@ char *fasthex(const u_char *xdata, int length)
  *   Fatal Integer Parser
  *   Ascii to Integer conversion with fatal error support
  */
-long int xatol(const char *s , const char *etext)
+int xatol(const char *s , const char *etext)
 {
     long int val;
     char *endptr;
@@ -2287,17 +2331,17 @@ long int xatol(const char *s , const char *etext)
      */
     val = SnortStrtol(s, &endptr, 0);
 
-    if ((errno == ERANGE) || (*endptr != '\0'))
+    if ((errno == ERANGE) || (val > INT_MAX) || (val < INT_MIN) || (*endptr != '\0'))
         FatalError("%s: Invalid integer input: %s\n", etext, s);
 
-    return val;
+    return (int)val;
 }
 
 /*
  *   Fatal Integer Parser
  *   Ascii to Integer conversion with fatal error support
  */
-unsigned long int xatou(const char *s , const char *etext)
+unsigned int xatou(const char *s , const char *etext)
 {
     unsigned long int val;
     char *endptr;
@@ -2328,18 +2372,18 @@ unsigned long int xatou(const char *s , const char *etext)
      */
     val = SnortStrtoul(s, &endptr, 0);
 
-    if ((errno == ERANGE) || (*endptr != '\0'))
+    if ((errno == ERANGE) || (val > UINT_MAX) || (*endptr != '\0'))
         FatalError("%s: Invalid integer input: %s\n", etext, s);
 
-    return val;
+    return (unsigned int)val;
 }
 
-unsigned long int xatoup(const char *s , const char *etext)
+unsigned int xatoup(const char *s , const char *etext)
 {
     unsigned long int val = xatou(s, etext);
     if ( !val )
         FatalError("%s: must be > 0\n", etext);
-    return val;
+    return (unsigned int)val;
 }
 
 char * ObfuscateIpToText(sfip_t *ip)
@@ -2495,7 +2539,7 @@ int CheckValueInRange(const char *value_str, char *option,
 
     if ( (errno == ERANGE) || (*value) < lo || (*value) > hi)
     {
-        ParseError("Invalid value for %s."
+        ParseError("Invalid value for %s. "
                 "It should range between %u and %u.", option,
                 lo, hi);
         return -1;

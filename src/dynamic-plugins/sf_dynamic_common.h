@@ -14,6 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2005-2013 Sourcefire, Inc.
  *
  */
@@ -34,7 +35,7 @@ typedef enum {
 
 #ifdef SF_WCHAR
 #include <wchar.h>
-typedef void (*DebugWideMsgFunc)(uint64_t, wchar_t *, ...);
+typedef void (*DebugWideMsgFunc)(uint64_t, const wchar_t *, ...);
 #endif
 typedef uint32_t (*GetSnortInstance)(void);
 
@@ -42,7 +43,7 @@ typedef uint32_t (*GetSnortInstance)(void);
 
 #ifndef DECODE_BLEN
 #define DECODE_BLEN 65535
-// must be defined the same as in detection_util.h
+/* must be defined the same as in detection_util.h */
 typedef enum
 {
     HTTP_BUFFER_NONE,
@@ -71,7 +72,7 @@ typedef struct {
 } SFDataBuffer;
 
 typedef void (*LogMsgFunc)(const char *, ...);
-typedef void (*DebugMsgFunc)(uint64_t, char *, ...);
+typedef void (*DebugMsgFunc)(uint64_t, const char *, ...);
 typedef int (*GetAltDetectFunc)(uint8_t **, uint16_t *);
 typedef void (*SetAltDetectFunc)(uint8_t *,uint16_t );
 typedef int (*IsDetectFlagFunc)(SFDetectFlagType);

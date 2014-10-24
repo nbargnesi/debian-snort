@@ -14,6 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
  * Copyright (C) 2011-2013 Sourcefire, Inc.
  *
  * Author: Ryan Jordan
@@ -48,7 +49,7 @@
 /* Modbus preprocessor configuration */
 typedef struct _modbus_config
 {
-    char     ports[MAX_PORTS/8];
+    uint8_t ports[MAX_PORTS/8];
 
     int ref_count;
 } modbus_config_t;
