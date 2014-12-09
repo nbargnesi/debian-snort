@@ -1,3 +1,12 @@
+snort (2.9.7.0-4) unstable; urgency=low
+
+  * debian/control Updated deprecated VCs URL to
+    git://anonscm.debian.org/pkg-snort/pkg-snort.git
+  * Rebuild with the latest daq library upstream (libdaq2). Libdaq0 is obsolete
+    and not maintained upstrea
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 09 Dec 2014 20:37:03 +0100
+
 snort (2.9.7.0-3) unstable; urgency=high
 
   * debian/control: 
