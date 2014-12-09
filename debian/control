@@ -27,7 +27,7 @@ Build-Depends-Indep:
     ghostscript
 Standards-Version: 3.9.6
 Homepage: http://www.snort.org/
-Vcs-Git: git://git.debian.org/git/pkg-snort/pkg-snort.git
+Vcs-Git: git://anonscm.debian.org/pkg-snort/pkg-snort.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-snort/pkg-snort.git
 
 Package: snort
