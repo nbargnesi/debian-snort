@@ -5,10 +5,13 @@ snort (2.9.7.0-4) unstable; urgency=low
   * Include Snort tools u2boat and u2spewfoo to parse Unified2 log format
     files (Closes: #770882):
      - debian/snort.install: Install the files in the Snort package
-     - debian/{u2boat,u2spewfoo}.8 create new manpages for the tools
+     - debian/{u2boat,u2spewfoo}.1 create new manpages for the tools
      - debian/snort.manpages: add the new manpages to the package
+     - debian/snort.dirs: create usr/bin/ for the new tools
   * debian/rules: 
      - Use dh_prep instead of dh_clean -k
+  * debian/snort.manpages: Add the manpage for snort-stat, which was not included in the snort
+     package (but the script was)
   * Rebuild with the latest daq library upstream (libdaq2). Libdaq0 is obsolete
     and not maintained upstrea
 
