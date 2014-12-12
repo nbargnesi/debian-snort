@@ -10,10 +10,10 @@ snort (2.9.7.0-4) unstable; urgency=low
      - debian/snort.dirs: create usr/bin/ for the new tools
   * debian/rules: 
      - Use dh_prep instead of dh_clean -k
-  * debian/snort.manpages: Add the manpage for snort-stat, which was not included in the snort
-     package (but the script was)
-  * Rebuild with the latest daq library upstream (libdaq2). Libdaq0 is obsolete
-    and not maintained upstrea
+  * debian/snort.manpages: Add the manpage for snort-stat, which was not
+    included in the snort package (but the script was)
+  * Rebuild with the latest daq library upstream (libdaq2). Libdaq0 is
+    deprecated/obsolete and not maintained upstrea
 
  -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 09 Dec 2014 20:37:03 +0100
 
