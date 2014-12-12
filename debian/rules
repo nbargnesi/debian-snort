@@ -137,7 +137,7 @@ install: install-indep install-arch
 install-arch: 
 	dh_testdir
 	dh_testroot
-	dh_clean -k -s
+	dh_prep -s
 	dh_installdirs -s
 # Install the common binaries
 	$(MAKE) install prefix=$(TMP)/snort-common/usr/
@@ -168,7 +168,7 @@ install-arch:
 install-indep: 
 	dh_testdir
 	dh_testroot
-	dh_clean -k -i
+	dh_prep -i
 	dh_installdirs -i
 # Install Debian specific, scripts and files of the snort-common
 # package
