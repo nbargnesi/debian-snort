@@ -53,7 +53,7 @@ Description: Flexible Network Intrusion Detection System [Inline]
 Package: snort-common
 Architecture: all
 Pre-Depends: adduser (>= 3.11)
-Depends: perl-modules, debconf (>= 0.2.80) | debconf-2.0, syslogd | system-log-daemon, ${shlibs:Depends}
+Depends: perl, debconf (>= 0.2.80) | debconf-2.0, syslogd | system-log-daemon, ${shlibs:Depends}
 Conflicts: snort (<< ${Source-Version})
 Replaces: snort (<< 1.8.4beta1-1)
 Suggests: snort-doc

@@ -64,7 +64,7 @@ Package: snort-common
 Architecture: all
 Pre-Depends: adduser (>= 3.11)
 Depends: 
-    perl-modules, 
+    perl, 
     debconf (>= 0.2.80) | debconf-2.0,
     lsb-base,
     ${shlibs:Depends},
