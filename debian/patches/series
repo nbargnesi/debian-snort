@@ -1,6 +1,8 @@
 config
-configure_werror
-hardening_werror
+# Fixed in 2.9.7.3:
+#configure_werror
+# Fixed in 2.9.7.3:
+#hardening_werror
 documentation
 fix_ftbfs_in_manual.tex
 fix_upstream_typos
