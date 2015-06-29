@@ -1,3 +1,9 @@
+snort (2.9.7.0-5) unstable; urgency=medium
+
+  * debian/control: Depend on perl, not perl-modules (Closes: #779126)
+
+ -- Javier Fernández-Sanguino Peña <jfs@debian.org>  Tue, 30 Jun 2015 00:54:42 +0200
+
 snort (2.9.7.0-4) unstable; urgency=low
 
   * debian/control: Updated deprecated VCs URL to
